@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -247,16 +248,41 @@ class Phase0ContractsTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         path = fixture / ".github/workflows/ci.yml"
-        path.write_text(
-            path.read_text(encoding="utf-8").replace(
+        text = path.read_text(encoding="utf-8").replace(
                 "        run: python3 .github/scripts/check-phase0-contracts.py",
                 "        continue-on-error: true\n"
                 "        run: python3 .github/scripts/check-phase0-contracts.py",
                 1,
-            ),
-            encoding="utf-8",
         )
-        self.assert_rejected(self.errors_for(fixture), "workflow content digest")
+        path.write_text(text, encoding="utf-8")
+        original_digest = self.checker.EXPECTED_WORKFLOW_SHA256
+        self.addCleanup(
+            setattr, self.checker, "EXPECTED_WORKFLOW_SHA256", original_digest
+        )
+        self.checker.EXPECTED_WORKFLOW_SHA256 = hashlib.sha256(
+            text.encode("utf-8")
+        ).hexdigest()
+        self.assert_rejected(self.errors_for(fixture), "canonical step shape")
+
+    def test_escaped_yaml_action_key_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / ".github/workflows/ci.yml"
+        text = path.read_text(encoding="utf-8").replace(
+            "      - name: Validate Phase 0 contracts",
+            '      - "u\\u0073es": actions/setup-node@v4\n'
+            "      - name: Validate Phase 0 contracts",
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        original_digest = self.checker.EXPECTED_WORKFLOW_SHA256
+        self.addCleanup(
+            setattr, self.checker, "EXPECTED_WORKFLOW_SHA256", original_digest
+        )
+        self.checker.EXPECTED_WORKFLOW_SHA256 = hashlib.sha256(
+            text.encode("utf-8")
+        ).hexdigest()
+        self.assert_rejected(self.errors_for(fixture), "quoted or escaped mapping key")
 
     def test_copilot_execution_asset_is_rejected(self):
         temporary, fixture = self.copy_fixture()

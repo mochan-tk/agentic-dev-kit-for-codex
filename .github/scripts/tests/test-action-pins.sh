@@ -99,6 +99,16 @@ stage_all "$CASE"
 expect_rc 1 "flow-style unpinned reference fails closed" bash "$CASE/.github/scripts/check-action-pins.sh"
 
 new_case
+cat > "$CASE/.github/workflows/escaped-key.yml" <<'EOF'
+jobs:
+  build:
+    steps:
+      - "u\u0073es": actions/setup-node@v4
+EOF
+stage_all "$CASE"
+expect_rc 1 "escaped YAML uses key fails closed" bash "$CASE/.github/scripts/check-action-pins.sh"
+
+new_case
 rmdir "$CASE/.github/workflows"
 stage_all "$CASE"
 expect_rc 0 "repository without workflow files passes" bash "$CASE/.github/scripts/check-action-pins.sh"
