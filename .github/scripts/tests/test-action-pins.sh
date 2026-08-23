@@ -89,6 +89,16 @@ stage_all "$CASE"
 expect_rc 1 "one unpinned file among pinned ones fails" bash "$CASE/.github/scripts/check-action-pins.sh"
 
 new_case
+cat > "$CASE/.github/workflows/flow.yml" <<'EOF'
+jobs:
+  build:
+    steps:
+      - { uses: actions/cache@v4 }
+EOF
+stage_all "$CASE"
+expect_rc 1 "flow-style unpinned reference fails closed" bash "$CASE/.github/scripts/check-action-pins.sh"
+
+new_case
 rmdir "$CASE/.github/workflows"
 stage_all "$CASE"
 expect_rc 0 "repository without workflow files passes" bash "$CASE/.github/scripts/check-action-pins.sh"

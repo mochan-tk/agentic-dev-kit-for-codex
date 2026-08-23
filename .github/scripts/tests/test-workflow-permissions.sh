@@ -97,6 +97,22 @@ new_workflow mixed '  good:
 expect_rc_grep 1 "job 'bad'" \
   "one bad job among good jobs fails" bash "$GUARD" "$CASE_DIR"
 
+CASE_DIR="$WORK/alternate-indent"
+mkdir -p "$CASE_DIR"
+cat > "$CASE_DIR/workflow.yml" <<'EOF'
+name: alternate indentation
+on: [push]
+jobs:
+    quality:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: none
+        steps:
+            - uses: actions/checkout@0000000000000000000000000000000000000000
+EOF
+expect_rc_grep 1 "canonical block-style jobs" \
+  "unsupported job indentation fails closed" bash "$GUARD" "$CASE_DIR"
+
 expect_rc_grep 0 "check-workflow-permissions: OK" \
   "repository workflow passes" bash "$GUARD" "$REPO_ROOT/.github/workflows"
 
