@@ -192,7 +192,15 @@ def git_index_entries(root: Path) -> dict[str, str] | None:
         return None
     try:
         result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--stage", "-z"],
+            [
+                "git",
+                "--no-replace-objects",
+                "-C",
+                str(root),
+                "ls-files",
+                "--stage",
+                "-z",
+            ],
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -233,10 +241,22 @@ def discover_paths(root: Path) -> set[str]:
     return paths
 
 
+def reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate object key {key!r}")
+        value[key] = item
+    return value
+
+
 def read_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_json_keys,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         errors.append(f"{label} is not valid UTF-8 JSON: {exc}")
         return {}
     if not isinstance(payload, dict):

@@ -88,6 +88,30 @@ class Phase0ContractsTest(unittest.TestCase):
             "snapshot digest mismatch",
         )
 
+    def test_duplicate_snapshot_json_key_is_rejected(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        path = Path(temporary.name) / "snapshot.json"
+        path.write_text('{"schema":"one","schema":"two"}\n', encoding="utf-8")
+        errors = []
+        self.checker.read_json(path, errors, "Phase 0 snapshot")
+        self.assert_rejected(errors, "duplicate object key")
+
+    def test_duplicate_conformance_manifest_key_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / "tests/conformance/manifest.json"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                '  "schema": "phase-0-conformance-manifest/v1",',
+                '  "schema": "phase-0-conformance-manifest/v1",\n'
+                '  "schema": "duplicate",',
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_rejected(self.errors_for(fixture), "duplicate object key")
+
     def test_wrong_baseline_object_is_rejected(self):
         payload = self.snapshot_payload()
         payload["accepted_commit"] = "88179ec6a28393d7bf4cea96684e3af16b512484"

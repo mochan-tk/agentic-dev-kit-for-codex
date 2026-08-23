@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import stat
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 
 ROOT_MANIFEST = ".github/governance/phase-task-ownership.v1.json"
@@ -18,6 +20,10 @@ CONFORMANCE_MANIFEST = "tests/conformance/manifest.json"
 CI_WORKFLOW = ".github/workflows/ci.yml"
 ACCEPTED_PHASE0_COMMIT = "32615344ad4f0310948bc59d234a84718741788a"
 ACCEPTED_PHASE0_TREE = "33259721ec9f378fa67392ef8e1c7645db1321f9"
+TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
+REVIEWED_INVARIANT_DIGEST = (
+    "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c"
+)
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
 ALLOWED_MODES = {"100644", "100755"}
 ALLOWED_TASK_STATES = {"accepted", "active"}
@@ -37,11 +43,35 @@ USES_TOKEN = re.compile(r'''(?:^|[\s{,])(?:"uses"|'uses'|uses)\s*:''')
 QUOTED_MAPPING_KEY = re.compile(r'''(?:"(?:[^"\\]|\\.)*"|'[^']*')\s*:''')
 MODEL_SLUG = re.compile(r"\bgpt-[a-z0-9.-]+", re.IGNORECASE)
 
+CI_PREAMBLE = """name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+"""
+
+
+def reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate object key {key!r}")
+        value[key] = item
+    return value
+
 
 def read_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_json_keys,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         errors.append(f"{label} is not valid UTF-8 JSON: {exc}")
         return {}
     if not isinstance(value, dict):
@@ -144,10 +174,33 @@ def symlink_component(root: Path, relative: str) -> str | None:
 def valid_relative_path(value: str) -> bool:
     if not value or "\\" in value or value.startswith("/"):
         return False
+    if unicodedata.normalize("NFC", value) != value:
+        return False
+    if any(unicodedata.category(character).startswith("C") for character in value):
+        return False
     pure = PurePosixPath(value)
     if value != pure.as_posix() or any(part in {"", ".", ".."} for part in pure.parts):
         return False
     return True
+
+
+def collision_key(value: str) -> str:
+    return unicodedata.normalize("NFC", value).casefold()
+
+
+def validate_path_collisions(
+    paths: Iterable[str], label: str, errors: list[str]
+) -> None:
+    seen: dict[str, str] = {}
+    for path in paths:
+        key = collision_key(path)
+        previous = seen.get(key)
+        if previous is not None and previous != path:
+            errors.append(
+                f"{label} has a Unicode/case path collision: {previous!r} and {path!r}"
+            )
+        else:
+            seen[key] = path
 
 
 def exact_keys(
@@ -162,10 +215,15 @@ def validate_manifest(
 ) -> tuple[dict[str, str], dict[str, Any]]:
     """Validate the manifest and return path->mode plus policy."""
 
-    exact_keys(payload, {"schema", "repository", "phase", "policy", "tasks"}, "ownership manifest", errors)
+    exact_keys(
+        payload,
+        {"schema", "repository", "phase", "policy", "tasks"},
+        "ownership manifest",
+        errors,
+    )
     if payload.get("schema") != "phase-task-ownership/v1":
         errors.append("ownership manifest schema must be phase-task-ownership/v1")
-    if payload.get("repository") != "mochan-tk/agentic-dev-kit-for-codex":
+    if payload.get("repository") != TARGET_REPOSITORY:
         errors.append("ownership manifest repository is not the target repository")
 
     phase = payload.get("phase")
@@ -209,14 +267,13 @@ def validate_manifest(
         r"[0-9a-f]{64}", invariant_value
     ):
         errors.append("ownership policy invariant_digest must be a SHA-256")
+    if invariant_value != REVIEWED_INVARIANT_DIGEST:
+        errors.append(
+            "ownership policy invariant_digest does not match the reviewed live anchor"
+        )
     required_jobs = policy.get("required_jobs")
-    if (
-        not isinstance(required_jobs, list)
-        or any(not isinstance(item, str) or not item for item in required_jobs)
-        or len(required_jobs) != len(set(required_jobs))
-        or not {"quality", "conformance"}.issubset(set(required_jobs))
-    ):
-        errors.append("ownership policy required_jobs must uniquely include quality and conformance")
+    if required_jobs != ["quality", "conformance"]:
+        errors.append("ownership policy required_jobs must be exactly quality and conformance")
     for field in ("required_quality_commands", "required_conformance_commands"):
         commands = policy.get(field)
         if (
@@ -235,6 +292,7 @@ def validate_manifest(
     active_branches: list[str] = []
     ownership: dict[str, str] = {}
     modes: dict[str, str] = {}
+    manifest_paths: list[str] = []
     for index, task in enumerate(tasks):
         label = f"ownership tasks[{index}]"
         if not isinstance(task, dict):
@@ -255,7 +313,7 @@ def validate_manifest(
         if not isinstance(record, str) or not RECORD_URL.fullmatch(record):
             errors.append(f"{label}.record must be a stable target issue or PR URL")
         state_value = task.get("state")
-        if state_value not in ALLOWED_TASK_STATES:
+        if not isinstance(state_value, str) or state_value not in ALLOWED_TASK_STATES:
             errors.append(f"{label}.state is unsupported")
         branch = task.get("branch")
         if not isinstance(branch, str) or not BRANCH.fullmatch(branch):
@@ -284,7 +342,8 @@ def validate_manifest(
                 errors.append(f"{path_label}.path is not a normalized repository path")
                 continue
             observed_task_paths.append(path)
-            if mode not in ALLOWED_MODES:
+            manifest_paths.append(path)
+            if not isinstance(mode, str) or mode not in ALLOWED_MODES:
                 errors.append(f"{path_label}.mode is unsupported")
                 continue
             if path in ownership:
@@ -299,7 +358,9 @@ def validate_manifest(
         if len(observed_task_paths) != len(set(observed_task_paths)):
             errors.append(f"{label}.owned_paths contains duplicate paths")
 
-    duplicates = sorted(identifier for identifier in set(task_ids) if task_ids.count(identifier) > 1)
+    duplicates = sorted(
+        identifier for identifier in set(task_ids) if task_ids.count(identifier) > 1
+    )
     if duplicates:
         errors.append(f"duplicate ownership task ID(s): {', '.join(duplicates)}")
     if len(active_branches) != len(set(active_branches)):
@@ -308,10 +369,13 @@ def validate_manifest(
         errors.append("ownership manifest must contain at least one active task")
     if ROOT_MANIFEST not in ownership:
         errors.append("ownership manifest must own its own path")
+    validate_path_collisions(manifest_paths, "ownership manifest", errors)
     return modes, policy
 
 
-def validate_git_anchor(root: Path, commit: str, tree: str, label: str, errors: list[str]) -> None:
+def validate_git_anchor(
+    root: Path, commit: str, tree: str, label: str, errors: list[str]
+) -> None:
     if not FULL_SHA.fullmatch(commit) or not FULL_SHA.fullmatch(tree):
         return
     exists = git_command(root, "cat-file", "-e", f"{commit}^{{commit}}")
@@ -350,6 +414,272 @@ def validate_git_evidence(root: Path, payload: dict[str, Any], errors: list[str]
             )
 
 
+def resolve_execution_context(
+    root: Path, environment: Mapping[str, str], errors: list[str]
+) -> tuple[str, str] | None:
+    """Return (context, effective branch) or fail closed on ambiguous state."""
+
+    head_result = git_command(root, "rev-parse", "HEAD")
+    if head_result.returncode != 0:
+        errors.append("cannot resolve checked HEAD for Task authorization")
+        return None
+    head = head_result.stdout.decode("ascii", errors="replace").strip()
+    if not FULL_SHA.fullmatch(head):
+        errors.append("checked HEAD is not a full Git object ID")
+        return None
+
+    actions_value = environment.get("GITHUB_ACTIONS", "")
+    github_fields = {
+        key: environment.get(key, "")
+        for key in (
+            "GITHUB_BASE_REF",
+            "GITHUB_EVENT_NAME",
+            "GITHUB_EVENT_PATH",
+            "GITHUB_HEAD_REF",
+            "GITHUB_REF",
+            "GITHUB_REF_NAME",
+            "GITHUB_REF_TYPE",
+            "GITHUB_REPOSITORY",
+            "GITHUB_SHA",
+        )
+    }
+    if actions_value:
+        if actions_value != "true":
+            errors.append("GITHUB_ACTIONS must be exactly 'true' when present")
+            return None
+        if github_fields["GITHUB_SHA"] != head:
+            errors.append("GITHUB_SHA does not match checked HEAD")
+            return None
+        if github_fields["GITHUB_REPOSITORY"] != TARGET_REPOSITORY:
+            errors.append("GITHUB_REPOSITORY does not match the governed repository")
+            return None
+        event = github_fields["GITHUB_EVENT_NAME"]
+        if event == "pull_request":
+            branch = github_fields["GITHUB_HEAD_REF"]
+            if not branch:
+                errors.append("GitHub pull_request context is missing GITHUB_HEAD_REF")
+                return None
+            if github_fields["GITHUB_BASE_REF"] != "main":
+                errors.append("GitHub pull_request GITHUB_BASE_REF must be main")
+                return None
+            if github_fields["GITHUB_REF_TYPE"] != "branch":
+                errors.append("GitHub pull_request GITHUB_REF_TYPE must be branch")
+                return None
+            ref_name_match = re.fullmatch(
+                r"([1-9][0-9]*)/merge", github_fields["GITHUB_REF_NAME"]
+            )
+            if ref_name_match is None:
+                errors.append("GitHub pull_request GITHUB_REF_NAME is unsupported")
+                return None
+            expected_ref = f"refs/pull/{ref_name_match.group(1)}/merge"
+            if github_fields["GITHUB_REF"] != expected_ref:
+                errors.append(
+                    "GitHub pull_request GITHUB_REF does not match GITHUB_REF_NAME"
+                )
+                return None
+            return "pull_request", branch
+        if event == "push":
+            branch = github_fields["GITHUB_REF_NAME"]
+            if (
+                not branch
+                or github_fields["GITHUB_HEAD_REF"]
+                or github_fields["GITHUB_BASE_REF"]
+            ):
+                errors.append("GitHub push context has ambiguous branch fields")
+                return None
+            if github_fields["GITHUB_REF_TYPE"] != "branch":
+                errors.append("GitHub push context is not a branch ref")
+                return None
+            reference = github_fields["GITHUB_REF"]
+            if reference != f"refs/heads/{branch}":
+                errors.append("GitHub push GITHUB_REF does not match GITHUB_REF_NAME")
+                return None
+            if branch != "main":
+                errors.append("live policy supports GitHub push checks only for main")
+                return None
+            return "main_push", branch
+        errors.append(f"unsupported GitHub Actions event for live policy: {event!r}")
+        return None
+
+    if any(github_fields.values()):
+        errors.append("partial GitHub context is unsupported outside GitHub Actions")
+        return None
+    branch_result = git_command(root, "symbolic-ref", "--quiet", "--short", "HEAD")
+    if branch_result.returncode != 0:
+        errors.append("local live policy requires a symbolic current branch")
+        return None
+    branch = branch_result.stdout.decode("utf-8", errors="replace").strip()
+    if not branch:
+        errors.append("local current branch is empty or uncheckable")
+        return None
+    return ("local_main" if branch == "main" else "local_branch"), branch
+
+
+def active_task_for_branch(
+    payload: dict[str, Any], branch: str, errors: list[str]
+) -> dict[str, Any] | None:
+    tasks = payload.get("tasks")
+    matches = (
+        [
+            task
+            for task in tasks
+            if isinstance(task, dict)
+            and task.get("state") == "active"
+            and task.get("branch") == branch
+        ]
+        if isinstance(tasks, list)
+        else []
+    )
+    if len(matches) != 1:
+        errors.append(
+            f"effective branch {branch!r} must match exactly one active ownership Task"
+        )
+        return None
+    return matches[0]
+
+
+def active_owned_paths(task: dict[str, Any]) -> set[str]:
+    entries = task.get("owned_paths")
+    if not isinstance(entries, list):
+        return set()
+    return {
+        entry["path"]
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    }
+
+
+def authorize_changed_paths(
+    task: dict[str, Any], changed_paths: Iterable[str], errors: list[str]
+) -> None:
+    owned = active_owned_paths(task)
+    changes = list(changed_paths)
+    validate_path_collisions(changes, "Task diff", errors)
+    for path in changes:
+        if not valid_relative_path(path):
+            errors.append(f"Task diff contains an unsupported path: {path!r}")
+        elif path not in owned:
+            errors.append(
+                f"Task diff path is outside active Task {task.get('id', '?')} ownership: {path}"
+            )
+
+
+def validate_execution_authorization(
+    root: Path,
+    payload: dict[str, Any],
+    environment: Mapping[str, str],
+    errors: list[str],
+) -> None:
+    context = resolve_execution_context(root, environment, errors)
+    if context is None:
+        return
+    context_name, branch = context
+    if context_name in {"main_push", "local_main"}:
+        return
+    task = active_task_for_branch(payload, branch, errors)
+    if task is None:
+        return
+    task_base = task.get("base_commit")
+    if not isinstance(task_base, str) or not FULL_SHA.fullmatch(task_base):
+        return
+    diff_base = task_base
+    diff_head = "HEAD"
+    if context_name == "pull_request":
+        event_path = environment.get("GITHUB_EVENT_PATH", "")
+        if not event_path:
+            errors.append("GitHub pull_request context is missing GITHUB_EVENT_PATH")
+            return
+        event = read_json(Path(event_path), errors, "GitHub pull_request event")
+        pull_request = event.get("pull_request")
+        if not isinstance(pull_request, dict):
+            errors.append("GitHub event pull_request must be an object")
+            return
+        base = pull_request.get("base")
+        head = pull_request.get("head")
+        if not isinstance(base, dict) or not isinstance(head, dict):
+            errors.append("GitHub pull_request base and head must be objects")
+            return
+        base_sha = base.get("sha")
+        head_sha = head.get("sha")
+        base_ref = base.get("ref")
+        head_ref = head.get("ref")
+        if not isinstance(base_sha, str) or not FULL_SHA.fullmatch(base_sha):
+            errors.append("GitHub pull_request base.sha must be a full object ID")
+            return
+        if not isinstance(head_sha, str) or not FULL_SHA.fullmatch(head_sha):
+            errors.append("GitHub pull_request head.sha must be a full object ID")
+            return
+        if base_ref != "main":
+            errors.append("GitHub pull_request base.ref must be main")
+            return
+        if head_ref != branch:
+            errors.append("GitHub pull_request head.ref does not match GITHUB_HEAD_REF")
+            return
+        if task_base != base_sha:
+            errors.append("active Task base_commit does not match pull_request.base.sha")
+            return
+        checked_head = environment.get("GITHUB_SHA", "")
+        parents_result = git_command(
+            root, "rev-list", "--parents", "-n", "1", checked_head
+        )
+        parents = parents_result.stdout.decode(
+            "ascii", errors="replace"
+        ).strip().split()
+        if (
+            parents_result.returncode != 0
+            or parents != [checked_head, base_sha, head_sha]
+        ):
+            errors.append(
+                "checked pull_request HEAD must be the exact synthetic merge of "
+                "event base.sha and head.sha"
+            )
+            return
+        diff_base = base_sha
+        diff_head = head_sha
+    elif context_name == "local_branch":
+        main_result = git_command(root, "rev-parse", "refs/heads/main")
+        if main_result.returncode != 0:
+            errors.append("local Task authorization cannot resolve refs/heads/main")
+            return
+        main_sha = main_result.stdout.decode("ascii", errors="replace").strip()
+        merge_base_result = git_command(root, "merge-base", main_sha, "HEAD")
+        if merge_base_result.returncode != 0:
+            errors.append("local Task authorization cannot resolve the main merge-base")
+            return
+        merge_base = merge_base_result.stdout.decode("ascii", errors="replace").strip()
+        if task_base != main_sha or merge_base != main_sha:
+            errors.append(
+                "active Task base_commit must equal current local main and its HEAD merge-base"
+            )
+            return
+        diff_base = main_sha
+    else:
+        errors.append(f"unsupported Task-diff execution context: {context_name}")
+        return
+    diff_result = git_command(
+        root,
+        "diff",
+        "--name-only",
+        "-z",
+        "--no-renames",
+        f"{diff_base}...{diff_head}",
+        "--",
+    )
+    if diff_result.returncode != 0:
+        errors.append("cannot enumerate active Task diff from its pinned base")
+        return
+    changed_paths: list[str] = []
+    for raw_path in diff_result.stdout.split(b"\0"):
+        if not raw_path:
+            continue
+        try:
+            changed_paths.append(raw_path.decode("utf-8"))
+        except UnicodeError:
+            errors.append("active Task diff contains a non-UTF-8 path")
+            return
+    authorize_changed_paths(task, changed_paths, errors)
+
+
 def invariant_digest(invariants: Iterable[tuple[str, str]]) -> str:
     canonical = "".join(
         f"{identifier}\t{statement}\n"
@@ -369,14 +699,19 @@ def validate_invariants(root: Path, policy: dict[str, Any], errors: list[str]) -
     if identifiers != EXPECTED_INVARIANT_IDS or len(identifiers) != len(set(identifiers)):
         errors.append("live invariant IDs must be exactly I01 through I13 in order")
     digest = invariant_digest(invariants)
-    if digest != policy.get("invariant_digest"):
+    if digest != REVIEWED_INVARIANT_DIGEST:
+        errors.append("live invariant meanings do not match the reviewed live anchor")
+    if policy.get("invariant_digest") != REVIEWED_INVARIANT_DIGEST:
         errors.append("live invariant meanings do not match the reviewed policy digest")
 
     manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
     if manifest.get("release_blocked") is not True:
         errors.append("conformance manifest release_blocked must remain true")
     manifest_invariants = manifest.get("invariants")
-    if not isinstance(manifest_invariants, dict) or manifest_invariants.get("digest") != digest:
+    if (
+        not isinstance(manifest_invariants, dict)
+        or manifest_invariants.get("digest") != REVIEWED_INVARIANT_DIGEST
+    ):
         errors.append("conformance manifest invariant digest does not match AGENTS.md")
 
 
@@ -422,6 +757,88 @@ def simple_mapping(block: str, header: str) -> list[tuple[str, str]] | None:
             return None
         entries.append((match.group(1), match.group(2)))
     return entries
+
+
+def workflow_step_blocks(job_block: str) -> list[str]:
+    lines = job_block.splitlines()
+    starts = [
+        index for index, line in enumerate(lines) if re.match(r"^      -\s+", line)
+    ]
+    return [
+        "\n".join(
+            lines[
+                start : starts[position + 1]
+                if position + 1 < len(starts)
+                else len(lines)
+            ]
+        ).rstrip()
+        for position, start in enumerate(starts)
+    ]
+
+
+def canonical_job_header(name: str) -> str:
+    return (
+        f"  {name}:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    permissions:\n"
+        "      contents: read\n"
+        "    steps:"
+    )
+
+
+def validate_ci_job(
+    name: str, block: str, commands: list[str], errors: list[str]
+) -> None:
+    lines = block.splitlines()
+    try:
+        steps_index = lines.index("    steps:")
+    except ValueError:
+        steps_index = -1
+    header = "\n".join(lines[: steps_index + 1]) if steps_index >= 0 else ""
+    if header != canonical_job_header(name):
+        errors.append(
+            f"ci job {name!r} has unsupported job metadata or execution modifiers"
+        )
+
+    steps = workflow_step_blocks(block)
+    if len(steps) != len(commands) + 1:
+        errors.append(f"ci job {name!r} must contain exactly its reviewed steps")
+        return
+
+    checkout_lines = steps[0].splitlines()
+    checkout_match = ACTION_USE.fullmatch(checkout_lines[0]) if checkout_lines else None
+    if (
+        len(checkout_lines) != 4
+        or checkout_match is None
+        or not checkout_match.group(1).startswith("actions/checkout@")
+        or checkout_lines[1:] != [
+            "        with:",
+            "          fetch-depth: 0",
+            "          persist-credentials: false",
+        ]
+    ):
+        errors.append(
+            f"ci job {name!r} checkout step has unsupported fields or execution modifiers"
+        )
+
+    observed_commands: list[str] = []
+    for index, step in enumerate(steps[1:], start=1):
+        step_lines = step.splitlines()
+        if (
+            len(step_lines) != 2
+            or not re.fullmatch(
+                r"      - name: [A-Za-z0-9][A-Za-z0-9 ._:/()'&-]*",
+                step_lines[0],
+            )
+            or not step_lines[1].startswith("        run: ")
+        ):
+            errors.append(
+                f"ci job {name!r} step {index} has unsupported fields or execution modifiers"
+            )
+            continue
+        observed_commands.append(step_lines[1].removeprefix("        run: "))
+    if observed_commands != commands:
+        errors.append(f"ci job {name!r} commands differ from the reviewed policy order")
 
 
 def validate_action_uses(path: str, text: str, errors: list[str]) -> None:
@@ -489,6 +906,10 @@ def validate_workflows(root: Path, policy: dict[str, Any], errors: list[str]) ->
     except (OSError, UnicodeError) as exc:
         errors.append(f"cannot read live CI workflow: {exc}")
         return
+    if not text.startswith(CI_PREAMBLE):
+        errors.append(
+            "ci trigger/preamble must enable pull_request and push to main with empty permissions"
+        )
     blocks = workflow_job_blocks(text)
     job_names = re.findall(r"^  ([A-Za-z_][A-Za-z0-9_-]*):\s*$", text, re.MULTILINE)
     duplicates = sorted(name for name in set(job_names) if job_names.count(name) > 1)
@@ -497,9 +918,8 @@ def validate_workflows(root: Path, policy: dict[str, Any], errors: list[str]) ->
     required_jobs = policy.get("required_jobs")
     if not isinstance(required_jobs, list):
         return
-    missing = sorted(set(required_jobs) - set(blocks))
-    if missing:
-        errors.append(f"ci required job drift: missing {', '.join(missing)}")
+    if set(blocks) != {"quality", "conformance"}:
+        errors.append("ci required job drift: jobs must be exactly quality and conformance")
     command_fields = {
         "quality": "required_quality_commands",
         "conformance": "required_conformance_commands",
@@ -509,16 +929,7 @@ def validate_workflows(root: Path, policy: dict[str, Any], errors: list[str]) ->
         commands = policy.get(field)
         if not isinstance(commands, list):
             continue
-        for command in commands:
-            if f"        run: {command}" not in block:
-                errors.append(f"ci job {job_name!r} is missing required command: {command}")
-        checkout_lines = [line for line in block.splitlines() if "actions/checkout@" in line]
-        if len(checkout_lines) != 1:
-            errors.append(f"ci job {job_name!r} must contain exactly one checkout")
-        if "          fetch-depth: 0" not in block or "          persist-credentials: false" not in block:
-            errors.append(
-                f"ci job {job_name!r} checkout must disable persisted credentials and fetch history"
-            )
+        validate_ci_job(job_name, block, commands, errors)
 
 
 def validate_text_policy(root: Path, paths: set[str], errors: list[str]) -> None:
@@ -544,6 +955,7 @@ def validate_repository(
     verify_git: bool = True,
     observed_paths: set[str] | None = None,
     observed_modes: dict[str, str] | None = None,
+    environment: Mapping[str, str] | None = None,
 ) -> list[str]:
     root = root.resolve()
     errors: list[str] = []
@@ -559,6 +971,7 @@ def validate_repository(
     paths = discover_paths(root, index_entries) if observed_paths is None else set(observed_paths)
     if tree_entries is not None:
         paths.update(tree_entries)
+    validate_path_collisions(paths, "live repository", errors)
     modes = dict(observed_modes or {})
     if observed_modes is None:
         for relative in paths:
@@ -599,6 +1012,9 @@ def validate_repository(
 
     if verify_git:
         validate_git_evidence(root, payload, errors)
+        validate_execution_authorization(
+            root, payload, os.environ if environment is None else environment, errors
+        )
     validate_invariants(root, policy, errors)
     validate_workflows(root, policy, errors)
     validate_text_policy(root, paths, errors)
