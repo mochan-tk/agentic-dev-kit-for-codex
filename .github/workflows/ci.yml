@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate Phase 0 contracts
+        run: python3 .github/scripts/check-phase0-contracts.py
+      - name: Validate repository Action pins
+        run: bash .github/scripts/check-action-pins.sh
+      - name: Test Action-pin guard
+        run: bash .github/scripts/tests/test-action-pins.sh
+      - name: Validate repository workflow permissions
+        run: bash .github/scripts/check-workflow-permissions.sh
+      - name: Test workflow-permission guard
+        run: bash .github/scripts/tests/test-workflow-permissions.sh
+      - name: Compile Python checks
+        run: python3 -m py_compile .github/scripts/check-phase0-contracts.py tests/conformance/test_phase0_contracts.py
+
+  conformance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run Phase 0 conformance tests
+        run: python3 -m unittest discover -s tests/conformance -p 'test_*.py'

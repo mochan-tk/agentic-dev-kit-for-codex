@@ -1,0 +1,18 @@
+# Operating-system and editor artifacts.
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Local Python and test artifacts.
+__pycache__/
+*.py[cod]
+.coverage
+.pytest_cache/
+
+# Optional local Codex diagnostic output. Project `.codex/` remains tracked.
+.codex-log/
+
+# A root plan is replaceable session transport, not project truth.
+/plan.md

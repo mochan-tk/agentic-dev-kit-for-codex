@@ -1,0 +1,75 @@
+{
+  "schema": "phase-0-conformance-manifest/v1",
+  "observed_at": "2026-08-24T01:53:31+09:00",
+  "target": {
+    "repository": "mochan-tk/agentic-dev-kit-for-codex",
+    "seed_commit": "88179ec6a28393d7bf4cea96684e3af16b512484",
+    "seed_tree": "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+  },
+  "source": {
+    "repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+    "tree": "88f96493ec167602750c8dfec044629bd494a586",
+    "tracked_files": 135,
+    "signature": {
+      "github_api": "verified",
+      "local_gpg": "unverified"
+    },
+    "guard_test_files": 23
+  },
+  "research_pack": {
+    "zip_sha256": "55e3e36d581c40a30f4e09e208573fcc15b46a254077da4f177fe7b8adcad0f7",
+    "conformance_catalog_sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0",
+    "supplied_files_verified": 7
+  },
+  "invariants": {
+    "source": "AGENTS.md#canonical-invariants",
+    "algorithm": "sha256",
+    "canonicalization": "UTF-8 ID<TAB>statement<LF>, sorted by ID",
+    "count": 13,
+    "digest": "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c"
+  },
+  "scenario_catalog": {
+    "total": 136,
+    "families": {
+      "A": 6,
+      "C": 5,
+      "D": 4,
+      "E": 10,
+      "G": 13,
+      "H": 10,
+      "I": 15,
+      "O": 7,
+      "P": 12,
+      "R": 10,
+      "S": 8,
+      "T": 16,
+      "W": 12,
+      "X": 8
+    }
+  },
+  "contracts": [
+    {"id": "K01", "phase0_state": "foundation", "contract": "durable GitHub truth and canonical hierarchy"},
+    {"id": "K02", "phase0_state": "policy-only", "contract": "record verify and escalate"},
+    {"id": "K03", "phase0_state": "policy-only", "contract": "supervisor worker and exemption topology"},
+    {"id": "K04", "phase0_state": "policy-only", "contract": "single writer and ownership serialization"},
+    {"id": "K05", "phase0_state": "foundation", "contract": "human authority and risk gates"},
+    {"id": "K06", "phase0_state": "planned", "contract": "connector-neutral context contract"},
+    {"id": "K07", "phase0_state": "planned", "contract": "GitHub ledger schemas"},
+    {"id": "K08", "phase0_state": "planned", "contract": "eight repository Skills"},
+    {"id": "K09", "phase0_state": "planned", "contract": "role separation"},
+    {"id": "K10", "phase0_state": "planned", "contract": "Task execution envelope"},
+    {"id": "K11", "phase0_state": "planned", "contract": "normalized loop event receipts"},
+    {"id": "K12", "phase0_state": "planned", "contract": "Codex execution adapter"},
+    {"id": "K13", "phase0_state": "planned", "contract": "installer and upgrade safety"},
+    {"id": "K14", "phase0_state": "planned", "contract": "Task ritual and current-attempt evidence"},
+    {"id": "K15", "phase0_state": "planned", "contract": "governance sensors and actuators"},
+    {"id": "K16", "phase0_state": "unassigned", "contract": "consent feedback and retrospective learning"},
+    {"id": "K17", "phase0_state": "minimal", "contract": "least-privilege CI and self-check"},
+    {"id": "K18", "phase0_state": "recorded", "contract": "source defect deviations"},
+    {"id": "K19", "phase0_state": "foundation", "contract": "model neutrality and control-plane limits"},
+    {"id": "K20", "phase0_state": "blocked", "contract": "full parity evidence"}
+  ],
+  "results": [],
+  "release_blocked": true
+}
