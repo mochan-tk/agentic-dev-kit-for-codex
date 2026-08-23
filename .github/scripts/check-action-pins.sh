@@ -17,6 +17,7 @@ if [ "${#files[@]}" -eq 0 ]; then
 fi
 
 uses_key_re="(^|[[:space:]{,])(\"uses\"|'uses'|uses)[[:space:]]*:"
+quoted_key_re="\"[^\"]*\"[[:space:]]*:|'[^']*'[[:space:]]*:"
 external_re='^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]+[^@[:space:]#]+@[0-9a-f]{40}[[:space:]]+#[[:space:]]*v[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$'
 local_re='^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]+\./[^[:space:]#]+([[:space:]]+#[^[:cntrl:]]*)?[[:space:]]*$'
 
@@ -27,6 +28,9 @@ for file in "${files[@]}"; do
     line_number=$((line_number + 1))
     trimmed="${line#"${line%%[![:space:]]*}"}"
     if [[ "$trimmed" == \#* ]] || [[ ! "$line" =~ $uses_key_re ]]; then
+      if [[ "$trimmed" != \#* ]] && [[ "$line" =~ $quoted_key_re ]]; then
+        bad="${bad}${file}:${line_number}:${line}"$'\n'
+      fi
       continue
     fi
     if [[ "$line" =~ $external_re ]] || [[ "$line" =~ $local_re ]]; then

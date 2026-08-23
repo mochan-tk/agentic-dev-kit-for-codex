@@ -16,8 +16,10 @@ and source test results are provenance only; they are not target passes.
 
 The Phase 0 workflow guards intentionally accept only the reviewed canonical
 block-style YAML shape and fail closed on unsupported syntax. They are not a
-general YAML parser. The exact Phase 0 workflow digest, focused negative tests,
-and external `actionlint` validation are separate layers.
+general YAML parser. The exact Phase 0 workflow digest is an accidental-drift
+tripwire, not an authenticity root; canonical structure checks, focused
+negative tests, external `actionlint`, independent review, and branch policy
+remain separate layers.
 
 ## Roles and identifiers are not authenticated identity
 

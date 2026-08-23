@@ -48,7 +48,9 @@ EXPECTED_SOURCE = {
 
 EXPECTED_PACK = {
     "zip_sha256": "55e3e36d581c40a30f4e09e208573fcc15b46a254077da4f177fe7b8adcad0f7",
-    "conformance_catalog_sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0",
+    "conformance_catalog_sha256": (
+        "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0"
+    ),
     "supplied_files_verified": 7,
 }
 
@@ -60,10 +62,16 @@ EXPECTED_WORKFLOW_SHA256 = (
 )
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
 EXPECTED_CONTRACTS = {
-    "K01": {"phase0_state": "foundation", "contract": "durable GitHub truth and canonical hierarchy"},
+    "K01": {
+        "phase0_state": "foundation",
+        "contract": "durable GitHub truth and canonical hierarchy",
+    },
     "K02": {"phase0_state": "policy-only", "contract": "record verify and escalate"},
     "K03": {"phase0_state": "policy-only", "contract": "supervisor worker and exemption topology"},
-    "K04": {"phase0_state": "policy-only", "contract": "single writer and ownership serialization"},
+    "K04": {
+        "phase0_state": "policy-only",
+        "contract": "single writer and ownership serialization",
+    },
     "K05": {"phase0_state": "foundation", "contract": "human authority and risk gates"},
     "K06": {"phase0_state": "planned", "contract": "connector-neutral context contract"},
     "K07": {"phase0_state": "planned", "contract": "GitHub ledger schemas"},
@@ -75,7 +83,10 @@ EXPECTED_CONTRACTS = {
     "K13": {"phase0_state": "planned", "contract": "installer and upgrade safety"},
     "K14": {"phase0_state": "planned", "contract": "Task ritual and current-attempt evidence"},
     "K15": {"phase0_state": "planned", "contract": "governance sensors and actuators"},
-    "K16": {"phase0_state": "unassigned", "contract": "consent feedback and retrospective learning"},
+    "K16": {
+        "phase0_state": "unassigned",
+        "contract": "consent feedback and retrospective learning",
+    },
     "K17": {"phase0_state": "minimal", "contract": "least-privilege CI and self-check"},
     "K18": {"phase0_state": "recorded", "contract": "source defect deviations"},
     "K19": {"phase0_state": "foundation", "contract": "model neutrality and control-plane limits"},
@@ -119,20 +130,49 @@ IGNORED_PARTS = {".git", "__pycache__", ".pytest_cache", ".codex-log"}
 INVARIANT_ROW = re.compile(r"^\|\s*(I\d{2})\s*\|\s*(.*?)\s*\|\s*$")
 ACTION_USE = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)(?:\s+#\s*(\S.*))?$")
 USES_TOKEN = re.compile(r'''(?:^|[\s{,])(?:"uses"|'uses'|uses)\s*:''')
+QUOTED_MAPPING_KEY = re.compile(r'''(?:"(?:[^"\\]|\\.)*"|'[^']*')\s*:''')
 FULL_ACTION_REF = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
 MODEL_SLUG = re.compile(r"\bgpt-[a-z0-9.-]+", re.IGNORECASE)
 
-EXPECTED_JOB_RUNS = {
+EXPECTED_WORKFLOW_PREAMBLE = """name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+"""
+CHECKOUT_STEP = """      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false"""
+EXPECTED_JOB_COMMANDS = {
     "quality": [
-        "python3 .github/scripts/check-phase0-contracts.py",
-        "bash .github/scripts/check-action-pins.sh",
-        "bash .github/scripts/tests/test-action-pins.sh",
-        "bash .github/scripts/check-workflow-permissions.sh",
-        "bash .github/scripts/tests/test-workflow-permissions.sh",
-        "python3 -m py_compile .github/scripts/check-phase0-contracts.py tests/conformance/test_phase0_contracts.py",
+        ("Validate Phase 0 contracts", "python3 .github/scripts/check-phase0-contracts.py"),
+        ("Validate repository Action pins", "bash .github/scripts/check-action-pins.sh"),
+        ("Test Action-pin guard", "bash .github/scripts/tests/test-action-pins.sh"),
+        (
+            "Validate repository workflow permissions",
+            "bash .github/scripts/check-workflow-permissions.sh",
+        ),
+        (
+            "Test workflow-permission guard",
+            "bash .github/scripts/tests/test-workflow-permissions.sh",
+        ),
+        (
+            "Compile Python checks",
+            "python3 -m py_compile .github/scripts/check-phase0-contracts.py "
+            "tests/conformance/test_phase0_contracts.py",
+        ),
     ],
     "conformance": [
-        "python3 -m unittest discover -s tests/conformance -p 'test_*.py'",
+        (
+            "Run Phase 0 conformance tests",
+            "python3 -m unittest discover -s tests/conformance -p 'test_*.py'",
+        ),
     ],
 }
 
@@ -303,7 +343,10 @@ def validate_contracts(manifest: dict[str, Any], errors: list[str]) -> None:
     )
     if duplicates:
         errors.append(f"duplicate contract ID(s): {', '.join(duplicates)}")
-    if sorted(identifier for identifier in identifiers if isinstance(identifier, str)) != EXPECTED_CONTRACT_IDS:
+    observed_ids = sorted(
+        identifier for identifier in identifiers if isinstance(identifier, str)
+    )
+    if observed_ids != EXPECTED_CONTRACT_IDS:
         errors.append("contract IDs must be exactly K01 through K20")
     for item in contracts:
         if not isinstance(item, dict):
@@ -336,7 +379,9 @@ def validate_results(manifest: dict[str, Any], errors: list[str]) -> None:
         if status == "pass" and not result.get("target_evidence"):
             errors.append(f"results[{index}] pass requires non-empty target_evidence")
     if results:
-        errors.append("Phase 0 results must remain empty; release evidence belongs to later phases")
+        errors.append(
+            "Phase 0 results must remain empty; release evidence belongs to later phases"
+        )
 
 
 def validate_docs(root: Path, errors: list[str]) -> None:
@@ -447,8 +492,34 @@ def workflow_step_blocks(job_block: str) -> list[str]:
     blocks: list[str] = []
     for position, start in enumerate(starts):
         end = starts[position + 1] if position + 1 < len(starts) else len(lines)
-        blocks.append("\n".join(lines[start:end]))
+        blocks.append("\n".join(lines[start:end]).rstrip())
     return blocks
+
+
+def expected_job_steps(name: str) -> list[str]:
+    commands = EXPECTED_JOB_COMMANDS.get(name, [])
+    return [CHECKOUT_STEP] + [
+        f"      - name: {label}\n        run: {command}"
+        for label, command in commands
+    ]
+
+
+def canonical_job_header(name: str) -> str:
+    return (
+        f"  {name}:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    permissions:\n"
+        "      contents: read\n"
+        "    steps:"
+    )
+
+
+def canonical_workflow_text() -> str:
+    job_blocks = [
+        canonical_job_header(name) + "\n" + "\n".join(expected_job_steps(name))
+        for name in ("quality", "conformance")
+    ]
+    return EXPECTED_WORKFLOW_PREAMBLE + "\n\n".join(job_blocks) + "\n"
 
 
 def validate_workflow(root: Path, errors: list[str]) -> None:
@@ -466,10 +537,30 @@ def validate_workflow(root: Path, errors: list[str]) -> None:
             f"workflow content digest must be {EXPECTED_WORKFLOW_SHA256}, found {digest}"
         )
 
+    if not text.startswith(EXPECTED_WORKFLOW_PREAMBLE):
+        errors.append("Phase 0 workflow preamble must match the canonical shape")
+    if text != canonical_workflow_text():
+        errors.append(
+            "Phase 0 workflow must match the canonical step shape and approved job fields"
+        )
+    if "\t" in text:
+        errors.append("Phase 0 workflow must not contain tab indentation")
+
     blocks = workflow_job_blocks(text)
     if set(blocks) != {"quality", "conformance"}:
         errors.append("Phase 0 workflow jobs must be exactly quality and conformance")
     for name, block in blocks.items():
+        block_lines = block.splitlines()
+        try:
+            steps_index = block_lines.index("    steps:")
+        except ValueError:
+            steps_index = -1
+        observed_header = (
+            "\n".join(block_lines[: steps_index + 1]) if steps_index >= 0 else ""
+        )
+        if observed_header != canonical_job_header(name):
+            errors.append(f"workflow job {name!r} header must match canonical shape")
+
         permissions = simple_mapping(block, "    permissions:")
         if permissions != [("contents", "read")]:
             errors.append(
@@ -477,6 +568,8 @@ def validate_workflow(root: Path, errors: list[str]) -> None:
             )
 
         steps = workflow_step_blocks(block)
+        if steps != expected_job_steps(name):
+            errors.append(f"workflow job {name!r} must use the canonical step shape")
         action_steps: list[tuple[str, str]] = []
         for step in steps:
             for line in step.splitlines():
@@ -501,17 +594,14 @@ def validate_workflow(root: Path, errors: list[str]) -> None:
                     "must be false and fetch-depth must be 0"
                 )
 
-        runs = []
-        for line in block.splitlines():
-            match = re.fullmatch(r"        run:\s*(\S.*)", line)
-            if match:
-                runs.append(match.group(1))
-        if name in EXPECTED_JOB_RUNS and runs != EXPECTED_JOB_RUNS[name]:
-            errors.append(f"workflow job {name!r} must run the exact Phase 0 checks")
-
     uses = 0
     for line_number, line in enumerate(text.splitlines(), start=1):
         if line.lstrip().startswith("#"):
+            continue
+        if QUOTED_MAPPING_KEY.search(line):
+            errors.append(
+                f"ci.yml:{line_number} quoted or escaped mapping key is unsupported"
+            )
             continue
         match = ACTION_USE.match(line)
         if USES_TOKEN.search(line) and not match:
