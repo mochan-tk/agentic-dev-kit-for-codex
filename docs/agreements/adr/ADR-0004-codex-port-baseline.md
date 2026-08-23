@@ -104,4 +104,3 @@ audit the PR's current head before a human decides whether to merge.
 - [Official subagent/custom-agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 - [Official hooks documentation](https://learn.chatgpt.com/docs/hooks)
 - [Official non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode)
-

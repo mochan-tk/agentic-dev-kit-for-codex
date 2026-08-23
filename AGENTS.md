@@ -136,4 +136,3 @@ human's language.
 Change this constitution only in a reviewed PR with an updated invariant
 digest, rationale, conformance evidence, and human acceptance. Procedures
 belong in Skills or deterministic guards rather than accumulating here.
-

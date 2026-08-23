@@ -16,4 +16,3 @@ __pycache__/
 
 # A root plan is replaceable session transport, not project truth.
 /plan.md
-

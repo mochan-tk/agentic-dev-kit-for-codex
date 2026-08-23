@@ -243,6 +243,21 @@ class Phase0ContractsTest(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         self.assert_rejected(self.errors_for(fixture), "checkout with.persist-credentials")
 
+    def test_workflow_escape_hatch_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / ".github/workflows/ci.yml"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "        run: python3 .github/scripts/check-phase0-contracts.py",
+                "        continue-on-error: true\n"
+                "        run: python3 .github/scripts/check-phase0-contracts.py",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_rejected(self.errors_for(fixture), "workflow content digest")
+
     def test_copilot_execution_asset_is_rejected(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
@@ -294,6 +309,21 @@ class Phase0ContractsTest(unittest.TestCase):
         path.unlink()
         path.symlink_to("AGENTS.md")
         self.assert_rejected(self.errors_for(fixture), "must not be a symlink")
+
+    def test_executable_mode_on_phase0_document_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        subprocess.run(
+            ["git", "-c", "init.defaultBranch=main", "init", "-q", str(fixture)],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(fixture), "add", "-A"], check=True)
+        readme = fixture / "README.md"
+        readme.chmod(readme.stat().st_mode | 0o111)
+        subprocess.run(
+            ["git", "-C", str(fixture), "add", "README.md"], check=True
+        )
+        self.assert_rejected(self.errors_for(fixture), "mode 100644")
 
 
 if __name__ == "__main__":

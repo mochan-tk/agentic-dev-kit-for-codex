@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Iterable
@@ -54,8 +55,33 @@ EXPECTED_PACK = {
 EXPECTED_INVARIANT_DIGEST = (
     "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c"
 )
+EXPECTED_WORKFLOW_SHA256 = (
+    "8991d5a55685879da2b018a6531793138efc43c1cc7f81808133ef5e6e4350f2"
+)
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
-EXPECTED_CONTRACT_IDS = [f"K{number:02d}" for number in range(1, 21)]
+EXPECTED_CONTRACTS = {
+    "K01": {"phase0_state": "foundation", "contract": "durable GitHub truth and canonical hierarchy"},
+    "K02": {"phase0_state": "policy-only", "contract": "record verify and escalate"},
+    "K03": {"phase0_state": "policy-only", "contract": "supervisor worker and exemption topology"},
+    "K04": {"phase0_state": "policy-only", "contract": "single writer and ownership serialization"},
+    "K05": {"phase0_state": "foundation", "contract": "human authority and risk gates"},
+    "K06": {"phase0_state": "planned", "contract": "connector-neutral context contract"},
+    "K07": {"phase0_state": "planned", "contract": "GitHub ledger schemas"},
+    "K08": {"phase0_state": "planned", "contract": "eight repository Skills"},
+    "K09": {"phase0_state": "planned", "contract": "role separation"},
+    "K10": {"phase0_state": "planned", "contract": "Task execution envelope"},
+    "K11": {"phase0_state": "planned", "contract": "normalized loop event receipts"},
+    "K12": {"phase0_state": "planned", "contract": "Codex execution adapter"},
+    "K13": {"phase0_state": "planned", "contract": "installer and upgrade safety"},
+    "K14": {"phase0_state": "planned", "contract": "Task ritual and current-attempt evidence"},
+    "K15": {"phase0_state": "planned", "contract": "governance sensors and actuators"},
+    "K16": {"phase0_state": "unassigned", "contract": "consent feedback and retrospective learning"},
+    "K17": {"phase0_state": "minimal", "contract": "least-privilege CI and self-check"},
+    "K18": {"phase0_state": "recorded", "contract": "source defect deviations"},
+    "K19": {"phase0_state": "foundation", "contract": "model neutrality and control-plane limits"},
+    "K20": {"phase0_state": "blocked", "contract": "full parity evidence"},
+}
+EXPECTED_CONTRACT_IDS = sorted(EXPECTED_CONTRACTS)
 EXPECTED_FAMILIES = {
     "A": 6,
     "C": 5,
@@ -92,12 +118,56 @@ REQUIRED_LIMITATION_PHRASES = (
 IGNORED_PARTS = {".git", "__pycache__", ".pytest_cache", ".codex-log"}
 INVARIANT_ROW = re.compile(r"^\|\s*(I\d{2})\s*\|\s*(.*?)\s*\|\s*$")
 ACTION_USE = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)(?:\s+#\s*(\S.*))?$")
+USES_TOKEN = re.compile(r'''(?:^|[\s{,])(?:"uses"|'uses'|uses)\s*:''')
 FULL_ACTION_REF = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
 MODEL_SLUG = re.compile(r"\bgpt-[a-z0-9.-]+", re.IGNORECASE)
 
+EXPECTED_JOB_RUNS = {
+    "quality": [
+        "python3 .github/scripts/check-phase0-contracts.py",
+        "bash .github/scripts/check-action-pins.sh",
+        "bash .github/scripts/tests/test-action-pins.sh",
+        "bash .github/scripts/check-workflow-permissions.sh",
+        "bash .github/scripts/tests/test-workflow-permissions.sh",
+        "python3 -m py_compile .github/scripts/check-phase0-contracts.py tests/conformance/test_phase0_contracts.py",
+    ],
+    "conformance": [
+        "python3 -m unittest discover -s tests/conformance -p 'test_*.py'",
+    ],
+}
+
+
+def git_index_entries(root: Path) -> dict[str, str] | None:
+    """Return tracked path -> mode, or None when root is not a usable Git worktree."""
+
+    if not (root / ".git").exists():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--stage", "-z"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+
+    entries: dict[str, str] = {}
+    for raw_record in result.stdout.split(b"\0"):
+        if not raw_record:
+            continue
+        record = raw_record.decode("utf-8", errors="surrogateescape")
+        metadata, relative = record.split("\t", 1)
+        mode, _object_id, stage = metadata.split()
+        if stage == "0":
+            entries[relative] = mode
+    return entries
+
 
 def discover_paths(root: Path) -> set[str]:
-    """Return repository files while excluding known local-only artifacts."""
+    """Return tracked paths plus non-ignored working-tree files."""
 
     paths: set[str] = set()
     for path in root.rglob("*"):
@@ -109,6 +179,9 @@ def discover_paths(root: Path) -> set[str]:
         if path.name in {".DS_Store", "Thumbs.db"}:
             continue
         paths.add(relative.as_posix())
+    tracked = git_index_entries(root)
+    if tracked is not None:
+        paths.update(tracked)
     return paths
 
 
@@ -236,8 +309,15 @@ def validate_contracts(manifest: dict[str, Any], errors: list[str]) -> None:
         if not isinstance(item, dict):
             errors.append("every contract must be an object")
             continue
-        if not item.get("contract") or not item.get("phase0_state"):
-            errors.append(f"contract {item.get('id')!r} needs contract and phase0_state")
+        identifier = item.get("id")
+        expected = EXPECTED_CONTRACTS.get(identifier)
+        if expected is None:
+            continue
+        expected_item = {"id": identifier, **expected}
+        if item != expected_item:
+            errors.append(
+                f"contract {identifier} must match the frozen Phase 0 state and text"
+            )
 
 
 def validate_results(manifest: dict[str, Any], errors: list[str]) -> None:
@@ -320,6 +400,8 @@ def workflow_job_blocks(text: str) -> dict[str, str]:
         return {}
     starts: list[tuple[int, str]] = []
     for index in range(jobs_index + 1, len(lines)):
+        if lines[index] and not lines[index][0].isspace():
+            break
         match = re.match(r"^  ([A-Za-z_][A-Za-z0-9_-]*):\s*$", lines[index])
         if match:
             starts.append((index, match.group(1)))
@@ -330,29 +412,113 @@ def workflow_job_blocks(text: str) -> dict[str, str]:
     return blocks
 
 
+def simple_mapping(block: str, header: str) -> list[tuple[str, str]] | None:
+    """Parse one canonical block-style scalar mapping beneath an exact header."""
+
+    lines = block.splitlines()
+    indexes = [index for index, line in enumerate(lines) if line == header]
+    if len(indexes) != 1:
+        return None
+    header_indent = len(header) - len(header.lstrip(" "))
+    child_indent = header_indent + 2
+    entries: list[tuple[str, str]] = []
+    for line in lines[indexes[0] + 1 :]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        if indent <= header_indent:
+            break
+        if indent != child_indent:
+            return None
+        content = re.sub(r"\s+#.*$", "", stripped)
+        match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_-]*):\s*(\S.*)", content)
+        if not match:
+            return None
+        entries.append((match.group(1), match.group(2)))
+    return entries
+
+
+def workflow_step_blocks(job_block: str) -> list[str]:
+    lines = job_block.splitlines()
+    starts = [
+        index for index, line in enumerate(lines) if re.match(r"^      -\s+", line)
+    ]
+    blocks: list[str] = []
+    for position, start in enumerate(starts):
+        end = starts[position + 1] if position + 1 < len(starts) else len(lines)
+        blocks.append("\n".join(lines[start:end]))
+    return blocks
+
+
 def validate_workflow(root: Path, errors: list[str]) -> None:
     path = root / ".github/workflows/ci.yml"
     try:
-        text = path.read_text(encoding="utf-8")
+        raw = path.read_bytes()
+        text = raw.decode("utf-8")
     except (OSError, UnicodeError) as exc:
         errors.append(f"cannot read Phase 0 workflow: {exc}")
         return
+
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != EXPECTED_WORKFLOW_SHA256:
+        errors.append(
+            f"workflow content digest must be {EXPECTED_WORKFLOW_SHA256}, found {digest}"
+        )
 
     blocks = workflow_job_blocks(text)
     if set(blocks) != {"quality", "conformance"}:
         errors.append("Phase 0 workflow jobs must be exactly quality and conformance")
     for name, block in blocks.items():
-        if not re.search(r"(?m)^    permissions:\s*\n      contents: read\s*$", block):
-            errors.append(f"workflow job {name!r} must grant exactly contents: read")
-        checkout_count = block.count("actions/checkout@")
-        if checkout_count != 1:
-            errors.append(f"workflow job {name!r} must contain one checkout step")
-        if block.count("persist-credentials: false") != checkout_count:
-            errors.append(f"workflow job {name!r} must disable persisted checkout credentials")
+        permissions = simple_mapping(block, "    permissions:")
+        if permissions != [("contents", "read")]:
+            errors.append(
+                f"workflow job {name!r} permissions must contain only contents: read"
+            )
+
+        steps = workflow_step_blocks(block)
+        action_steps: list[tuple[str, str]] = []
+        for step in steps:
+            for line in step.splitlines():
+                match = ACTION_USE.match(line)
+                if match:
+                    action_steps.append((match.group(1), step))
+        checkout_steps = [
+            step for reference, step in action_steps if reference.startswith("actions/checkout@")
+        ]
+        if len(action_steps) != 1 or len(checkout_steps) != 1:
+            errors.append(
+                f"workflow job {name!r} must contain only one checkout Action step"
+            )
+        else:
+            checkout_with = simple_mapping(checkout_steps[0], "        with:")
+            if checkout_with != [
+                ("fetch-depth", "0"),
+                ("persist-credentials", "false"),
+            ]:
+                errors.append(
+                    f"workflow job {name!r} checkout with.persist-credentials "
+                    "must be false and fetch-depth must be 0"
+                )
+
+        runs = []
+        for line in block.splitlines():
+            match = re.fullmatch(r"        run:\s*(\S.*)", line)
+            if match:
+                runs.append(match.group(1))
+        if name in EXPECTED_JOB_RUNS and runs != EXPECTED_JOB_RUNS[name]:
+            errors.append(f"workflow job {name!r} must run the exact Phase 0 checks")
 
     uses = 0
     for line_number, line in enumerate(text.splitlines(), start=1):
+        if line.lstrip().startswith("#"):
+            continue
         match = ACTION_USE.match(line)
+        if USES_TOKEN.search(line) and not match:
+            errors.append(
+                f"ci.yml:{line_number} uses syntax must be canonical block-style YAML"
+            )
+            continue
         if not match:
             continue
         uses += 1
@@ -361,12 +527,12 @@ def validate_workflow(root: Path, errors: list[str]) -> None:
             errors.append(
                 f"ci.yml:{line_number} Action reference must use a full commit SHA"
             )
-        if not comment or not re.match(r"v\d", comment):
+        if not comment or not re.fullmatch(r"v\d+\.\d+\.\d+", comment):
             errors.append(
                 f"ci.yml:{line_number} pinned Action needs a version comment"
             )
-    if uses == 0:
-        errors.append("Phase 0 workflow must contain pinned Action uses")
+    if uses != 2:
+        errors.append("Phase 0 workflow must contain exactly two pinned Action uses")
 
 
 def validate_repository(root: Path, paths: set[str] | None = None) -> list[str]:
@@ -374,11 +540,25 @@ def validate_repository(root: Path, paths: set[str] | None = None) -> list[str]:
     observed_paths = discover_paths(root) if paths is None else set(paths)
     errors: list[str] = []
 
+    index_entries = git_index_entries(root)
+    if (root / ".git").exists() and index_entries is None:
+        errors.append("cannot classify tracked Phase 0 paths from the Git index")
+
     for relative in sorted(EXPECTED_PATHS):
-        if not (root / relative).is_file():
+        path = root / relative
+        if path.is_symlink():
+            errors.append(f"required Phase 0 path must not be a symlink: {relative}")
+        if not path.is_file():
             errors.append(f"missing required Phase 0 path: {relative}")
     for relative in sorted(observed_paths - EXPECTED_PATHS):
         errors.append(f"unexpected Phase 0 path outside ownership allowlist: {relative}")
+    if index_entries is not None:
+        for relative, mode in sorted(index_entries.items()):
+            if relative in EXPECTED_PATHS and mode != "100644":
+                errors.append(
+                    f"required Phase 0 path must use regular mode 100644: "
+                    f"{relative} has {mode}"
+                )
 
     manifest_path = root / "tests/conformance/manifest.json"
     manifest = read_json(manifest_path, errors, "conformance manifest")
@@ -430,7 +610,8 @@ def main() -> int:
         return 1
     print(
         "phase0-contracts: OK — baseline, 13 invariants, 20 contracts, "
-        "136-scenario catalog, limitations, ownership, and CI are consistent"
+        "frozen catalog hash and 136 aggregate counts, limitations, ownership, "
+        "and CI are consistent"
     )
     return 0
 

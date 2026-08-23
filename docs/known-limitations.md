@@ -14,6 +14,11 @@ constitution or manifest does not make those controls active.
 The conformance result set is empty and `release_blocked` is true. Source CI
 and source test results are provenance only; they are not target passes.
 
+The Phase 0 workflow guards intentionally accept only the reviewed canonical
+block-style YAML shape and fail closed on unsupported syntax. They are not a
+general YAML parser. The exact Phase 0 workflow digest, focused negative tests,
+and external `actionlint` validation are separate layers.
+
 ## Roles and identifiers are not authenticated identity
 
 A custom-agent name, TOML file, declared role, issue comment, thread ID,

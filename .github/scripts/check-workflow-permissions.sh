@@ -31,8 +31,22 @@ for workflow in "$DIR"/*.yml "$DIR"/*.yaml; do
       inperm = 0
       next
     }
+    job == "" && /^[[:space:]]+[^[:space:]#]/ {
+      print "__PARSE_ERROR__\t0\t0\t0\t0"
+      exit
+    }
+    /^  [^[:space:]#]/ {
+      print "__PARSE_ERROR__\t0\t0\t0\t0"
+      job = ""
+      exit
+    }
     job == "" { next }
-    /^    permissions:/ { hasperm = 1; inperm = 1; next }
+    /^    permissions:[[:space:]]*$/ { hasperm = 1; inperm = 1; next }
+    /^    permissions:/ {
+      print "__PARSE_ERROR__\t0\t0\t0\t0"
+      job = ""
+      exit
+    }
     /^    [a-zA-Z]/ { inperm = 0 }
     inperm && /^      contents:/ {
       value = $0
@@ -49,9 +63,15 @@ for workflow in "$DIR"/*.yml "$DIR"/*.yaml; do
     }
   ' "$workflow")"
 
+  workflow_checked=0
   while IFS=$'\t' read -r job hasperm validcontents invalidcontents hascheckout; do
     [ -n "$job" ] || continue
+    if [ "$job" = "__PARSE_ERROR__" ]; then
+      findings="${findings}${workflow}: unsupported YAML shape; expected canonical block-style jobs and permissions."$'\n'
+      continue
+    fi
     checked=$((checked + 1))
+    workflow_checked=$((workflow_checked + 1))
     if [ "$hasperm" = "1" ] && [ "$hascheckout" = "1" ] \
       && { [ "$validcontents" = "0" ] || [ "$invalidcontents" = "1" ]; }; then
       findings="${findings}${workflow}: job '${job}' declares permissions and checks out"$'\n'"    the repository, but grants no usable 'contents' scope (expected read or write)."$'\n'
@@ -59,6 +79,9 @@ for workflow in "$DIR"/*.yml "$DIR"/*.yaml; do
   done <<EOF
 $report
 EOF
+  if [ "$workflow_checked" -eq 0 ]; then
+    findings="${findings}${workflow}: no canonical block-style jobs could be classified."$'\n'
+  fi
 done
 
 if [ -n "$findings" ]; then
