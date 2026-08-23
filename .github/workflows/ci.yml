@@ -19,6 +19,8 @@ jobs:
           persist-credentials: false
       - name: Validate Phase 0 contracts
         run: python3 .github/scripts/check-phase0-contracts.py
+      - name: Validate live repository policy
+        run: python3 .github/scripts/check-repository-policy.py
       - name: Validate repository Action pins
         run: bash .github/scripts/check-action-pins.sh
       - name: Test Action-pin guard
@@ -28,7 +30,7 @@ jobs:
       - name: Test workflow-permission guard
         run: bash .github/scripts/tests/test-workflow-permissions.sh
       - name: Compile Python checks
-        run: python3 -m py_compile .github/scripts/check-phase0-contracts.py tests/conformance/test_phase0_contracts.py
+        run: python3 -m py_compile .github/scripts/check-phase0-contracts.py .github/scripts/check-repository-policy.py tests/conformance/test_phase0_contracts.py tests/conformance/test_repository_policy.py
 
   conformance:
     runs-on: ubuntu-latest

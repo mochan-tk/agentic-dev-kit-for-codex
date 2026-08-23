@@ -1,0 +1,70 @@
+{
+  "schema": "phase-task-ownership/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "phase": {
+    "id": "phase-1",
+    "epic": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+    "base_commit": "32615344ad4f0310948bc59d234a84718741788a",
+    "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+    "release_blocked": true
+  },
+  "policy": {
+    "invariant_digest": "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c",
+    "required_jobs": ["quality", "conformance"],
+    "required_quality_commands": [
+      "python3 .github/scripts/check-phase0-contracts.py",
+      "python3 .github/scripts/check-repository-policy.py",
+      "bash .github/scripts/check-action-pins.sh",
+      "bash .github/scripts/tests/test-action-pins.sh",
+      "bash .github/scripts/check-workflow-permissions.sh",
+      "bash .github/scripts/tests/test-workflow-permissions.sh",
+      "python3 -m py_compile .github/scripts/check-phase0-contracts.py .github/scripts/check-repository-policy.py tests/conformance/test_phase0_contracts.py tests/conformance/test_repository_policy.py"
+    ],
+    "required_conformance_commands": [
+      "python3 -m unittest discover -s tests/conformance -p 'test_*.py'"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "P00",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/1",
+      "state": "accepted",
+      "branch": "codex/phase-0-foundation",
+      "base_commit": "32615344ad4f0310948bc59d234a84718741788a",
+      "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+      "owned_paths": [
+        {"path": ".gitattributes", "mode": "100644"},
+        {"path": ".github/scripts/check-action-pins.sh", "mode": "100644"},
+        {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644"},
+        {"path": ".github/scripts/tests/lib.sh", "mode": "100644"},
+        {"path": ".github/scripts/tests/test-action-pins.sh", "mode": "100644"},
+        {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
+        {"path": ".gitignore", "mode": "100644"},
+        {"path": "AGENTS.md", "mode": "100644"},
+        {"path": "LICENSE", "mode": "100644"},
+        {"path": "README.md", "mode": "100644"},
+        {"path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md", "mode": "100644"},
+        {"path": "docs/known-limitations.md", "mode": "100644"},
+        {"path": "docs/planning/phase-0-orientation.md", "mode": "100644"},
+        {"path": "tests/conformance/manifest.json", "mode": "100644"}
+      ]
+    },
+    {
+      "id": "T03",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5",
+      "state": "active",
+      "branch": "codex/phase-1-policy-bridge",
+      "base_commit": "32615344ad4f0310948bc59d234a84718741788a",
+      "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+      "owned_paths": [
+        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
+        {"path": ".github/scripts/check-phase0-contracts.py", "mode": "100644"},
+        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
+        {"path": ".github/workflows/ci.yml", "mode": "100644"},
+        {"path": "tests/conformance/phase0-snapshot.json", "mode": "100644"},
+        {"path": "tests/conformance/test_phase0_contracts.py", "mode": "100644"},
+        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"}
+      ]
+    }
+  ]
+}
