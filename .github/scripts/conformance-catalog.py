@@ -44,6 +44,81 @@ MANAGED_OUTPUT_PATHS = {
     HUMAN_CATALOG_PATH,
 }
 
+FIXED_ASSET_POLICY_VERSION = 1
+MIB = 1024 * 1024
+FIXED_ASSET_CLASS_LIMITS = {
+    "frozen-source/v1": 1 * MIB,
+    "catalog-json/v1": 4 * MIB,
+    "independent-json/v1": 4 * MIB,
+    "contract-json/v1": 1 * MIB,
+    "repository-text/v1": 4 * MIB,
+    "policy-text/v1": 1 * MIB,
+}
+FIXED_ASSET_SPECS = {
+    SOURCE_PATH: {
+        "label": "scenario source",
+        "class": "frozen-source/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["frozen-source/v1"],
+    },
+    SOURCE_MANIFEST_PATH: {
+        "label": "source provenance",
+        "class": "contract-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["contract-json/v1"],
+    },
+    CATALOG_PATH: {
+        "label": "canonical catalog",
+        "class": "catalog-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["catalog-json/v1"],
+    },
+    CATALOG_SCHEMA_PATH: {
+        "label": "catalog schema",
+        "class": "contract-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["contract-json/v1"],
+    },
+    COVERAGE_PATH: {
+        "label": "target coverage",
+        "class": "independent-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["independent-json/v1"],
+    },
+    COVERAGE_SCHEMA_PATH: {
+        "label": "coverage schema",
+        "class": "contract-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["contract-json/v1"],
+    },
+    RESULTS_PATH: {
+        "label": "conformance results",
+        "class": "independent-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["independent-json/v1"],
+    },
+    RESULTS_SCHEMA_PATH: {
+        "label": "results schema",
+        "class": "contract-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["contract-json/v1"],
+    },
+    HUMAN_CATALOG_PATH: {
+        "label": "rendered catalog",
+        "class": "repository-text/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["repository-text/v1"],
+    },
+    PROVENANCE_ADR_PATH: {
+        "label": "catalog provenance ADR",
+        "class": "policy-text/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["policy-text/v1"],
+    },
+    PHASE_MANIFEST_PATH: {
+        "label": "Phase conformance manifest",
+        "class": "contract-json/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["contract-json/v1"],
+    },
+    TOOL_PATH: {
+        "label": "catalog tool",
+        "class": "policy-text/v1",
+        "max_bytes": FIXED_ASSET_CLASS_LIMITS["policy-text/v1"],
+    },
+}
+AGREEMENT_ADR_MAX_BYTES = FIXED_ASSET_CLASS_LIMITS["policy-text/v1"]
+READ_CHUNK_BYTES = 64 * 1024
+
 RESEARCH_ARCHIVE_NAME = "agentic-dev-kit-codex-research-pack.zip"
 RESEARCH_ARCHIVE_MEMBER = (
     "agentic-dev-kit-codex-research-pack/05_CONFORMANCE_SCENARIOS.md"
@@ -159,11 +234,7 @@ def canonical_json_bytes(value: Any) -> bytes:
         raise CatalogError("JSON value cannot be canonicalized") from None
 
 
-def read_utf8_lf(path: Path, label: str) -> tuple[bytes, str]:
-    try:
-        raw = path.read_bytes()
-    except OSError:
-        raise CatalogError(f"{label} cannot be read") from None
+def decode_utf8_lf(raw: bytes, label: str) -> tuple[bytes, str]:
     if raw.startswith(b"\xef\xbb\xbf"):
         raise CatalogError(f"{label} must not contain a UTF-8 BOM")
     if b"\r" in raw:
@@ -179,8 +250,10 @@ def read_utf8_lf(path: Path, label: str) -> tuple[bytes, str]:
     return raw, text
 
 
-def load_json(path: Path, label: str, *, canonical: bool = True) -> dict[str, Any]:
-    raw, text = read_utf8_lf(path, label)
+def parse_json_bytes(
+    raw: bytes, label: str, *, canonical: bool = True
+) -> dict[str, Any]:
+    raw, text = decode_utf8_lf(raw, label)
     try:
         value = json.loads(text, object_pairs_hook=reject_duplicate_json_keys)
     except json.JSONDecodeError as exc:
@@ -200,10 +273,13 @@ def load_json(path: Path, label: str, *, canonical: bool = True) -> dict[str, An
 
 
 def valid_managed_relative_path(relative: str) -> bool:
+    return relative in MANAGED_OUTPUT_PATHS and valid_repository_relative_path(relative)
+
+
+def valid_repository_relative_path(relative: str) -> bool:
     pure = PurePosixPath(relative)
     return (
-        relative in MANAGED_OUTPUT_PATHS
-        and relative == pure.as_posix()
+        relative == pure.as_posix()
         and not relative.startswith("/")
         and all(part not in {"", ".", ".."} for part in pure.parts)
     )
@@ -253,7 +329,7 @@ def require_safe_write_support() -> None:
 
 
 def describe_unopenable_parent(
-    parent_descriptor: int, component: str, relative: str
+    parent_descriptor: int, component: str, relative: str, subject: str
 ) -> CatalogError:
     try:
         component_stat = os.stat(
@@ -262,14 +338,14 @@ def describe_unopenable_parent(
             follow_symlinks=False,
         )
     except FileNotFoundError:
-        return CatalogError(f"managed output parent is missing: {relative}")
+        return CatalogError(f"{subject} parent is missing: {relative}")
     except OSError:
-        return CatalogError(f"managed output parent cannot be inspected: {relative}")
+        return CatalogError(f"{subject} parent cannot be inspected: {relative}")
     if stat.S_ISLNK(component_stat.st_mode):
-        return CatalogError(f"managed output parent is a symlink: {relative}")
+        return CatalogError(f"{subject} parent is a symlink: {relative}")
     if not stat.S_ISDIR(component_stat.st_mode):
-        return CatalogError(f"managed output parent is not a directory: {relative}")
-    return CatalogError(f"managed output parent cannot be opened safely: {relative}")
+        return CatalogError(f"{subject} parent is not a directory: {relative}")
+    return CatalogError(f"{subject} parent cannot be opened safely: {relative}")
 
 
 def open_child_directory(
@@ -278,29 +354,32 @@ def open_child_directory(
     relative: str,
     *,
     create: bool,
+    subject: str = "managed output",
 ) -> int:
     flags = safe_descriptor_open_flags(directory=True)
     try:
         return os.open(component, flags, dir_fd=parent_descriptor)
     except FileNotFoundError:
         if not create:
-            raise CatalogError(f"managed output parent is missing: {relative}") from None
+            raise CatalogError(f"{subject} parent is missing: {relative}") from None
         try:
             os.mkdir(component, 0o755, dir_fd=parent_descriptor)
         except FileExistsError:
             pass
         except OSError:
             raise CatalogError(
-                f"managed output parent cannot be created: {relative}"
+                f"{subject} parent cannot be created: {relative}"
             ) from None
         try:
             return os.open(component, flags, dir_fd=parent_descriptor)
         except OSError:
             raise describe_unopenable_parent(
-                parent_descriptor, component, relative
+                parent_descriptor, component, relative, subject
             ) from None
     except OSError:
-        raise describe_unopenable_parent(parent_descriptor, component, relative) from None
+        raise describe_unopenable_parent(
+            parent_descriptor, component, relative, subject
+        ) from None
     except (TypeError, NotImplementedError):
         raise CatalogError("safe descriptor operations are unsupported") from None
 
@@ -341,13 +420,17 @@ def open_canonical_root(canonical_root: Path) -> int:
         raise CatalogError("repository root cannot be opened safely") from None
 
 
-def open_managed_parent(
-    root: Path, relative: str, *, create_parents: bool
+def open_repository_parent(
+    root: Path,
+    relative: str,
+    *,
+    create_parents: bool,
+    subject: str,
 ) -> tuple[Path, int, int, tuple[str, ...], str]:
-    """Open the fixed output parent without granting authority to path checks."""
+    """Open a validated repository-relative parent with descriptor authority."""
 
-    if not valid_managed_relative_path(relative):
-        raise CatalogError("managed output path is unsupported")
+    if not valid_repository_relative_path(relative):
+        raise CatalogError(f"{subject} path is unsupported")
     if create_parents:
         require_safe_write_support()
     canonical_root = canonicalize_repository_root(root)
@@ -363,6 +446,7 @@ def open_managed_parent(
                 component,
                 relative,
                 create=create_parents,
+                subject=subject,
             )
             close_descriptor(parent_descriptor)
             parent_descriptor = child_descriptor
@@ -383,9 +467,41 @@ def open_managed_parent(
         raise CatalogError("repository root cannot be opened safely") from None
 
 
+def open_managed_parent(
+    root: Path, relative: str, *, create_parents: bool
+) -> tuple[Path, int, int, tuple[str, ...], str]:
+    """Open the fixed output parent without granting authority to path checks."""
+
+    if not valid_managed_relative_path(relative):
+        raise CatalogError("managed output path is unsupported")
+    return open_repository_parent(
+        root,
+        relative,
+        create_parents=create_parents,
+        subject="managed output",
+    )
+
+
+def open_fixed_asset_parent(
+    root: Path, relative: str
+) -> tuple[Path, int, int, tuple[str, ...], str]:
+    if relative not in FIXED_ASSET_SPECS:
+        raise CatalogError("fixed asset path is unsupported")
+    return open_repository_parent(
+        root,
+        relative,
+        create_parents=False,
+        subject="fixed asset",
+    )
+
+
 def read_target_at(
-    parent_descriptor: int, target_name: str, relative: str
-) -> bytes | None:
+    parent_descriptor: int,
+    target_name: str,
+    relative: str,
+    *,
+    max_bytes: int,
+) -> tuple[bytes, os.stat_result] | None:
     try:
         target_stat = os.stat(
             target_name,
@@ -400,6 +516,10 @@ def read_target_at(
         raise CatalogError(f"managed output target is a symlink: {relative}")
     if not stat.S_ISREG(target_stat.st_mode):
         raise CatalogError(f"managed output target is not a regular file: {relative}")
+    if target_stat.st_size > max_bytes:
+        raise CatalogError(
+            f"managed output exceeds configured byte limit: {relative}"
+        )
 
     descriptor = -1
     try:
@@ -408,16 +528,38 @@ def read_target_at(
             safe_descriptor_open_flags(directory=False),
             dir_fd=parent_descriptor,
         )
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        opened_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(opened_stat.st_mode):
             raise CatalogError(
                 f"managed output target is not a regular file: {relative}"
             )
+        if _file_binding(target_stat) != _file_binding(opened_stat):
+            raise CatalogError(f"managed output changed during read: {relative}")
         chunks = []
+        total = 0
         while True:
-            chunk = os.read(descriptor, 1024 * 1024)
+            chunk = os.read(
+                descriptor,
+                min(READ_CHUNK_BYTES, max_bytes + 1 - total),
+            )
             if not chunk:
-                return b"".join(chunks)
+                completed_stat = os.fstat(descriptor)
+                if _file_binding(opened_stat) != _file_binding(completed_stat):
+                    raise CatalogError(
+                        f"managed output changed during read: {relative}"
+                    )
+                value = b"".join(chunks)
+                if len(value) != completed_stat.st_size:
+                    raise CatalogError(
+                        f"managed output changed during read: {relative}"
+                    )
+                return value, completed_stat
             chunks.append(chunk)
+            total += len(chunk)
+            if total > max_bytes:
+                raise CatalogError(
+                    f"managed output exceeds configured byte limit: {relative}"
+                )
     except CatalogError:
         raise
     except (OSError, TypeError, NotImplementedError):
@@ -534,11 +676,241 @@ def verify_parent_binding(
         close_descriptor(check_root_descriptor)
 
 
+def _file_binding(file_stat: os.stat_result) -> tuple[int, ...]:
+    return (
+        file_stat.st_dev,
+        file_stat.st_ino,
+        file_stat.st_mode,
+        file_stat.st_size,
+        file_stat.st_mtime_ns,
+        file_stat.st_ctime_ns,
+    )
+
+
+def _fixed_asset_test_hook(stage: str, relative: str) -> None:
+    """Deterministic no-op seam for namespace-race regression tests."""
+
+
+def verify_fixed_asset_binding(
+    canonical_root: Path,
+    root_descriptor: int,
+    parent_descriptor: int,
+    parent_parts: tuple[str, ...],
+    target_name: str,
+    relative: str,
+    expected_target: os.stat_result,
+) -> None:
+    """Freshly re-walk root, parent, and target name after a bounded read."""
+
+    check_root_descriptor = -1
+    check_parent_descriptor = -1
+    target_descriptor = -1
+    try:
+        check_root_descriptor = open_canonical_root(canonical_root)
+        if _file_binding(os.fstat(root_descriptor))[:2] != _file_binding(
+            os.fstat(check_root_descriptor)
+        )[:2]:
+            raise CatalogError("fixed asset changed during read")
+        check_parent_descriptor = os.dup(check_root_descriptor)
+        for component in parent_parts:
+            child_descriptor = open_child_directory(
+                check_parent_descriptor,
+                component,
+                relative,
+                create=False,
+                subject="fixed asset",
+            )
+            close_descriptor(check_parent_descriptor)
+            check_parent_descriptor = child_descriptor
+        if _file_binding(os.fstat(parent_descriptor))[:2] != _file_binding(
+            os.fstat(check_parent_descriptor)
+        )[:2]:
+            raise CatalogError("fixed asset changed during read")
+        named_stat = os.stat(
+            target_name,
+            dir_fd=check_parent_descriptor,
+            follow_symlinks=False,
+        )
+        if stat.S_ISLNK(named_stat.st_mode) or not stat.S_ISREG(named_stat.st_mode):
+            raise CatalogError("fixed asset changed during read")
+        target_descriptor = os.open(
+            target_name,
+            safe_descriptor_open_flags(directory=False),
+            dir_fd=check_parent_descriptor,
+        )
+        fresh_stat = os.fstat(target_descriptor)
+        if not stat.S_ISREG(fresh_stat.st_mode):
+            raise CatalogError("fixed asset changed during read")
+        expected = _file_binding(expected_target)
+        if _file_binding(named_stat) != expected or _file_binding(fresh_stat) != expected:
+            raise CatalogError("fixed asset changed during read")
+    except CatalogError:
+        raise CatalogError(f"fixed asset changed during read: {relative}") from None
+    except (OSError, TypeError, NotImplementedError):
+        raise CatalogError(f"fixed asset changed during read: {relative}") from None
+    finally:
+        close_descriptor(target_descriptor)
+        close_descriptor(check_parent_descriptor)
+        close_descriptor(check_root_descriptor)
+
+
+def _read_fixed_asset_from_parent(
+    root: Path,
+    relative: str,
+    label: str,
+    max_bytes: int,
+    parent_opener: Any,
+) -> bytes:
+    canonical_root: Path | None = None
+    root_descriptor = -1
+    parent_descriptor = -1
+    target_descriptor = -1
+    try:
+        (
+            canonical_root,
+            root_descriptor,
+            parent_descriptor,
+            parent_parts,
+            target_name,
+        ) = parent_opener(root, relative)
+        _fixed_asset_test_hook("after_parent_open", relative)
+        try:
+            named_stat = os.stat(
+                target_name,
+                dir_fd=parent_descriptor,
+                follow_symlinks=False,
+            )
+        except OSError:
+            raise CatalogError(f"{label} cannot be read") from None
+        if stat.S_ISLNK(named_stat.st_mode):
+            raise CatalogError(f"{label} is a symlink")
+        if not stat.S_ISREG(named_stat.st_mode):
+            raise CatalogError(f"{label} is not a regular file")
+        if named_stat.st_size > max_bytes:
+            raise CatalogError(f"{label} exceeds configured byte limit")
+        _fixed_asset_test_hook("after_target_stat", relative)
+        try:
+            target_descriptor = os.open(
+                target_name,
+                safe_descriptor_open_flags(directory=False),
+                dir_fd=parent_descriptor,
+            )
+            opened_stat = os.fstat(target_descriptor)
+        except OSError:
+            raise CatalogError(f"{label} cannot be read") from None
+        if not stat.S_ISREG(opened_stat.st_mode):
+            raise CatalogError(f"{label} is not a regular file")
+        if _file_binding(named_stat) != _file_binding(opened_stat):
+            raise CatalogError(f"{label} changed during read")
+        if opened_stat.st_size > max_bytes:
+            raise CatalogError(f"{label} exceeds configured byte limit")
+        _fixed_asset_test_hook("after_target_open", relative)
+        value = bytearray()
+        while True:
+            chunk = os.read(
+                target_descriptor,
+                min(READ_CHUNK_BYTES, max_bytes + 1 - len(value)),
+            )
+            if not chunk:
+                break
+            value.extend(chunk)
+            if len(value) > max_bytes:
+                raise CatalogError(f"{label} exceeds configured byte limit")
+        completed_stat = os.fstat(target_descriptor)
+        if _file_binding(opened_stat) != _file_binding(completed_stat):
+            raise CatalogError(f"{label} changed during read")
+        if len(value) != completed_stat.st_size:
+            raise CatalogError(f"{label} changed during read")
+        _fixed_asset_test_hook("after_read", relative)
+        close_descriptor(target_descriptor)
+        target_descriptor = -1
+        _fixed_asset_test_hook("before_binding_check", relative)
+        verify_fixed_asset_binding(
+            canonical_root,
+            root_descriptor,
+            parent_descriptor,
+            parent_parts,
+            target_name,
+            relative,
+            completed_stat,
+        )
+        return bytes(value)
+    except CatalogError:
+        raise
+    except (OSError, TypeError, NotImplementedError):
+        raise CatalogError(f"{label} cannot be read") from None
+    finally:
+        close_descriptor(target_descriptor)
+        close_descriptor(parent_descriptor)
+        close_descriptor(root_descriptor)
+
+
+def read_fixed_asset(root: Path, relative: str) -> bytes:
+    spec = FIXED_ASSET_SPECS.get(relative)
+    if spec is None:
+        raise CatalogError("fixed asset path is unsupported")
+    return _read_fixed_asset_from_parent(
+        root,
+        relative,
+        spec["label"],
+        spec["max_bytes"],
+        open_fixed_asset_parent,
+    )
+
+
+def read_fixed_utf8_lf(root: Path, relative: str) -> tuple[bytes, str]:
+    spec = FIXED_ASSET_SPECS.get(relative)
+    if spec is None:
+        raise CatalogError("fixed asset path is unsupported")
+    return decode_utf8_lf(read_fixed_asset(root, relative), spec["label"])
+
+
+def load_fixed_json(
+    root: Path, relative: str, *, canonical: bool = True
+) -> dict[str, Any]:
+    spec = FIXED_ASSET_SPECS.get(relative)
+    if spec is None:
+        raise CatalogError("fixed asset path is unsupported")
+    return parse_json_bytes(
+        read_fixed_asset(root, relative), spec["label"], canonical=canonical
+    )
+
+
+def read_agreement_adr(root: Path, relative: str) -> bytes:
+    if not AGREEMENT_ADR.fullmatch(relative):
+        raise CatalogError("C-004 agreement ADR path is unsupported")
+
+    def open_agreement_parent(
+        repository_root: Path, repository_relative: str
+    ) -> tuple[Path, int, int, tuple[str, ...], str]:
+        return open_repository_parent(
+            repository_root,
+            repository_relative,
+            create_parents=False,
+            subject="agreement ADR",
+        )
+
+    return _read_fixed_asset_from_parent(
+        root,
+        relative,
+        "C-004 agreement ADR",
+        AGREEMENT_ADR_MAX_BYTES,
+        open_agreement_parent,
+    )
+
+
 def write_if_changed(root: Path, relative: str, content: bytes) -> None:
     root_descriptor = -1
     parent_descriptor = -1
     temporary_name: str | None = None
     try:
+        spec = FIXED_ASSET_SPECS.get(relative)
+        if spec is None or relative not in MANAGED_OUTPUT_PATHS:
+            raise CatalogError("managed output path is unsupported")
+        if len(content) > spec["max_bytes"]:
+            raise CatalogError(
+                f"managed output exceeds configured byte limit: {relative}"
+            )
         require_safe_write_support()
         (
             canonical_root,
@@ -547,14 +919,46 @@ def write_if_changed(root: Path, relative: str, content: bytes) -> None:
             parent_parts,
             target_name,
         ) = open_managed_parent(root, relative, create_parents=True)
-        observed = read_target_at(parent_descriptor, target_name, relative)
-        if observed == content:
+        observed_target = read_target_at(
+            parent_descriptor,
+            target_name,
+            relative,
+            max_bytes=spec["max_bytes"],
+        )
+        if observed_target is not None and observed_target[0] == content:
+            observed_stat = observed_target[1]
             verify_parent_binding(
                 canonical_root,
                 root_descriptor,
                 parent_descriptor,
                 parent_parts,
                 relative,
+            )
+            verify_fixed_asset_binding(
+                canonical_root,
+                root_descriptor,
+                parent_descriptor,
+                parent_parts,
+                target_name,
+                relative,
+                observed_stat,
+            )
+            os.fsync(parent_descriptor)
+            verify_parent_binding(
+                canonical_root,
+                root_descriptor,
+                parent_descriptor,
+                parent_parts,
+                relative,
+            )
+            verify_fixed_asset_binding(
+                canonical_root,
+                root_descriptor,
+                parent_descriptor,
+                parent_parts,
+                target_name,
+                relative,
+                observed_stat,
             )
             return
         temporary_name = create_temporary_at(
@@ -606,32 +1010,24 @@ def write_if_changed(root: Path, relative: str, content: bytes) -> None:
 def read_managed_output(root: Path, relative: str) -> bytes:
     """Read through a verified descriptor chain and fail closed otherwise."""
 
-    safe_descriptor_open_flags(directory=True)
+    spec = FIXED_ASSET_SPECS.get(relative)
+    if spec is None or relative not in MANAGED_OUTPUT_PATHS:
+        raise CatalogError("managed output path is unsupported")
 
-    root_descriptor = -1
-    parent_descriptor = -1
-    try:
-        (
-            canonical_root,
-            root_descriptor,
-            parent_descriptor,
-            parent_parts,
-            target_name,
-        ) = open_managed_parent(root, relative, create_parents=False)
-        observed = read_target_at(parent_descriptor, target_name, relative)
-        if observed is None:
-            raise CatalogError(f"managed output cannot be read: {relative}")
-        verify_parent_binding(
-            canonical_root,
-            root_descriptor,
-            parent_descriptor,
-            parent_parts,
-            relative,
+    def open_output_parent(
+        repository_root: Path, repository_relative: str
+    ) -> tuple[Path, int, int, tuple[str, ...], str]:
+        return open_managed_parent(
+            repository_root, repository_relative, create_parents=False
         )
-        return observed
-    finally:
-        close_descriptor(parent_descriptor)
-        close_descriptor(root_descriptor)
+
+    return _read_fixed_asset_from_parent(
+        root,
+        relative,
+        spec["label"],
+        spec["max_bytes"],
+        open_output_parent,
+    )
 
 
 def exact_keys(
@@ -1281,7 +1677,7 @@ def private_path_values(
 def validate_import_artifacts(root: Path) -> list[str]:
     errors: list[str] = []
     try:
-        source_raw, source_text = read_utf8_lf(root / SOURCE_PATH, "scenario source")
+        source_raw, source_text = read_fixed_utf8_lf(root, SOURCE_PATH)
         if sha256_bytes(source_raw) != SOURCE_SHA256:
             errors.append("scenario source SHA-256 differs from the reviewed member")
         if len(source_raw) != SOURCE_BYTES:
@@ -1297,7 +1693,7 @@ def validate_import_artifacts(root: Path) -> list[str]:
 
     for relative, expected_value in expected.items():
         try:
-            observed = load_json(root / relative, relative)
+            observed = load_fixed_json(root, relative)
         except CatalogError as exc:
             errors.append(str(exc))
             continue
@@ -1305,7 +1701,7 @@ def validate_import_artifacts(root: Path) -> list[str]:
             errors.append(f"{relative} differs from deterministic import output")
 
     try:
-        catalog = load_json(root / CATALOG_PATH, "canonical catalog")
+        catalog = load_fixed_json(root, CATALOG_PATH)
         reconstructed = reconstruct_source(catalog).encode("utf-8")
         if reconstructed != source_raw:
             errors.append("catalog full-text reconstruction differs from source bytes")
@@ -1320,7 +1716,7 @@ def validate_import_artifacts(root: Path) -> list[str]:
         errors.append("catalog semantic validation failed: invalid structure")
 
     try:
-        provenance = load_json(root / SOURCE_MANIFEST_PATH, "source provenance")
+        provenance = load_fixed_json(root, SOURCE_MANIFEST_PATH)
         private_locations = []
         private_locations_omitted = False
         for location in private_path_values(provenance):
@@ -1366,7 +1762,7 @@ def validate_contract_schemas(root: Path) -> list[str]:
         (RESULTS_SCHEMA_PATH, results_schema()),
     ):
         try:
-            observed = load_json(root / relative, relative)
+            observed = load_fixed_json(root, relative)
         except CatalogError as exc:
             errors.append(str(exc))
             continue
@@ -1378,8 +1774,8 @@ def validate_contract_schemas(root: Path) -> list[str]:
 def validate_coverage(root: Path) -> list[str]:
     errors: list[str] = []
     try:
-        catalog = load_json(root / CATALOG_PATH, "canonical catalog")
-        coverage = load_json(root / COVERAGE_PATH, "target coverage")
+        catalog = load_fixed_json(root, CATALOG_PATH)
+        coverage = load_fixed_json(root, COVERAGE_PATH)
     except CatalogError as exc:
         return [str(exc)]
 
@@ -1471,14 +1867,9 @@ def validate_coverage(root: Path) -> list[str]:
                     )
                 else:
                     try:
-                        adr_stat = os.lstat(root / agreement_adr)
-                    except OSError:
-                        errors.append("C-004 agreement ADR cannot be inspected")
-                    else:
-                        if stat.S_ISLNK(adr_stat.st_mode) or not stat.S_ISREG(
-                            adr_stat.st_mode
-                        ):
-                            errors.append("C-004 agreement ADR must be a regular file")
+                        read_agreement_adr(root, agreement_adr)
+                    except CatalogError:
+                        errors.append("C-004 agreement ADR cannot be read safely")
         else:
             try:
                 exact_keys(entry, common, set(), label)
@@ -1492,8 +1883,8 @@ def validate_coverage(root: Path) -> list[str]:
 def validate_results(root: Path) -> list[str]:
     errors: list[str] = []
     try:
-        catalog = load_json(root / CATALOG_PATH, "canonical catalog")
-        results = load_json(root / RESULTS_PATH, "conformance results")
+        catalog = load_fixed_json(root, CATALOG_PATH)
+        results = load_fixed_json(root, RESULTS_PATH)
     except CatalogError as exc:
         return [str(exc)]
     try:
@@ -1536,9 +1927,9 @@ def validate_results(root: Path) -> list[str]:
 def validate_render(root: Path) -> list[str]:
     errors: list[str] = []
     try:
-        catalog = load_json(root / CATALOG_PATH, "canonical catalog")
+        catalog = load_fixed_json(root, CATALOG_PATH)
         expected = render_catalog(catalog).encode("utf-8")
-        observed, _text = read_utf8_lf(root / HUMAN_CATALOG_PATH, "rendered catalog")
+        observed, _text = read_fixed_utf8_lf(root, HUMAN_CATALOG_PATH)
         if observed != expected:
             errors.append("rendered catalog differs from deterministic output")
     except CatalogError as exc:
@@ -1548,8 +1939,8 @@ def validate_render(root: Path) -> list[str]:
 
 def asset_reference(root: Path, path: str) -> dict[str, str]:
     try:
-        value = (root / path).read_bytes()
-    except OSError:
+        value = read_fixed_asset(root, path)
+    except CatalogError:
         raise CatalogError(f"cannot hash repository asset: {path}") from None
     return {"path": path, "sha256": sha256_bytes(value)}
 
@@ -1590,9 +1981,7 @@ def expected_manifest_catalog_section(root: Path) -> dict[str, Any]:
 def validate_phase_manifest(root: Path) -> list[str]:
     errors: list[str] = []
     try:
-        manifest = load_json(
-            root / PHASE_MANIFEST_PATH, "Phase conformance manifest", canonical=False
-        )
+        manifest = load_fixed_json(root, PHASE_MANIFEST_PATH, canonical=False)
         expected = expected_manifest_catalog_section(root)
     except CatalogError as exc:
         errors.append(str(exc))
@@ -1617,7 +2006,7 @@ def validate_phase_manifest(root: Path) -> list[str]:
 def validate_advisory_boundary(root: Path) -> list[str]:
     errors: list[str] = []
     try:
-        _raw, text = read_utf8_lf(root / PROVENANCE_ADR_PATH, "catalog provenance ADR")
+        _raw, text = read_fixed_utf8_lf(root, PROVENANCE_ADR_PATH)
     except CatalogError as exc:
         return [str(exc)]
     required = [
@@ -1657,7 +2046,7 @@ def validate_repository(root: Path) -> list[str]:
 
 
 def source_for_import(root: Path) -> str:
-    raw, text = read_utf8_lf(root / SOURCE_PATH, "scenario source")
+    raw, text = read_fixed_utf8_lf(root, SOURCE_PATH)
     if sha256_bytes(raw) != SOURCE_SHA256:
         raise CatalogError("scenario source SHA-256 differs from the reviewed member")
     if len(raw) != SOURCE_BYTES or raw.count(b"\n") != SOURCE_LINES:
@@ -1716,7 +2105,7 @@ def run_import(root: Path, check_only: bool) -> int:
 
 def run_render(root: Path, check_only: bool) -> int:
     try:
-        catalog = load_json(root / CATALOG_PATH, "canonical catalog")
+        catalog = load_fixed_json(root, CATALOG_PATH)
         expected = render_catalog(catalog).encode("utf-8")
     except CatalogError as exc:
         print(f"conformance catalog render: FAIL\n- {exc}", file=sys.stderr)

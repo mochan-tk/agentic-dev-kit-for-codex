@@ -2,7 +2,10 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 import unicodedata
@@ -76,6 +79,29 @@ class ConformanceCatalogTest(unittest.TestCase):
         with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
             status = command(root)
         return status, output.getvalue()
+
+    def capture_cli(self, root, *arguments, timeout=1.0):
+        try:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(TOOL),
+                    *arguments,
+                    "--root",
+                    str(root),
+                ],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            output = exc.stdout or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            return None, output
+        return completed.returncode, completed.stdout
 
     def assert_no_sensitive_reflection(self, rendered, root, *secret_tokens):
         for marker in (
@@ -570,7 +596,7 @@ class ConformanceCatalogTest(unittest.TestCase):
         self.assertTrue(swapped)
         self.assertEqual(expected, sentinel.read_bytes())
         self.assertEqual(expected, (opened_parent / target.name).read_bytes())
-        self.assertIn("parent changed during operation", output.getvalue())
+        self.assertIn("changed during read", output.getvalue())
         self.assertNotIn(str(outside), output.getvalue())
 
     def test_root_swap_after_open_is_detected_before_target_replace(self):
@@ -688,6 +714,375 @@ class ConformanceCatalogTest(unittest.TestCase):
         self.assertIn("managed output cannot be written", output.getvalue())
         self.assertNotIn("private filesystem detail", output.getvalue())
 
+    def test_identical_retry_fsyncs_parent_between_binding_verifications(self):
+        fixture = self.copy_fixture()
+        target = fixture / self.catalog.HUMAN_CATALOG_PATH
+        expected = target.read_bytes()
+        target.unlink()
+        real_fsync = self.catalog.os.fsync
+
+        def fail_first_directory_fsync(descriptor):
+            if self.catalog.stat.S_ISDIR(
+                self.catalog.os.fstat(descriptor).st_mode
+            ):
+                raise OSError("PRIVATE_FSYNC_FAILURE")
+            return real_fsync(descriptor)
+
+        with mock.patch.object(
+            self.catalog.os, "fsync", side_effect=fail_first_directory_fsync
+        ):
+            first_status, first_output = self.capture_command(
+                lambda root: self.catalog.run_render(root, False), fixture
+            )
+        self.assertEqual(1, first_status)
+        self.assertEqual(expected, target.read_bytes())
+        self.assertEqual([], list(target.parent.glob(f".{target.name}.*.tmp")))
+        self.assertNotIn("PRIVATE_FSYNC_FAILURE", first_output)
+
+        events = []
+        real_verify = self.catalog.verify_parent_binding
+
+        def record_verify(*arguments, **keywords):
+            events.append("verify")
+            return real_verify(*arguments, **keywords)
+
+        def record_fsync(descriptor):
+            if self.catalog.stat.S_ISDIR(
+                self.catalog.os.fstat(descriptor).st_mode
+            ):
+                events.append("directory-fsync")
+            return real_fsync(descriptor)
+
+        with mock.patch.object(
+            self.catalog, "verify_parent_binding", side_effect=record_verify
+        ), mock.patch.object(
+            self.catalog.os, "fsync", side_effect=record_fsync
+        ):
+            second_status, second_output = self.capture_command(
+                lambda root: self.catalog.run_render(root, False), fixture
+            )
+        self.assertEqual(0, second_status, second_output)
+        self.assertEqual(["verify", "directory-fsync", "verify"], events)
+
+    def test_unchanged_write_rejects_target_name_swap_after_comparison(self):
+        fixture = self.copy_fixture()
+        target = fixture / self.catalog.HUMAN_CATALOG_PATH
+        original = fixture.parent / "opened-unchanged-target"
+        outside = fixture.parent / "outside-unchanged-target"
+        outside.mkdir()
+        sentinel = outside / target.name
+        sentinel.write_bytes(b"EXTERNAL_UNCHANGED_SECRET\n")
+        real_read = self.catalog.read_target_at
+        swapped = False
+
+        def read_then_swap(*arguments, **keywords):
+            nonlocal swapped
+            observed = real_read(*arguments, **keywords)
+            if not swapped:
+                target.rename(original)
+                target.symlink_to(sentinel)
+                swapped = True
+            return observed
+
+        with mock.patch.object(
+            self.catalog, "read_target_at", side_effect=read_then_swap
+        ):
+            status, rendered = self.capture_command(
+                lambda root: self.catalog.run_render(root, False), fixture
+            )
+        self.assertTrue(swapped)
+        self.assertEqual(1, status)
+        self.assertEqual(b"EXTERNAL_UNCHANGED_SECRET\n", sentinel.read_bytes())
+        self.assertEqual([], list(original.parent.glob(f".{target.name}.*.tmp")))
+        self.assert_no_sensitive_reflection(
+            rendered, fixture, "EXTERNAL_UNCHANGED_SECRET"
+        )
+
+    def test_fifo_fixed_inputs_fail_promptly_in_every_command_mode(self):
+        cases = (
+            (self.catalog.SOURCE_PATH, ("import",)),
+            (self.catalog.SOURCE_PATH, ("import", "--check")),
+            (self.catalog.CATALOG_PATH, ("render",)),
+            (self.catalog.CATALOG_PATH, ("render", "--check")),
+            (self.catalog.COVERAGE_PATH, ("check",)),
+            (self.catalog.RESULTS_PATH, ("check",)),
+        )
+        for relative, arguments in cases:
+            with self.subTest(relative=relative, arguments=arguments):
+                fixture = self.copy_fixture()
+                target = fixture / relative
+                target.unlink()
+                os.mkfifo(target)
+                status, rendered = self.capture_cli(fixture, *arguments)
+                self.assertIsNotNone(status, "fixed-input FIFO read blocked")
+                self.assertNotEqual(0, status, rendered)
+                self.assert_no_sensitive_reflection(rendered, fixture)
+
+    def test_all_symlinked_fixed_inputs_are_rejected_without_following_fifo(self):
+        cases = (
+            (self.catalog.SOURCE_PATH, ("import", "--check")),
+            (self.catalog.SOURCE_MANIFEST_PATH, ("check",)),
+            (self.catalog.CATALOG_PATH, ("render", "--check")),
+            (self.catalog.CATALOG_SCHEMA_PATH, ("check",)),
+            (self.catalog.COVERAGE_PATH, ("check",)),
+            (self.catalog.COVERAGE_SCHEMA_PATH, ("check",)),
+            (self.catalog.RESULTS_PATH, ("check",)),
+            (self.catalog.RESULTS_SCHEMA_PATH, ("check",)),
+            (self.catalog.PHASE_MANIFEST_PATH, ("check",)),
+            (self.catalog.PROVENANCE_ADR_PATH, ("check",)),
+            (self.catalog.HUMAN_CATALOG_PATH, ("render", "--check")),
+            (self.catalog.TOOL_PATH, ("check",)),
+        )
+        for relative, arguments in cases:
+            with self.subTest(relative=relative, arguments=arguments):
+                fixture = self.copy_fixture()
+                outside = fixture.parent / "EXTERNAL_PRIVATE_FIFO"
+                os.mkfifo(outside)
+                target = fixture / relative
+                target.unlink()
+                target.symlink_to(outside)
+                status, rendered = self.capture_cli(fixture, *arguments)
+                self.assertIsNotNone(status, "symlink target was followed")
+                self.assertNotEqual(0, status, rendered)
+                self.assert_no_sensitive_reflection(
+                    rendered, fixture, "EXTERNAL_PRIVATE_FIFO"
+                )
+
+    def test_fixed_input_parent_namespace_swap_fails_closed(self):
+        fixture = self.copy_fixture()
+        source = fixture / self.catalog.SOURCE_PATH
+        source_parent = source.parent
+        opened_parent = fixture.parent / "opened-source-parent"
+        outside = fixture.parent / "outside-source-parent"
+        outside.mkdir()
+        sentinel = outside / source.name
+        sentinel.write_bytes(b"EXTERNAL_SENTINEL_SECRET\n")
+        real_open = self.catalog.open_fixed_asset_parent
+        swapped = False
+
+        def open_then_swap(root, relative):
+            nonlocal swapped
+            descriptors = real_open(root, relative)
+            if relative == self.catalog.SOURCE_PATH and not swapped:
+                source_parent.rename(opened_parent)
+                source_parent.symlink_to(outside, target_is_directory=True)
+                swapped = True
+            return descriptors
+
+        with mock.patch.object(
+            self.catalog, "open_fixed_asset_parent", side_effect=open_then_swap
+        ):
+            status, rendered = self.capture_command(
+                lambda root: self.catalog.run_import(root, True), fixture
+            )
+        self.assertTrue(swapped)
+        self.assertEqual(1, status)
+        self.assertEqual(b"EXTERNAL_SENTINEL_SECRET\n", sentinel.read_bytes())
+        self.assert_no_sensitive_reflection(
+            rendered, fixture, "EXTERNAL_SENTINEL_SECRET"
+        )
+
+    def test_fixed_asset_limits_accept_boundary_and_reject_one_byte_over(self):
+        representatives = (
+            self.catalog.SOURCE_PATH,
+            self.catalog.SOURCE_MANIFEST_PATH,
+            self.catalog.CATALOG_PATH,
+            self.catalog.COVERAGE_PATH,
+            self.catalog.PROVENANCE_ADR_PATH,
+            self.catalog.HUMAN_CATALOG_PATH,
+        )
+        for relative in representatives:
+            with self.subTest(relative=relative):
+                fixture = self.copy_fixture()
+                limit = self.catalog.FIXED_ASSET_SPECS[relative]["max_bytes"]
+                target = fixture / relative
+                target.write_bytes(b"x" * limit)
+                self.assertEqual(
+                    limit,
+                    len(self.catalog.read_fixed_asset(fixture, relative)),
+                )
+                with target.open("ab") as stream:
+                    stream.write(b"x")
+                with self.assertRaisesRegex(
+                    self.catalog.CatalogError, "exceeds configured byte limit"
+                ) as error:
+                    self.catalog.read_fixed_asset(fixture, relative)
+                self.assert_no_sensitive_reflection(str(error.exception), fixture)
+
+    def test_fixed_asset_policy_covers_every_governed_input(self):
+        expected = {
+            self.catalog.SOURCE_PATH,
+            self.catalog.SOURCE_MANIFEST_PATH,
+            self.catalog.CATALOG_PATH,
+            self.catalog.CATALOG_SCHEMA_PATH,
+            self.catalog.COVERAGE_PATH,
+            self.catalog.COVERAGE_SCHEMA_PATH,
+            self.catalog.RESULTS_PATH,
+            self.catalog.RESULTS_SCHEMA_PATH,
+            self.catalog.HUMAN_CATALOG_PATH,
+            self.catalog.PROVENANCE_ADR_PATH,
+            self.catalog.PHASE_MANIFEST_PATH,
+            self.catalog.TOOL_PATH,
+        }
+        self.assertEqual(expected, set(self.catalog.FIXED_ASSET_SPECS))
+        self.assertLessEqual(self.catalog.MANAGED_OUTPUT_PATHS, expected)
+        self.assertEqual(1, self.catalog.FIXED_ASSET_POLICY_VERSION)
+        for spec in self.catalog.FIXED_ASSET_SPECS.values():
+            self.assertEqual(
+                self.catalog.FIXED_ASSET_CLASS_LIMITS[spec["class"]],
+                spec["max_bytes"],
+            )
+
+    def test_streaming_limit_rejects_growth_after_target_open(self):
+        fixture = self.copy_fixture()
+        relative = self.catalog.SOURCE_PATH
+        target = fixture / relative
+        limit = self.catalog.FIXED_ASSET_SPECS[relative]["max_bytes"]
+        target.write_bytes(b"x" * (limit - 1))
+        grown = False
+
+        def grow_after_open(stage, observed_relative):
+            nonlocal grown
+            if stage == "after_target_open" and observed_relative == relative:
+                with target.open("ab") as stream:
+                    stream.write(b"xx")
+                grown = True
+
+        with mock.patch.object(
+            self.catalog, "_fixed_asset_test_hook", side_effect=grow_after_open
+        ):
+            with self.assertRaisesRegex(
+                self.catalog.CatalogError, "exceeds configured byte limit"
+            ) as error:
+                self.catalog.read_fixed_asset(fixture, relative)
+        self.assertTrue(grown)
+        self.assert_no_sensitive_reflection(str(error.exception), fixture)
+
+    def test_post_read_target_name_swap_is_rejected(self):
+        fixture = self.copy_fixture()
+        relative = self.catalog.CATALOG_PATH
+        target = fixture / relative
+        original = fixture.parent / "opened-catalog-original"
+        replacement_bytes = target.read_bytes()
+        swapped = False
+
+        def swap_after_read(stage, observed_relative):
+            nonlocal swapped
+            if stage == "after_read" and observed_relative == relative:
+                target.rename(original)
+                target.write_bytes(replacement_bytes)
+                swapped = True
+
+        with mock.patch.object(
+            self.catalog, "_fixed_asset_test_hook", side_effect=swap_after_read
+        ):
+            with self.assertRaisesRegex(
+                self.catalog.CatalogError, "changed during read"
+            ) as error:
+                self.catalog.read_fixed_asset(fixture, relative)
+        self.assertTrue(swapped)
+        self.assertEqual(replacement_bytes, target.read_bytes())
+        self.assertEqual(replacement_bytes, original.read_bytes())
+        self.assert_no_sensitive_reflection(str(error.exception), fixture)
+
+    def test_dynamic_c004_agreement_adr_uses_safe_bounded_reader(self):
+        fixture = self.copy_fixture()
+        agreement = "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
+
+        def decide(payload):
+            c004 = next(
+                entry for entry in payload["entries"]
+                if entry["scenario"] == "C-004"
+            )
+            c004["disposition"] = "agreement-decision"
+            c004["agreement_adr"] = agreement
+
+        self.mutate_json(fixture, self.catalog.COVERAGE_PATH, decide)
+        outside = fixture.parent / "EXTERNAL_AGREEMENT_FIFO"
+        os.mkfifo(outside)
+        agreement_path = fixture / agreement
+        agreement_path.parent.mkdir(parents=True, exist_ok=True)
+        agreement_path.symlink_to(outside)
+        status, rendered = self.capture_cli(fixture, "check")
+        self.assertIsNotNone(status, "agreement ADR symlink target was followed")
+        self.assertNotEqual(0, status, rendered)
+        self.assert_no_sensitive_reflection(
+            rendered, fixture, "EXTERNAL_AGREEMENT_FIFO"
+        )
+
+    def test_generated_output_limit_is_checked_before_temp_creation(self):
+        fixture = self.copy_fixture()
+        limit = self.catalog.FIXED_ASSET_SPECS[
+            self.catalog.HUMAN_CATALOG_PATH
+        ]["max_bytes"]
+        oversized = "x" * limit + "\n"
+        with mock.patch.object(
+            self.catalog, "render_catalog", return_value=oversized
+        ), mock.patch.object(
+            self.catalog, "create_temporary_at"
+        ) as temporary:
+            status, rendered = self.capture_command(
+                lambda root: self.catalog.run_render(root, False), fixture
+            )
+        self.assertEqual(1, status)
+        temporary.assert_not_called()
+        self.assertIn("exceeds configured byte limit", rendered)
+        self.assert_no_sensitive_reflection(rendered, fixture)
+
+    def test_fixed_asset_descriptors_close_on_success_and_failure(self):
+        for fail_after_open in (False, True):
+            with self.subTest(fail_after_open=fail_after_open):
+                fixture = self.copy_fixture()
+                relative = self.catalog.SOURCE_PATH
+                opened = []
+                real_open = self.catalog.os.open
+
+                def capture_open(path, flags, mode=0o777, *, dir_fd=None):
+                    if dir_fd is None:
+                        descriptor = real_open(path, flags, mode)
+                    else:
+                        descriptor = real_open(path, flags, mode, dir_fd=dir_fd)
+                    opened.append(descriptor)
+                    return descriptor
+
+                def optional_failure(stage, observed_relative):
+                    if (
+                        fail_after_open
+                        and stage == "after_target_open"
+                        and observed_relative == relative
+                    ):
+                        raise OSError("PRIVATE_DESCRIPTOR_FAILURE")
+
+                with mock.patch.object(
+                    self.catalog.os, "open", side_effect=capture_open
+                ) as patched_open:
+                    supported = set(self.catalog.os.supports_dir_fd)
+                    supported.add(patched_open)
+                    with mock.patch.object(
+                        self.catalog.os, "supports_dir_fd", supported
+                    ), mock.patch.object(
+                        self.catalog, "_fixed_asset_test_hook",
+                        side_effect=optional_failure,
+                    ):
+                        if fail_after_open:
+                            with self.assertRaisesRegex(
+                                self.catalog.CatalogError,
+                                "scenario source cannot be read",
+                            ) as error:
+                                self.catalog.read_fixed_asset(fixture, relative)
+                            self.assertNotIn(
+                                "PRIVATE_DESCRIPTOR_FAILURE", str(error.exception)
+                            )
+                        else:
+                            self.assertEqual(
+                                (fixture / relative).read_bytes(),
+                                self.catalog.read_fixed_asset(fixture, relative),
+                            )
+                self.assertTrue(opened)
+                for descriptor in set(opened):
+                    with self.assertRaises(OSError):
+                        self.catalog.os.fstat(descriptor)
+
     def test_temp_cleanup_failure_has_bounded_non_success_diagnostic(self):
         fixture = self.copy_fixture()
         target = fixture / self.catalog.CATALOG_PATH
@@ -751,7 +1146,10 @@ class ConformanceCatalogTest(unittest.TestCase):
             self.assertEqual(1, self.catalog.run_render(fixture, False))
         self.assertEqual(before, target.read_bytes())
         self.assertIn("safe descriptor operations are unsupported", output.getvalue())
-        self.assertIn("safe managed output writes are unsupported", output.getvalue())
+        self.assertEqual(
+            2,
+            output.getvalue().count("safe descriptor operations are unsupported"),
+        )
 
     def test_write_mode_rejects_symlinked_repository_root(self):
         fixture = self.copy_fixture()
@@ -967,7 +1365,9 @@ class ConformanceCatalogTest(unittest.TestCase):
 
         error_fixture = self.copy_fixture()
         raw_error = f"/home/private/person/{secret}: raw OSError detail"
-        with mock.patch.object(Path, "read_bytes", side_effect=OSError(raw_error)):
+        with mock.patch.object(
+            self.catalog.os, "read", side_effect=OSError(raw_error)
+        ):
             error_status, error_output = self.capture_command(
                 lambda root: self.catalog.run_import(root, True), error_fixture
             )

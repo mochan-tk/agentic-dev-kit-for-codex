@@ -91,11 +91,11 @@
     },
     "provenance_adr": {
       "path": "docs/agreements/adr/ADR-0006-conformance-catalog-provenance.md",
-      "sha256": "12155b4357f827151c432bb2e463c4f61af4c733dbf59a172fbc71cff6beddc9"
+      "sha256": "f5e33b9f7f36c23582a9450d1c3529316e24b82fc44a89a192a2be2511693907"
     },
     "tool": {
       "path": ".github/scripts/conformance-catalog.py",
-      "sha256": "3cd67cbb050ee2ee04f2e3f6844f665b59aa5fb940cb9cbe4d4ff15dbae9039f"
+      "sha256": "a07228aca11144ef43930000a3a1deef242b96a86ead218333369e340a37e9c7"
     },
     "verification_state": "not-run"
   },

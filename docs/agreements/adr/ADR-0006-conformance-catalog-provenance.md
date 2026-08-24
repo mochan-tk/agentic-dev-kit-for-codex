@@ -82,22 +82,46 @@ comparison is useful advisory evidence, but it is not a mandatory approver or a
 substitute for deterministic hash, reconstruction, schema, and current-head CI
 checks.
 
-Managed import/render reads and writes canonicalize benign repository-root
-ancestor links while preserving the final root component, then open the root
-from `/` and every output-parent component descriptor-relatively with
-`O_DIRECTORY` and `O_NOFOLLOW`. Target reads also use `O_NONBLOCK` and require a
-regular-file `fstat`. Temporary-file creation, comparison, cleanup, and POSIX
-atomic `rename` remain relative to the verified parent descriptor. The complete
-root-to-parent identity is rechecked immediately before and after rename, and
-the parent directory is `fsync`ed after rename. Both check and write modes fail
-closed when the required descriptor operations are unavailable. A failed
-temporary cleanup is a bounded non-success diagnostic. Diagnostics identify
-repository assets without including raw operating-system errors or
-source-machine paths. Untrusted JSON keys and values are never reflected;
-syntax failures expose only numeric line/column coordinates, and private-path
-findings use bounded numeric structural locations. Frozen source identity,
-size, encoding, line endings, and normalization are gated before parsing, so
-unreviewed headings or scenario text cannot enter diagnostics.
+Every governed fixed input uses one bounded descriptor-relative reader: the
+frozen source, source manifest, catalog and schema, coverage and schema, results
+and schema, Phase manifest, provenance ADR, generated Markdown, and the tool
+hashed as evidence. The later C-004 agreement ADR uses the same reader after its
+repository-relative ADR name passes the agreement-path grammar. The reader
+canonicalizes benign repository-root ancestor links while preserving the final
+root component, opens the root from `/`, and walks every parent component with
+`O_DIRECTORY` and `O_NOFOLLOW`. It opens the target with `O_NOFOLLOW` and
+`O_NONBLOCK`, requires a regular-file `fstat`, applies both an initial size
+check and a streaming `limit+1` check, compares pre/post target metadata, then
+freshly reopens the root, parent, and target name to verify their identity
+before returning bytes. Symlinks, FIFOs, namespace swaps, target-name swaps,
+growth, and unsupported descriptor capabilities therefore fail closed without
+granting authority to an earlier path check.
+
+The version 1 fixed-asset limits are class based: frozen source and policy text
+are 1 MiB, catalog JSON and independently updated JSON stores are 4 MiB,
+contract JSON is 1 MiB, and the generated repository-text projection is 4 MiB.
+These limits leave substantial headroom over the 136-scenario assets while
+bounding memory and read time. A reviewed policy update is required to change a
+class or limit. Generated content is checked against its fixed-output limit
+before a temporary file is created.
+
+Temporary-file creation, comparison, cleanup, and POSIX atomic `rename` remain
+relative to the verified output-parent descriptor. The complete root-to-parent
+identity is rechecked immediately before and after rename, and the parent
+directory is `fsync`ed after rename. If rename succeeded but the directory
+`fsync` failed, a retry whose target bytes are already equal performs
+verify-parent plus fresh target-name binding, directory `fsync`, and the same
+parent/target verification again before it may report success. Thus an
+equal-content comparison cannot succeed after its directory entry is swapped.
+Both check and write modes fail closed when required descriptor
+operations are unavailable. A failed temporary cleanup is a bounded
+non-success diagnostic. Diagnostics identify repository assets without
+including raw operating-system errors or source-machine paths. Untrusted JSON
+keys and values are never reflected; syntax failures expose only numeric
+line/column coordinates, and private-path findings use bounded numeric
+structural locations. Frozen source identity, size, encoding, line endings, and
+normalization are gated before parsing, so unreviewed headings or scenario text
+cannot enter diagnostics.
 
 The three import outputs are updated sequentially; the command is not a
 multi-file transaction. Each changed file is individually atomic and durable,

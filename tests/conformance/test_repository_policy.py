@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / ".github/scripts/check-repository-policy.py"
 OWNERSHIP = ".github/governance/phase-task-ownership.v1.json"
+CURRENT_TASK_ID = "T04"
+CURRENT_TASK_BRANCH = "codex/phase-1-conformance-catalog"
 
 
 class RepositoryPolicyTest(unittest.TestCase):
@@ -27,9 +29,21 @@ class RepositoryPolicyTest(unittest.TestCase):
     def ownership_payload(self, root=ROOT):
         return json.loads((root / OWNERSHIP).read_text(encoding="utf-8"))
 
-    def active_task(self, payload):
-        active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(1, len(active), "fixture must have exactly one active Task")
+    def active_task(
+        self,
+        payload,
+        *,
+        task_id=CURRENT_TASK_ID,
+        branch=CURRENT_TASK_BRANCH,
+    ):
+        active = [
+            task
+            for task in payload["tasks"]
+            if task["state"] == "active"
+            and task["id"] == task_id
+            and task["branch"] == branch
+        ]
+        self.assertEqual(1, len(active), "intended active Task fixture is missing")
         return active[0]
 
     def declared_paths(self, payload):
@@ -200,6 +214,15 @@ class RepositoryPolicyTest(unittest.TestCase):
 
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
+
+    def test_active_task_helper_selects_t04_among_disjoint_active_tasks(self):
+        payload = copy.deepcopy(self.ownership_payload())
+        phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
+        phase0["state"] = "active"
+        self.assertEqual("T04", self.active_task(payload)["id"])
+        errors = []
+        self.checker.validate_manifest(payload, errors)
+        self.assertEqual([], errors)
 
     def test_safe_declared_expansion_passes(self):
         temporary, fixture = self.copy_fixture()
