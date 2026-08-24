@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / ".github/scripts/check-repository-policy.py"
 OWNERSHIP = ".github/governance/phase-task-ownership.v1.json"
+CURRENT_TASK_ID = "T04"
+CURRENT_TASK_BRANCH = "codex/phase-1-conformance-catalog"
 
 
 class RepositoryPolicyTest(unittest.TestCase):
@@ -26,6 +28,23 @@ class RepositoryPolicyTest(unittest.TestCase):
 
     def ownership_payload(self, root=ROOT):
         return json.loads((root / OWNERSHIP).read_text(encoding="utf-8"))
+
+    def active_task(
+        self,
+        payload,
+        *,
+        task_id=CURRENT_TASK_ID,
+        branch=CURRENT_TASK_BRANCH,
+    ):
+        active = [
+            task
+            for task in payload["tasks"]
+            if task["state"] == "active"
+            and task["id"] == task_id
+            and task["branch"] == branch
+        ]
+        self.assertEqual(1, len(active), "intended active Task fixture is missing")
+        return active[0]
 
     def declared_paths(self, payload):
         return [
@@ -66,10 +85,11 @@ class RepositoryPolicyTest(unittest.TestCase):
         path = root / relative
         path.write_text(text, encoding="utf-8")
         payload = self.ownership_payload(root)
-        payload["tasks"][1]["owned_paths"].append(
+        task = self.active_task(payload)
+        task["owned_paths"].append(
             {"path": relative, "mode": "100644"}
         )
-        payload["tasks"][1]["owned_paths"].sort(key=lambda item: item["path"])
+        task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(root, payload)
         return path
 
@@ -79,12 +99,13 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertIn(token, rendered)
 
     def current_feature_head(self):
+        active_base = self.active_task(self.ownership_payload())["base_commit"]
         parents = subprocess.check_output(
             ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
             cwd=ROOT,
             text=True,
         ).split()
-        if len(parents) == 3 and parents[1] == self.checker.ACCEPTED_PHASE0_COMMIT:
+        if len(parents) == 3 and parents[1] == active_base:
             return parents[2]
         return parents[0]
 
@@ -101,6 +122,7 @@ class RepositoryPolicyTest(unittest.TestCase):
             cwd=fixture,
             check=True,
         )
+        task = self.active_task(self.ownership_payload())
         feature_head = self.current_feature_head()
         subprocess.run(
             ["git", "checkout", "--quiet", "--detach", feature_head],
@@ -113,7 +135,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                 "branch",
                 "--force",
                 "main",
-                self.checker.ACCEPTED_PHASE0_COMMIT,
+                task["base_commit"],
             ],
             cwd=fixture,
             check=True,
@@ -124,7 +146,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                 "checkout",
                 "--quiet",
                 "-B",
-                "codex/phase-1-policy-bridge",
+                task["branch"],
                 feature_head,
             ],
             cwd=fixture,
@@ -140,6 +162,7 @@ class RepositoryPolicyTest(unittest.TestCase):
             ["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(fixture)],
             check=True,
         )
+        task = self.active_task(self.ownership_payload())
         feature_head = self.current_feature_head()
         tree = subprocess.check_output(
             ["git", "rev-parse", f"{feature_head}^{{tree}}"], cwd=fixture, text=True
@@ -154,7 +177,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                 "commit-tree",
                 tree,
                 "-p",
-                self.checker.ACCEPTED_PHASE0_COMMIT,
+                task["base_commit"],
                 "-p",
                 feature_head,
             ],
@@ -175,12 +198,13 @@ class RepositoryPolicyTest(unittest.TestCase):
         return fixture, feature_head, merge
 
     def pull_request_environment(self, event_path, merge):
+        task = self.active_task(self.ownership_payload())
         return {
             "GITHUB_ACTIONS": "true",
             "GITHUB_BASE_REF": "main",
             "GITHUB_EVENT_NAME": "pull_request",
             "GITHUB_EVENT_PATH": str(event_path),
-            "GITHUB_HEAD_REF": "codex/phase-1-policy-bridge",
+            "GITHUB_HEAD_REF": task["branch"],
             "GITHUB_REF": "refs/pull/2/merge",
             "GITHUB_REF_NAME": "2/merge",
             "GITHUB_REF_TYPE": "branch",
@@ -191,6 +215,15 @@ class RepositoryPolicyTest(unittest.TestCase):
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
 
+    def test_active_task_helper_selects_t04_among_disjoint_active_tasks(self):
+        payload = copy.deepcopy(self.ownership_payload())
+        phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
+        phase0["state"] = "active"
+        self.assertEqual("T04", self.active_task(payload)["id"])
+        errors = []
+        self.checker.validate_manifest(payload, errors)
+        self.assertEqual([], errors)
+
     def test_safe_declared_expansion_passes(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
@@ -198,10 +231,11 @@ class RepositoryPolicyTest(unittest.TestCase):
         added.parent.mkdir(parents=True, exist_ok=True)
         added.write_text("reviewed expansion\n", encoding="utf-8")
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"].append(
+        task = self.active_task(payload)
+        task["owned_paths"].append(
             {"path": "docs/reviewed-expansion.md", "mode": "100644"}
         )
-        payload["tasks"][1]["owned_paths"].sort(key=lambda item: item["path"])
+        task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assertEqual([], self.errors_for(fixture))
 
@@ -221,10 +255,11 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"].append(
+        task = self.active_task(payload)
+        task["owned_paths"].append(
             {"path": "README.md", "mode": "100644"}
         )
-        payload["tasks"][1]["owned_paths"].sort(key=lambda item: item["path"])
+        task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "overlapping ownership")
 
@@ -232,10 +267,9 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"].append(
-            dict(payload["tasks"][1]["owned_paths"][0])
-        )
-        payload["tasks"][1]["owned_paths"].sort(key=lambda item: item["path"])
+        task = self.active_task(payload)
+        task["owned_paths"].append(dict(task["owned_paths"][0]))
+        task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "duplicate paths")
 
@@ -243,7 +277,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["id"] = payload["tasks"][0]["id"]
+        self.active_task(payload)["id"] = payload["tasks"][0]["id"]
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "duplicate ownership task ID")
 
@@ -251,7 +285,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"][0]["path"] = "../escape"
+        self.active_task(payload)["owned_paths"][0]["path"] = "../escape"
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "normalized repository path")
 
@@ -259,7 +293,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"][0]["path"] = "bad\npath"
+        self.active_task(payload)["owned_paths"][0]["path"] = "bad\npath"
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "normalized repository path")
 
@@ -267,7 +301,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"][0]["path"] = "docs/cafe\u0301.md"
+        self.active_task(payload)["owned_paths"][0]["path"] = "docs/cafe\u0301.md"
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "normalized repository path")
 
@@ -275,10 +309,11 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"].append(
+        task = self.active_task(payload)
+        task["owned_paths"].append(
             {"path": "readme.md", "mode": "100644"}
         )
-        payload["tasks"][1]["owned_paths"].sort(key=lambda item: item["path"])
+        task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(self.errors_for(fixture), "Unicode/case path collision")
 
@@ -294,8 +329,9 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["state"] = ["active"]
-        payload["tasks"][1]["owned_paths"][0]["mode"] = ["100644"]
+        task = self.active_task(payload)
+        task["state"] = ["active"]
+        task["owned_paths"][0]["mode"] = ["100644"]
         self.write_ownership(fixture, payload)
         errors = self.errors_for(fixture)
         self.assert_rejected(errors, ".state is unsupported")
@@ -335,9 +371,10 @@ class RepositoryPolicyTest(unittest.TestCase):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.ownership_payload(fixture)
-        payload["tasks"][1]["owned_paths"] = [
+        task = self.active_task(payload)
+        task["owned_paths"] = [
             entry
-            for entry in payload["tasks"][1]["owned_paths"]
+            for entry in task["owned_paths"]
             if entry["path"] != OWNERSHIP
         ]
         self.write_ownership(fixture, payload)
@@ -742,43 +779,47 @@ jobs:
 
     def test_stale_or_missing_base_evidence_is_rejected(self):
         payload = self.ownership_payload()
-        payload["tasks"][1]["base_commit"] = "0" * 40
+        self.active_task(payload)["base_commit"] = "0" * 40
         errors = []
         self.checker.validate_git_evidence(ROOT, payload, errors)
         self.assert_rejected(errors, "commit object is missing")
 
     def test_base_tree_mismatch_is_rejected(self):
         payload = self.ownership_payload()
-        payload["tasks"][1]["base_tree"] = "f" * 40
+        self.active_task(payload)["base_tree"] = "f" * 40
         errors = []
         self.checker.validate_git_evidence(ROOT, payload, errors)
         self.assert_rejected(errors, "tree does not match")
 
     def test_active_task_rejects_change_owned_only_by_phase0(self):
         payload = self.ownership_payload()
+        active = self.active_task(payload)
         errors = []
         task = self.checker.active_task_for_branch(
-            payload, "codex/phase-1-policy-bridge", errors
+            payload, active["branch"], errors
         )
         self.assertIsNotNone(task)
         self.checker.authorize_changed_paths(task, ["README.md"], errors)
-        self.assert_rejected(errors, "outside active Task T03 ownership")
+        self.assert_rejected(
+            errors, f"outside active Task {active['id']} ownership"
+        )
 
     def test_atomic_manifest_ownership_transfer_is_viable(self):
         transferred = copy.deepcopy(self.ownership_payload())
+        active = self.active_task(transferred)
         manifest_entry = next(
             entry
-            for entry in transferred["tasks"][1]["owned_paths"]
+            for entry in active["owned_paths"]
             if entry["path"] == OWNERSHIP
         )
-        transferred["tasks"][1]["owned_paths"].remove(manifest_entry)
-        transferred["tasks"][1]["state"] = "accepted"
+        active["owned_paths"].remove(manifest_entry)
+        active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T04",
-                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6",
+                "id": "T05",
+                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
                 "state": "active",
-                "branch": "codex/phase-1-ci-toolchain",
+                "branch": "codex/phase-1-next-task",
                 "base_commit": subprocess.check_output(
                     ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
                 ).strip(),
@@ -791,7 +832,7 @@ jobs:
         errors = []
         self.checker.validate_manifest(transferred, errors)
         task = self.checker.active_task_for_branch(
-            transferred, "codex/phase-1-ci-toolchain", errors
+            transferred, "codex/phase-1-next-task", errors
         )
         self.assertIsNotNone(task)
         self.checker.authorize_changed_paths(task, [OWNERSHIP], errors)
@@ -806,10 +847,11 @@ jobs:
     def test_local_branch_rejects_older_ancestor_as_task_base(self):
         fixture = self.local_branch_fixture()
         payload = copy.deepcopy(self.ownership_payload(fixture))
-        payload["tasks"][1]["base_commit"] = (
+        active = self.active_task(payload)
+        active["base_commit"] = (
             "88179ec6a28393d7bf4cea96684e3af16b512484"
         )
-        payload["tasks"][1]["base_tree"] = (
+        active["base_tree"] = (
             "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
         )
         errors = []
@@ -818,9 +860,10 @@ jobs:
 
     def test_local_branch_rejects_committed_p00_change(self):
         fixture = self.local_branch_fixture()
+        active = self.active_task(self.ownership_payload(fixture))
         path = fixture / "README.md"
         path.write_text(
-            path.read_text(encoding="utf-8") + "\ncommitted outside T03\n",
+            path.read_text(encoding="utf-8") + "\ncommitted outside active Task\n",
             encoding="utf-8",
         )
         subprocess.run(
@@ -843,56 +886,67 @@ jobs:
         )
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            "outside active Task T03 ownership: README.md",
+            f"outside active Task {active['id']} ownership: README.md",
         )
 
     def test_local_branch_rejects_unstaged_p00_content_change(self):
         fixture = self.local_branch_fixture()
+        active = self.active_task(self.ownership_payload(fixture))
         path = fixture / "README.md"
         path.write_text(
-            path.read_text(encoding="utf-8") + "\nunstaged outside T03\n",
+            path.read_text(encoding="utf-8") + "\nunstaged outside active Task\n",
             encoding="utf-8",
         )
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            "outside active Task T03 ownership: README.md",
+            f"outside active Task {active['id']} ownership: README.md",
         )
 
     def test_local_branch_rejects_staged_p00_content_change(self):
         fixture = self.local_branch_fixture()
+        active = self.active_task(self.ownership_payload(fixture))
         path = fixture / "README.md"
         path.write_text(
-            path.read_text(encoding="utf-8") + "\nstaged outside T03\n",
+            path.read_text(encoding="utf-8") + "\nstaged outside active Task\n",
             encoding="utf-8",
         )
         subprocess.run(["git", "add", "README.md"], cwd=fixture, check=True)
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            "outside active Task T03 ownership: README.md",
+            f"outside active Task {active['id']} ownership: README.md",
         )
 
     def test_local_branch_rejects_dirty_p00_mode_change(self):
         fixture = self.local_branch_fixture()
+        active = self.active_task(self.ownership_payload(fixture))
         (fixture / "README.md").chmod(0o755)
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            "outside active Task T03 ownership: README.md",
+            f"outside active Task {active['id']} ownership: README.md",
         )
 
     def test_local_branch_rejects_dirty_p00_deletion(self):
         fixture = self.local_branch_fixture()
+        active = self.active_task(self.ownership_payload(fixture))
         (fixture / "README.md").unlink()
         errors = self.local_authorization_errors(fixture)
         self.assert_rejected(errors, "does not support deletion")
         self.assert_rejected(
-            errors, "outside active Task T03 ownership: README.md"
+            errors, f"outside active Task {active['id']} ownership: README.md"
         )
 
     def test_local_branch_allows_checking_active_owned_dirty_change(self):
         fixture = self.local_branch_fixture()
-        path = fixture / ".github/scripts/check-repository-policy.py"
+        active = self.active_task(self.ownership_payload(fixture))
+        relative = next(
+            entry["path"]
+            for entry in active["owned_paths"]
+            if entry["path"].endswith(".md")
+            and entry["path"] != "docs/conformance/catalog.md"
+        )
+        path = fixture / relative
         path.write_text(
-            path.read_text(encoding="utf-8") + "\n# active-owned dirty test\n",
+            path.read_text(encoding="utf-8") + "\n",
             encoding="utf-8",
         )
         self.assertEqual(
@@ -901,6 +955,7 @@ jobs:
 
     def test_github_pull_request_synthetic_ref_context_passes(self):
         fixture, head, merge = self.synthetic_pull_request_fixture()
+        task = self.active_task(self.ownership_payload())
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         event_path = Path(temporary.name) / "event.json"
@@ -913,10 +968,10 @@ jobs:
                             "repo": {
                                 "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                             },
-                            "sha": "32615344ad4f0310948bc59d234a84718741788a",
+                            "sha": task["base_commit"],
                         },
                         "head": {
-                            "ref": "codex/phase-1-policy-bridge",
+                            "ref": task["branch"],
                             "repo": {
                                 "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                             },
@@ -934,6 +989,7 @@ jobs:
         )
 
     def test_github_pull_request_base_must_match_active_task(self):
+        task = self.active_task(self.ownership_payload())
         head = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip()
@@ -952,7 +1008,7 @@ jobs:
                             "sha": "88179ec6a28393d7bf4cea96684e3af16b512484"
                         },
                         "head": {
-                            "ref": "codex/phase-1-policy-bridge",
+                            "ref": task["branch"],
                             "repo": {
                                 "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                             },
@@ -973,7 +1029,7 @@ jobs:
                 "GITHUB_BASE_REF": "main",
                 "GITHUB_EVENT_NAME": "pull_request",
                 "GITHUB_EVENT_PATH": str(event_path),
-                "GITHUB_HEAD_REF": "codex/phase-1-policy-bridge",
+                "GITHUB_HEAD_REF": task["branch"],
                 "GITHUB_REF": "refs/pull/2/merge",
                 "GITHUB_REF_NAME": "2/merge",
                 "GITHUB_REF_TYPE": "branch",
@@ -985,6 +1041,7 @@ jobs:
         self.assert_rejected(errors, "does not match pull_request.base.sha")
 
     def test_github_pull_request_requires_same_repository_on_both_sides(self):
+        task = self.active_task(self.ownership_payload())
         checked_head = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip()
@@ -1009,10 +1066,10 @@ jobs:
                         "repo": {
                             "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                         },
-                        "sha": self.checker.ACCEPTED_PHASE0_COMMIT,
+                        "sha": task["base_commit"],
                     },
                     "head": {
-                        "ref": "codex/phase-1-policy-bridge",
+                        "ref": task["branch"],
                         "repo": {
                             "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                         },
@@ -1037,6 +1094,7 @@ jobs:
                 self.assert_rejected(errors, token)
 
     def test_github_pull_request_ref_number_mismatch_fails_closed(self):
+        task = self.active_task(self.ownership_payload())
         head = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip()
@@ -1048,7 +1106,7 @@ jobs:
                 "GITHUB_BASE_REF": "main",
                 "GITHUB_EVENT_NAME": "pull_request",
                 "GITHUB_EVENT_PATH": "/not-read-by-context-resolution",
-                "GITHUB_HEAD_REF": "codex/phase-1-policy-bridge",
+                "GITHUB_HEAD_REF": task["branch"],
                 "GITHUB_REF": "refs/pull/3/merge",
                 "GITHUB_REF_NAME": "2/merge",
                 "GITHUB_REF_TYPE": "branch",
@@ -1060,6 +1118,7 @@ jobs:
         self.assert_rejected(errors, "does not match GITHUB_REF_NAME")
 
     def test_github_pull_request_requires_exact_synthetic_merge(self):
+        task = self.active_task(self.ownership_payload())
         checked_head = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip()
@@ -1075,14 +1134,14 @@ jobs:
                             "repo": {
                                 "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                             },
-                            "sha": self.checker.ACCEPTED_PHASE0_COMMIT,
+                            "sha": task["base_commit"],
                         },
                         "head": {
-                            "ref": "codex/phase-1-policy-bridge",
+                            "ref": task["branch"],
                             "repo": {
                                 "full_name": "mochan-tk/agentic-dev-kit-for-codex"
                             },
-                            "sha": self.checker.ACCEPTED_PHASE0_COMMIT,
+                            "sha": task["base_commit"],
                         },
                     }
                 }

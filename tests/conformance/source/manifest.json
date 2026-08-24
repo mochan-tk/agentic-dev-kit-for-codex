@@ -1,0 +1,49 @@
+{
+  "schema": "conformance-source-manifest/v1",
+  "research_archive": {
+    "file_name": "agentic-dev-kit-codex-research-pack.zip",
+    "sha256": "55e3e36d581c40a30f4e09e208573fcc15b46a254077da4f177fe7b8adcad0f7",
+    "committed": false,
+    "supplied_files_verified": 7
+  },
+  "scenario_member": {
+    "archive_member": "agentic-dev-kit-codex-research-pack/05_CONFORMANCE_SCENARIOS.md",
+    "repository_path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md",
+    "sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0",
+    "bytes": 26387,
+    "lines": 876,
+    "encoding": "UTF-8",
+    "line_endings": "LF"
+  },
+  "source_baseline": {
+    "repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+    "tree": "88f96493ec167602750c8dfec044629bd494a586",
+    "phase_manifest_pointer": "tests/conformance/manifest.json#source"
+  },
+  "conversion": {
+    "tool": ".github/scripts/conformance-catalog.py",
+    "import_outputs": [
+      "tests/conformance/source/manifest.json",
+      "tests/conformance/catalog.json",
+      "tests/conformance/catalog.schema.json"
+    ],
+    "independent_update_authorities": [
+      "tests/conformance/coverage.json",
+      "tests/conformance/coverage.schema.json",
+      "tests/conformance/results.json",
+      "tests/conformance/results.schema.json"
+    ],
+    "render_output": "docs/conformance/catalog.md",
+    "import_write": "python3 .github/scripts/conformance-catalog.py import",
+    "render_write": "python3 .github/scripts/conformance-catalog.py render",
+    "import_check": "python3 .github/scripts/conformance-catalog.py import --check",
+    "render_check": "python3 .github/scripts/conformance-catalog.py render --check",
+    "catalog_check": "python3 .github/scripts/conformance-catalog.py check"
+  },
+  "independent_full_text_comparison": {
+    "classification": "advisory",
+    "required_approver": false
+  },
+  "private_local_paths_recorded": false
+}

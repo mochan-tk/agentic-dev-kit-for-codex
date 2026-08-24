@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/tests/conformance/coverage.schema.json",
+  "title": "Target conformance disposition and coverage plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "catalog",
+    "scenario_count",
+    "entries"
+  ],
+  "properties": {
+    "schema": {
+      "const": "conformance-coverage/v1"
+    },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "const": "tests/conformance/catalog.json"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "scenario_count": {
+      "const": 136
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 136,
+      "maxItems": 136,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scenario",
+          "disposition",
+          "verification_state"
+        ],
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "pattern": "^[A-Z]-[0-9]{3}$"
+          },
+          "disposition": {
+            "enum": [
+              "planned",
+              "target-specialization",
+              "pending-agreement",
+              "agreement-decision"
+            ]
+          },
+          "verification_state": {
+            "const": "not-run"
+          },
+          "specialization": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agreement_issue": {
+            "const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
+          },
+          "agreement_adr": {
+            "type": "string",
+            "pattern": "^docs/agreements/adr/ADR-[0-9]{4}-[a-z0-9][a-z0-9-]*\\.md$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "disposition": {
+                  "const": "planned"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "specialization"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "agreement_issue"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "agreement_adr"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "disposition": {
+                  "const": "target-specialization"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "specialization"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "agreement_issue"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "agreement_adr"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "disposition": {
+                  "const": "pending-agreement"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "agreement_issue"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "specialization"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "agreement_adr"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "disposition": {
+                  "const": "agreement-decision"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "agreement_issue",
+                "agreement_adr"
+              ],
+              "not": {
+                "required": [
+                  "specialization"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

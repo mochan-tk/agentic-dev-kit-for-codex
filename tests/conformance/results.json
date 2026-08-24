@@ -1,0 +1,10 @@
+{
+  "schema": "conformance-results/v1",
+  "catalog": {
+    "path": "tests/conformance/catalog.json",
+    "sha256": "418bf8aa01674dc0c78cc615ad8e278ed06df1a952bb4670ec42e3bdd7dacc3d"
+  },
+  "result_count": 0,
+  "results": [],
+  "release_blocked": true
+}

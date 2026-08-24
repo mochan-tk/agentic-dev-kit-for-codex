@@ -1,0 +1,693 @@
+{
+  "schema": "conformance-coverage/v1",
+  "catalog": {
+    "path": "tests/conformance/catalog.json",
+    "sha256": "418bf8aa01674dc0c78cc615ad8e278ed06df1a952bb4670ec42e3bdd7dacc3d"
+  },
+  "scenario_count": 136,
+  "entries": [
+    {
+      "scenario": "C-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "C-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "C-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "C-004",
+      "disposition": "pending-agreement",
+      "verification_state": "not-run",
+      "agreement_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
+    },
+    {
+      "scenario": "C-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "A-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "A-002",
+      "disposition": "target-specialization",
+      "verification_state": "not-run",
+      "specialization": "Nested discovery follows the repository root to the session startup working directory. Editing a `.github` path from a root-started session does not itself load `.github/AGENTS.md`; the probe must start within that hierarchy or explicitly read and apply the nested policy."
+    },
+    {
+      "scenario": "A-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "A-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "A-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "A-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "S-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "R-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "E-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "H-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-008",
+      "disposition": "target-specialization",
+      "verification_state": "not-run",
+      "specialization": "Bind event assertions to a named Codex client, version, and observation date. The `codex exec --json` JSONL stream shape is distinct from `--output-schema`, which constrains only the final structured output. Preserve or explicitly handle unknown event types; malformed, interrupted, or unrecognized required events are non-pass."
+    },
+    {
+      "scenario": "W-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-011",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "W-012",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-011",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-012",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-013",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-014",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-015",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "T-016",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "O-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-011",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-012",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-013",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-014",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "I-015",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-011",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-012",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "G-013",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-009",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-010",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-011",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "P-012",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "D-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "D-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "D-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "D-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-001",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-002",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-003",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-004",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-005",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-006",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-007",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    },
+    {
+      "scenario": "X-008",
+      "disposition": "planned",
+      "verification_state": "not-run"
+    }
+  ]
+}
