@@ -1,0 +1,32 @@
+{
+  "schema": "phase0-snapshot/v1",
+  "snapshot_sha256": "7ee73a7cd8818fd2e1688e9b266575f22d294d0caf299c17e28eec8a65d69c54",
+  "accepted_commit": "32615344ad4f0310948bc59d234a84718741788a",
+  "accepted_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+  "path_count": 17,
+  "files": [
+    {"path": ".gitattributes", "mode": "100644", "blob": "5a93eedaf4b158b37e1343c223e60f77650ca81e", "sha256": "8726ecc3445fcec57aab475aa7dc7ee4cb2f7bafc23c182f304600289af7eab6"},
+    {"path": ".github/scripts/check-action-pins.sh", "mode": "100644", "blob": "903bc4a72f67a3a3f9327de2974c7e5f020fc401", "sha256": "fde1f79e8a95c016cfd1afbde3c4d0ff6d9a74ce064241cfc8322da511fd5683"},
+    {"path": ".github/scripts/check-phase0-contracts.py", "mode": "100644", "blob": "ad85660b1a38acdd614dd0095d2a1da6b36e4efb", "sha256": "02e536f79d737a84eb8baaa199e47463ec2c76006f7f1925d889c64db8ef9003"},
+    {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644", "blob": "5e2bc9ad0e1eebe5f403daf99b055ed574c4a273", "sha256": "fd40964e756cab6feb21ca3d503764eb55d070648a124b8755503fef4191d2b9"},
+    {"path": ".github/scripts/tests/lib.sh", "mode": "100644", "blob": "51892639e43ac2e104b2f7c23efa2b52df776dec", "sha256": "9897ce0054cee59a9300019f5dd34cc69700a8447653eebc11e775ed3a4c7143"},
+    {"path": ".github/scripts/tests/test-action-pins.sh", "mode": "100644", "blob": "6baa5fe146fc0aae74c011269cb83feb2b3e3de5", "sha256": "7c4535473912d2b351f0d78d3f190d2dbd253497a5e96d5726ca9f40db219d85"},
+    {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644", "blob": "148a83014662eeede886df7cfe79314bb719188e", "sha256": "30749b61b5ee6072b1b85fcbd723f1cbb411c5b54140bc29fd8904e2d48a3ee2"},
+    {"path": ".github/workflows/ci.yml", "mode": "100644", "blob": "b34ff2d3e4ee971a9683bb274c6e44d8fff96179", "sha256": "8991d5a55685879da2b018a6531793138efc43c1cc7f81808133ef5e6e4350f2"},
+    {"path": ".gitignore", "mode": "100644", "blob": "4970eb66bdfec2c3fb6270ec23ecba6d6cc5681a", "sha256": "a3350390f9b66d858db155fc63c4bbb8c57502c42f4442af6e8bb1d761a8ee7d"},
+    {"path": "AGENTS.md", "mode": "100644", "blob": "d6e5311e024f47d0464937109defac216b0fb30f", "sha256": "438b7c8e838fd8ad91f6ee3a6a782258c3e49207810bccfaf64ecffe3a7de59c"},
+    {"path": "LICENSE", "mode": "100644", "blob": "746b0d8d979fac8e7c16526552d1fe2aa3330832", "sha256": "2e296907bf220de10cdabb84fd4244082adb8f935b4a5f04686c63aebd800610"},
+    {"path": "README.md", "mode": "100644", "blob": "4c6f0089ca53fc848706c8951ac1dc5e05934897", "sha256": "2d85644064ba5d03f8239787f9046409098f2f0d0cf94510cee095a2a7f57453"},
+    {"path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md", "mode": "100644", "blob": "6929c3373735f3377a078fefebc1c3f6a6f5fd98", "sha256": "9a2fd667caffda8f1d20b195a05dbb885392273e4c87e110f913490e4c9561d2"},
+    {"path": "docs/known-limitations.md", "mode": "100644", "blob": "038b90456419aafdc724b515eaf9af2ff62e896f", "sha256": "2b251aff859da9f54c3d05904a48b2f745751fb06bd3fa71f0afe276fbfd87f2"},
+    {"path": "docs/planning/phase-0-orientation.md", "mode": "100644", "blob": "3125bb544f4b471af9f829952e42d4a823bf8606", "sha256": "31f9b94fe8fdd71d747b647a2580a981f6502a3f007e736160f036ac7e4b1b0a"},
+    {"path": "tests/conformance/manifest.json", "mode": "100644", "blob": "1fb1aa025f9db9854f8dd038b16f167b3712837c", "sha256": "7fd65003590179ab42a0a6ba8f21e713db6a89956a16a039886c2e3577b7dc44"},
+    {"path": "tests/conformance/test_phase0_contracts.py", "mode": "100644", "blob": "1429eb211efb9932673a210618c3e2d3e3e0676f", "sha256": "1318aed61a66ab7c79fcb4f5155f1d7a2eca077419d3d80a55af0b14d69152fb"}
+  ],
+  "reviewed_digests": {
+    "invariants_sha256": "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c",
+    "workflow_sha256": "8991d5a55685879da2b018a6531793138efc43c1cc7f81808133ef5e6e4350f2",
+    "manifest_sha256": "7fd65003590179ab42a0a6ba8f21e713db6a89956a16a039886c2e3577b7dc44",
+    "research_catalog_sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0"
+  }
+}

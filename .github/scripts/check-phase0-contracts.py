@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the self-contained Phase 0 contract without network access."""
+"""Replay the accepted Phase 0 contract from immutable local Git objects."""
 
 from __future__ import annotations
 
@@ -8,9 +8,14 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
+
+ACCEPTED_PHASE0_COMMIT = "32615344ad4f0310948bc59d234a84718741788a"
+ACCEPTED_PHASE0_TREE = "33259721ec9f378fa67392ef8e1c7645db1321f9"
+SNAPSHOT_RELATIVE_PATH = "tests/conformance/phase0-snapshot.json"
 
 EXPECTED_PATHS = {
     ".gitattributes",
@@ -59,6 +64,9 @@ EXPECTED_INVARIANT_DIGEST = (
 )
 EXPECTED_WORKFLOW_SHA256 = (
     "8991d5a55685879da2b018a6531793138efc43c1cc7f81808133ef5e6e4350f2"
+)
+EXPECTED_MANIFEST_SHA256 = (
+    "7fd65003590179ab42a0a6ba8f21e713db6a89956a16a039886c2e3577b7dc44"
 )
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
 EXPECTED_CONTRACTS = {
@@ -184,7 +192,15 @@ def git_index_entries(root: Path) -> dict[str, str] | None:
         return None
     try:
         result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--stage", "-z"],
+            [
+                "git",
+                "--no-replace-objects",
+                "-C",
+                str(root),
+                "ls-files",
+                "--stage",
+                "-z",
+            ],
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -225,10 +241,22 @@ def discover_paths(root: Path) -> set[str]:
     return paths
 
 
+def reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate object key {key!r}")
+        value[key] = item
+    return value
+
+
 def read_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_json_keys,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         errors.append(f"{label} is not valid UTF-8 JSON: {exc}")
         return {}
     if not isinstance(payload, dict):
@@ -690,18 +718,249 @@ def validate_repository(root: Path, paths: set[str] | None = None) -> list[str]:
     return errors
 
 
+def canonical_snapshot_digest(snapshot: dict[str, Any]) -> str:
+    """Hash the snapshot payload without its self-address field."""
+
+    canonical = dict(snapshot)
+    canonical.pop("snapshot_sha256", None)
+    encoded = json.dumps(
+        canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def validate_snapshot_payload(snapshot: dict[str, Any], errors: list[str]) -> None:
+    """Validate the closed Phase 0 snapshot schema and reviewed anchors."""
+
+    expected_keys = {
+        "schema",
+        "snapshot_sha256",
+        "accepted_commit",
+        "accepted_tree",
+        "path_count",
+        "files",
+        "reviewed_digests",
+    }
+    if set(snapshot) != expected_keys:
+        errors.append("Phase 0 snapshot has unsupported or missing top-level fields")
+    if snapshot.get("schema") != "phase0-snapshot/v1":
+        errors.append("Phase 0 snapshot schema must be phase0-snapshot/v1")
+    if snapshot.get("accepted_commit") != ACCEPTED_PHASE0_COMMIT:
+        errors.append(
+            f"Phase 0 accepted commit must be {ACCEPTED_PHASE0_COMMIT}"
+        )
+    if snapshot.get("accepted_tree") != ACCEPTED_PHASE0_TREE:
+        errors.append(f"Phase 0 accepted tree must be {ACCEPTED_PHASE0_TREE}")
+
+    recorded_digest = snapshot.get("snapshot_sha256")
+    actual_digest = canonical_snapshot_digest(snapshot)
+    if not isinstance(recorded_digest, str) or not re.fullmatch(
+        r"[0-9a-f]{64}", recorded_digest
+    ):
+        errors.append("Phase 0 snapshot digest must be a SHA-256 string")
+    if recorded_digest != actual_digest:
+        errors.append(
+            "Phase 0 snapshot digest mismatch: "
+            f"recorded {recorded_digest!r}, calculated {actual_digest}"
+        )
+
+    files = snapshot.get("files")
+    if not isinstance(files, list):
+        errors.append("Phase 0 snapshot files must be a list")
+        files = []
+    if snapshot.get("path_count") != 17 or len(files) != 17:
+        errors.append("Phase 0 snapshot must contain exactly 17 paths")
+
+    observed_paths: list[str] = []
+    for index, item in enumerate(files):
+        if not isinstance(item, dict):
+            errors.append(f"Phase 0 snapshot files[{index}] must be an object")
+            continue
+        if set(item) != {"path", "mode", "blob", "sha256"}:
+            errors.append(
+                f"Phase 0 snapshot files[{index}] has unsupported or missing fields"
+            )
+        path = item.get("path")
+        if not isinstance(path, str):
+            errors.append(f"Phase 0 snapshot files[{index}].path must be a string")
+            continue
+        observed_paths.append(path)
+        if item.get("mode") != "100644":
+            errors.append(f"Phase 0 snapshot path must use mode 100644: {path}")
+        blob = item.get("blob")
+        if not isinstance(blob, str) or not re.fullmatch(r"[0-9a-f]{40}", blob):
+            errors.append(f"Phase 0 snapshot blob is invalid: {path}")
+        digest = item.get("sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            errors.append(f"Phase 0 snapshot SHA-256 is invalid: {path}")
+
+    if observed_paths != sorted(observed_paths):
+        errors.append("Phase 0 snapshot paths must be sorted")
+    if len(observed_paths) != len(set(observed_paths)):
+        errors.append("Phase 0 snapshot paths must be unique")
+    if set(observed_paths) != EXPECTED_PATHS:
+        errors.append("Phase 0 snapshot paths do not match the accepted 17-path set")
+
+    expected_reviewed = {
+        "invariants_sha256": EXPECTED_INVARIANT_DIGEST,
+        "workflow_sha256": EXPECTED_WORKFLOW_SHA256,
+        "manifest_sha256": EXPECTED_MANIFEST_SHA256,
+        "research_catalog_sha256": EXPECTED_PACK["conformance_catalog_sha256"],
+    }
+    if snapshot.get("reviewed_digests") != expected_reviewed:
+        errors.append("Phase 0 snapshot reviewed digests do not match accepted values")
+
+
+def git_output(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
+    """Run a bounded read-only Git command."""
+
+    try:
+        return subprocess.run(
+            ["git", "--no-replace-objects", "-C", str(root), *arguments],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as exc:
+        return subprocess.CompletedProcess(arguments, 127, b"", str(exc).encode())
+
+
+def snapshot_files(snapshot: dict[str, Any]) -> list[dict[str, str]]:
+    files = snapshot.get("files")
+    if not isinstance(files, list):
+        return []
+    return [item for item in files if isinstance(item, dict)]
+
+
+def validate_snapshot_git_objects(
+    root: Path, snapshot: dict[str, Any], errors: list[str]
+) -> dict[str, bytes]:
+    """Validate the accepted commit/tree/path/blob graph and return file bytes."""
+
+    commit = str(snapshot.get("accepted_commit", ""))
+    expected_tree = str(snapshot.get("accepted_tree", ""))
+    existence = git_output(root, "cat-file", "-e", f"{commit}^{{commit}}")
+    if existence.returncode != 0:
+        errors.append(f"accepted Phase 0 commit object is missing or invalid: {commit}")
+        return {}
+
+    resolved_tree = git_output(root, "rev-parse", f"{commit}^{{tree}}")
+    if resolved_tree.returncode != 0:
+        errors.append("cannot resolve the accepted Phase 0 tree object")
+        return {}
+    actual_tree = resolved_tree.stdout.decode("ascii", errors="replace").strip()
+    if actual_tree != expected_tree:
+        errors.append(
+            f"accepted Phase 0 tree mismatch: expected {expected_tree}, found {actual_tree}"
+        )
+
+    ancestry = git_output(root, "merge-base", "--is-ancestor", commit, "HEAD")
+    if ancestry.returncode != 0:
+        errors.append("accepted Phase 0 commit is not an ancestor of current HEAD")
+
+    tree_result = git_output(root, "ls-tree", "-r", "-z", commit)
+    if tree_result.returncode != 0:
+        errors.append("cannot enumerate accepted Phase 0 tree")
+        return {}
+    observed_tree: dict[str, tuple[str, str]] = {}
+    for record in tree_result.stdout.split(b"\0"):
+        if not record:
+            continue
+        try:
+            metadata, raw_path = record.split(b"\t", 1)
+            mode, object_type, blob = metadata.decode("ascii").split()
+            path = raw_path.decode("utf-8")
+        except (ValueError, UnicodeError):
+            errors.append("accepted Phase 0 tree contains an unclassifiable entry")
+            continue
+        if object_type != "blob":
+            errors.append(f"accepted Phase 0 tree entry is not a blob: {path}")
+            continue
+        observed_tree[path] = (mode, blob)
+
+    expected_tree_entries = {
+        str(item.get("path")): (str(item.get("mode")), str(item.get("blob")))
+        for item in snapshot_files(snapshot)
+    }
+    if observed_tree != expected_tree_entries:
+        errors.append("accepted Phase 0 tree entries differ from the snapshot")
+
+    contents: dict[str, bytes] = {}
+    for item in snapshot_files(snapshot):
+        path = str(item.get("path", ""))
+        result = git_output(root, "cat-file", "blob", f"{commit}:{path}")
+        if result.returncode != 0:
+            errors.append(f"accepted Phase 0 blob is missing: {path}")
+            continue
+        contents[path] = result.stdout
+        digest = hashlib.sha256(result.stdout).hexdigest()
+        if digest != item.get("sha256"):
+            errors.append(
+                f"accepted Phase 0 content digest mismatch for {path}: found {digest}"
+            )
+    return contents
+
+
+def materialize_snapshot(
+    destination: Path,
+    snapshot: dict[str, Any],
+    contents: dict[str, bytes],
+    errors: list[str],
+) -> None:
+    """Materialize only validated regular snapshot files for semantic replay."""
+
+    for item in snapshot_files(snapshot):
+        relative = str(item.get("path", ""))
+        if relative not in contents:
+            continue
+        path = destination / relative
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(contents[relative])
+            path.chmod(0o644)
+        except OSError as exc:
+            errors.append(f"cannot materialize Phase 0 snapshot path {relative}: {exc}")
+
+
+def validate_historical_repository(
+    root: Path, snapshot_payload: dict[str, Any] | None = None
+) -> list[str]:
+    """Replay the frozen Phase 0 verifier against its accepted Git tree."""
+
+    root = root.resolve()
+    errors: list[str] = []
+    snapshot = snapshot_payload
+    if snapshot is None:
+        snapshot = read_json(
+            root / SNAPSHOT_RELATIVE_PATH, errors, "Phase 0 snapshot"
+        )
+    validate_snapshot_payload(snapshot, errors)
+    if errors:
+        return errors
+
+    contents = validate_snapshot_git_objects(root, snapshot, errors)
+    if errors:
+        return errors
+    with tempfile.TemporaryDirectory(prefix="phase0-replay-") as temporary:
+        replay_root = Path(temporary)
+        materialize_snapshot(replay_root, snapshot, contents, errors)
+        if not errors:
+            errors.extend(validate_repository(replay_root, EXPECTED_PATHS))
+    return errors
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
-    errors = validate_repository(root)
+    errors = validate_historical_repository(root)
     if errors:
         print(f"phase0-contracts: FAIL — {len(errors)} finding(s)", file=sys.stderr)
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
     print(
-        "phase0-contracts: OK — baseline, 13 invariants, 20 contracts, "
-        "frozen catalog hash and 136 aggregate counts, limitations, ownership, "
-        "and CI are consistent"
+        "phase0-contracts: OK — accepted commit/tree, 17 paths and blobs, "
+        "reviewed digests, 13 invariants, 20 contracts, frozen catalog hash, "
+        "limitations, ownership, and CI replay consistently"
     )
     return 0
 

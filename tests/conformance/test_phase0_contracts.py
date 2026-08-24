@@ -1,7 +1,6 @@
 import hashlib
 import importlib.util
 import json
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -46,13 +45,22 @@ class Phase0ContractsTest(unittest.TestCase):
     def copy_fixture(self):
         temporary = tempfile.TemporaryDirectory()
         fixture = Path(temporary.name)
-        for relative in PHASE0_PATHS:
-            source = ROOT / relative
-            self.assertTrue(source.is_file(), f"fixture source missing: {relative}")
-            target = fixture / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
+        payload = self.snapshot_payload()
+        errors = []
+        contents = self.checker.validate_snapshot_git_objects(ROOT, payload, errors)
+        self.checker.materialize_snapshot(fixture, payload, contents, errors)
+        self.assertEqual([], errors)
         return temporary, fixture
+
+    def snapshot_payload(self):
+        return json.loads(
+            (ROOT / "tests/conformance/phase0-snapshot.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def resign_snapshot(self, payload):
+        payload["snapshot_sha256"] = self.checker.canonical_snapshot_digest(payload)
 
     def errors_for(self, root):
         paths = self.checker.discover_paths(root)
@@ -70,7 +78,80 @@ class Phase0ContractsTest(unittest.TestCase):
         self.assertIn(token, rendered)
 
     def test_repository_passes(self):
-        self.assertEqual([], self.errors_for(ROOT))
+        self.assertEqual([], self.checker.validate_historical_repository(ROOT))
+
+    def test_snapshot_self_digest_drift_is_rejected(self):
+        payload = self.snapshot_payload()
+        payload["path_count"] = 16
+        self.assert_rejected(
+            self.checker.validate_historical_repository(ROOT, payload),
+            "snapshot digest mismatch",
+        )
+
+    def test_duplicate_snapshot_json_key_is_rejected(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        path = Path(temporary.name) / "snapshot.json"
+        path.write_text('{"schema":"one","schema":"two"}\n', encoding="utf-8")
+        errors = []
+        self.checker.read_json(path, errors, "Phase 0 snapshot")
+        self.assert_rejected(errors, "duplicate object key")
+
+    def test_duplicate_conformance_manifest_key_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / "tests/conformance/manifest.json"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                '  "schema": "phase-0-conformance-manifest/v1",',
+                '  "schema": "phase-0-conformance-manifest/v1",\n'
+                '  "schema": "duplicate",',
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_rejected(self.errors_for(fixture), "duplicate object key")
+
+    def test_wrong_baseline_object_is_rejected(self):
+        payload = self.snapshot_payload()
+        payload["accepted_commit"] = "88179ec6a28393d7bf4cea96684e3af16b512484"
+        self.resign_snapshot(payload)
+        self.assert_rejected(
+            self.checker.validate_historical_repository(ROOT, payload),
+            "accepted commit must be",
+        )
+
+    def test_missing_baseline_object_is_rejected(self):
+        payload = self.snapshot_payload()
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        repository = Path(temporary.name)
+        subprocess.run(
+            ["git", "-c", "init.defaultBranch=main", "init", "-q", str(repository)],
+            check=True,
+        )
+        self.assert_rejected(
+            self.checker.validate_historical_repository(repository, payload),
+            "commit object is missing",
+        )
+
+    def test_snapshot_tree_drift_is_rejected(self):
+        payload = self.snapshot_payload()
+        payload["accepted_tree"] = "f" * 40
+        self.resign_snapshot(payload)
+        self.assert_rejected(
+            self.checker.validate_historical_repository(ROOT, payload),
+            "accepted tree must be",
+        )
+
+    def test_snapshot_content_digest_drift_is_rejected(self):
+        payload = self.snapshot_payload()
+        payload["files"][0]["sha256"] = "0" * 64
+        self.resign_snapshot(payload)
+        self.assert_rejected(
+            self.checker.validate_historical_repository(ROOT, payload),
+            "content digest mismatch",
+        )
 
     def test_phase0_text_files_have_no_blank_line_at_eof(self):
         for relative in PHASE0_PATHS:
@@ -80,6 +161,8 @@ class Phase0ContractsTest(unittest.TestCase):
     def test_ci_runs_repository_guards_directly(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         for command in (
+            "python3 .github/scripts/check-phase0-contracts.py",
+            "python3 .github/scripts/check-repository-policy.py",
             "bash .github/scripts/check-action-pins.sh",
             "bash .github/scripts/check-workflow-permissions.sh",
         ):
