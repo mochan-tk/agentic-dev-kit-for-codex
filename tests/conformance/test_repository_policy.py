@@ -13,8 +13,40 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / ".github/scripts/check-repository-policy.py"
 OWNERSHIP = ".github/governance/phase-task-ownership.v1.json"
-CURRENT_TASK_ID = "T04"
-CURRENT_TASK_BRANCH = "codex/phase-1-conformance-catalog"
+PHASE_MANIFEST = "tests/conformance/manifest.json"
+COVERAGE = "tests/conformance/coverage.json"
+HIERARCHY_ADR = "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
+REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
+HIERARCHY_ISSUE = (
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
+)
+CURRENT_TASK_ID = "T05"
+CURRENT_TASK_BRANCH = "codex/phase-1-hierarchy-agreement"
+EXPECTED_I02 = (
+    "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
+    "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
+    "is an optional projection and never outranks it."
+)
+EXPECTED_INVARIANT_DIGEST = (
+    "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6"
+)
+CANONICAL_HIERARCHY = (
+    "Repository initiative / Epic set -> Epic issue -> Task issue -> PR -> "
+    "commits, checks, and evidence"
+)
+PROJECTS_PROJECTION = (
+    "A GitHub Projects board is an optional projection. It never outranks the "
+    "Issue graph."
+)
+NO_INDIVIDUAL_COMPLETION = (
+    "No individual phase completion constitutes repository-level completion."
+)
+OVERALL_COMPLETION_CONDITION = (
+    "The overall repository implementation remains incomplete until every "
+    "required contract has current target-side evidence and a human-reviewed "
+    "completion pull request changing `release_blocked` to `false` is merged."
+)
+REQUIRED_CONTRACTS = [f"K{number:02d}" for number in range(1, 21)]
 
 
 class RepositoryPolicyTest(unittest.TestCase):
@@ -70,6 +102,22 @@ class RepositoryPolicyTest(unittest.TestCase):
             json.dumps(payload, indent=2) + "\n", encoding="utf-8"
         )
 
+    def read_json(self, root, relative):
+        return json.loads((root / relative).read_text(encoding="utf-8"))
+
+    def write_json(self, root, relative, payload):
+        (root / relative).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    def bind_coverage_hash(self, root):
+        manifest = self.read_json(root, PHASE_MANIFEST)
+        manifest["scenario_catalog"]["coverage"]["sha256"] = hashlib.sha256(
+            (root / COVERAGE).read_bytes()
+        ).hexdigest()
+        self.write_json(root, PHASE_MANIFEST, manifest)
+
     def errors_for(self, root):
         return self.checker.validate_repository(root, verify_git=False)
 
@@ -109,6 +157,52 @@ class RepositoryPolicyTest(unittest.TestCase):
             return parents[2]
         return parents[0]
 
+    def materialize_current_worktree_head(self, fixture, feature_head):
+        """Create a fixture-only commit when the current governed tree is dirty."""
+
+        subprocess.run(
+            ["git", "checkout", "--quiet", "--detach", feature_head],
+            cwd=fixture,
+            check=True,
+        )
+        for relative in self.declared_paths(self.ownership_payload()):
+            source = ROOT / relative
+            self.assertTrue(source.is_file(), f"live source missing: {relative}")
+            target = fixture / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+        subprocess.run(["git", "add", "--all"], cwd=fixture, check=True)
+        changed = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=fixture,
+            check=False,
+        ).returncode
+        self.assertIn(changed, {0, 1})
+        if changed == 1:
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Policy Test",
+                    "-c",
+                    "user.email=policy-test@example.invalid",
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "materialize current governed worktree",
+                ],
+                cwd=fixture,
+                check=True,
+                env={
+                    **os.environ,
+                    "GIT_AUTHOR_DATE": "2000-01-01T00:00:00Z",
+                    "GIT_COMMITTER_DATE": "2000-01-01T00:00:00Z",
+                },
+            )
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=fixture, text=True
+        ).strip()
+
     def local_branch_fixture(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -123,11 +217,8 @@ class RepositoryPolicyTest(unittest.TestCase):
             check=True,
         )
         task = self.active_task(self.ownership_payload())
-        feature_head = self.current_feature_head()
-        subprocess.run(
-            ["git", "checkout", "--quiet", "--detach", feature_head],
-            cwd=fixture,
-            check=True,
+        feature_head = self.materialize_current_worktree_head(
+            fixture, self.current_feature_head()
         )
         subprocess.run(
             [
@@ -163,7 +254,9 @@ class RepositoryPolicyTest(unittest.TestCase):
             check=True,
         )
         task = self.active_task(self.ownership_payload())
-        feature_head = self.current_feature_head()
+        feature_head = self.materialize_current_worktree_head(
+            fixture, self.current_feature_head()
+        )
         tree = subprocess.check_output(
             ["git", "rev-parse", f"{feature_head}^{{tree}}"], cwd=fixture, text=True
         ).strip()
@@ -215,11 +308,11 @@ class RepositoryPolicyTest(unittest.TestCase):
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
 
-    def test_active_task_helper_selects_t04_among_disjoint_active_tasks(self):
+    def test_active_task_helper_selects_t05_among_disjoint_active_tasks(self):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T04", self.active_task(payload)["id"])
+        self.assertEqual("T05", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assertEqual([], errors)
@@ -473,6 +566,479 @@ class RepositoryPolicyTest(unittest.TestCase):
             json.dumps(conformance, indent=2) + "\n", encoding="utf-8"
         )
         self.assert_rejected(self.errors_for(fixture), "reviewed live anchor")
+
+    def test_option_b_invariant_and_live_digest_anchors_are_exact(self):
+        lines = (ROOT / "AGENTS.md").read_text(encoding="utf-8").splitlines()
+        invariants = [
+            match.groups()
+            for line in lines
+            if (match := self.checker.INVARIANT_ROW.match(line))
+        ]
+        statements = dict(invariants)
+        self.assertEqual(EXPECTED_I02, statements["I02"])
+        self.assertEqual(
+            EXPECTED_INVARIANT_DIGEST,
+            self.checker.invariant_digest(invariants),
+        )
+        self.assertEqual(
+            EXPECTED_INVARIANT_DIGEST,
+            self.checker.REVIEWED_INVARIANT_DIGEST,
+        )
+        self.assertEqual(
+            EXPECTED_INVARIANT_DIGEST,
+            self.ownership_payload()["policy"]["invariant_digest"],
+        )
+        self.assertEqual(
+            EXPECTED_INVARIANT_DIGEST,
+            self.read_json(ROOT, PHASE_MANIFEST)["invariants"]["digest"],
+        )
+
+    def test_option_b_manifest_anchors_and_completion_prerequisites_are_exact(self):
+        manifest = self.read_json(ROOT, PHASE_MANIFEST)
+        hierarchy = manifest["hierarchy_agreement"]
+        self.assertEqual(
+            {"decision", "issue", "path", "sha256"}, set(hierarchy)
+        )
+        self.assertEqual("option-b", hierarchy["decision"])
+        self.assertEqual(HIERARCHY_ISSUE, hierarchy["issue"])
+        self.assertEqual(HIERARCHY_ADR, hierarchy["path"])
+        self.assertEqual(
+            hashlib.sha256((ROOT / HIERARCHY_ADR).read_bytes()).hexdigest(),
+            hierarchy["sha256"],
+        )
+
+        completion = manifest["repository_completion"]
+        self.assertEqual(
+            {
+                "state",
+                "definition",
+                "individual_phase_completion_satisfies_repository_completion",
+                "required_contracts",
+                "target_side_evidence_required",
+                "human_reviewed_completion_pr_required",
+            },
+            set(completion),
+        )
+        self.assertEqual("incomplete", completion["state"])
+        self.assertIs(
+            completion[
+                "individual_phase_completion_satisfies_repository_completion"
+            ],
+            False,
+        )
+        self.assertEqual(REQUIRED_CONTRACTS, completion["required_contracts"])
+        self.assertIs(completion["target_side_evidence_required"], True)
+        self.assertIs(completion["human_reviewed_completion_pr_required"], True)
+        self.assertEqual(
+            {"path", "sha256"}, set(completion["definition"])
+        )
+        self.assertEqual(
+            REPOSITORY_COMPLETION, completion["definition"]["path"]
+        )
+        self.assertEqual(
+            hashlib.sha256((ROOT / REPOSITORY_COMPLETION).read_bytes()).hexdigest(),
+            completion["definition"]["sha256"],
+        )
+        self.assertEqual(
+            REQUIRED_CONTRACTS,
+            [contract["id"] for contract in manifest["contracts"]],
+        )
+        self.assertEqual([], manifest["results"])
+        self.assertIs(manifest["release_blocked"], True)
+
+    def test_option_b_surfaces_and_repository_completion_boundary_are_explicit(self):
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        adr = (ROOT / HIERARCHY_ADR).read_text(encoding="utf-8")
+        completion = (ROOT / REPOSITORY_COMPLETION).read_text(encoding="utf-8")
+
+        for text in (agents, readme, adr):
+            self.assertIn(CANONICAL_HIERARCHY, text)
+            self.assertIn(PROJECTS_PROJECTION, text)
+        for text in (agents, readme, completion):
+            self.assertIn(NO_INDIVIDUAL_COMPLETION, text)
+            self.assertIn(OVERALL_COMPLETION_CONDITION, text)
+        self.assertIn("## Repository completion boundary", agents)
+        self.assertIn(f"]({HIERARCHY_ADR})", readme)
+        self.assertIn(f"]({REPOSITORY_COMPLETION})", readme)
+        for marker in (
+            "Phase 0 is complete",
+            "Phase 1 is in progress",
+            "not installable",
+            "not a parity release",
+            "`release_blocked` remains `true`",
+        ):
+            self.assertIn(marker, readme)
+        for marker in (
+            "durable repository objective",
+            "explicitly linked Epic issues",
+            "A single Epic issue may be the root",
+            "wins if a projection conflicts",
+        ):
+            self.assertIn(marker, agents)
+
+        for marker in (
+            "# ADR-0005: Issue graph authority and optional Project projection",
+            "- Status: Proposed; accepted when Issue #7's dedicated agreement pull request is owner-merged",
+            "## Options considered",
+            "### Option A",
+            "### Option B (selected)",
+            "### Option C",
+            "Selected: Option B.",
+            HIERARCHY_ISSUE,
+            REPOSITORY_COMPLETION,
+            "C-004",
+        ):
+            self.assertIn(marker, adr)
+
+        for marker in (
+            "# Repository-level definition of done",
+            "eight repository Skills",
+            "six custom agents",
+            "project hooks and handlers",
+            "Epic, Task, and PR ledger schemas",
+            "execution envelope and loop-event schemas",
+            "Codex execution adapter",
+            "installer and upgrade",
+            "Task ritual, ownership, and governance",
+            "clean-repository installation and end-to-end Task",
+            "all 136 conformance scenarios",
+            "satisfying each scenario's expected target behavior",
+            "K01 through K20",
+            "UNKNOWN",
+            "UNCHECKABLE",
+            "`fail`",
+            "`failed`",
+        ):
+            self.assertIn(marker, completion)
+
+    def test_synchronized_option_a_or_c_invariant_drift_is_rejected(self):
+        alternatives = (
+            "GitHub Project -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
+            "A Project record -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical; Project does not mean GitHub Projects.",
+        )
+        for alternative in alternatives:
+            with self.subTest(alternative=alternative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                agents_path = fixture / "AGENTS.md"
+                agents_text = agents_path.read_text(encoding="utf-8").replace(
+                    EXPECTED_I02, alternative, 1
+                )
+                agents_path.write_text(agents_text, encoding="utf-8")
+                invariants = [
+                    match.groups()
+                    for line in agents_text.splitlines()
+                    if (match := self.checker.INVARIANT_ROW.match(line))
+                ]
+                digest = self.checker.invariant_digest(invariants)
+                ownership = self.ownership_payload(fixture)
+                ownership["policy"]["invariant_digest"] = digest
+                self.write_ownership(fixture, ownership)
+                manifest = self.read_json(fixture, PHASE_MANIFEST)
+                manifest["invariants"]["digest"] = digest
+                self.write_json(fixture, PHASE_MANIFEST, manifest)
+                self.assert_rejected(
+                    self.errors_for(fixture), "reviewed live anchor"
+                )
+
+    def test_hierarchy_manifest_anchor_shape_and_values_are_enforced(self):
+        def missing_anchor(payload):
+            payload.pop("hierarchy_agreement")
+
+        def missing_field(payload):
+            payload["hierarchy_agreement"].pop("sha256")
+
+        def extra_field(payload):
+            payload["hierarchy_agreement"]["projection"] = "optional"
+
+        def wrong_decision(payload):
+            payload["hierarchy_agreement"]["decision"] = "option-a"
+
+        def wrong_issue(payload):
+            payload["hierarchy_agreement"]["issue"] = HIERARCHY_ISSUE + "0"
+
+        def wrong_path(payload):
+            payload["hierarchy_agreement"]["path"] = REPOSITORY_COMPLETION
+
+        def malformed_hash(payload):
+            payload["hierarchy_agreement"]["sha256"] = "not-a-sha256"
+
+        for name, mutation in (
+            ("missing-anchor", missing_anchor),
+            ("missing-field", missing_field),
+            ("extra-field", extra_field),
+            ("wrong-decision", wrong_decision),
+            ("wrong-issue", wrong_issue),
+            ("wrong-path", wrong_path),
+            ("malformed-hash", malformed_hash),
+        ):
+            with self.subTest(case=name):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                manifest = self.read_json(fixture, PHASE_MANIFEST)
+                mutation(manifest)
+                self.write_json(fixture, PHASE_MANIFEST, manifest)
+                self.assert_rejected(
+                    self.errors_for(fixture), "hierarchy agreement"
+                )
+
+    def test_repository_completion_manifest_contract_is_enforced(self):
+        def missing_object(payload):
+            payload.pop("repository_completion")
+
+        def missing_gate(payload):
+            payload["repository_completion"].pop(
+                "human_reviewed_completion_pr_required"
+            )
+
+        def missing_individual_phase_gate(payload):
+            payload["repository_completion"].pop(
+                "individual_phase_completion_satisfies_repository_completion"
+            )
+
+        def wrong_individual_phase_gate(payload):
+            payload["repository_completion"][
+                "individual_phase_completion_satisfies_repository_completion"
+            ] = True
+
+        def missing_target_evidence_gate(payload):
+            payload["repository_completion"].pop(
+                "target_side_evidence_required"
+            )
+
+        def wrong_target_evidence_gate(payload):
+            payload["repository_completion"]["target_side_evidence_required"] = False
+
+        def extra_gate(payload):
+            payload["repository_completion"]["phase_is_complete"] = True
+
+        def completed_state(payload):
+            payload["repository_completion"]["state"] = "complete"
+
+        def missing_contract(payload):
+            payload["repository_completion"]["required_contracts"].pop()
+
+        def reordered_contracts(payload):
+            payload["repository_completion"]["required_contracts"].reverse()
+
+        def duplicate_contract(payload):
+            payload["repository_completion"]["required_contracts"][-1] = "K19"
+
+        def unknown_contract(payload):
+            payload["repository_completion"]["required_contracts"][-1] = "K21"
+
+        def disabled_completion_pr_gate(payload):
+            payload["repository_completion"][
+                "human_reviewed_completion_pr_required"
+            ] = False
+
+        def wrong_definition_path(payload):
+            payload["repository_completion"]["definition"]["path"] = HIERARCHY_ADR
+
+        def missing_definition(payload):
+            payload["repository_completion"].pop("definition")
+
+        def missing_definition_hash(payload):
+            payload["repository_completion"]["definition"].pop("sha256")
+
+        def extra_definition_field(payload):
+            payload["repository_completion"]["definition"]["status"] = "draft"
+
+        def malformed_definition_hash(payload):
+            payload["repository_completion"]["definition"]["sha256"] = "bad"
+
+        for name, mutation in (
+            ("missing-object", missing_object),
+            ("missing-gate", missing_gate),
+            ("missing-individual-phase-gate", missing_individual_phase_gate),
+            ("wrong-individual-phase-gate", wrong_individual_phase_gate),
+            ("missing-target-evidence-gate", missing_target_evidence_gate),
+            ("wrong-target-evidence-gate", wrong_target_evidence_gate),
+            ("extra-gate", extra_gate),
+            ("completed-state", completed_state),
+            ("missing-contract", missing_contract),
+            ("reordered-contracts", reordered_contracts),
+            ("duplicate-contract", duplicate_contract),
+            ("unknown-contract", unknown_contract),
+            ("disabled-completion-pr-gate", disabled_completion_pr_gate),
+            ("wrong-definition-path", wrong_definition_path),
+            ("missing-definition", missing_definition),
+            ("missing-definition-hash", missing_definition_hash),
+            ("extra-definition-field", extra_definition_field),
+            ("malformed-definition-hash", malformed_definition_hash),
+        ):
+            with self.subTest(case=name):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                manifest = self.read_json(fixture, PHASE_MANIFEST)
+                mutation(manifest)
+                self.write_json(fixture, PHASE_MANIFEST, manifest)
+                self.assert_rejected(
+                    self.errors_for(fixture), "repository completion"
+                )
+
+    def test_synchronized_agreement_document_rehash_cannot_move_reviewed_anchor(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / HIERARCHY_ADR
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "Selected: Option B.", "Selected: Option A.", 1
+            ),
+            encoding="utf-8",
+        )
+        manifest = self.read_json(fixture, PHASE_MANIFEST)
+        manifest["hierarchy_agreement"]["sha256"] = hashlib.sha256(
+            path.read_bytes()
+        ).hexdigest()
+        self.write_json(fixture, PHASE_MANIFEST, manifest)
+        self.assert_rejected(
+            self.errors_for(fixture), "reviewed hierarchy agreement hash"
+        )
+
+    def test_synchronized_completion_document_rehash_cannot_move_reviewed_anchor(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / REPOSITORY_COMPLETION
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                NO_INDIVIDUAL_COMPLETION,
+                "Phase completion constitutes repository-level completion.",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        manifest = self.read_json(fixture, PHASE_MANIFEST)
+        manifest["repository_completion"]["definition"]["sha256"] = (
+            hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+        self.write_json(fixture, PHASE_MANIFEST, manifest)
+        self.assert_rejected(
+            self.errors_for(fixture), "reviewed repository completion hash"
+        )
+
+    def test_option_b_and_completion_markers_are_enforced_on_live_surfaces(self):
+        mutations = (
+            (
+                "AGENTS.md",
+                CANONICAL_HIERARCHY,
+                "GitHub Project -> Epic issue -> Task issue -> PR -> commits/checks/evidence",
+                "Option B hierarchy",
+            ),
+            (
+                "README.md",
+                PROJECTS_PROJECTION,
+                "A GitHub Projects board is the authoritative hierarchy.",
+                "Option B hierarchy",
+            ),
+            (
+                "AGENTS.md",
+                NO_INDIVIDUAL_COMPLETION,
+                "",
+                "repository completion boundary",
+            ),
+            (
+                "README.md",
+                OVERALL_COMPLETION_CONDITION,
+                "Phase 1 completion completes the repository.",
+                "repository completion boundary",
+            ),
+        )
+        for relative, old, new, token in mutations:
+            with self.subTest(path=relative, marker=old):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / relative
+                text = path.read_text(encoding="utf-8")
+                self.assertIn(old, text)
+                path.write_text(text.replace(old, new, 1), encoding="utf-8")
+                self.assert_rejected(self.errors_for(fixture), token)
+
+    def test_contradictory_live_authority_or_completion_insertions_are_rejected(self):
+        insertions = (
+            (
+                "AGENTS.md",
+                "GitHub Project -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
+            ),
+            (
+                "README.md",
+                "A GitHub Projects board is authoritative.",
+            ),
+            (
+                "AGENTS.md",
+                "Project Record -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
+            ),
+            (
+                "README.md",
+                "Phase 1 completion completes the repository.",
+            ),
+        )
+        for relative, insertion in insertions:
+            with self.subTest(path=relative, insertion=insertion):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / relative
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{insertion}\n",
+                    encoding="utf-8",
+                )
+                self.assert_rejected(
+                    self.errors_for(fixture),
+                    "contradictory hierarchy or completion claim",
+                )
+
+    def test_c004_canonical_agreement_decision_is_enforced_after_rehash(self):
+        def pending_reversion(entry):
+            entry["disposition"] = "pending-agreement"
+            entry.pop("agreement_adr")
+
+        def planned_reversion(entry):
+            entry["disposition"] = "planned"
+            entry.pop("agreement_issue")
+            entry.pop("agreement_adr")
+
+        def wrong_issue(entry):
+            entry["agreement_issue"] = HIERARCHY_ISSUE + "0"
+
+        def wrong_adr(entry):
+            entry["agreement_adr"] = (
+                "docs/agreements/adr/ADR-0999-wrong-agreement.md"
+            )
+
+        def missing_adr(entry):
+            entry.pop("agreement_adr")
+
+        def marked_pass(entry):
+            entry["verification_state"] = "pass"
+
+        def extra_field(entry):
+            entry["specialization"] = "GitHub Projects is authoritative"
+
+        for name, mutation in (
+            ("pending-reversion", pending_reversion),
+            ("planned-reversion", planned_reversion),
+            ("wrong-issue", wrong_issue),
+            ("wrong-adr", wrong_adr),
+            ("missing-adr", missing_adr),
+            ("marked-pass", marked_pass),
+            ("extra-field", extra_field),
+        ):
+            with self.subTest(case=name):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                coverage = self.read_json(fixture, COVERAGE)
+                entry = next(
+                    item
+                    for item in coverage["entries"]
+                    if item["scenario"] == "C-004"
+                )
+                mutation(entry)
+                self.write_json(fixture, COVERAGE, coverage)
+                self.bind_coverage_hash(fixture)
+                self.assert_rejected(
+                    self.errors_for(fixture), "canonical C-004 agreement decision"
+                )
 
     def test_missing_required_job_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -799,7 +1365,7 @@ jobs:
             payload, active["branch"], errors
         )
         self.assertIsNotNone(task)
-        self.checker.authorize_changed_paths(task, ["README.md"], errors)
+        self.checker.authorize_changed_paths(task, ["LICENSE"], errors)
         self.assert_rejected(
             errors, f"outside active Task {active['id']} ownership"
         )
@@ -816,8 +1382,8 @@ jobs:
         active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T05",
-                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
+                "id": "T06",
+                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
                 "state": "active",
                 "branch": "codex/phase-1-next-task",
                 "base_commit": subprocess.check_output(
@@ -861,13 +1427,13 @@ jobs:
     def test_local_branch_rejects_committed_p00_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        path = fixture / "README.md"
+        path = fixture / "LICENSE"
         path.write_text(
             path.read_text(encoding="utf-8") + "\ncommitted outside active Task\n",
             encoding="utf-8",
         )
         subprocess.run(
-            ["git", "add", "README.md"], cwd=fixture, check=True
+            ["git", "add", "LICENSE"], cwd=fixture, check=True
         )
         subprocess.run(
             [
@@ -886,53 +1452,53 @@ jobs:
         )
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            f"outside active Task {active['id']} ownership: README.md",
+            f"outside active Task {active['id']} ownership: LICENSE",
         )
 
     def test_local_branch_rejects_unstaged_p00_content_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        path = fixture / "README.md"
+        path = fixture / "LICENSE"
         path.write_text(
             path.read_text(encoding="utf-8") + "\nunstaged outside active Task\n",
             encoding="utf-8",
         )
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            f"outside active Task {active['id']} ownership: README.md",
+            f"outside active Task {active['id']} ownership: LICENSE",
         )
 
     def test_local_branch_rejects_staged_p00_content_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        path = fixture / "README.md"
+        path = fixture / "LICENSE"
         path.write_text(
             path.read_text(encoding="utf-8") + "\nstaged outside active Task\n",
             encoding="utf-8",
         )
-        subprocess.run(["git", "add", "README.md"], cwd=fixture, check=True)
+        subprocess.run(["git", "add", "LICENSE"], cwd=fixture, check=True)
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            f"outside active Task {active['id']} ownership: README.md",
+            f"outside active Task {active['id']} ownership: LICENSE",
         )
 
     def test_local_branch_rejects_dirty_p00_mode_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        (fixture / "README.md").chmod(0o755)
+        (fixture / "LICENSE").chmod(0o755)
         self.assert_rejected(
             self.local_authorization_errors(fixture),
-            f"outside active Task {active['id']} ownership: README.md",
+            f"outside active Task {active['id']} ownership: LICENSE",
         )
 
     def test_local_branch_rejects_dirty_p00_deletion(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        (fixture / "README.md").unlink()
+        (fixture / "LICENSE").unlink()
         errors = self.local_authorization_errors(fixture)
         self.assert_rejected(errors, "does not support deletion")
         self.assert_rejected(
-            errors, f"outside active Task {active['id']} ownership: README.md"
+            errors, f"outside active Task {active['id']} ownership: LICENSE"
         )
 
     def test_local_branch_allows_checking_active_owned_dirty_change(self):

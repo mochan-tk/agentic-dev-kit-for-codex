@@ -9,7 +9,7 @@
     "release_blocked": true
   },
   "policy": {
-    "invariant_digest": "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c",
+    "invariant_digest": "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6",
     "required_jobs": ["quality", "conformance"],
     "required_quality_commands": [
       "python3 .github/scripts/check-phase0-contracts.py",
@@ -40,9 +40,7 @@
         {"path": ".github/scripts/tests/test-action-pins.sh", "mode": "100644"},
         {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
         {"path": ".gitignore", "mode": "100644"},
-        {"path": "AGENTS.md", "mode": "100644"},
         {"path": "LICENSE", "mode": "100644"},
-        {"path": "README.md", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md", "mode": "100644"},
         {"path": "docs/known-limitations.md", "mode": "100644"},
         {"path": "docs/planning/phase-0-orientation.md", "mode": "100644"}
@@ -57,7 +55,6 @@
       "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
       "owned_paths": [
         {"path": ".github/scripts/check-phase0-contracts.py", "mode": "100644"},
-        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
         {"path": ".github/workflows/ci.yml", "mode": "100644"},
         {"path": "tests/conformance/phase0-snapshot.json", "mode": "100644"},
         {"path": "tests/conformance/test_phase0_contracts.py", "mode": "100644"}
@@ -66,24 +63,39 @@
     {
       "id": "T04",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/phase-1-conformance-catalog",
       "base_commit": "3065afcf80ee348796a7d159f6aaefeeac65ad10",
       "base_tree": "f7132c5867023a2b971e0383d95a6c4184e20f35",
       "owned_paths": [
-        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
         {"path": ".github/scripts/conformance-catalog.py", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0006-conformance-catalog-provenance.md", "mode": "100644"},
         {"path": "docs/conformance/catalog.md", "mode": "100644"},
         {"path": "tests/conformance/catalog.json", "mode": "100644"},
         {"path": "tests/conformance/catalog.schema.json", "mode": "100644"},
-        {"path": "tests/conformance/coverage.json", "mode": "100644"},
         {"path": "tests/conformance/coverage.schema.json", "mode": "100644"},
-        {"path": "tests/conformance/manifest.json", "mode": "100644"},
         {"path": "tests/conformance/results.json", "mode": "100644"},
         {"path": "tests/conformance/results.schema.json", "mode": "100644"},
         {"path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md", "mode": "100644"},
-        {"path": "tests/conformance/source/manifest.json", "mode": "100644"},
+        {"path": "tests/conformance/source/manifest.json", "mode": "100644"}
+      ]
+    },
+    {
+      "id": "T05",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
+      "state": "active",
+      "branch": "codex/phase-1-hierarchy-agreement",
+      "base_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
+      "base_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
+      "owned_paths": [
+        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
+        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
+        {"path": "AGENTS.md", "mode": "100644"},
+        {"path": "README.md", "mode": "100644"},
+        {"path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md", "mode": "100644"},
+        {"path": "docs/agreements/repository-completion.md", "mode": "100644"},
+        {"path": "tests/conformance/coverage.json", "mode": "100644"},
+        {"path": "tests/conformance/manifest.json", "mode": "100644"},
         {"path": "tests/conformance/test_conformance_catalog.py", "mode": "100644"},
         {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"}
       ]

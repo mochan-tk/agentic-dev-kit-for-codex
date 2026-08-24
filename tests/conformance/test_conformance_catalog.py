@@ -15,6 +15,17 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / ".github/scripts/conformance-catalog.py"
+HIERARCHY_ADR = "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
+HIERARCHY_ISSUE = (
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
+)
+EXPECTED_C004 = {
+    "scenario": "C-004",
+    "disposition": "agreement-decision",
+    "verification_state": "not-run",
+    "agreement_issue": HIERARCHY_ISSUE,
+    "agreement_adr": HIERARCHY_ADR,
+}
 
 
 class ConformanceCatalogTest(unittest.TestCase):
@@ -39,6 +50,7 @@ class ConformanceCatalogTest(unittest.TestCase):
             self.catalog.RESULTS_SCHEMA_PATH,
             self.catalog.HUMAN_CATALOG_PATH,
             self.catalog.PROVENANCE_ADR_PATH,
+            HIERARCHY_ADR,
             self.catalog.PHASE_MANIFEST_PATH,
         ]
 
@@ -191,30 +203,16 @@ class ConformanceCatalogTest(unittest.TestCase):
         source = self.catalog.reconstruct_source(catalog).encode("utf-8")
         self.assertEqual(self.catalog.SOURCE_SHA256, self.catalog.sha256_bytes(source))
 
-    def test_c004_remains_pending_agreement(self):
+    def test_c004_is_exact_versioned_agreement_decision(self):
         coverage = self.read_json(ROOT, self.catalog.COVERAGE_PATH)
         c004 = next(
             entry for entry in coverage["entries"] if entry["scenario"] == "C-004"
         )
-        self.assertEqual("pending-agreement", c004["disposition"])
-        self.assertEqual(self.catalog.C004_AGREEMENT_ISSUE, c004["agreement_issue"])
-        self.assertEqual("not-run", c004["verification_state"])
+        self.assertEqual(EXPECTED_C004, c004)
+        self.assertEqual(self.catalog.C004_AGREEMENT_ISSUE, HIERARCHY_ISSUE)
 
-    def test_c004_accepts_only_versioned_issue7_agreement_transition(self):
+    def test_c004_canonical_decision_passes_transition_grammar(self):
         fixture = self.copy_fixture()
-        agreement = "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
-        agreement_path = fixture / agreement
-        agreement_path.parent.mkdir(parents=True, exist_ok=True)
-        agreement_path.write_text("# Human-reviewed agreement\n", encoding="utf-8")
-
-        def decide(payload):
-            c004 = next(
-                entry for entry in payload["entries"] if entry["scenario"] == "C-004"
-            )
-            c004["disposition"] = "agreement-decision"
-            c004["agreement_adr"] = agreement
-
-        self.mutate_json(fixture, self.catalog.COVERAGE_PATH, decide)
         self.assertEqual([], self.catalog.validate_coverage(fixture))
 
     def test_results_and_phase_release_remain_blocked(self):
@@ -987,7 +985,7 @@ class ConformanceCatalogTest(unittest.TestCase):
 
     def test_dynamic_c004_agreement_adr_uses_safe_bounded_reader(self):
         fixture = self.copy_fixture()
-        agreement = "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
+        agreement = HIERARCHY_ADR
 
         def decide(payload):
             c004 = next(
@@ -1001,7 +999,7 @@ class ConformanceCatalogTest(unittest.TestCase):
         outside = fixture.parent / "EXTERNAL_AGREEMENT_FIFO"
         os.mkfifo(outside)
         agreement_path = fixture / agreement
-        agreement_path.parent.mkdir(parents=True, exist_ok=True)
+        agreement_path.unlink()
         agreement_path.symlink_to(outside)
         status, rendered = self.capture_cli(fixture, "check")
         self.assertIsNotNone(status, "agreement ADR symlink target was followed")
@@ -1479,21 +1477,65 @@ class ConformanceCatalogTest(unittest.TestCase):
         self.mutate_json(fixture, self.catalog.COVERAGE_PATH, mutate)
         self.assert_rejected(self.errors_for(fixture), "A-002 target specialization")
 
-    def test_c004_agreement_drift_is_rejected(self):
-        fixture = self.copy_fixture()
-
-        def mutate(payload):
-            entry = next(
-                item for item in payload["entries"] if item["scenario"] == "C-004"
-            )
+    def test_c004_invalid_transition_bindings_are_rejected_by_coverage_validator(self):
+        def planned(entry):
             entry["disposition"] = "planned"
             entry.pop("agreement_issue")
+            entry.pop("agreement_adr")
 
-        self.mutate_json(fixture, self.catalog.COVERAGE_PATH, mutate)
-        self.assert_rejected(
-            self.errors_for(fixture),
-            "C-004 must be pending-agreement or a versioned agreement-decision",
-        )
+        def wrong_issue(entry):
+            entry["agreement_issue"] = HIERARCHY_ISSUE + "0"
+
+        def missing_issue(entry):
+            entry.pop("agreement_issue")
+
+        def wrong_adr(entry):
+            entry["agreement_adr"] = (
+                "docs/agreements/adr/ADR-0999-wrong-agreement.md"
+            )
+
+        def missing_adr(entry):
+            entry.pop("agreement_adr")
+
+        def extra_field(entry):
+            entry["specialization"] = "GitHub Projects is authoritative"
+
+        for name, mutation, token in (
+            (
+                "planned",
+                planned,
+                "C-004 must be pending-agreement or a versioned agreement-decision",
+            ),
+            ("wrong-issue", wrong_issue, "C-004 must remain bound"),
+            ("missing-issue", missing_issue, "C-004 must remain bound"),
+            ("wrong-adr", wrong_adr, "C-004 agreement ADR cannot be read safely"),
+            (
+                "missing-adr",
+                missing_adr,
+                "C-004 agreement-decision requires",
+            ),
+            (
+                "extra-field",
+                extra_field,
+                "target coverage entries[3] has an invalid key set",
+            ),
+        ):
+            with self.subTest(case=name):
+                fixture = self.copy_fixture()
+
+                def mutate(payload):
+                    entry = next(
+                        item
+                        for item in payload["entries"]
+                        if item["scenario"] == "C-004"
+                    )
+                    mutation(entry)
+
+                self.mutate_json(fixture, self.catalog.COVERAGE_PATH, mutate)
+                self.assert_rejected(
+                    self.catalog.validate_coverage(fixture),
+                    token,
+                )
 
     def test_synthetic_result_is_rejected(self):
         fixture = self.copy_fixture()

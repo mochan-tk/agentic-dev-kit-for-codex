@@ -27,7 +27,45 @@
     "algorithm": "sha256",
     "canonicalization": "UTF-8 ID<TAB>statement<LF>, sorted by ID",
     "count": 13,
-    "digest": "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c"
+    "digest": "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6"
+  },
+  "hierarchy_agreement": {
+    "decision": "option-b",
+    "issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
+    "path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md",
+    "sha256": "2b33ba6b6b51cf3d88e35c6f8722bec7ba1406aabd0eed4e6657af9a96293b75"
+  },
+  "repository_completion": {
+    "state": "incomplete",
+    "definition": {
+      "path": "docs/agreements/repository-completion.md",
+      "sha256": "c1cf6dbb1efd0438f1387b33416743433fb94bf376a4c0fa9ecf76a8da3f880d"
+    },
+    "individual_phase_completion_satisfies_repository_completion": false,
+    "required_contracts": [
+      "K01",
+      "K02",
+      "K03",
+      "K04",
+      "K05",
+      "K06",
+      "K07",
+      "K08",
+      "K09",
+      "K10",
+      "K11",
+      "K12",
+      "K13",
+      "K14",
+      "K15",
+      "K16",
+      "K17",
+      "K18",
+      "K19",
+      "K20"
+    ],
+    "target_side_evidence_required": true,
+    "human_reviewed_completion_pr_required": true
   },
   "scenario_catalog": {
     "total": 136,
@@ -70,7 +108,7 @@
     },
     "coverage": {
       "path": "tests/conformance/coverage.json",
-      "sha256": "833fb276819dafeaa4d32dd7ab45362723d2cdb1d9f4a18316bb0f48fc197b55",
+      "sha256": "e52fe6f3e73248b69114261d137aa775e9ce021b44602a78c8d10f8bfd327808",
       "schema": {
         "path": "tests/conformance/coverage.schema.json",
         "sha256": "ed6b4e278fccbd0ac54383bd207d8f94870e86f7f5c4171b3cf62e71b5977367"

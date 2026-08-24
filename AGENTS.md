@@ -6,9 +6,10 @@ threads, subagents, local transcripts, and model memory are replaceable
 transport. If a lower-precedence instruction conflicts with this constitution,
 stop the affected work and record the conflict.
 
-Phase 0 establishes policy and provenance only. Procedures, custom agents,
-hooks, installers, and the full GitHub ledger arrive in later reviewed phases.
-Do not claim that a planned surface already exists.
+Phase 0 established policy and provenance only. Phase 1 is in progress;
+procedures, custom agents, hooks, installers, and the full GitHub ledger arrive
+only in their later reviewed Tasks. Do not claim that a planned surface already
+exists.
 
 ## Canonical invariants
 
@@ -18,7 +19,7 @@ The statement column is canonical. CI hashes sorted UTF-8 lines in the form
 | ID | Statement |
 |---|---|
 | I01 | GitHub is durable truth; thread and session history are replaceable transport. |
-| I02 | GitHub Project -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical. |
+| I02 | The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue -> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board is an optional projection and never outranks it. |
 | I03 | One Task has one active supervisor responsibility. |
 | I04 | One PR has one active writer, branch, and worktree. |
 | I05 | A durable record exists before a narrative report. |
@@ -33,14 +34,25 @@ The statement column is canonical. CI hashes sorted UTF-8 lines in the form
 
 ## Durable hierarchy
 
-The canonical project model is:
+The canonical Issue graph is:
 
 ```text
-GitHub Project -> Epic issue -> Task issue -> PR -> commits/checks/evidence
+Repository initiative / Epic set -> Epic issue -> Task issue -> PR -> commits, checks, and evidence
 ```
 
+A repository initiative / Epic set is the durable repository objective plus
+its explicitly linked Epic issues. A single Epic issue may be the root when no
+larger initiative record is useful. Issue relationships, pull requests,
+commits, required checks, and bounded evidence form the authoritative graph;
+that graph wins if a projection conflicts with it.
+
+A GitHub Projects board is an optional projection. It never outranks the Issue graph.
+Board absence, lag, field drift, or automation failure cannot change Issue or
+pull-request authority. Sensors may observe a board read-only; creating or
+reconciling a projection is an explicit actuator.
+
 Codex projects, chats, threads, subagents, worktrees, and cloud tasks are
-execution contexts. They do not replace the issue graph. A Task may use more
+execution contexts. They do not replace the Issue graph. A Task may use more
 than one thread across supervision, worker attempts, recovery, exploration,
 and independent review.
 
@@ -48,9 +60,19 @@ Until the target's issue and PR templates land, the versioned Phase 0
 orientation record is the bootstrap work order. Do not fabricate retroactive
 issue comments after the ledger becomes available.
 
+## Repository completion boundary
+
+No individual phase completion constitutes repository-level completion.
+Task and Epic completion also do not constitute repository completion.
+The overall repository implementation remains incomplete until every required contract has current target-side evidence and a human-reviewed completion pull request changing `release_blocked` to `false` is merged.
+The repository-level definition of done is versioned in
+`docs/agreements/repository-completion.md`. Missing, stale, `UNKNOWN`, and
+`UNCHECKABLE` evidence are non-success states. The repository owner retains
+final agreement, completion-PR review, and merge authority.
+
 ## Roles and writer boundary
 
-- A project or Epic orchestrator coordinates durable work and does not become
+- A repository initiative or Epic orchestrator coordinates durable work and does not become
   the application-code writer.
 - A Task supervisor owns claim, plan, routing, monitoring, verification, and
   outcome responsibility. A declared trivial-task exemption may combine
