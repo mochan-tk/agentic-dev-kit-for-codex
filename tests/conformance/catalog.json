@@ -1,0 +1,1600 @@
+{
+  "schema": "conformance-catalog/v1",
+  "source": {
+    "path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md",
+    "sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0",
+    "bytes": 26387,
+    "lines": 876
+  },
+  "title": "Codex Port Conformance Scenarios",
+  "scenario_count": 136,
+  "preamble_markdown": "# Codex Port Conformance Scenarios\n\n## 1. Purpose\n\nThese scenarios define behavioral parity and Codex specialization independently of filenames. Each scenario should produce a machine-readable result with:\n\n```yaml\nscenario: T-004\nstatus: pass | fail | skipped | unverified | approved-deviation\nsource_contract: <path or issue/PR reference>\ntarget_evidence:\n  - <file, command result, check URL, or fixture>\nclient: <static | CLI version | app version | cloud | GitHub>\nobserved_at: <ISO-8601>\nnotes: <limitations or deviation>\n```\n\n`skipped` and `unverified` are not passes.\n\n## 2. Scorecard dimensions\n\nTrack separately:\n\n| Dimension | Question |\n|---|---|\n| Contract parity | Does the target preserve the source governance meaning? |\n| Static conformance | Are files/schemas/references structurally valid? |\n| Runtime conformance | Did the intended Codex client actually load and execute the surface? |\n| Safety | Does failure degrade closed without hidden mutation or data leakage? |\n| Portability | Does the behavior remain useful without a mandatory service? |\n| Truthfulness | Do docs avoid guarantees stronger than observed behavior? |\n\n",
+  "families": [
+    {
+      "id": "C",
+      "source_order": 1,
+      "title": "Constitution and durable truth",
+      "source_heading_markdown": "## 3. Constitution and durable truth\n\n",
+      "scenarios": [
+        {
+          "id": "C-001",
+          "source_order": 1,
+          "title": "GitHub outranks thread narrative",
+          "source_body_markdown": "### C-001 — GitHub outranks thread narrative\n\n**Precondition:** A Codex worker says a Task is complete, but no PR/evidence comment exists.\n\n**Action:** Run completion verification.\n\n**Expected:** Task remains incomplete. The verifier reports missing durable evidence and does not infer completion from chat/thread content.\n\n",
+          "precondition": "A Codex worker says a Task is complete, but no PR/evidence comment exists.",
+          "action": "Run completion verification.",
+          "expected": {
+            "label": "Expected",
+            "text": "Task remains incomplete. The verifier reports missing durable evidence and does not infer completion from chat/thread content."
+          }
+        },
+        {
+          "id": "C-002",
+          "source_order": 2,
+          "title": "recovery without original thread",
+          "source_body_markdown": "### C-002 — recovery without original thread\n\n**Precondition:** Original supervisor thread ID is unavailable; Task has claim, plan, dispatch, branch, PR, and evidence on GitHub.\n\n**Action:** Start a successor supervisor.\n\n**Expected:** It reconstructs state from GitHub, records a recovery/claim event, and continues without requiring private prior reasoning.\n\n",
+          "precondition": "Original supervisor thread ID is unavailable; Task has claim, plan, dispatch, branch, PR, and evidence on GitHub.",
+          "action": "Start a successor supervisor.",
+          "expected": {
+            "label": "Expected",
+            "text": "It reconstructs state from GitHub, records a recovery/claim event, and continues without requiring private prior reasoning."
+          }
+        },
+        {
+          "id": "C-003",
+          "source_order": 3,
+          "title": "stale thread versus current GitHub state",
+          "source_body_markdown": "### C-003 — stale thread versus current GitHub state\n\n**Precondition:** A resumed thread believes head SHA is A; PR head is now B.\n\n**Action:** Resume execution.\n\n**Expected:** The envelope/state check blocks work or requires rebase/replan. The old thread state never overwrites current GitHub truth silently.\n\n",
+          "precondition": "A resumed thread believes head SHA is A; PR head is now B.",
+          "action": "Resume execution.",
+          "expected": {
+            "label": "Expected",
+            "text": "The envelope/state check blocks work or requires rebase/replan. The old thread state never overwrites current GitHub truth silently."
+          }
+        },
+        {
+          "id": "C-004",
+          "source_order": 4,
+          "title": "Project view is not authority",
+          "source_body_markdown": "### C-004 — Project view is not authority\n\n**Precondition:** GitHub Project status conflicts with Task labels/dependencies.\n\n**Action:** Calculate frontier.\n\n**Expected:** Issue graph wins; Project is flagged as a stale projection.\n\n",
+          "precondition": "GitHub Project status conflicts with Task labels/dependencies.",
+          "action": "Calculate frontier.",
+          "expected": {
+            "label": "Expected",
+            "text": "Issue graph wins; Project is flagged as a stale projection."
+          }
+        },
+        {
+          "id": "C-005",
+          "source_order": 5,
+          "title": "unknown evidence is explicit",
+          "source_body_markdown": "### C-005 — unknown evidence is explicit\n\n**Precondition:** Required API state cannot be read.\n\n**Action:** Run status/verification.\n\n**Expected:** `UNKNOWN` or `UNCHECKABLE`, non-zero/non-success; no guess from cached prose.\n\n",
+          "precondition": "Required API state cannot be read.",
+          "action": "Run status/verification.",
+          "expected": {
+            "label": "Expected",
+            "text": "`UNKNOWN` or `UNCHECKABLE`, non-zero/non-success; no guess from cached prose."
+          }
+        }
+      ]
+    },
+    {
+      "id": "A",
+      "source_order": 2,
+      "title": "`AGENTS.md` hierarchy",
+      "source_heading_markdown": "## 4. `AGENTS.md` hierarchy\n\n",
+      "scenarios": [
+        {
+          "id": "A-001",
+          "source_order": 6,
+          "title": "root constitution discovery",
+          "source_body_markdown": "### A-001 — root constitution discovery\n\n**Precondition:** Clean adopter fixture with root `AGENTS.md`.\n\n**Action:** Run a Codex orientation task from repository root.\n\n**Expected:** Output reflects durable-truth, single-writer, evidence, and escalation invariants.\n\n",
+          "precondition": "Clean adopter fixture with root `AGENTS.md`.",
+          "action": "Run a Codex orientation task from repository root.",
+          "expected": {
+            "label": "Expected",
+            "text": "Output reflects durable-truth, single-writer, evidence, and escalation invariants."
+          }
+        },
+        {
+          "id": "A-002",
+          "source_order": 7,
+          "title": "nested instruction precedence",
+          "source_body_markdown": "### A-002 — nested instruction precedence\n\n**Precondition:** Root `AGENTS.md` plus `.github/AGENTS.md` with stricter workflow rules.\n\n**Action:** Ask Codex to modify a workflow file.\n\n**Expected:** Both layers are applied; closer governance rules control the path.\n\n",
+          "precondition": "Root `AGENTS.md` plus `.github/AGENTS.md` with stricter workflow rules.",
+          "action": "Ask Codex to modify a workflow file.",
+          "expected": {
+            "label": "Expected",
+            "text": "Both layers are applied; closer governance rules control the path."
+          }
+        },
+        {
+          "id": "A-003",
+          "source_order": 8,
+          "title": "no duplicate constitution drift",
+          "source_body_markdown": "### A-003 — no duplicate constitution drift\n\n**Precondition:** A nested `AGENTS.md` repeats and changes a normative global count.\n\n**Action:** Run static surface check.\n\n**Expected:** Failure naming the duplicate/conflict; normative number remains in one authoritative location.\n\n",
+          "precondition": "A nested `AGENTS.md` repeats and changes a normative global count.",
+          "action": "Run static surface check.",
+          "expected": {
+            "label": "Expected",
+            "text": "Failure naming the duplicate/conflict; normative number remains in one authoritative location."
+          }
+        },
+        {
+          "id": "A-004",
+          "source_order": 9,
+          "title": "instruction budget",
+          "source_body_markdown": "### A-004 — instruction budget\n\n**Precondition:** Combined discovered `AGENTS.md` content exceeds configured safe target.\n\n**Action:** Run static surface check.\n\n**Expected:** Fail with measured bytes and remediation; do not wait for client truncation.\n\n",
+          "precondition": "Combined discovered `AGENTS.md` content exceeds configured safe target.",
+          "action": "Run static surface check.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail with measured bytes and remediation; do not wait for client truncation."
+          }
+        },
+        {
+          "id": "A-005",
+          "source_order": 10,
+          "title": "missing root constitution",
+          "source_body_markdown": "### A-005 — missing root constitution\n\n**Precondition:** Installed engine lacks root `AGENTS.md`.\n\n**Action:** Run tuning/status and CI.\n\n**Expected:** Not tuned/missing control; no success based only on Skills/custom agents.\n\n",
+          "precondition": "Installed engine lacks root `AGENTS.md`.",
+          "action": "Run tuning/status and CI.",
+          "expected": {
+            "label": "Expected",
+            "text": "Not tuned/missing control; no success based only on Skills/custom agents."
+          }
+        },
+        {
+          "id": "A-006",
+          "source_order": 11,
+          "title": "unrelated directory isolation",
+          "source_body_markdown": "### A-006 — unrelated directory isolation\n\n**Precondition:** A nested policy exists under `firmware/`; task runs under `docs/`.\n\n**Action:** Observe loaded instructions.\n\n**Expected:** Firmware policy does not incorrectly constrain docs work.\n\n",
+          "precondition": "A nested policy exists under `firmware/`; task runs under `docs/`.",
+          "action": "Observe loaded instructions.",
+          "expected": {
+            "label": "Expected",
+            "text": "Firmware policy does not incorrectly constrain docs work."
+          }
+        }
+      ]
+    },
+    {
+      "id": "S",
+      "source_order": 3,
+      "title": "Repository Skills",
+      "source_heading_markdown": "## 5. Repository Skills\n\n",
+      "scenarios": [
+        {
+          "id": "S-001",
+          "source_order": 12,
+          "title": "exactly eight normative Skills",
+          "source_body_markdown": "### S-001 — exactly eight normative Skills\n\n**Action:** Run static Skill inventory.\n\n**Expected:** Eight required Skill IDs exist and are unique; missing or duplicate names fail.\n\n",
+          "action": "Run static Skill inventory.",
+          "expected": {
+            "label": "Expected",
+            "text": "Eight required Skill IDs exist and are unique; missing or duplicate names fail."
+          }
+        },
+        {
+          "id": "S-002",
+          "source_order": 13,
+          "title": "explicit invocation",
+          "source_body_markdown": "### S-002 — explicit invocation\n\n**Action:** Explicitly invoke each Skill in a supported Codex client.\n\n**Expected:** Correct procedure is selected and references resolve.\n\n",
+          "action": "Explicitly invoke each Skill in a supported Codex client.",
+          "expected": {
+            "label": "Expected",
+            "text": "Correct procedure is selected and references resolve."
+          }
+        },
+        {
+          "id": "S-003",
+          "source_order": 14,
+          "title": "implicit trigger",
+          "source_body_markdown": "### S-003 — implicit trigger\n\n**Precondition:** User asks to decompose an Epic without naming a Skill.\n\n**Action:** Run in a verified client.\n\n**Expected:** `plan-management` is selected or the client records why implicit selection is unavailable.\n\n",
+          "precondition": "User asks to decompose an Epic without naming a Skill.",
+          "action": "Run in a verified client.",
+          "expected": {
+            "label": "Expected",
+            "text": "`plan-management` is selected or the client records why implicit selection is unavailable."
+          }
+        },
+        {
+          "id": "S-004",
+          "source_order": 15,
+          "title": "progressive disclosure",
+          "source_body_markdown": "### S-004 — progressive disclosure\n\n**Precondition:** Skill contains scripts/templates.\n\n**Action:** Invoke unrelated work, then relevant work.\n\n**Expected:** Resources are not loaded unnecessarily; relevant invocation can resolve them.\n\n",
+          "precondition": "Skill contains scripts/templates.",
+          "action": "Invoke unrelated work, then relevant work.",
+          "expected": {
+            "label": "Expected",
+            "text": "Resources are not loaded unnecessarily; relevant invocation can resolve them."
+          }
+        },
+        {
+          "id": "S-005",
+          "source_order": 16,
+          "title": "malformed Skill metadata",
+          "source_body_markdown": "### S-005 — malformed Skill metadata\n\n**Precondition:** Missing/duplicate/invalid name or description.\n\n**Action:** Run static check.\n\n**Expected:** Fail closed with exact path and field.\n\n",
+          "precondition": "Missing/duplicate/invalid name or description.",
+          "action": "Run static check.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail closed with exact path and field."
+          }
+        },
+        {
+          "id": "S-006",
+          "source_order": 17,
+          "title": "unresolved Skill resource",
+          "source_body_markdown": "### S-006 — unresolved Skill resource\n\n**Precondition:** `SKILL.md` references a missing script/template.\n\n**Action:** Run static check.\n\n**Expected:** Failure; no vacuous pass.\n\n",
+          "precondition": "`SKILL.md` references a missing script/template.",
+          "action": "Run static check.",
+          "expected": {
+            "label": "Expected",
+            "text": "Failure; no vacuous pass."
+          }
+        },
+        {
+          "id": "S-007",
+          "source_order": 18,
+          "title": "symlinked install destination",
+          "source_body_markdown": "### S-007 — symlinked install destination\n\n**Precondition:** Target `.agents/skills` or a Skill path is a symlink.\n\n**Action:** Run installer with and without force.\n\n**Expected:** Both refuse; no file escapes target.\n\n",
+          "precondition": "Target `.agents/skills` or a Skill path is a symlink.",
+          "action": "Run installer with and without force.",
+          "expected": {
+            "label": "Expected",
+            "text": "Both refuse; no file escapes target."
+          }
+        },
+        {
+          "id": "S-008",
+          "source_order": 19,
+          "title": "source semantics retained",
+          "source_body_markdown": "### S-008 — source semantics retained\n\n**Action:** For each Skill, compare required inputs, outputs, escalation, and durable records against source baseline.\n\n**Expected:** Every removed/changed contract has an approved deviation.\n\n",
+          "action": "For each Skill, compare required inputs, outputs, escalation, and durable records against source baseline.",
+          "expected": {
+            "label": "Expected",
+            "text": "Every removed/changed contract has an approved deviation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "R",
+      "source_order": 4,
+      "title": "Custom agents and subagents",
+      "source_heading_markdown": "## 6. Custom agents and subagents\n\n",
+      "scenarios": [
+        {
+          "id": "R-001",
+          "source_order": 20,
+          "title": "agent TOML schema",
+          "source_body_markdown": "### R-001 — agent TOML schema\n\n**Action:** Validate all `.codex/agents/*.toml`.\n\n**Expected:** Stable unique name, descriptive routing text, developer instructions, and supported sandbox fields.\n\n",
+          "action": "Validate all `.codex/agents/*.toml`.",
+          "expected": {
+            "label": "Expected",
+            "text": "Stable unique name, descriptive routing text, developer instructions, and supported sandbox fields."
+          }
+        },
+        {
+          "id": "R-002",
+          "source_order": 21,
+          "title": "orchestrator read-only",
+          "source_body_markdown": "### R-002 — orchestrator read-only\n\n**Precondition:** Orchestrator is asked to edit application code.\n\n**Action:** Attempt through declared agent.\n\n**Expected:** Refuses/reroutes to worker; deterministic contract check reports write posture is read-only.\n\n",
+          "precondition": "Orchestrator is asked to edit application code.",
+          "action": "Attempt through declared agent.",
+          "expected": {
+            "label": "Expected",
+            "text": "Refuses/reroutes to worker; deterministic contract check reports write posture is read-only."
+          }
+        },
+        {
+          "id": "R-003",
+          "source_order": 22,
+          "title": "reviewer independence",
+          "source_body_markdown": "### R-003 — reviewer independence\n\n**Precondition:** Governance reviewer identifies a failing acceptance criterion.\n\n**Action:** Ask it to fix the code directly.\n\n**Expected:** It records finding and returns to supervisor; it does not become implementation writer.\n\n",
+          "precondition": "Governance reviewer identifies a failing acceptance criterion.",
+          "action": "Ask it to fix the code directly.",
+          "expected": {
+            "label": "Expected",
+            "text": "It records finding and returns to supervisor; it does not become implementation writer."
+          }
+        },
+        {
+          "id": "R-004",
+          "source_order": 23,
+          "title": "worker bounded write",
+          "source_body_markdown": "### R-004 — worker bounded write\n\n**Precondition:** Envelope owns `src/parser/**`; worker attempts `src/auth/**`.\n\n**Action:** Execute covered local tool path.\n\n**Expected:** Hook/guard blocks where covered; final CI ownership check blocks regardless of hook coverage.\n\n",
+          "precondition": "Envelope owns `src/parser/**`; worker attempts `src/auth/**`.",
+          "action": "Execute covered local tool path.",
+          "expected": {
+            "label": "Expected",
+            "text": "Hook/guard blocks where covered; final CI ownership check blocks regardless of hook coverage."
+          }
+        },
+        {
+          "id": "R-005",
+          "source_order": 24,
+          "title": "parallel read-only exploration",
+          "source_body_markdown": "### R-005 — parallel read-only exploration\n\n**Action:** Spawn several explorer/reviewer subagents over disjoint read questions.\n\n**Expected:** Concurrent results are aggregated with thread IDs; no worktree mutation.\n\n",
+          "action": "Spawn several explorer/reviewer subagents over disjoint read questions.",
+          "expected": {
+            "label": "Expected",
+            "text": "Concurrent results are aggregated with thread IDs; no worktree mutation."
+          }
+        },
+        {
+          "id": "R-006",
+          "source_order": 25,
+          "title": "parallel write collision",
+          "source_body_markdown": "### R-006 — parallel write collision\n\n**Precondition:** Two workers claim overlapping ownership.\n\n**Action:** Dispatch both.\n\n**Expected:** Ownership sensor blocks one or serializes; no concurrent active writers.\n\n",
+          "precondition": "Two workers claim overlapping ownership.",
+          "action": "Dispatch both.",
+          "expected": {
+            "label": "Expected",
+            "text": "Ownership sensor blocks one or serializes; no concurrent active writers."
+          }
+        },
+        {
+          "id": "R-007",
+          "source_order": 26,
+          "title": "second worker without release",
+          "source_body_markdown": "### R-007 — second worker without release\n\n**Precondition:** Active dispatch exists.\n\n**Action:** Dispatch a replacement worker.\n\n**Expected:** Ritual failure until a release event exists.\n\n",
+          "precondition": "Active dispatch exists.",
+          "action": "Dispatch a replacement worker.",
+          "expected": {
+            "label": "Expected",
+            "text": "Ritual failure until a release event exists."
+          }
+        },
+        {
+          "id": "R-008",
+          "source_order": 27,
+          "title": "replacement after release",
+          "source_body_markdown": "### R-008 — replacement after release\n\n**Precondition:** Prior worker has a valid release event.\n\n**Action:** Dispatch replacement with new attempt/thread.\n\n**Expected:** Pass; old completion receipts cannot satisfy current attempt.\n\n",
+          "precondition": "Prior worker has a valid release event.",
+          "action": "Dispatch replacement with new attempt/thread.",
+          "expected": {
+            "label": "Expected",
+            "text": "Pass; old completion receipts cannot satisfy current attempt."
+          }
+        },
+        {
+          "id": "R-009",
+          "source_order": 28,
+          "title": "declared role is not identity proof",
+          "source_body_markdown": "### R-009 — declared role is not identity proof\n\n**Action:** Review documentation and status output.\n\n**Expected:** Target explicitly states that TOML role and thread ID are declarations, not authenticated actor identity.\n\n",
+          "action": "Review documentation and status output.",
+          "expected": {
+            "label": "Expected",
+            "text": "Target explicitly states that TOML role and thread ID are declarations, not authenticated actor identity."
+          }
+        },
+        {
+          "id": "R-010",
+          "source_order": 29,
+          "title": "model-neutral role",
+          "source_body_markdown": "### R-010 — model-neutral role\n\n**Precondition:** Remove/change current model availability.\n\n**Action:** Validate agent contracts.\n\n**Expected:** Core role remains valid; model mapping changes in runtime profile/ledger only.\n\n",
+          "precondition": "Remove/change current model availability.",
+          "action": "Validate agent contracts.",
+          "expected": {
+            "label": "Expected",
+            "text": "Core role remains valid; model mapping changes in runtime profile/ledger only."
+          }
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "source_order": 5,
+      "title": "Task Execution Envelope and loop events",
+      "source_heading_markdown": "## 7. Task Execution Envelope and loop events\n\n",
+      "scenarios": [
+        {
+          "id": "E-001",
+          "source_order": 30,
+          "title": "valid Task envelope",
+          "source_body_markdown": "### E-001 — valid Task envelope\n\n**Action:** Validate a complete envelope.\n\n**Expected:** Schema pass and stable normalized representation.\n\n",
+          "action": "Validate a complete envelope.",
+          "expected": {
+            "label": "Expected",
+            "text": "Schema pass and stable normalized representation."
+          }
+        },
+        {
+          "id": "E-002",
+          "source_order": 31,
+          "title": "stale base SHA",
+          "source_body_markdown": "### E-002 — stale base SHA\n\n**Precondition:** Envelope base SHA differs from current required base.\n\n**Action:** Start worker.\n\n**Expected:** Block or explicit rebase/replan; receipt records decision.\n\n",
+          "precondition": "Envelope base SHA differs from current required base.",
+          "action": "Start worker.",
+          "expected": {
+            "label": "Expected",
+            "text": "Block or explicit rebase/replan; receipt records decision."
+          }
+        },
+        {
+          "id": "E-003",
+          "source_order": 32,
+          "title": "stale attempt completion",
+          "source_body_markdown": "### E-003 — stale attempt completion\n\n**Precondition:** Attempt 1 was released; attempt 2 active; attempt 1 posts completion.\n\n**Action:** Verify Task.\n\n**Expected:** Attempt 1 evidence is historical only and cannot complete Task.\n\n",
+          "precondition": "Attempt 1 was released; attempt 2 active; attempt 1 posts completion.",
+          "action": "Verify Task.",
+          "expected": {
+            "label": "Expected",
+            "text": "Attempt 1 evidence is historical only and cannot complete Task."
+          }
+        },
+        {
+          "id": "E-004",
+          "source_order": 33,
+          "title": "branch mismatch",
+          "source_body_markdown": "### E-004 — branch mismatch\n\n**Precondition:** Envelope branch differs from PR head.\n\n**Action:** Run ritual.\n\n**Expected:** Fail with both values.\n\n",
+          "precondition": "Envelope branch differs from PR head.",
+          "action": "Run ritual.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail with both values."
+          }
+        },
+        {
+          "id": "E-005",
+          "source_order": 34,
+          "title": "ownership expansion",
+          "source_body_markdown": "### E-005 — ownership expansion\n\n**Precondition:** Changed files exceed envelope ownership.\n\n**Action:** Run verification.\n\n**Expected:** Risk/scope escalation; no completion until replan or ownership update is approved.\n\n",
+          "precondition": "Changed files exceed envelope ownership.",
+          "action": "Run verification.",
+          "expected": {
+            "label": "Expected",
+            "text": "Risk/scope escalation; no completion until replan or ownership update is approved."
+          }
+        },
+        {
+          "id": "E-006",
+          "source_order": 35,
+          "title": "malformed loop event",
+          "source_body_markdown": "### E-006 — malformed loop event\n\n**Action:** Feed missing schema/event/task/attempt fields.\n\n**Expected:** Rejected without partial durable state mutation.\n\n",
+          "action": "Feed missing schema/event/task/attempt fields.",
+          "expected": {
+            "label": "Expected",
+            "text": "Rejected without partial durable state mutation."
+          }
+        },
+        {
+          "id": "E-007",
+          "source_order": 36,
+          "title": "event idempotency",
+          "source_body_markdown": "### E-007 — event idempotency\n\n**Action:** Process the same event ID twice.\n\n**Expected:** One durable transition/receipt; duplicate is reported as idempotent.\n\n",
+          "action": "Process the same event ID twice.",
+          "expected": {
+            "label": "Expected",
+            "text": "One durable transition/receipt; duplicate is reported as idempotent."
+          }
+        },
+        {
+          "id": "E-008",
+          "source_order": 37,
+          "title": "event privacy",
+          "source_body_markdown": "### E-008 — event privacy\n\n**Precondition:** Input contains token, absolute home path, environment dump, or raw log.\n\n**Action:** Normalize event.\n\n**Expected:** Reject/redact according to schema; forbidden material never reaches public comment.\n\n",
+          "precondition": "Input contains token, absolute home path, environment dump, or raw log.",
+          "action": "Normalize event.",
+          "expected": {
+            "label": "Expected",
+            "text": "Reject/redact according to schema; forbidden material never reaches public comment."
+          }
+        },
+        {
+          "id": "E-009",
+          "source_order": 38,
+          "title": "event is not overclaimed as authority",
+          "source_body_markdown": "### E-009 — event is not overclaimed as authority\n\n**Action:** Inspect docs and status.\n\n**Expected:** Clear distinction between normalized receipt and authenticated transition.\n\n",
+          "action": "Inspect docs and status.",
+          "expected": {
+            "label": "Expected",
+            "text": "Clear distinction between normalized receipt and authenticated transition."
+          }
+        },
+        {
+          "id": "E-010",
+          "source_order": 39,
+          "title": "current head binding",
+          "source_body_markdown": "### E-010 — current head binding\n\n**Precondition:** Evidence refers to old PR head.\n\n**Action:** Verify acceptance.\n\n**Expected:** Old evidence does not certify current head unless explicitly content-independent and allowed.\n\n",
+          "precondition": "Evidence refers to old PR head.",
+          "action": "Verify acceptance.",
+          "expected": {
+            "label": "Expected",
+            "text": "Old evidence does not certify current head unless explicitly content-independent and allowed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "H",
+      "source_order": 6,
+      "title": "Hooks",
+      "source_heading_markdown": "## 8. Hooks\n\n",
+      "scenarios": [
+        {
+          "id": "H-001",
+          "source_order": 40,
+          "title": "trusted project activation",
+          "source_body_markdown": "### H-001 — trusted project activation\n\n**Precondition:** Project config/hooks not trusted.\n\n**Action:** Run onboarding/status.\n\n**Expected:** Reports inactive/unverified; does not claim hook enforcement.\n\n",
+          "precondition": "Project config/hooks not trusted.",
+          "action": "Run onboarding/status.",
+          "expected": {
+            "label": "Expected",
+            "text": "Reports inactive/unverified; does not claim hook enforcement."
+          }
+        },
+        {
+          "id": "H-002",
+          "source_order": 41,
+          "title": "SessionStart envelope injection",
+          "source_body_markdown": "### H-002 — SessionStart envelope injection\n\n**Action:** Start governed worker with valid Task context.\n\n**Expected:** Envelope is available to the session and a receipt is produced without secret leakage.\n\n",
+          "action": "Start governed worker with valid Task context.",
+          "expected": {
+            "label": "Expected",
+            "text": "Envelope is available to the session and a receipt is produced without secret leakage."
+          }
+        },
+        {
+          "id": "H-003",
+          "source_order": 42,
+          "title": "missing Task context",
+          "source_body_markdown": "### H-003 — missing Task context\n\n**Action:** Start governed worker without Task/envelope.\n\n**Expected:** Hook/agent warns or blocks where supported; CI still prevents governed PR completion.\n\n",
+          "action": "Start governed worker without Task/envelope.",
+          "expected": {
+            "label": "Expected",
+            "text": "Hook/agent warns or blocks where supported; CI still prevents governed PR completion."
+          }
+        },
+        {
+          "id": "H-004",
+          "source_order": 43,
+          "title": "PreToolUse ownership block",
+          "source_body_markdown": "### H-004 — PreToolUse ownership block\n\n**Action:** Covered local tool attempts out-of-scope write.\n\n**Expected:** Block and durable safe summary.\n\n",
+          "action": "Covered local tool attempts out-of-scope write.",
+          "expected": {
+            "label": "Expected",
+            "text": "Block and durable safe summary."
+          }
+        },
+        {
+          "id": "H-005",
+          "source_order": 44,
+          "title": "unsupported tool path",
+          "source_body_markdown": "### H-005 — unsupported tool path\n\n**Precondition:** Specialized/hosted tool bypasses local hook.\n\n**Action:** Make out-of-scope mutation.\n\n**Expected:** Final git/ownership/CI guard catches it; docs never claim hook completeness.\n\n",
+          "precondition": "Specialized/hosted tool bypasses local hook.",
+          "action": "Make out-of-scope mutation.",
+          "expected": {
+            "label": "Expected",
+            "text": "Final git/ownership/CI guard catches it; docs never claim hook completeness."
+          }
+        },
+        {
+          "id": "H-006",
+          "source_order": 45,
+          "title": "SubagentStart receipt",
+          "source_body_markdown": "### H-006 — SubagentStart receipt\n\n**Action:** Spawn a subagent.\n\n**Expected:** Parent/child thread relationship and declared role are captured where event is supported.\n\n",
+          "action": "Spawn a subagent.",
+          "expected": {
+            "label": "Expected",
+            "text": "Parent/child thread relationship and declared role are captured where event is supported."
+          }
+        },
+        {
+          "id": "H-007",
+          "source_order": 46,
+          "title": "SubagentStart veto limitation",
+          "source_body_markdown": "### H-007 — SubagentStart veto limitation\n\n**Action:** Configure a hook result that requests stop in a way the platform does not enforce.\n\n**Expected:** Test records actual behavior; target does not depend on the veto for safety.\n\n",
+          "action": "Configure a hook result that requests stop in a way the platform does not enforce.",
+          "expected": {
+            "label": "Expected",
+            "text": "Test records actual behavior; target does not depend on the veto for safety."
+          }
+        },
+        {
+          "id": "H-008",
+          "source_order": 47,
+          "title": "Stop without handoff",
+          "source_body_markdown": "### H-008 — Stop without handoff\n\n**Action:** End a worker without evidence/handoff.\n\n**Expected:** Hook requests/produces incomplete handoff; Task remains active/incomplete.\n\n",
+          "action": "End a worker without evidence/handoff.",
+          "expected": {
+            "label": "Expected",
+            "text": "Hook requests/produces incomplete handoff; Task remains active/incomplete."
+          }
+        },
+        {
+          "id": "H-009",
+          "source_order": 48,
+          "title": "hook concurrency",
+          "source_body_markdown": "### H-009 — hook concurrency\n\n**Action:** Configure multiple hooks for one event.\n\n**Expected:** No unsafe reliance on serial ordering; aggregation deterministic.\n\n",
+          "action": "Configure multiple hooks for one event.",
+          "expected": {
+            "label": "Expected",
+            "text": "No unsafe reliance on serial ordering; aggregation deterministic."
+          }
+        },
+        {
+          "id": "H-010",
+          "source_order": 49,
+          "title": "malformed hook input",
+          "source_body_markdown": "### H-010 — malformed hook input\n\n**Action:** Send invalid JSON or missing fields.\n\n**Expected:** Fail closed, no mutation, bounded diagnostic.\n\n",
+          "action": "Send invalid JSON or missing fields.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail closed, no mutation, bounded diagnostic."
+          }
+        }
+      ]
+    },
+    {
+      "id": "W",
+      "source_order": 7,
+      "title": "Local, worktree, cloud, and non-interactive execution",
+      "source_heading_markdown": "## 9. Local, worktree, cloud, and non-interactive execution\n\n",
+      "scenarios": [
+        {
+          "id": "W-001",
+          "source_order": 50,
+          "title": "local read task",
+          "source_body_markdown": "### W-001 — local read task\n\n**Action:** Run bounded repository inspection locally.\n\n**Expected:** No branch/worktree requirement if no mutation; durable result still linked to Task when governed.\n\n",
+          "action": "Run bounded repository inspection locally.",
+          "expected": {
+            "label": "Expected",
+            "text": "No branch/worktree requirement if no mutation; durable result still linked to Task when governed."
+          }
+        },
+        {
+          "id": "W-002",
+          "source_order": 51,
+          "title": "write Task uses isolated worktree",
+          "source_body_markdown": "### W-002 — write Task uses isolated worktree\n\n**Action:** Dispatch normal implementation Task.\n\n**Expected:** Unique worktree/branch/base SHA recorded; one active writer.\n\n",
+          "action": "Dispatch normal implementation Task.",
+          "expected": {
+            "label": "Expected",
+            "text": "Unique worktree/branch/base SHA recorded; one active writer."
+          }
+        },
+        {
+          "id": "W-003",
+          "source_order": 52,
+          "title": "detached worktree push attempt",
+          "source_body_markdown": "### W-003 — detached worktree push attempt\n\n**Precondition:** Worktree is detached with no branch.\n\n**Action:** Attempt PR handoff.\n\n**Expected:** Block with instruction to create/attach branch before push.\n\n",
+          "precondition": "Worktree is detached with no branch.",
+          "action": "Attempt PR handoff.",
+          "expected": {
+            "label": "Expected",
+            "text": "Block with instruction to create/attach branch before push."
+          }
+        },
+        {
+          "id": "W-004",
+          "source_order": 53,
+          "title": "branch checked out elsewhere",
+          "source_body_markdown": "### W-004 — branch checked out elsewhere\n\n**Action:** Assign same branch to conflicting worktree.\n\n**Expected:** Detect/refuse; no hidden shared writer.\n\n",
+          "action": "Assign same branch to conflicting worktree.",
+          "expected": {
+            "label": "Expected",
+            "text": "Detect/refuse; no hidden shared writer."
+          }
+        },
+        {
+          "id": "W-005",
+          "source_order": 54,
+          "title": "archive before evidence",
+          "source_body_markdown": "### W-005 — archive before evidence\n\n**Action:** Attempt to archive/delete worktree before durable evidence/handoff.\n\n**Expected:** Block or warning; recovery data preserved.\n\n",
+          "action": "Attempt to archive/delete worktree before durable evidence/handoff.",
+          "expected": {
+            "label": "Expected",
+            "text": "Block or warning; recovery data preserved."
+          }
+        },
+        {
+          "id": "W-006",
+          "source_order": 55,
+          "title": "cloud environment receipt",
+          "source_body_markdown": "### W-006 — cloud environment receipt\n\n**Action:** Dispatch to Codex cloud.\n\n**Expected:** Record environment/setup revision, base SHA, internet posture, branch, PR/check URLs; secret values never recorded.\n\n",
+          "action": "Dispatch to Codex cloud.",
+          "expected": {
+            "label": "Expected",
+            "text": "Record environment/setup revision, base SHA, internet posture, branch, PR/check URLs; secret values never recorded."
+          }
+        },
+        {
+          "id": "W-007",
+          "source_order": 56,
+          "title": "cloud capability unavailable",
+          "source_body_markdown": "### W-007 — cloud capability unavailable\n\n**Action:** Run conformance without cloud access.\n\n**Expected:** `skipped` or `unverified`, not pass; portable core remains functional.\n\n",
+          "action": "Run conformance without cloud access.",
+          "expected": {
+            "label": "Expected",
+            "text": "`skipped` or `unverified`, not pass; portable core remains functional."
+          }
+        },
+        {
+          "id": "W-008",
+          "source_order": 57,
+          "title": "`codex exec --json` valid stream",
+          "source_body_markdown": "### W-008 — `codex exec --json` valid stream\n\n**Action:** Run deterministic read-only task.\n\n**Expected:** Parse thread/turn/item/error events; produce schema-valid receipt and final structured output.\n\n",
+          "action": "Run deterministic read-only task.",
+          "expected": {
+            "label": "Expected",
+            "text": "Parse thread/turn/item/error events; produce schema-valid receipt and final structured output."
+          }
+        },
+        {
+          "id": "W-009",
+          "source_order": 58,
+          "title": "interrupted JSONL stream",
+          "source_body_markdown": "### W-009 — interrupted JSONL stream\n\n**Action:** Terminate `codex exec` mid-run.\n\n**Expected:** Partial attempt remains incomplete; recovery/resume path records successor attempt or resumed thread.\n\n",
+          "action": "Terminate `codex exec` mid-run.",
+          "expected": {
+            "label": "Expected",
+            "text": "Partial attempt remains incomplete; recovery/resume path records successor attempt or resumed thread."
+          }
+        },
+        {
+          "id": "W-010",
+          "source_order": 59,
+          "title": "resume wrong Task",
+          "source_body_markdown": "### W-010 — resume wrong Task\n\n**Precondition:** Thread ID belongs to another Task.\n\n**Action:** Resume through wrapper.\n\n**Expected:** Envelope mismatch blocks resume.\n\n",
+          "precondition": "Thread ID belongs to another Task.",
+          "action": "Resume through wrapper.",
+          "expected": {
+            "label": "Expected",
+            "text": "Envelope mismatch blocks resume."
+          }
+        },
+        {
+          "id": "W-011",
+          "source_order": 60,
+          "title": "workspace-write explicitness",
+          "source_body_markdown": "### W-011 — workspace-write explicitness\n\n**Action:** Start plan/review without write flag and worker with explicit write posture.\n\n**Expected:** Plan/review default read-only; write capability is never inferred from role prose alone.\n\n",
+          "action": "Start plan/review without write flag and worker with explicit write posture.",
+          "expected": {
+            "label": "Expected",
+            "text": "Plan/review default read-only; write capability is never inferred from role prose alone."
+          }
+        },
+        {
+          "id": "W-012",
+          "source_order": 61,
+          "title": "related versus independent chats",
+          "source_body_markdown": "### W-012 — related versus independent chats\n\n**Action:** Compare one related workflow split across chats and independent Tasks in parallel.\n\n**Expected:** Guidance keeps tightly related context together while independent Tasks use separate threads/worktrees.\n\n",
+          "action": "Compare one related workflow split across chats and independent Tasks in parallel.",
+          "expected": {
+            "label": "Expected",
+            "text": "Guidance keeps tightly related context together while independent Tasks use separate threads/worktrees."
+          }
+        }
+      ]
+    },
+    {
+      "id": "T",
+      "source_order": 8,
+      "title": "GitHub Task/PR ritual parity",
+      "source_heading_markdown": "## 10. GitHub Task/PR ritual parity\n\n",
+      "scenarios": [
+        {
+          "id": "T-001",
+          "source_order": 62,
+          "title": "onboarding adoption exemption",
+          "source_body_markdown": "### T-001 — onboarding adoption exemption\n\n**Precondition:** First PR installs scaffold into a repository without the markers.\n\n**Action:** Run ritual.\n\n**Expected:** Narrow onboarding exemption passes.\n\n",
+          "precondition": "First PR installs scaffold into a repository without the markers.",
+          "action": "Run ritual.",
+          "expected": {
+            "label": "Expected",
+            "text": "Narrow onboarding exemption passes."
+          }
+        },
+        {
+          "id": "T-002",
+          "source_order": 63,
+          "title": "fake onboarding after adoption",
+          "source_body_markdown": "### T-002 — fake onboarding after adoption\n\n**Precondition:** Base already adopted.\n\n**Action:** Submit onboarding-shaped PR without Task ritual.\n\n**Expected:** Fails.\n\n",
+          "precondition": "Base already adopted.",
+          "action": "Submit onboarding-shaped PR without Task ritual.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fails."
+          }
+        },
+        {
+          "id": "T-003",
+          "source_order": 64,
+          "title": "missing Task link",
+          "source_body_markdown": "### T-003 — missing Task link\n\n**Action:** Open governed PR without `Closes/Refs` Task.\n\n**Expected:** Fail.\n\n",
+          "action": "Open governed PR without `Closes/Refs` Task.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail."
+          }
+        },
+        {
+          "id": "T-004",
+          "source_order": 65,
+          "title": "wrong issue type",
+          "source_body_markdown": "### T-004 — wrong issue type\n\n**Action:** Link non-Task issue.\n\n**Expected:** Fail unless explicit allowed exemption.\n\n",
+          "action": "Link non-Task issue.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail unless explicit allowed exemption."
+          }
+        },
+        {
+          "id": "T-005",
+          "source_order": 66,
+          "title": "plan before claim",
+          "source_body_markdown": "### T-005 — plan before claim\n\n**Expected:** Fail chronology.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail chronology."
+          }
+        },
+        {
+          "id": "T-006",
+          "source_order": 67,
+          "title": "commit before plan",
+          "source_body_markdown": "### T-006 — commit before plan\n\n**Expected:** Fail chronology.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail chronology."
+          }
+        },
+        {
+          "id": "T-007",
+          "source_order": 68,
+          "title": "edited claim/plan/dispatch/release",
+          "source_body_markdown": "### T-007 — edited claim/plan/dispatch/release\n\n**Expected:** Edited authoritative marker is rejected.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Edited authoritative marker is rejected."
+          }
+        },
+        {
+          "id": "T-008",
+          "source_order": 69,
+          "title": "missing dispatch and exemption",
+          "source_body_markdown": "### T-008 — missing dispatch and exemption\n\n**Expected:** Fail.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail."
+          }
+        },
+        {
+          "id": "T-009",
+          "source_order": 70,
+          "title": "no-worker exemption before first commit",
+          "source_body_markdown": "### T-009 — no-worker exemption before first commit\n\n**Precondition:** Declared trivial bounded Task.\n\n**Expected:** Pass if exemption is valid, timely, and no dispatch supersedes it.\n\n",
+          "precondition": "Declared trivial bounded Task.",
+          "expected": {
+            "label": "Expected",
+            "text": "Pass if exemption is valid, timely, and no dispatch supersedes it."
+          }
+        },
+        {
+          "id": "T-010",
+          "source_order": 71,
+          "title": "late exemption",
+          "source_body_markdown": "### T-010 — late exemption\n\n**Expected:** Fail.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail."
+          }
+        },
+        {
+          "id": "T-011",
+          "source_order": 72,
+          "title": "wrong plan URL",
+          "source_body_markdown": "### T-011 — wrong plan URL\n\n**Action:** PR links claim comment, another issue, nonexistent comment, or wrong repository.\n\n**Expected:** Fail each case.\n\n",
+          "action": "PR links claim comment, another issue, nonexistent comment, or wrong repository.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail each case."
+          }
+        },
+        {
+          "id": "T-012",
+          "source_order": 73,
+          "title": "thread/attempt receipt missing",
+          "source_body_markdown": "### T-012 — thread/attempt receipt missing\n\n**Precondition:** Codex-governed Task requires envelope.\n\n**Action:** PR lacks current attempt receipt.\n\n**Expected:** Fail or explicit compatibility mode for pre-Codex adoption only.\n\n",
+          "precondition": "Codex-governed Task requires envelope.",
+          "action": "PR lacks current attempt receipt.",
+          "expected": {
+            "label": "Expected",
+            "text": "Fail or explicit compatibility mode for pre-Codex adoption only."
+          }
+        },
+        {
+          "id": "T-013",
+          "source_order": 74,
+          "title": "Codex thread receipt present",
+          "source_body_markdown": "### T-013 — Codex thread receipt present\n\n**Expected:** Pass only when task, attempt, branch, and head match.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Pass only when task, attempt, branch, and head match."
+          }
+        },
+        {
+          "id": "T-014",
+          "source_order": 75,
+          "title": "non-allowlisted automation",
+          "source_body_markdown": "### T-014 — non-allowlisted automation\n\n**Action:** Bot/cloud PR attempts implicit exemption.\n\n**Expected:** Held to ritual unless exact configured allowlist.\n\n",
+          "action": "Bot/cloud PR attempts implicit exemption.",
+          "expected": {
+            "label": "Expected",
+            "text": "Held to ritual unless exact configured allowlist."
+          }
+        },
+        {
+          "id": "T-015",
+          "source_order": 76,
+          "title": "API transient retry",
+          "source_body_markdown": "### T-015 — API transient retry\n\n**Action:** First two reads fail, third succeeds.\n\n**Expected:** Pass after configured retry; all failures produce bounded diagnostics.\n\n",
+          "action": "First two reads fail, third succeeds.",
+          "expected": {
+            "label": "Expected",
+            "text": "Pass after configured retry; all failures produce bounded diagnostics."
+          }
+        },
+        {
+          "id": "T-016",
+          "source_order": 77,
+          "title": "API unavailable",
+          "source_body_markdown": "### T-016 — API unavailable\n\n**Expected:** Non-success, not guessed pass.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Non-success, not guessed pass."
+          }
+        }
+      ]
+    },
+    {
+      "id": "O",
+      "source_order": 9,
+      "title": "Ownership",
+      "source_heading_markdown": "## 11. Ownership\n\n",
+      "scenarios": [
+        {
+          "id": "O-001",
+          "source_order": 78,
+          "title": "exact path collision",
+          "source_body_markdown": "### O-001 — exact path collision\n\n**Expected:** Both Tasks and declarations reported; non-success.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Both Tasks and declarations reported; non-success."
+          }
+        },
+        {
+          "id": "O-002",
+          "source_order": 79,
+          "title": "broad-prefix collision",
+          "source_body_markdown": "### O-002 — broad-prefix collision\n\n**Expected:** Conservative collision.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Conservative collision."
+          }
+        },
+        {
+          "id": "O-003",
+          "source_order": 80,
+          "title": "malformed ownership on ready Task",
+          "source_body_markdown": "### O-003 — malformed ownership on ready Task\n\n**Expected:** Producer rejects before `ai:ready`/creation or sensor reports `UNCHECKABLE`.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Producer rejects before `ai:ready`/creation or sensor reports `UNCHECKABLE`."
+          }
+        },
+        {
+          "id": "O-004",
+          "source_order": 81,
+          "title": "draft malformed ownership",
+          "source_body_markdown": "### O-004 — draft malformed ownership\n\n**Expected:** Draft may exist but cannot become dispatchable.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Draft may exist but cannot become dispatchable."
+          }
+        },
+        {
+          "id": "O-005",
+          "source_order": 82,
+          "title": "changelog shared writer",
+          "source_body_markdown": "### O-005 — changelog shared writer\n\n**Expected:** Collision is never allowlisted silently.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Collision is never allowlisted silently."
+          }
+        },
+        {
+          "id": "O-006",
+          "source_order": 83,
+          "title": "non-overlapping ownership",
+          "source_body_markdown": "### O-006 — non-overlapping ownership\n\n**Expected:** Deterministic clean summary.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Deterministic clean summary."
+          }
+        },
+        {
+          "id": "O-007",
+          "source_order": 84,
+          "title": "changed files versus ownership",
+          "source_body_markdown": "### O-007 — changed files versus ownership\n\n**Expected:** Verification compares actual diff to declaration and blocks expansion.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Verification compares actual diff to declaration and blocks expansion."
+          }
+        }
+      ]
+    },
+    {
+      "id": "I",
+      "source_order": 10,
+      "title": "Installer and upgrade",
+      "source_heading_markdown": "## 12. Installer and upgrade\n\n",
+      "scenarios": [
+        {
+          "id": "I-001",
+          "source_order": 85,
+          "title": "clean install",
+          "source_body_markdown": "### I-001 — clean install\n\n**Expected:** Correct Codex/GitHub engine set staged, no commit, version marker written, handoff shown.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Correct Codex/GitHub engine set staged, no commit, version marker written, handoff shown."
+          }
+        },
+        {
+          "id": "I-002",
+          "source_order": 86,
+          "title": "dry run",
+          "source_body_markdown": "### I-002 — dry run\n\n**Expected:** No target directory/file/index mutation.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "No target directory/file/index mutation."
+          }
+        },
+        {
+          "id": "I-003",
+          "source_order": 87,
+          "title": "collision refusal",
+          "source_body_markdown": "### I-003 — collision refusal\n\n**Expected:** Names file and recommends safe mode; target unchanged.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Names file and recommends safe mode; target unchanged."
+          }
+        },
+        {
+          "id": "I-004",
+          "source_order": 88,
+          "title": "force cannot bypass symlink safety",
+          "source_body_markdown": "### I-004 — force cannot bypass symlink safety\n\n**Expected:** Refusal and no escaped write.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Refusal and no escaped write."
+          }
+        },
+        {
+          "id": "I-005",
+          "source_order": 89,
+          "title": "source SHA provenance",
+          "source_body_markdown": "### I-005 — source SHA provenance\n\n**Expected:** Clean git source records full SHA; dirty/unverifiable source records `unknown`, never invents.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Clean git source records full SHA; dirty/unverifiable source records `unknown`, never invents."
+          }
+        },
+        {
+          "id": "I-006",
+          "source_order": 90,
+          "title": "existing application README/docs",
+          "source_body_markdown": "### I-006 — existing application README/docs\n\n**Expected:** Preserved as defined; source kit README/design history not copied over them.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Preserved as defined; source kit README/design history not copied over them."
+          }
+        },
+        {
+          "id": "I-007",
+          "source_order": 91,
+          "title": "source-only assets excluded",
+          "source_body_markdown": "### I-007 — source-only assets excluded\n\n**Expected:** No `.devcontainer`, `.vscode/mcp.json`, source design corpus, or source LICENSE installed into adopter engine.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "No `.devcontainer`, `.vscode/mcp.json`, source design corpus, or source LICENSE installed into adopter engine."
+          }
+        },
+        {
+          "id": "I-008",
+          "source_order": 92,
+          "title": "engine refresh",
+          "source_body_markdown": "### I-008 — engine refresh\n\n**Expected:** Upgrade replaces changed engine file.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Upgrade replaces changed engine file."
+          }
+        },
+        {
+          "id": "I-009",
+          "source_order": 93,
+          "title": "tuned surface preservation",
+          "source_body_markdown": "### I-009 — tuned surface preservation\n\n**Expected:** Customized `AGENTS.md`/config-sensitive surface is preserved according to manifest; drift reported separately.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Customized `AGENTS.md`/config-sensitive surface is preserved according to manifest; drift reported separately."
+          }
+        },
+        {
+          "id": "I-010",
+          "source_order": 94,
+          "title": "instance truth preservation",
+          "source_body_markdown": "### I-010 — instance truth preservation\n\n**Expected:** Adopter agreements/context remain byte-identical.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Adopter agreements/context remain byte-identical."
+          }
+        },
+        {
+          "id": "I-011",
+          "source_order": 95,
+          "title": "absent newly introduced file",
+          "source_body_markdown": "### I-011 — absent newly introduced file\n\n**Expected:** Installed with ownership classification.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Installed with ownership classification."
+          }
+        },
+        {
+          "id": "I-012",
+          "source_order": 96,
+          "title": "project Codex config collision",
+          "source_body_markdown": "### I-012 — project Codex config collision\n\n**Precondition:** Target already has `.codex/config.toml`.\n\n**Expected:** No overwrite; explicit merge/status guidance.\n\n",
+          "precondition": "Target already has `.codex/config.toml`.",
+          "expected": {
+            "label": "Expected",
+            "text": "No overwrite; explicit merge/status guidance."
+          }
+        },
+        {
+          "id": "I-013",
+          "source_order": 97,
+          "title": "user configuration isolation",
+          "source_body_markdown": "### I-013 — user configuration isolation\n\n**Expected:** Installer never modifies `~/.codex/**` or user Skills.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Installer never modifies `~/.codex/**` or user Skills."
+          }
+        },
+        {
+          "id": "I-014",
+          "source_order": 98,
+          "title": "Windows documented invocation",
+          "source_body_markdown": "### I-014 — Windows documented invocation\n\n**Expected:** PowerShell parses, resolves Git Bash, delegates without embedding policy.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "PowerShell parses, resolves Git Bash, delegates without embedding policy."
+          }
+        },
+        {
+          "id": "I-015",
+          "source_order": 99,
+          "title": "upgrade governance drift",
+          "source_body_markdown": "### I-015 — upgrade governance drift\n\n**Expected:** Preserved tuned file missing new control is reported as drift, not silently overwritten or ignored.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Preserved tuned file missing new control is reported as drift, not silently overwritten or ignored."
+          }
+        }
+      ]
+    },
+    {
+      "id": "G",
+      "source_order": 11,
+      "title": "Governance, Rulesets, and workflow safety",
+      "source_heading_markdown": "## 13. Governance, Rulesets, and workflow safety\n\n",
+      "scenarios": [
+        {
+          "id": "G-001",
+          "source_order": 100,
+          "title": "sensor GET-only wall",
+          "source_body_markdown": "### G-001 — sensor GET-only wall\n\n**Action:** Run governance status with a shim rejecting mutations.\n\n**Expected:** Only read calls; pass.\n\n",
+          "action": "Run governance status with a shim rejecting mutations.",
+          "expected": {
+            "label": "Expected",
+            "text": "Only read calls; pass."
+          }
+        },
+        {
+          "id": "G-002",
+          "source_order": 101,
+          "title": "undeclared profile",
+          "source_body_markdown": "### G-002 — undeclared profile\n\n**Expected:** `UNKNOWN`; profile never guessed from repository shape.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "`UNKNOWN`; profile never guessed from repository shape."
+          }
+        },
+        {
+          "id": "G-003",
+          "source_order": 102,
+          "title": "solo profile",
+          "source_body_markdown": "### G-003 — solo profile\n\n**Expected:** Evaluate solo requirements and still report stronger controls factually.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Evaluate solo requirements and still report stronger controls factually."
+          }
+        },
+        {
+          "id": "G-004",
+          "source_order": 103,
+          "title": "team profile source binding",
+          "source_body_markdown": "### G-004 — team profile source binding\n\n**Expected:** Required checks bound only after all contexts share verified expected App ID.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Required checks bound only after all contexts share verified expected App ID."
+          }
+        },
+        {
+          "id": "G-005",
+          "source_order": 104,
+          "title": "ambiguous check issuer",
+          "source_body_markdown": "### G-005 — ambiguous check issuer\n\n**Expected:** `UNCHECKABLE`; actuator performs zero writes.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "`UNCHECKABLE`; actuator performs zero writes."
+          }
+        },
+        {
+          "id": "G-006",
+          "source_order": 105,
+          "title": "Ruleset noncanonical existing state",
+          "source_body_markdown": "### G-006 — Ruleset noncanonical existing state\n\n**Expected:** Reconciliation fails closed rather than rewriting unknown policy.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Reconciliation fails closed rather than rewriting unknown policy."
+          }
+        },
+        {
+          "id": "G-007",
+          "source_order": 106,
+          "title": "intent persistence failure",
+          "source_body_markdown": "### G-007 — intent persistence failure\n\n**Expected:** No later Ruleset write.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "No later Ruleset write."
+          }
+        },
+        {
+          "id": "G-008",
+          "source_order": 107,
+          "title": "merge queue applicability",
+          "source_body_markdown": "### G-008 — merge queue applicability\n\n**Expected:** Personal repo `n/a`; eligible org requires effective rule and `merge_group` workflow coverage.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Personal repo `n/a`; eligible org requires effective rule and `merge_group` workflow coverage."
+          }
+        },
+        {
+          "id": "G-009",
+          "source_order": 108,
+          "title": "CODEOWNERS target posture",
+          "source_body_markdown": "### G-009 — CODEOWNERS target posture\n\n**Expected:** Source template placeholder treated differently from installed unresolved target; team profile fails unresolved target.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Source template placeholder treated differently from installed unresolved target; team profile fails unresolved target."
+          }
+        },
+        {
+          "id": "G-010",
+          "source_order": 109,
+          "title": "Action SHA pins",
+          "source_body_markdown": "### G-010 — Action SHA pins\n\n**Expected:** Floating `@v1` or tag fails; full SHA with version comment passes.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Floating `@v1` or tag fails; full SHA with version comment passes."
+          }
+        },
+        {
+          "id": "G-011",
+          "source_order": 110,
+          "title": "least-privilege workflow",
+          "source_body_markdown": "### G-011 — least-privilege workflow\n\n**Expected:** Checkout jobs explicitly receive needed contents permission and no unnecessary writes.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Checkout jobs explicitly receive needed contents permission and no unnecessary writes."
+          }
+        },
+        {
+          "id": "G-012",
+          "source_order": 111,
+          "title": "untrusted PR code",
+          "source_body_markdown": "### G-012 — untrusted PR code\n\n**Expected:** No privileged secret-bearing workflow executes untrusted PR code.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "No privileged secret-bearing workflow executes untrusted PR code."
+          }
+        },
+        {
+          "id": "G-013",
+          "source_order": 112,
+          "title": "Codex Action output authority",
+          "source_body_markdown": "### G-013 — Codex Action output authority\n\n**Expected:** Advisory unless schema/check contract; docs distinguish AI result from deterministic gate.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Advisory unless schema/check contract; docs distinguish AI result from deterministic gate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "P",
+      "source_order": 12,
+      "title": "Feedback and retrospective",
+      "source_heading_markdown": "## 14. Feedback and retrospective\n\n",
+      "scenarios": [
+        {
+          "id": "P-001",
+          "source_order": 113,
+          "title": "non-interactive failure silence",
+          "source_body_markdown": "### P-001 — non-interactive failure silence\n\n**Expected:** Original exit preserved; no feedback prompt or network call.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Original exit preserved; no feedback prompt or network call."
+          }
+        },
+        {
+          "id": "P-002",
+          "source_order": 114,
+          "title": "CI failure silence",
+          "source_body_markdown": "### P-002 — CI failure silence\n\n**Expected:** Same.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Same."
+          }
+        },
+        {
+          "id": "P-003",
+          "source_order": 115,
+          "title": "explicit consent",
+          "source_body_markdown": "### P-003 — explicit consent\n\n**Expected:** Exact preview, `y`, one issue-create call, allowlisted fields only, original exit preserved.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Exact preview, `y`, one issue-create call, allowlisted fields only, original exit preserved."
+          }
+        },
+        {
+          "id": "P-004",
+          "source_order": 116,
+          "title": "declined consent",
+          "source_body_markdown": "### P-004 — declined consent\n\n**Expected:** No network call.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "No network call."
+          }
+        },
+        {
+          "id": "P-005",
+          "source_order": 117,
+          "title": "environment injection attempt",
+          "source_body_markdown": "### P-005 — environment injection attempt\n\n**Expected:** Cannot pre-arm or redirect feedback target.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Cannot pre-arm or redirect feedback target."
+          }
+        },
+        {
+          "id": "P-006",
+          "source_order": 118,
+          "title": "private data in failure",
+          "source_body_markdown": "### P-006 — private data in failure\n\n**Expected:** Not included in issue body.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Not included in issue body."
+          }
+        },
+        {
+          "id": "P-007",
+          "source_order": 119,
+          "title": "repeated friction promotion",
+          "source_body_markdown": "### P-007 — repeated friction promotion\n\n**Precondition:** Same pattern has two independent occurrences.\n\n**Expected:** Candidate becomes overdue/promotion-ready with evidence links.\n\n",
+          "precondition": "Same pattern has two independent occurrences.",
+          "expected": {
+            "label": "Expected",
+            "text": "Candidate becomes overdue/promotion-ready with evidence links."
+          }
+        },
+        {
+          "id": "P-008",
+          "source_order": 120,
+          "title": "one-off friction",
+          "source_body_markdown": "### P-008 — one-off friction\n\n**Expected:** Recorded but not prematurely converted into global rule.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Recorded but not prematurely converted into global rule."
+          }
+        },
+        {
+          "id": "P-009",
+          "source_order": 121,
+          "title": "mechanism preference",
+          "source_body_markdown": "### P-009 — mechanism preference\n\n**Expected:** Proposed remediation prioritizes test/guard/schema/script over duplicated prose.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Proposed remediation prioritizes test/guard/schema/script over duplicated prose."
+          }
+        },
+        {
+          "id": "P-010",
+          "source_order": 122,
+          "title": "capability checkpoint changed",
+          "source_body_markdown": "### P-010 — capability checkpoint changed\n\n**Expected:** Monthly report identifies exact official Codex source change and opens human review, not automatic semantic rewrite.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Monthly report identifies exact official Codex source change and opens human review, not automatic semantic rewrite."
+          }
+        },
+        {
+          "id": "P-011",
+          "source_order": 123,
+          "title": "model retirement",
+          "source_body_markdown": "### P-011 — model retirement\n\n**Expected:** Detect hardcoded retired model references in runtime configs/evaluation records; core governance remains model-neutral.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Detect hardcoded retired model references in runtime configs/evaluation records; core governance remains model-neutral."
+          }
+        },
+        {
+          "id": "P-012",
+          "source_order": 124,
+          "title": "mechanism retirement",
+          "source_body_markdown": "### P-012 — mechanism retirement\n\n**Expected:** Obsolete/redundant control can be removed with evidence and owner approval.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Obsolete/redundant control can be removed with evidence and owner approval."
+          }
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "source_order": 13,
+      "title": "Source-defect regression scenarios",
+      "source_heading_markdown": "## 15. Source-defect regression scenarios\n\n",
+      "scenarios": [
+        {
+          "id": "D-001",
+          "source_order": 125,
+          "title": "ADR reference integrity",
+          "source_body_markdown": "### D-001 — ADR reference integrity\n\n**Precondition:** ADR contains local `#N` link to unrelated/missing item.\n\n**Expected:** Full reference checker fails or requires qualified provenance.\n\n",
+          "precondition": "ADR contains local `#N` link to unrelated/missing item.",
+          "expected": {
+            "label": "Expected",
+            "text": "Full reference checker fails or requires qualified provenance."
+          }
+        },
+        {
+          "id": "D-002",
+          "source_order": 126,
+          "title": "changelog range is not existence",
+          "source_body_markdown": "### D-002 — changelog range is not existence\n\n**Precondition:** Bare `#199` does not exist but is below ceiling.\n\n**Expected target behavior:** Either real existence validation fails, or command/output is explicitly named “range check” and does not claim resolution.\n\n",
+          "precondition": "Bare `#199` does not exist but is below ceiling.",
+          "expected": {
+            "label": "Expected target behavior",
+            "text": "Either real existence validation fails, or command/output is explicitly named “range check” and does not claim resolution."
+          }
+        },
+        {
+          "id": "D-003",
+          "source_order": 127,
+          "title": "all governed Markdown references",
+          "source_body_markdown": "### D-003 — all governed Markdown references\n\n**Action:** Scan changelog, ADRs, and normative docs.\n\n**Expected:** Configured local/cross-repo references validate with offline fixtures and authenticated integration mode.\n\n",
+          "action": "Scan changelog, ADRs, and normative docs.",
+          "expected": {
+            "label": "Expected",
+            "text": "Configured local/cross-repo references validate with offline fixtures and authenticated integration mode."
+          }
+        },
+        {
+          "id": "D-004",
+          "source_order": 128,
+          "title": "floating MCP dependency",
+          "source_body_markdown": "### D-004 — floating MCP dependency\n\n**Precondition:** Installed asset contains `@latest` or unpinned external executable dependency.\n\n**Expected:** Supply-chain check fails unless explicitly approved in source-only experimental area.\n\n",
+          "precondition": "Installed asset contains `@latest` or unpinned external executable dependency.",
+          "expected": {
+            "label": "Expected",
+            "text": "Supply-chain check fails unless explicitly approved in source-only experimental area."
+          }
+        }
+      ]
+    },
+    {
+      "id": "X",
+      "source_order": 14,
+      "title": "End-to-end release scenarios",
+      "source_heading_markdown": "## 16. End-to-end release scenarios\n\n",
+      "scenarios": [
+        {
+          "id": "X-001",
+          "source_order": 129,
+          "title": "clean adopter normal Task",
+          "source_body_markdown": "### X-001 — clean adopter normal Task\n\n1. Install into a clean fixture.\n2. Tune/activate sources and governance profile.\n3. Create Epic and Task.\n4. Claim and publish plan.\n5. Dispatch worker to isolated worktree.\n6. Implement within ownership.\n7. Open PR with plan link and evidence.\n8. Run deterministic CI and governance reviewer.\n9. Human accepts/merges.\n\n**Expected:** All durable records reconstruct the flow without private thread history.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "All durable records reconstruct the flow without private thread history."
+          }
+        },
+        {
+          "id": "X-002",
+          "source_order": 130,
+          "title": "interrupted worker recovery",
+          "source_body_markdown": "### X-002 — interrupted worker recovery\n\n1. Dispatch worker attempt 1.\n2. Create partial commit/evidence.\n3. Simulate lost thread.\n4. Release/orphan-detect and create attempt 2.\n5. Successor reconstructs from GitHub and continues.\n\n**Expected:** Attempt 1 cannot complete; attempt 2 produces current evidence; no double writer.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Attempt 1 cannot complete; attempt 2 produces current evidence; no double writer."
+          }
+        },
+        {
+          "id": "X-003",
+          "source_order": 131,
+          "title": "ownership conflict across frontier",
+          "source_body_markdown": "### X-003 — ownership conflict across frontier\n\n1. Two ready Tasks overlap.\n2. Orchestrator calculates frontier.\n\n**Expected:** They are not dispatched concurrently; resolution is split, serialized, or re-planned durably.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "They are not dispatched concurrently; resolution is split, serialized, or re-planned durably."
+          }
+        },
+        {
+          "id": "X-004",
+          "source_order": 132,
+          "title": "high-risk Task",
+          "source_body_markdown": "### X-004 — high-risk Task\n\n1. Task touches auth/workflow/agreement path.\n2. Risk tier requires pre-dispatch human approval.\n\n**Expected:** No worker starts before approval; final acceptance also requires appropriate human/code-owner evidence.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "No worker starts before approval; final acceptance also requires appropriate human/code-owner evidence."
+          }
+        },
+        {
+          "id": "X-005",
+          "source_order": 133,
+          "title": "Codex client unavailable",
+          "source_body_markdown": "### X-005 — Codex client unavailable\n\n1. Install portable core in environment without Codex app/cloud.\n2. Run GitHub governance and static checks.\n\n**Expected:** Portable lifecycle remains inspectable; unavailable runtime probes are explicit non-passes, not installation failure unless selected capability is required.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Portable lifecycle remains inspectable; unavailable runtime probes are explicit non-passes, not installation failure unless selected capability is required."
+          }
+        },
+        {
+          "id": "X-006",
+          "source_order": 134,
+          "title": "upgrade with local customization",
+          "source_body_markdown": "### X-006 — upgrade with local customization\n\n1. Install v1 and customize tuned files.\n2. Introduce upstream engine and governance-control changes.\n3. Upgrade.\n\n**Expected:** Engine refreshes, tuned/instance files survive, new missing control is reported, no hidden commit.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Engine refreshes, tuned/instance files survive, new missing control is reported, no hidden commit."
+          }
+        },
+        {
+          "id": "X-007",
+          "source_order": 135,
+          "title": "false completion attempt",
+          "source_body_markdown": "### X-007 — false completion attempt\n\n1. Worker posts persuasive completion narrative.\n2. One acceptance criterion lacks current-head evidence.\n\n**Expected:** Reviewer rejects completion; human sees the exact missing proof.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Reviewer rejects completion; human sees the exact missing proof."
+          }
+        },
+        {
+          "id": "X-008",
+          "source_order": 136,
+          "title": "post-merge deferred evidence",
+          "source_body_markdown": "### X-008 — post-merge deferred evidence\n\n1. Acceptance includes a condition verifiable only after merge/deploy.\n2. PR records deferred evidence and owner.\n\n**Expected:** Pre-merge status does not falsely mark that criterion verified; post-merge observation closes or escalates it.\n\n",
+          "expected": {
+            "label": "Expected",
+            "text": "Pre-merge status does not falsely mark that criterion verified; post-merge observation closes or escalates it."
+          }
+        }
+      ]
+    }
+  ],
+  "footer_markdown": "## 17. Release threshold\n\nA release candidate must provide:\n\n- a result for every scenario;\n- no `fail` in non-deferred scenarios;\n- no `skipped` represented as support;\n- approved deviations linked to ADRs;\n- exact client/version/date for runtime observations;\n- evidence that source-independent contracts did not regress;\n- a public known-limitations section matching all `unverified` and `deferred` capabilities.\n"
+}

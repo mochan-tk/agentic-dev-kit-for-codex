@@ -1,6 +1,6 @@
 {
   "schema": "phase-0-conformance-manifest/v1",
-  "observed_at": "2026-08-24T01:53:31+09:00",
+  "observed_at": "2026-08-24T11:27:49+09:00",
   "target": {
     "repository": "mochan-tk/agentic-dev-kit-for-codex",
     "seed_commit": "88179ec6a28393d7bf4cea96684e3af16b512484",
@@ -46,7 +46,58 @@
       "T": 16,
       "W": 12,
       "X": 8
-    }
+    },
+    "source": {
+      "archive_file": "agentic-dev-kit-codex-research-pack.zip",
+      "archive_member": "agentic-dev-kit-codex-research-pack/05_CONFORMANCE_SCENARIOS.md",
+      "archive_sha256": "55e3e36d581c40a30f4e09e208573fcc15b46a254077da4f177fe7b8adcad0f7",
+      "path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md",
+      "sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0",
+      "provenance": {
+        "path": "tests/conformance/source/manifest.json",
+        "sha256": "c73427839b34d0cd8215fb8fe81ea22c6c9a88759acc17ef29d604dd2c6036f0"
+      },
+      "baseline_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+      "baseline_commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
+    },
+    "definitions": {
+      "path": "tests/conformance/catalog.json",
+      "sha256": "418bf8aa01674dc0c78cc615ad8e278ed06df1a952bb4670ec42e3bdd7dacc3d",
+      "schema": {
+        "path": "tests/conformance/catalog.schema.json",
+        "sha256": "3bb3b4f7f09d5079d6b3e7c303aaae4f4a25c2dd36927e0aec4ad7a737e0834f"
+      }
+    },
+    "coverage": {
+      "path": "tests/conformance/coverage.json",
+      "sha256": "833fb276819dafeaa4d32dd7ab45362723d2cdb1d9f4a18316bb0f48fc197b55",
+      "schema": {
+        "path": "tests/conformance/coverage.schema.json",
+        "sha256": "ed6b4e278fccbd0ac54383bd207d8f94870e86f7f5c4171b3cf62e71b5977367"
+      }
+    },
+    "result_store": {
+      "path": "tests/conformance/results.json",
+      "sha256": "1316a58941f3c8aa6eab86132e27d879722934f117e8527089225c8cf69449fb",
+      "schema": {
+        "path": "tests/conformance/results.schema.json",
+        "sha256": "5466fb66ee8e98fb71ac630682f43b09c4ea9e69804112e9c1a3fa2321759a9a"
+      },
+      "result_count": 0
+    },
+    "human_view": {
+      "path": "docs/conformance/catalog.md",
+      "sha256": "78d67c5114c1a7c9d6d05819ecba29f5c46d7b2cf9d580b1680c8290515b47bf"
+    },
+    "provenance_adr": {
+      "path": "docs/agreements/adr/ADR-0006-conformance-catalog-provenance.md",
+      "sha256": "12155b4357f827151c432bb2e463c4f61af4c733dbf59a172fbc71cff6beddc9"
+    },
+    "tool": {
+      "path": ".github/scripts/conformance-catalog.py",
+      "sha256": "3cd67cbb050ee2ee04f2e3f6844f665b59aa5fb940cb9cbe4d4ff15dbae9039f"
+    },
+    "verification_state": "not-run"
   },
   "contracts": [
     {"id": "K01", "phase0_state": "foundation", "contract": "durable GitHub truth and canonical hierarchy"},
