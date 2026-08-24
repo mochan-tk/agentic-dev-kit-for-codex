@@ -564,6 +564,69 @@ def authorize_changed_paths(
             )
 
 
+def git_diff_entries(
+    root: Path,
+    arguments: list[str],
+    label: str,
+    errors: list[str],
+) -> list[tuple[str, str]] | None:
+    """Return status/path pairs from one NUL-delimited, rename-disabled diff."""
+
+    result = git_command(
+        root,
+        "diff",
+        "--name-status",
+        "-z",
+        "--no-renames",
+        *arguments,
+        "--",
+    )
+    if result.returncode != 0:
+        errors.append(f"cannot enumerate {label}")
+        return None
+    fields = result.stdout.split(b"\0")
+    if fields and not fields[-1]:
+        fields.pop()
+    if len(fields) % 2:
+        errors.append(f"{label} has malformed NUL-delimited status output")
+        return None
+    entries: list[tuple[str, str]] = []
+    for index in range(0, len(fields), 2):
+        try:
+            status = fields[index].decode("ascii")
+            path = fields[index + 1].decode("utf-8")
+        except UnicodeError:
+            errors.append(f"{label} contains a non-UTF-8 path or status")
+            return None
+        if not status:
+            errors.append(f"{label} contains an empty change status")
+            return None
+        entries.append((status, path))
+    return entries
+
+
+def authorize_changed_entries(
+    task: dict[str, Any], entries: Iterable[tuple[str, str]], errors: list[str]
+) -> None:
+    """Authorize additive/modifying entries; deletion and rename stay fail-closed."""
+
+    observed = list(entries)
+    for status, path in observed:
+        if status == "D":
+            errors.append(
+                f"Task ownership does not support deletion in this phase: {path}"
+            )
+        elif status.startswith(("R", "C")):
+            errors.append(
+                f"Task ownership does not support rename or copy in this phase: {path}"
+            )
+        elif status not in {"A", "M"}:
+            errors.append(
+                f"Task diff has unsupported change status {status!r}: {path}"
+            )
+    authorize_changed_paths(task, (path for _status, path in observed), errors)
+
+
 def validate_execution_authorization(
     root: Path,
     payload: dict[str, Any],
@@ -582,8 +645,6 @@ def validate_execution_authorization(
     task_base = task.get("base_commit")
     if not isinstance(task_base, str) or not FULL_SHA.fullmatch(task_base):
         return
-    diff_base = task_base
-    diff_head = "HEAD"
     if context_name == "pull_request":
         event_path = environment.get("GITHUB_EVENT_PATH", "")
         if not event_path:
@@ -603,6 +664,8 @@ def validate_execution_authorization(
         head_sha = head.get("sha")
         base_ref = base.get("ref")
         head_ref = head.get("ref")
+        base_repo = base.get("repo")
+        head_repo = head.get("repo")
         if not isinstance(base_sha, str) or not FULL_SHA.fullmatch(base_sha):
             errors.append("GitHub pull_request base.sha must be a full object ID")
             return
@@ -614,6 +677,22 @@ def validate_execution_authorization(
             return
         if head_ref != branch:
             errors.append("GitHub pull_request head.ref does not match GITHUB_HEAD_REF")
+            return
+        if (
+            not isinstance(base_repo, dict)
+            or base_repo.get("full_name") != TARGET_REPOSITORY
+        ):
+            errors.append(
+                "GitHub pull_request base.repo.full_name must match the governed repository"
+            )
+            return
+        if (
+            not isinstance(head_repo, dict)
+            or head_repo.get("full_name") != TARGET_REPOSITORY
+        ):
+            errors.append(
+                "GitHub pull_request head.repo.full_name must match the governed repository"
+            )
             return
         if task_base != base_sha:
             errors.append("active Task base_commit does not match pull_request.base.sha")
@@ -634,8 +713,12 @@ def validate_execution_authorization(
                 "event base.sha and head.sha"
             )
             return
-        diff_base = base_sha
-        diff_head = head_sha
+        diff_sources = [
+            (
+                [f"{base_sha}...{head_sha}"],
+                "pull_request Task diff from event base to head",
+            )
+        ]
     elif context_name == "local_branch":
         main_result = git_command(root, "rev-parse", "refs/heads/main")
         if main_result.returncode != 0:
@@ -652,32 +735,21 @@ def validate_execution_authorization(
                 "active Task base_commit must equal current local main and its HEAD merge-base"
             )
             return
-        diff_base = main_sha
+        diff_sources = [
+            ([f"{main_sha}...HEAD"], "committed local Task diff"),
+            (["--cached", "HEAD"], "staged local Task diff"),
+            ([], "unstaged local Task diff"),
+        ]
     else:
         errors.append(f"unsupported Task-diff execution context: {context_name}")
         return
-    diff_result = git_command(
-        root,
-        "diff",
-        "--name-only",
-        "-z",
-        "--no-renames",
-        f"{diff_base}...{diff_head}",
-        "--",
-    )
-    if diff_result.returncode != 0:
-        errors.append("cannot enumerate active Task diff from its pinned base")
-        return
-    changed_paths: list[str] = []
-    for raw_path in diff_result.stdout.split(b"\0"):
-        if not raw_path:
-            continue
-        try:
-            changed_paths.append(raw_path.decode("utf-8"))
-        except UnicodeError:
-            errors.append("active Task diff contains a non-UTF-8 path")
+    changed_entries: list[tuple[str, str]] = []
+    for arguments, label in diff_sources:
+        entries = git_diff_entries(root, arguments, label, errors)
+        if entries is None:
             return
-    authorize_changed_paths(task, changed_paths, errors)
+        changed_entries.extend(entries)
+    authorize_changed_entries(task, changed_entries, errors)
 
 
 def invariant_digest(invariants: Iterable[tuple[str, str]]) -> str:
@@ -732,6 +804,71 @@ def workflow_job_blocks(text: str) -> dict[str, str]:
         name: "\n".join(lines[start : starts[position + 1][0] if position + 1 < len(starts) else len(lines)])
         for position, (start, name) in enumerate(starts)
     }
+
+
+def validate_reserved_check_contexts(
+    path: str, text: str, errors: list[str]
+) -> None:
+    """Keep Ruleset-required job names exclusive to the canonical CI workflow."""
+
+    if path == CI_WORKFLOW:
+        return
+    lines = text.splitlines()
+    jobs_indexes = [index for index, line in enumerate(lines) if line == "jobs:"]
+    if len(jobs_indexes) != 1:
+        errors.append(
+            f"{path} must contain exactly one literal jobs mapping for context reservation"
+        )
+        return
+
+    job_ids: list[str] = []
+    workflow_lines = lines[jobs_indexes[0] + 1 :]
+    for line_number, line in enumerate(
+        workflow_lines, start=jobs_indexes[0] + 2
+    ):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not line[0].isspace():
+            break
+        indent = len(line) - len(line.lstrip(" "))
+        if "\t" in line or indent % 2:
+            errors.append(
+                f"{path}:{line_number} has unsupported job-mapping indentation"
+            )
+            continue
+        if indent == 2:
+            match = re.fullmatch(r"  ([A-Za-z_][A-Za-z0-9_-]*):\s*", line)
+            if match is None:
+                errors.append(
+                    f"{path}:{line_number} has a dynamic or non-literal job ID"
+                )
+            else:
+                job_ids.append(match.group(1))
+        elif indent == 4:
+            match = re.fullmatch(
+                r"    ([A-Za-z_][A-Za-z0-9_-]*):(?:\s.*)?", line
+            )
+            if match is None:
+                errors.append(
+                    f"{path}:{line_number} has dynamic or merged job metadata"
+                )
+            elif match.group(1) == "name":
+                errors.append(
+                    f"{path}:{line_number} job-level name is forbidden because "
+                    "Ruleset check contexts are globally reserved"
+                )
+
+    duplicates = sorted(
+        job_id for job_id in set(job_ids) if job_ids.count(job_id) > 1
+    )
+    if duplicates:
+        errors.append(f"{path} has duplicate job ID(s): {', '.join(duplicates)}")
+    reserved = sorted({"quality", "conformance"} & set(job_ids))
+    if reserved:
+        errors.append(
+            f"{path} reuses reserved Ruleset job ID(s): {', '.join(reserved)}"
+        )
 
 
 def simple_mapping(block: str, header: str) -> list[tuple[str, str]] | None:
@@ -887,6 +1024,7 @@ def validate_workflows(root: Path, policy: dict[str, Any], errors: list[str]) ->
         if re.search(r"^\s*pull_request_target\s*:", text, re.MULTILINE):
             errors.append(f"{relative} uses unsupported pull_request_target")
         validate_action_uses(relative, text, errors)
+        validate_reserved_check_contexts(relative, text, errors)
         if text.splitlines().count("permissions: {}") != 1:
             errors.append(
                 f"{relative} workflow-level permissions must be exactly one empty mapping"
