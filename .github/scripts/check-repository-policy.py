@@ -17,12 +17,54 @@ from typing import Any, Iterable, Mapping
 
 ROOT_MANIFEST = ".github/governance/phase-task-ownership.v1.json"
 CONFORMANCE_MANIFEST = "tests/conformance/manifest.json"
+COVERAGE = "tests/conformance/coverage.json"
 CI_WORKFLOW = ".github/workflows/ci.yml"
 ACCEPTED_PHASE0_COMMIT = "32615344ad4f0310948bc59d234a84718741788a"
 ACCEPTED_PHASE0_TREE = "33259721ec9f378fa67392ef8e1c7645db1321f9"
 TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 REVIEWED_INVARIANT_DIGEST = (
-    "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c"
+    "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6"
+)
+HIERARCHY_AGREEMENT_PATH = (
+    "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
+)
+REPOSITORY_COMPLETION_PATH = "docs/agreements/repository-completion.md"
+HIERARCHY_AGREEMENT_ISSUE = (
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
+)
+REVIEWED_HIERARCHY_AGREEMENT_SHA256 = (
+    "2b33ba6b6b51cf3d88e35c6f8722bec7ba1406aabd0eed4e6657af9a96293b75"
+)
+REVIEWED_REPOSITORY_COMPLETION_SHA256 = (
+    "c1cf6dbb1efd0438f1387b33416743433fb94bf376a4c0fa9ecf76a8da3f880d"
+)
+CANONICAL_I02 = (
+    "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
+    "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
+    "is an optional projection and never outranks it."
+)
+CANONICAL_HIERARCHY = (
+    "Repository initiative / Epic set -> Epic issue -> Task issue -> PR -> "
+    "commits, checks, and evidence"
+)
+PROJECTS_PROJECTION = (
+    "A GitHub Projects board is an optional projection. It never outranks the "
+    "Issue graph."
+)
+NO_INDIVIDUAL_COMPLETION = (
+    "No individual phase completion constitutes repository-level completion."
+)
+OVERALL_COMPLETION_CONDITION = (
+    "The overall repository implementation remains incomplete until every "
+    "required contract has current target-side evidence and a human-reviewed "
+    "completion pull request changing `release_blocked` to `false` is merged."
+)
+REQUIRED_CONTRACT_IDS = [f"K{number:02d}" for number in range(1, 21)]
+FORBIDDEN_LIVE_AUTHORITY_MARKERS = (
+    "GitHub Project -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
+    "A GitHub Projects board is authoritative.",
+    "Project Record -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
+    "Phase 1 completion completes the repository.",
 )
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
 ALLOWED_MODES = {"100644", "100755"}
@@ -770,6 +812,8 @@ def validate_invariants(root: Path, policy: dict[str, Any], errors: list[str]) -
     identifiers = [identifier for identifier, _statement in invariants]
     if identifiers != EXPECTED_INVARIANT_IDS or len(identifiers) != len(set(identifiers)):
         errors.append("live invariant IDs must be exactly I01 through I13 in order")
+    if dict(invariants).get("I02") != CANONICAL_I02:
+        errors.append("live I02 does not express the reviewed Option B hierarchy")
     digest = invariant_digest(invariants)
     if digest != REVIEWED_INVARIANT_DIGEST:
         errors.append("live invariant meanings do not match the reviewed live anchor")
@@ -785,6 +829,285 @@ def validate_invariants(root: Path, policy: dict[str, Any], errors: list[str]) -
         or manifest_invariants.get("digest") != REVIEWED_INVARIANT_DIGEST
     ):
         errors.append("conformance manifest invariant digest does not match AGENTS.md")
+
+
+def policy_file_sha256(
+    root: Path, relative: str, label: str, errors: list[str]
+) -> str | None:
+    try:
+        raw = (root / relative).read_bytes()
+    except OSError:
+        errors.append(f"cannot read {label}")
+        return None
+    return hashlib.sha256(raw).hexdigest()
+
+
+def policy_text(
+    root: Path, relative: str, label: str, errors: list[str]
+) -> str | None:
+    try:
+        return (root / relative).read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        errors.append(f"cannot read {label} as UTF-8")
+        return None
+
+
+def validate_required_markers(
+    text: str | None,
+    markers: Iterable[str],
+    diagnostic: str,
+    errors: list[str],
+) -> None:
+    if text is not None and any(marker not in text for marker in markers):
+        errors.append(diagnostic)
+
+
+def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
+    manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
+
+    hierarchy = manifest.get("hierarchy_agreement")
+    if not isinstance(hierarchy, dict):
+        errors.append("conformance manifest hierarchy agreement must be an object")
+        hierarchy = {}
+    exact_keys(
+        hierarchy,
+        {"decision", "issue", "path", "sha256"},
+        "conformance manifest hierarchy agreement",
+        errors,
+    )
+    expected_hierarchy = {
+        "decision": "option-b",
+        "issue": HIERARCHY_AGREEMENT_ISSUE,
+        "path": HIERARCHY_AGREEMENT_PATH,
+        "sha256": REVIEWED_HIERARCHY_AGREEMENT_SHA256,
+    }
+    if hierarchy != expected_hierarchy:
+        errors.append("conformance manifest hierarchy agreement is not the reviewed Option B anchor")
+
+    hierarchy_hash = policy_file_sha256(
+        root,
+        HIERARCHY_AGREEMENT_PATH,
+        "hierarchy agreement ADR",
+        errors,
+    )
+    if hierarchy_hash != REVIEWED_HIERARCHY_AGREEMENT_SHA256:
+        errors.append("reviewed hierarchy agreement hash does not match ADR-0005")
+    if hierarchy.get("sha256") != hierarchy_hash:
+        errors.append("hierarchy agreement manifest hash does not match ADR-0005")
+
+    completion = manifest.get("repository_completion")
+    if not isinstance(completion, dict):
+        errors.append("conformance manifest repository completion must be an object")
+        completion = {}
+    exact_keys(
+        completion,
+        {
+            "state",
+            "definition",
+            "individual_phase_completion_satisfies_repository_completion",
+            "required_contracts",
+            "target_side_evidence_required",
+            "human_reviewed_completion_pr_required",
+        },
+        "conformance manifest repository completion",
+        errors,
+    )
+    definition = completion.get("definition")
+    if not isinstance(definition, dict):
+        errors.append("repository completion definition must be an object")
+        definition = {}
+    exact_keys(
+        definition,
+        {"path", "sha256"},
+        "repository completion definition",
+        errors,
+    )
+    expected_definition = {
+        "path": REPOSITORY_COMPLETION_PATH,
+        "sha256": REVIEWED_REPOSITORY_COMPLETION_SHA256,
+    }
+    if definition != expected_definition:
+        errors.append("repository completion definition is not the reviewed anchor")
+
+    if completion.get("state") != "incomplete":
+        errors.append("repository completion state must remain incomplete")
+    if (
+        completion.get(
+            "individual_phase_completion_satisfies_repository_completion"
+        )
+        is not False
+    ):
+        errors.append(
+            "repository completion must not be satisfied by individual Phase completion"
+        )
+    if completion.get("required_contracts") != REQUIRED_CONTRACT_IDS:
+        errors.append("repository completion required contracts must be exactly K01 through K20")
+    if completion.get("target_side_evidence_required") is not True:
+        errors.append("repository completion must require current target-side evidence")
+    if completion.get("human_reviewed_completion_pr_required") is not True:
+        errors.append("repository completion must require a human-reviewed completion PR")
+
+    contracts = manifest.get("contracts")
+    contract_ids = (
+        [item.get("id") for item in contracts if isinstance(item, dict)]
+        if isinstance(contracts, list)
+        else []
+    )
+    if contract_ids != REQUIRED_CONTRACT_IDS:
+        errors.append("repository completion contract records must be exactly K01 through K20")
+    if completion.get("required_contracts") != contract_ids:
+        errors.append("repository completion prerequisites do not match contract records")
+    if manifest.get("results") != []:
+        errors.append("repository completion requires the Phase compatibility results sentinel to remain empty")
+    if manifest.get("release_blocked") is not True:
+        errors.append("repository completion requires release_blocked to remain true")
+
+    completion_hash = policy_file_sha256(
+        root,
+        REPOSITORY_COMPLETION_PATH,
+        "repository completion definition",
+        errors,
+    )
+    if completion_hash != REVIEWED_REPOSITORY_COMPLETION_SHA256:
+        errors.append(
+            "reviewed repository completion hash does not match the definition"
+        )
+    if definition.get("sha256") != completion_hash:
+        errors.append("repository completion manifest hash does not match the definition")
+
+    coverage = read_json(root / COVERAGE, errors, "conformance coverage")
+    entries = coverage.get("entries")
+    c004_entries = (
+        [
+            entry
+            for entry in entries
+            if isinstance(entry, dict) and entry.get("scenario") == "C-004"
+        ]
+        if isinstance(entries, list)
+        else []
+    )
+    expected_c004 = {
+        "scenario": "C-004",
+        "disposition": "agreement-decision",
+        "verification_state": "not-run",
+        "agreement_issue": HIERARCHY_AGREEMENT_ISSUE,
+        "agreement_adr": HIERARCHY_AGREEMENT_PATH,
+    }
+    if c004_entries != [expected_c004]:
+        errors.append("canonical C-004 agreement decision is missing or drifted")
+    if (
+        hierarchy.get("issue") != expected_c004["agreement_issue"]
+        or hierarchy.get("path") != expected_c004["agreement_adr"]
+    ):
+        errors.append("canonical C-004 agreement decision is not bound to the hierarchy manifest")
+
+    agents = policy_text(root, "AGENTS.md", "live AGENTS.md", errors)
+    readme = policy_text(root, "README.md", "live README.md", errors)
+    agreement_text = policy_text(
+        root,
+        HIERARCHY_AGREEMENT_PATH,
+        "hierarchy agreement ADR",
+        errors,
+    )
+    completion_text = policy_text(
+        root,
+        REPOSITORY_COMPLETION_PATH,
+        "repository completion definition",
+        errors,
+    )
+
+    option_b_markers = (CANONICAL_HIERARCHY, PROJECTS_PROJECTION)
+    validate_required_markers(
+        agents,
+        option_b_markers
+        + (
+            "durable repository objective",
+            "explicitly linked Epic issues",
+            "A single Epic issue may be the root",
+            "wins if a projection conflicts",
+        ),
+        "Option B hierarchy markers are missing from AGENTS.md",
+        errors,
+    )
+    validate_required_markers(
+        readme,
+        option_b_markers
+        + (
+            f"]({HIERARCHY_AGREEMENT_PATH})",
+            f"]({REPOSITORY_COMPLETION_PATH})",
+            "Phase 0 is complete",
+            "Phase 1 is in progress",
+            "not installable",
+            "not a parity release",
+            "`release_blocked` remains `true`",
+        ),
+        "Option B hierarchy or current-status markers are missing from README.md",
+        errors,
+    )
+    for label, text in (("AGENTS.md", agents), ("README.md", readme)):
+        if text is not None and any(
+            marker in text for marker in FORBIDDEN_LIVE_AUTHORITY_MARKERS
+        ):
+            errors.append(
+                f"{label} contains a contradictory hierarchy or completion claim"
+            )
+    completion_markers = (
+        NO_INDIVIDUAL_COMPLETION,
+        OVERALL_COMPLETION_CONDITION,
+    )
+    validate_required_markers(
+        agents,
+        completion_markers + ("## Repository completion boundary",),
+        "repository completion boundary markers are missing from AGENTS.md",
+        errors,
+    )
+    validate_required_markers(
+        readme,
+        completion_markers,
+        "repository completion boundary markers are missing from README.md",
+        errors,
+    )
+    validate_required_markers(
+        agreement_text,
+        option_b_markers
+        + (
+            "# ADR-0005: Issue graph authority and optional Project projection",
+            "### Option A",
+            "### Option B (selected)",
+            "### Option C",
+            "Selected: Option B.",
+            HIERARCHY_AGREEMENT_ISSUE,
+            REPOSITORY_COMPLETION_PATH,
+            "C-004",
+        ),
+        "hierarchy agreement ADR is missing reviewed Option B markers",
+        errors,
+    )
+    validate_required_markers(
+        completion_text,
+        completion_markers
+        + (
+            "# Repository-level definition of done",
+            "eight repository Skills",
+            "six custom agents",
+            "project hooks and handlers",
+            "Epic, Task, and PR ledger schemas",
+            "execution envelope and loop-event schemas",
+            "Codex execution adapter",
+            "installer and upgrade",
+            "Task ritual, ownership, and governance",
+            "clean-repository installation and end-to-end Task",
+            "all 136 conformance scenarios",
+            "satisfying each scenario's expected target behavior",
+            "K01 through K20",
+            "UNKNOWN",
+            "UNCHECKABLE",
+            "`fail`",
+            "`failed`",
+        ),
+        "repository completion definition is missing reviewed gates",
+        errors,
+    )
 
 
 def workflow_job_blocks(text: str) -> dict[str, str]:
@@ -1154,6 +1477,7 @@ def validate_repository(
             root, payload, os.environ if environment is None else environment, errors
         )
     validate_invariants(root, policy, errors)
+    validate_hierarchy_and_completion(root, errors)
     validate_workflows(root, policy, errors)
     validate_text_policy(root, paths, errors)
     return errors

@@ -1,9 +1,9 @@
 # Agentic Development Kit for Codex
 
 > [!WARNING]
-> **Phase 0 bootstrap:** this repository is not installable and is not a parity release.
-> It currently contains only the constitution, frozen-source
-> provenance, limitations, and the first conformance wall.
+> **Current status:** Phase 0 is complete. Phase 1 is in progress. The overall
+> repository implementation is incomplete, not installable, and not a parity release.
+> `release_blocked` remains `true`.
 
 This project is the Codex-native edition of the governed agentic-development
 harness in
@@ -19,13 +19,21 @@ known source defects.
 ## Durable operating model
 
 ```text
-GitHub Project -> Epic issue -> Task issue -> PR -> commits/checks/evidence
+Repository initiative / Epic set -> Epic issue -> Task issue -> PR -> commits, checks, and evidence
 ```
 
-GitHub is durable truth. Codex threads and subagents are execution contexts,
-not the project hierarchy. One Task has one active supervisor responsibility;
-one PR has one active writer, branch, and worktree. Completion requires current
-acceptance evidence, not an agent narrative.
+The Issue graph is durable truth. A repository initiative / Epic set is a
+durable repository objective with explicitly linked Epic issues; a single Epic
+issue may serve as the root. A GitHub Projects board is an optional projection. It never outranks the Issue graph.
+Codex threads and subagents are execution contexts, not the hierarchy. One Task
+has one active supervisor responsibility; one PR has one active writer, branch,
+and worktree. Completion requires current acceptance evidence, not an agent
+narrative.
+
+The authority decision and its alternatives are recorded in
+[ADR-0005](docs/agreements/adr/ADR-0005-issue-graph-authority.md). The
+[repository-level definition of done](docs/agreements/repository-completion.md)
+defines the overall completion gate.
 
 The reviewed invariant table lives in [`AGENTS.md`](AGENTS.md). The initial
 audit and file-ownership plan lives in
@@ -72,15 +80,25 @@ any capability.
 5. **Parity release:** static and runtime probes, all 136 conformance
    scenarios, adopter migration, and independently reviewed evidence.
 
-Later work remains blocked until the Phase 0 PR is independently reviewed and
-accepted by a human. An unavailable runtime probe is `unverified` or
-`skipped`, never passed.
+Phase 0 has been human-accepted. Later Tasks remain subject to their own scoped
+evidence and owner merge gates. An unavailable runtime probe is `unverified`
+or `skipped`, never passed.
 
-## Phase 0 validation
+## Repository completion boundary
+
+No individual phase completion constitutes repository-level completion.
+Task and Epic completion do not complete the repository either.
+The overall repository implementation remains incomplete until every required contract has current target-side evidence and a human-reviewed completion pull request changing `release_blocked` to `false` is merged.
+Until then, completed Tasks and Phases are accepted foundations within an
+incomplete implementation, not a release claim.
+
+## Repository validation
 
 ```sh
 python3 -m unittest discover -s tests/conformance -p 'test_*.py'
 python3 .github/scripts/check-phase0-contracts.py
+python3 .github/scripts/check-repository-policy.py
+python3 .github/scripts/conformance-catalog.py check
 bash .github/scripts/tests/test-action-pins.sh
 bash .github/scripts/tests/test-workflow-permissions.sh
 ```

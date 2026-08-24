@@ -23,9 +23,10 @@
     },
     {
       "scenario": "C-004",
-      "disposition": "pending-agreement",
+      "disposition": "agreement-decision",
       "verification_state": "not-run",
-      "agreement_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
+      "agreement_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
+      "agreement_adr": "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
     },
     {
       "scenario": "C-005",

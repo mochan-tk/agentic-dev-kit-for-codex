@@ -9,7 +9,7 @@
     "release_blocked": true
   },
   "policy": {
-    "invariant_digest": "ca7732a7f4d928f10fdb826b1a55e3c9ecf93008c5d2b210a35139956da8393c",
+    "invariant_digest": "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6",
     "required_jobs": ["quality", "conformance"],
     "required_quality_commands": [
       "python3 .github/scripts/check-phase0-contracts.py",
