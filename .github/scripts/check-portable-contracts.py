@@ -567,34 +567,111 @@ def validate_record_set(records: Any, kind: str, label: str, errors: list[str]) 
 
 
 def list_record_paths(root: Path, directory: str, filename: re.Pattern[str], errors: list[str]) -> list[str]:
-    target = root / directory
+    if not valid_repo_path(directory):
+        errors.append(f"cannot safely enumerate {directory}: unsafe repository directory path")
+        return []
+    required: dict[str, int] = {}
+    for name in ("O_DIRECTORY", "O_NOFOLLOW"):
+        value = getattr(os, name, None)
+        if type(value) is not int or value == 0:
+            errors.append(f"cannot safely enumerate {directory}: required platform flag {name} is unavailable")
+            return []
+        required[name] = value
+    descriptors: list[int] = []
+    bindings: list[tuple[int, str, tuple[int, int]]] = []
     try:
-        entries = list(target.iterdir())
-    except OSError as exc:
-        errors.append(f"cannot enumerate {directory}: {exc}")
+        current = os.open(os.fspath(root), os.O_RDONLY | required["O_DIRECTORY"] | required["O_NOFOLLOW"])
+        descriptors.append(current)
+        root_stat = os.fstat(current)
+        if not stat.S_ISDIR(root_stat.st_mode):
+            raise ValueError("repository root is not a directory")
+        root_binding = (root_stat.st_dev, root_stat.st_ino)
+        for part in directory.split("/"):
+            parent = current
+            current = os.open(
+                part,
+                os.O_RDONLY | required["O_DIRECTORY"] | required["O_NOFOLLOW"],
+                dir_fd=parent,
+            )
+            descriptors.append(current)
+            current_stat = os.fstat(current)
+            if not stat.S_ISDIR(current_stat.st_mode):
+                raise ValueError(f"repository record path is not a directory: {directory}")
+            bindings.append((parent, part, (current_stat.st_dev, current_stat.st_ino)))
+
+        def verify_bindings() -> None:
+            live_root = os.stat(os.fspath(root), follow_symlinks=False)
+            if not stat.S_ISDIR(live_root.st_mode) or (live_root.st_dev, live_root.st_ino) != root_binding:
+                raise ValueError("repository root binding changed while enumerating governed records")
+            for parent_fd, name, expected in bindings:
+                live = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+                if not stat.S_ISDIR(live.st_mode) or (live.st_dev, live.st_ino) != expected:
+                    raise ValueError(f"repository directory binding changed while enumerating {directory}")
+
+        entries: list[tuple[str, str, tuple[int, int, int]]] = []
+        overflow = False
+        observed = 0
+        with os.scandir(current) as iterator:
+            for entry in iterator:
+                observed += 1
+                if observed > MAX_RECORDS_PER_KIND:
+                    overflow = True
+                    break
+                name = entry.name
+                relative = f"{directory}/{name}" if isinstance(name, str) else ""
+                if not valid_repo_path(relative):
+                    errors.append(f"unsupported or unsafe record filename under {directory}")
+                    continue
+                try:
+                    entry_stat = os.stat(name, dir_fd=current, follow_symlinks=False)
+                except OSError as exc:
+                    errors.append(f"cannot inspect {relative}: {exc}")
+                    continue
+                entries.append(
+                    (
+                        name,
+                        relative,
+                        (entry_stat.st_dev, entry_stat.st_ino, entry_stat.st_mode),
+                    )
+                )
+
+        verify_bindings()
+
+        if overflow:
+            errors.append(f"{directory} exceeds record count limit")
+            return []
+
+        paths: list[str] = []
+        for name, relative, expected in entries:
+            try:
+                live = os.stat(name, dir_fd=current, follow_symlinks=False)
+            except OSError as exc:
+                errors.append(f"cannot re-inspect {relative}: {exc}")
+                continue
+            if (live.st_dev, live.st_ino, live.st_mode) != expected:
+                errors.append(f"record input binding changed while enumerating: {relative}")
+                continue
+            if not stat.S_ISREG(live.st_mode):
+                errors.append(f"record input is not a regular file: {relative}")
+                continue
+            if filename.fullmatch(name) is None:
+                errors.append(f"unsupported record filename: {relative}")
+                continue
+            paths.append(relative)
+        collision = Counter(unicodedata.normalize("NFC", item).casefold() for item in paths)
+        if any(count > 1 for count in collision.values()):
+            errors.append(f"{directory} has a Unicode/case path collision")
+        verify_bindings()
+        return sorted(paths)
+    except (OSError, ValueError) as exc:
+        errors.append(f"cannot safely enumerate {directory}: {exc}")
         return []
-    if len(entries) > MAX_RECORDS_PER_KIND:
-        errors.append(f"{directory} exceeds record count limit")
-        return []
-    paths: list[str] = []
-    for entry in entries:
-        relative = entry.relative_to(root).as_posix()
-        try:
-            mode = entry.lstat().st_mode
-        except OSError as exc:
-            errors.append(f"cannot inspect {relative}: {exc}")
-            continue
-        if not stat.S_ISREG(mode):
-            errors.append(f"record input is not a regular file: {relative}")
-            continue
-        if filename.fullmatch(entry.name) is None:
-            errors.append(f"unsupported record filename: {relative}")
-            continue
-        paths.append(relative)
-    collision = Counter(unicodedata.normalize("NFC", item).casefold() for item in paths)
-    if any(count > 1 for count in collision.values()):
-        errors.append(f"{directory} has a Unicode/case path collision")
-    return sorted(paths)
+    finally:
+        for descriptor in reversed(descriptors):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
 
 
 def run_git(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes] | None:
@@ -1029,6 +1106,7 @@ def validate_accepted_main_history(root: Path, current_paths: set[str], errors: 
                 root,
                 "log",
                 "-m",
+                "--no-renames",
                 "--format=",
                 "--name-only",
                 "-z",

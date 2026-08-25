@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -675,6 +676,89 @@ class PortableContractsTest(unittest.TestCase):
         self.checker.validate_accepted_main_history(root, {REQ}, errors)
         self.assert_error(errors, "changed, deleted, renamed, or type-changed")
 
+    def test_accepted_main_high_similarity_rename_then_exact_restore_is_rejected(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "repository"
+        root.mkdir()
+        subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+        subprocess.run(["git", "branch", "-M", "main"], cwd=root, check=True)
+        target = root / REQ
+        target.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / REQ, target)
+        original = target.read_bytes()
+        subprocess.run(["git", "add", REQ], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "accepted main"],
+            cwd=root,
+            check=True,
+        )
+        accepted = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+        subprocess.run(["git", "config", "diff.renames", "true"], cwd=root, check=True)
+        subprocess.run(["git", "checkout", "--quiet", "-b", "feature"], cwd=root, check=True)
+        renamed = "docs/agreements/requirements/REQ-0002.json"
+        renamed_path = root / renamed
+        target.rename(renamed_path)
+        payload = self.read_json(root, renamed)
+        payload["id"] = "REQ-0002"
+        payload["title"] = "Verify selected context before each governed work boundary"
+        payload["supersedes"] = ["REQ-0001"]
+        self.write_json(root, renamed, payload)
+        subprocess.run(["git", "add", "--all", REQ, renamed], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "rename accepted record"],
+            cwd=root,
+            check=True,
+        )
+        rename_status = subprocess.check_output(
+            ["git", "diff-tree", "--no-commit-id", "--name-status", "-r", "-M", "HEAD^", "HEAD"],
+            cwd=root,
+            text=True,
+        )
+        self.assertRegex(rename_status, r"(?m)^R(?:0[5-9][0-9]|100)\s")
+
+        target.write_bytes(original)
+        subprocess.run(["git", "add", REQ], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "restore exact accepted record"],
+            cwd=root,
+            check=True,
+        )
+        record_errors = []
+        self.checker.validate_record_set(
+            [self.read_json(root, REQ), self.read_json(root, renamed)],
+            "requirement",
+            "requirements",
+            record_errors,
+        )
+        self.assertEqual([], record_errors)
+
+        legacy = subprocess.check_output(
+            [
+                "git",
+                "--no-replace-objects",
+                "log",
+                "-m",
+                "--format=",
+                "--name-only",
+                "-z",
+                "--diff-filter=DMRT",
+                f"{accepted}..HEAD",
+                "--",
+                "docs/agreements/requirements",
+            ],
+            cwd=root,
+        )
+        legacy_names = {
+            item.strip(b"\n").decode("utf-8")
+            for item in legacy.split(b"\0")
+            if item.strip(b"\n")
+        }
+        self.assertNotIn(REQ, legacy_names)
+        errors = []
+        self.checker.validate_accepted_main_history(root, {REQ, renamed}, errors)
+        self.assert_error(errors, "changed, deleted, renamed, or type-changed")
+
     def test_missing_canonical_main_ref_is_uncheckable_for_accepted_history(self):
         root = self.copy_fixture()
         subprocess.run(["git", "update-ref", "-d", "refs/remotes/origin/main"], cwd=root, check=True)
@@ -709,6 +793,97 @@ class PortableContractsTest(unittest.TestCase):
         root = self.copy_fixture()
         (root / CONTRACT).write_text("[" * 2000 + '"leaf"' + "]" * 2000, encoding="utf-8")
         self.assert_error(self.checker.validate_repository(root), "invalid JSON")
+
+    def test_record_directories_reject_symlinks(self):
+        cases = (
+            ("docs/agreements/requirements", re.compile(r"REQ-[0-9]{4}\.json\Z")),
+            ("docs/agreements/decisions", re.compile(r"DEC-[0-9]{4}\.json\Z")),
+            ("docs/context/pins", re.compile(r"PIN-[0-9]{4}\.context-pin\.v1\.json\Z")),
+        )
+        for directory, pattern in cases:
+            with self.subTest(directory=directory):
+                root = self.copy_fixture()
+                target = root / directory
+                moved = target.with_name(target.name + "-real")
+                target.rename(moved)
+                target.symlink_to(moved.name, target_is_directory=True)
+                errors = []
+                paths = self.checker.list_record_paths(root, directory, pattern, errors)
+                self.assertEqual([], paths)
+                self.assert_error(errors, "cannot safely enumerate")
+
+    def test_record_directory_enumeration_detects_parent_namespace_swap(self):
+        root = self.copy_fixture()
+        original_scandir = self.checker.os.scandir
+        swapped = False
+
+        def swapping_scandir(path):
+            nonlocal swapped
+            iterator = original_scandir(path)
+            if isinstance(path, int) and not swapped:
+                swapped = True
+                agreements = root / "docs/agreements"
+                agreements.rename(root / "docs/agreements-old")
+                agreements.mkdir()
+            return iterator
+
+        errors = []
+        with mock.patch.object(self.checker.os, "scandir", side_effect=swapping_scandir):
+            paths = self.checker.list_record_paths(
+                root,
+                "docs/agreements/requirements",
+                re.compile(r"REQ-[0-9]{4}\.json\Z"),
+                errors,
+            )
+        self.assertTrue(swapped)
+        self.assertEqual([], paths)
+        self.assert_error(errors, "directory binding changed while enumerating")
+
+    def test_record_directory_enumeration_stops_at_max_plus_one(self):
+        root = self.copy_fixture()
+        directory = root / "docs/agreements/requirements"
+        for number in range(2, self.checker.MAX_RECORDS_PER_KIND + 3):
+            (directory / f"unsafe\u200b-{number:04d}.json").write_bytes(b"{}\n")
+
+        original_scandir = self.checker.os.scandir
+        limit = self.checker.MAX_RECORDS_PER_KIND
+        consumed = 0
+
+        class GuardedScandir:
+            def __init__(self, iterator):
+                self.iterator = iterator
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, _kind, _value, _traceback):
+                self.iterator.close()
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                nonlocal consumed
+                value = next(self.iterator)
+                consumed += 1
+                if consumed > limit + 1:
+                    raise AssertionError("record enumeration consumed beyond MAX+1")
+                return value
+
+        def guarded_scandir(path):
+            return GuardedScandir(original_scandir(path))
+
+        errors = []
+        with mock.patch.object(self.checker.os, "scandir", side_effect=guarded_scandir):
+            paths = self.checker.list_record_paths(
+                root,
+                "docs/agreements/requirements",
+                re.compile(r"REQ-[0-9]{4}\.json\Z"),
+                errors,
+            )
+        self.assertEqual([], paths)
+        self.assert_error(errors, "exceeds record count limit")
+        self.assertEqual(limit + 1, consumed)
 
     def test_safe_reader_fails_when_platform_flags_are_missing(self):
         for flag in ("O_DIRECTORY", "O_NOFOLLOW", "O_NONBLOCK"):
