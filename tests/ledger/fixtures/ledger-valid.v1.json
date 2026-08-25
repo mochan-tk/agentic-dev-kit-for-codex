@@ -1,0 +1,262 @@
+{
+  "schema": "ledger-records/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "bootstrap_snapshots": {
+    "source": "read-only GitHub Issue API body snapshot",
+    "observed_at": "2026-08-25T03:51:32Z",
+    "issues": [
+      {
+        "kind": "epic",
+        "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+        "body_sha256": "9f6580a584d09f7006675bfd6a63dfc91b3ff632effa4f23ba260f92e621ac52",
+        "body": "## Goal\n\nPreserve the accepted Phase 0 foundation while delivering the portable Codex-native core: an extensible repository policy, the durable 136-scenario catalog, a human-reviewed hierarchy agreement, synchronized GitHub ledger templates, connector-neutral agreement/context contracts, all eight repository Skills, and current-head Phase 1 acceptance evidence.\n\nPhase 0 is complete at merge commit `32615344ad4f0310948bc59d234a84718741788a` / tree `33259721ec9f378fa67392ef8e1c7645db1321f9`.\n\nThe overall repository implementation is incomplete. `release_blocked` remains `true`.\n\n## Scope and non-goals\n\nIn scope:\n\n- minimal solo-profile main Ruleset;\n- frozen Phase 0 verifier plus live semantic repository policy;\n- complete 136-scenario canonical catalog;\n- hierarchy Options A/B/C agreement, with Option B recommended;\n- pinned CI toolchain;\n- Epic/Task/PR ledger templates;\n- connector-neutral agreements/context contract;\n- exactly eight repository Skills;\n- Phase 1 acceptance scorecard.\n\nOut of scope:\n\n- six custom agents;\n- Task Envelope, loop events, hooks, and the execution adapter;\n- installer/upgrade and full Task ritual/governance automation;\n- full runtime probes and clean-adopter E2E;\n- release/tag publication or `release_blocked=false`.\n\n## Task graph and dependencies\n\nDurable Tasks:\n\n- T01 — #3\n- T02 — #4 — blocked by #3\n- T03 — #5 — blocked by #4\n- T04 — #6 — blocked by #5\n- T05 — #7 — blocked by #6\n- T06 — #8 — blocked by #7\n- T07 — #9 — blocked by #8\n- T08 — #10 — blocked by #9\n- T09 — #11 — blocked by #9 and #10\n- T10 — #12 — blocked by #3 through #11\n\nStrict sequence:\n\n1. governance sensor and versioned intent (#3);\n2. approved minimal Ruleset actuator and read-back (#4);\n3. frozen/live policy bridge (#5);\n4. canonical 136-scenario catalog (#6);\n5. hierarchy agreement and repository-level DoD (#7);\n6. CI toolchain hardening (#8);\n7. ledger templates (#9);\n8. connector-neutral agreements/context (#10);\n9. eight repository Skills (#11);\n10. Phase 1 acceptance (#12).\n\n## Acceptance\n\n- Every Task has bounded ownership, dependencies, verifiable acceptance criteria, and one expected PR or external-state boundary.\n- `quality` and `conformance` remain required and green.\n- Unknown or uncheckable evidence is not represented as success.\n- Phase 1 completion is reported only as: “Phase 1 portable core complete; overall OSS implementation incomplete; release_blocked=true.”\n- No individual phase completion constitutes repository-level completion.\n- Repository-level completion requires target-side evidence for every required contract and a human-reviewed completion PR changing `release_blocked` to `false`.\n\n## Planning and control\n\nDevelopment profile: temporary `solo-fast`.\n\nThe repository owner is the only required human authority. Tier A/B work, routine branches, commits, pull requests, tests, workflow changes, Skills, schemas, and documentation may proceed without per-Task approval inside this Epic. AI review is advisory.\n\nReturn to the owner only for material Epic expansion, destructive/irreversible action, secrets/privacy/material security impact, broad permission expansion, contradictory or uncheckable requirements, a major uncovered governance decision, or release/tag/unblock.\n\nCurrent transition Project: https://github.com/users/mochan-tk/projects/13",
+        "ordered_headings": [
+          "Goal",
+          "Scope and non-goals",
+          "Task graph and dependencies",
+          "Acceptance",
+          "Planning and control"
+        ],
+        "heading_mapping": [
+          {"heading": "Goal", "section_id": "goal"},
+          {"heading": "Scope and non-goals", "section_id": "scope_and_non_goals"},
+          {"heading": "Task graph and dependencies", "section_id": "decomposition_and_dependency_graph"},
+          {"heading": "Acceptance", "section_id": "acceptance_and_evidence"},
+          {"heading": "Planning and control", "section_id": "planning_and_control"}
+        ]
+      },
+      {
+        "kind": "task",
+        "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+        "body_sha256": "dc4b92ad6e4df58d0b9ce4ea0686b53a1d6faf18b5b6bf4767c4e8316c17e403",
+        "body": "Parent Epic: https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2\n\n## Objective\n\nImplement synchronized human- and machine-readable Epic, Task, and PR ledger schemas.\n\n## Rationale\n\nProvides the durable interface used by later procedures without requiring a multi-person governance profile.\n\n## Dependencies / blocked by\n\nT06 is merged.\n\n## Acceptance criteria\n\n1. Epic template covers goal, scope/non-goals, graph, acceptance/evidence, and planning/control.\n2. Task template covers objective/scope, acceptance, dependencies, ownership, risk, evidence, routing, and completion/relationships.\n3. PR template carries Task relationship, actual plan URL, summary/scope, evidence, risk/limitations, and deferred evidence.\n4. Reject malformed ownership, missing dependency/Task links, invalid risk, and missing evidence fields.\n5. Follow the hierarchy selected by T05; do not make a Project board authoritative under Option B.\n6. Keep future envelope/event references optional and do not claim K10/K11 implementation.\n7. Do not fabricate historical comments for the manual Phase 1 bootstrap Issues.\n\n## Ownership\n\n`.github/ISSUE_TEMPLATE/**`; `.github/PULL_REQUEST_TEMPLATE.md`; ledger schema/checker; `tests/ledger/**`.\n\n## Out of scope\n\nLive Task ritual API enforcement, labels actuator, CODEOWNERS requirement, Ruleset changes.\n\n## Risk and human gates\n\nTier B; no per-Task pre-approval under solo-fast; owner merge.\n\n## Verification / evidence\n\nTemplate/schema synchronization checker, negative fixtures, current bootstrap-body compatibility, current-head CI.\n\n## Expected pull-request boundary\n\nExactly one PR from `codex/phase-1-ledger-templates`.\n\n## Contract and conformance coverage\n\n- Contracts advanced: K01, K02, K03, K04, K05, K07, K14\n- Scenario families affected: C, E, O, T, X\n\n## Completion boundary\n\nPhase 0 is complete. The overall repository implementation remains incomplete and `release_blocked` remains `true`. No individual phase completion constitutes repository-level completion.",
+        "ordered_headings": [
+          "Objective",
+          "Rationale",
+          "Dependencies / blocked by",
+          "Acceptance criteria",
+          "Ownership",
+          "Out of scope",
+          "Risk and human gates",
+          "Verification / evidence",
+          "Expected pull-request boundary",
+          "Contract and conformance coverage",
+          "Completion boundary"
+        ],
+        "heading_mapping": [
+          {"heading": "Objective", "section_id": "objective_and_scope"},
+          {"heading": "Rationale", "section_id": "objective_and_scope"},
+          {"heading": "Dependencies / blocked by", "section_id": "dependencies_and_references"},
+          {"heading": "Acceptance criteria", "section_id": "acceptance_criteria"},
+          {"heading": "Ownership", "section_id": "ownership"},
+          {"heading": "Out of scope", "section_id": "objective_and_scope"},
+          {"heading": "Risk and human gates", "section_id": "risk_and_constraints"},
+          {"heading": "Verification / evidence", "section_id": "verification_and_evidence"},
+          {"heading": "Expected pull-request boundary", "section_id": "routing_and_execution"},
+          {"heading": "Contract and conformance coverage", "section_id": "completion_and_relationships"},
+          {"heading": "Completion boundary", "section_id": "completion_and_relationships"}
+        ]
+      }
+    ]
+  },
+  "records": {
+    "epic": {
+      "record_type": "epic",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+      "goal": "Build the portable Codex-native core while preserving human final authority.",
+      "scope": [
+        "Deliver reviewed Phase 1 contracts through bounded Task pull requests.",
+        "Retain exact-head target-side evidence and deterministic governance checks."
+      ],
+      "non_goals": [
+        "Declaring repository-level completion before the reviewed completion pull request.",
+        "Creating or reconciling an optional board projection."
+      ],
+      "task_graph": [
+        {
+          "task_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
+          "dependencies": "None"
+        },
+        {
+          "task_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+          "dependencies": [
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8"
+          ]
+        }
+      ],
+      "dependency_policy": "A Task starts only after every declared blocked-by Task is merged; scope or agreement changes return to owner judgment.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-01",
+          "criterion": "Every bounded Task has one pull request and exact-head acceptance evidence.",
+          "evidence_required": "Required GitHub checks and a durable Task receipt bound to the pull-request head."
+        },
+        {
+          "id": "AC-02",
+          "criterion": "Repository-level completion remains blocked until every K01-K20 contract has current target-side evidence.",
+          "evidence_required": "A human-reviewed completion pull request is the only release transition."
+        }
+      ],
+      "evidence_requirements": [
+        "The quality and conformance contexts succeed for each exact Task head.",
+        "The repository owner reviews and merges each bounded pull request."
+      ],
+      "planning_owner": "Repository owner",
+      "control_policy": "Rolling-wave Tasks may proceed under solo-fast only inside the approved Epic; agreement, high-risk, actuator, and final acceptance authority remain human gates."
+    },
+    "tasks": [
+      {
+        "record_type": "task",
+        "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+        "objective": "Add synchronized Epic, Task, and pull-request ledger contracts and static validation.",
+        "scope": [
+          "Version issue forms, the pull-request template, the machine contract, fixtures, and deterministic tests.",
+          "Exclude live Task ritual, labels, Rulesets, Skills, agents, hooks, envelopes, events, and runtime adapters."
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-01",
+            "criterion": "The contract, human templates, rendered fixtures, and semantic validator remain synchronized."
+          },
+          {
+            "id": "AC-02",
+            "criterion": "Malformed ownership, dependencies, risk, relationships, and evidence fail closed."
+          }
+        ],
+        "epic_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+        "dependencies": [
+          "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8"
+        ],
+        "references": [
+          "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9#issuecomment-5404518469"
+        ],
+        "ownership": [
+          {
+            "pattern": ".github/ISSUE_TEMPLATE/**",
+            "mode": "100644"
+          },
+          {
+            "pattern": ".github/PULL_REQUEST_TEMPLATE.md",
+            "mode": "100644"
+          },
+          {
+            "pattern": "tests/ledger/**",
+            "mode": "100644"
+          }
+        ],
+        "risk_tier": "B",
+        "risk_rationale": "The Task changes the durable interface for future work but is reversible through one reviewed pull request.",
+        "risk_constraints": [
+          "Preserve I01-I13, release_blocked=true, and empty conformance results.",
+          "Do not modify Rulesets or implement later runtime surfaces."
+        ],
+        "verification_commands": [
+          "python3 -I .github/scripts/check-ledger-templates.py",
+          "python3 -I -m unittest discover -s tests/conformance -p 'test_ledger_templates.py'"
+        ],
+        "evidence_requirements": [
+          "Record the exact pull-request head SHA and the quality and conformance check URLs.",
+          "Treat missing, stale, UNKNOWN, and UNCHECKABLE evidence as non-success."
+        ],
+        "routing": "One Task supervisor coordinates one isolated implementation writer and independent read-only review.",
+        "execution": "Use branch codex/phase-1-ledger-templates, one worktree, one pull request, and no unapproved external actuator.",
+        "completion_conditions": [
+          "Both required check contexts pass for the exact pull-request head.",
+          "Task completion does not constitute Epic, Phase, or repository completion."
+        ],
+        "relationships": {
+          "epic_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+          "primary_pr": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/999"
+        }
+      },
+      {
+        "record_type": "task",
+        "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
+        "objective": "Establish a pinned least-privilege CI toolchain and repository-wide test reachability.",
+        "scope": [
+          "Pin ShellCheck and actionlint and protect the quality and conformance contexts."
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-01",
+            "criterion": "Pinned tools and all governed tests are reachable through required contexts."
+          }
+        ],
+        "epic_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+        "dependencies": "None",
+        "references": [
+          "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/16"
+        ],
+        "ownership": [
+          {
+            "pattern": ".github/scripts/install-ci-tools.py",
+            "mode": "100644"
+          }
+        ],
+        "risk_tier": "B",
+        "risk_rationale": "The Task changes required CI enforcement and pinned supply-chain inputs.",
+        "risk_constraints": [
+          "Keep required context names and least-privilege permissions stable."
+        ],
+        "verification_commands": [
+          "python3 -I -m unittest tests.conformance.test_ci_toolchain"
+        ],
+        "evidence_requirements": [
+          "Both required GitHub contexts pass for the exact head."
+        ],
+        "routing": "The Task used one supervisor, one isolated writer, and independent read-only audit.",
+        "execution": "The bounded pull request was merged by the repository owner after exact-head checks passed.",
+        "completion_conditions": [
+          "The Task receipt is bound to the merge commit and does not claim repository completion."
+        ],
+        "relationships": {
+          "epic_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+          "primary_pr": "None"
+        }
+      }
+    ],
+    "pull_requests": [
+      {
+        "record_type": "pull_request",
+        "pr_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/999",
+        "task_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+        "task_relationship": "Closes https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+        "plan_comment_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9#issuecomment-5404518469",
+        "summary": "Synchronize human ledger forms with one machine-readable contract and fail-closed static validation.",
+        "scope": [
+          "Epic and Task Issue forms, the pull-request template, fixtures, tests, and quality registration.",
+          "No live ritual, external actuator, Ruleset, envelope, event, Skill, agent, hook, or runtime adapter."
+        ],
+        "head_sha": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
+        "evidence": [
+          {
+            "id": "EV-01",
+            "criterion_id": "AC-01",
+            "check": "quality",
+            "result": "pass",
+            "evidence_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/commit/0e863f610267ca1ea454c19db2983ec4039d5d6b/checks",
+            "head_sha": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
+            "observed_at": "2026-08-25T03:04:41Z"
+          },
+          {
+            "id": "EV-02",
+            "criterion_id": "AC-02",
+            "check": "conformance",
+            "result": "pass",
+            "evidence_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/commit/0e863f610267ca1ea454c19db2983ec4039d5d6b/checks",
+            "head_sha": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
+            "observed_at": "2026-08-25T03:04:41Z"
+          }
+        ],
+        "risks": [
+          "Static validation cannot authenticate GitHub identities or prove live object state."
+        ],
+        "limitations": [
+          "K10 and K11 remain planned-unimplemented; optional opaque references provide no acceptance evidence.",
+          "K14 live Task ritual and chronology verification remain outside this static contract."
+        ],
+        "deferred_evidence": "None"
+      }
+    ]
+  }
+}

@@ -1,0 +1,512 @@
+{
+  "schema": "ledger-contracts/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "authority": {
+    "durable_truth": "issue-graph",
+    "canonical_graph": "repository-initiative-or-epic-set -> epic-issue -> task-issue -> pull-request -> commits-checks-evidence",
+    "github_projects_board": "optional-projection-never-authoritative"
+  },
+  "implementation": {
+    "K01": "static-contract-advanced",
+    "K02": "static-contract-advanced",
+    "K03": "static-contract-advanced",
+    "K04": "static-contract-advanced",
+    "K05": "static-contract-advanced",
+    "K07": "static-contract-implemented",
+    "K10": "planned-unimplemented",
+    "K11": "planned-unimplemented",
+    "K14": "static-validation-only"
+  },
+  "progress": {
+    "contracts_advanced_static": ["K01", "K02", "K03", "K04", "K05", "K07", "K14"],
+    "scenario_families": {
+      "C": "not-run",
+      "E": "not-run",
+      "O": "not-run",
+      "T": "not-run",
+      "X": "not-run"
+    }
+  },
+  "validation_boundary": {
+    "validated_offline": [
+      "canonical same-repository URL shape",
+      "frozen bootstrap Issue body hashes and heading-to-section mappings",
+      "non-placeholder field values",
+      "record shape and internal cross-reference integrity",
+      "template and rendered-fixture synchronization"
+    ],
+    "not_validated_offline": [
+      "GitHub API object existence or native type",
+      "current GitHub Issue body equality after the recorded observation",
+      "issue parent or dependency state",
+      "plan-comment authorship, edit history, or chronology",
+      "Actions run or job URL association with the declared head SHA",
+      "live labels or current-attempt ritual enforcement"
+    ]
+  },
+  "bootstrap_compatibility": {
+    "mode": "narrow-static-body",
+    "historical_ritual_synthesis": false,
+    "template_adoption_is_not_historical_compliance": true,
+    "static_heading_aliases": {
+      "epic.decomposition_and_dependency_graph": ["Task graph and dependencies"],
+      "epic.acceptance_and_evidence": ["Acceptance"],
+      "task.objective_and_scope": ["Objective", "Rationale", "Out of scope"],
+      "task.dependencies_and_references": ["Dependencies / blocked by"],
+      "task.risk_and_constraints": ["Risk and human gates"],
+      "task.verification_and_evidence": ["Verification / evidence"],
+      "task.routing_and_execution": ["Expected pull-request boundary"],
+      "task.completion_and_relationships": ["Contract and conformance coverage", "Completion boundary"]
+    }
+  },
+  "rendering_semantics": {
+    "issue_form_markdown_elements": "displayed-in-form-not-submitted",
+    "submitted_issue_body": "field-label-headings-and-values-only",
+    "empty_optional_input_or_textarea": "submitted-as-_No response_",
+    "pull_request_template_headings": "persisted-markdown"
+  },
+  "semantics": {
+    "risk_tiers": ["A", "B", "C", "D"],
+    "evidence_results": ["pass", "fail", "blocked", "not-run", "UNKNOWN", "UNCHECKABLE"],
+    "evidence_success_results": ["pass"],
+    "none_token": "None",
+    "ownership_modes": ["100644", "100755"],
+    "optional_opaque_fields": [
+      "task_execution_envelope_ref",
+      "loop_event_ref"
+    ]
+  },
+  "records": {
+    "epic": {
+      "template_path": ".github/ISSUE_TEMPLATE/epic.yml",
+      "template": {
+        "name": "Epic",
+        "description": "Define a durable Epic in the canonical Issue graph.",
+        "title": "[Epic] ",
+        "labels": [],
+        "assignees": []
+      },
+      "locator_fields": ["record_type", "issue_url"],
+      "sections": [
+        {
+          "id": "goal",
+          "heading": "Goal",
+          "fields": [
+            {
+              "id": "goal",
+              "type": "textarea",
+              "label": "Goal",
+              "description": "State the durable outcome and why it matters.",
+              "placeholder": "Describe one durable repository outcome.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "scope_and_non_goals",
+          "heading": "Scope and non-goals",
+          "fields": [
+            {
+              "id": "scope",
+              "type": "textarea",
+              "label": "Scope",
+              "description": "List the repository outcomes included in this Epic.",
+              "placeholder": "One scoped outcome per line.",
+              "required": true
+            },
+            {
+              "id": "non_goals",
+              "type": "textarea",
+              "label": "Non-goals",
+              "description": "List explicit exclusions. Use None only when there are no exclusions.",
+              "placeholder": "One exclusion per line, or None.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "decomposition_and_dependency_graph",
+          "heading": "Decomposition and dependency graph",
+          "fields": [
+            {
+              "id": "task_graph",
+              "type": "textarea",
+              "label": "Task graph",
+              "description": "List same-repository Task Issue URLs and each Task's explicit dependencies.",
+              "placeholder": "Task URL -> None, or Task URL -> dependency Task URL(s).",
+              "required": true
+            },
+            {
+              "id": "dependency_policy",
+              "type": "textarea",
+              "label": "Dependency policy",
+              "description": "Describe sequencing, blocked-by rules, and rolling-wave boundaries.",
+              "placeholder": "State how the graph may change and when human judgment is required.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "acceptance_and_evidence",
+          "heading": "Acceptance and evidence",
+          "fields": [
+            {
+              "id": "acceptance_criteria",
+              "type": "textarea",
+              "label": "Acceptance criteria",
+              "description": "Provide uniquely identified, testable criteria.",
+              "placeholder": "AC-01: verifiable outcome.",
+              "required": true
+            },
+            {
+              "id": "evidence_requirements",
+              "type": "textarea",
+              "label": "Evidence requirements",
+              "description": "Define current-head target-side evidence required for acceptance.",
+              "placeholder": "Name commands, checks, receipts, and required bindings.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "planning_and_control",
+          "heading": "Planning and control",
+          "fields": [
+            {
+              "id": "planning_owner",
+              "type": "input",
+              "label": "Planning owner",
+              "description": "Name the accountable owner or repository role.",
+              "placeholder": "Repository owner",
+              "required": true
+            },
+            {
+              "id": "control_policy",
+              "type": "textarea",
+              "label": "Control policy",
+              "description": "State risk gates, scope-change gates, and final acceptance authority.",
+              "placeholder": "Describe Human-on-the-Loop boundaries and escalation triggers.",
+              "required": true
+            }
+          ]
+        }
+      ]
+    },
+    "task": {
+      "template_path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "template": {
+        "name": "Task",
+        "description": "Define one bounded Task under an Epic Issue.",
+        "title": "[Task] ",
+        "labels": [],
+        "assignees": []
+      },
+      "locator_fields": ["record_type", "issue_url"],
+      "sections": [
+        {
+          "id": "objective_and_scope",
+          "heading": "Objective and scope",
+          "fields": [
+            {
+              "id": "objective",
+              "type": "textarea",
+              "label": "Objective",
+              "description": "State one bounded Task outcome.",
+              "placeholder": "Describe the result this Task must produce.",
+              "required": true
+            },
+            {
+              "id": "scope",
+              "type": "textarea",
+              "label": "Scope",
+              "description": "List included work and explicit exclusions.",
+              "placeholder": "Included paths and behavior; then out-of-scope work.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "acceptance_criteria",
+          "heading": "Acceptance criteria",
+          "fields": [
+            {
+              "id": "acceptance_criteria",
+              "type": "textarea",
+              "label": "Acceptance criteria",
+              "description": "Provide uniquely identified, deterministic criteria.",
+              "placeholder": "AC-01: verifiable outcome.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "dependencies_and_references",
+          "heading": "Dependencies and references",
+          "fields": [
+            {
+              "id": "epic_url",
+              "type": "input",
+              "label": "Parent Epic Issue URL",
+              "description": "Use one canonical same-repository Epic Issue URL.",
+              "placeholder": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+              "required": true
+            },
+            {
+              "id": "dependencies",
+              "type": "textarea",
+              "label": "Dependencies",
+              "description": "Use None or list same-repository Task Issue URLs.",
+              "placeholder": "None, or one Task Issue URL per line.",
+              "required": true
+            },
+            {
+              "id": "references",
+              "type": "textarea",
+              "label": "References",
+              "description": "List durable same-repository references. Use None when empty.",
+              "placeholder": "One Issue, pull request, commit, or comment URL per line, or None.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "ownership",
+          "heading": "Ownership",
+          "fields": [
+            {
+              "id": "ownership",
+              "type": "textarea",
+              "label": "Owned paths",
+              "description": "List normalized exact paths or terminal /** patterns with Git modes; ownership must not overlap.",
+              "placeholder": "100644 path/to/file, one entry per line.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "risk_and_constraints",
+          "heading": "Risk and constraints",
+          "fields": [
+            {
+              "id": "risk_tier",
+              "type": "dropdown",
+              "label": "Risk tier",
+              "description": "Select the reviewed A-D risk classification.",
+              "options": ["A", "B", "C", "D"],
+              "required": true
+            },
+            {
+              "id": "risk_rationale",
+              "type": "textarea",
+              "label": "Risk rationale",
+              "description": "Explain why the selected tier applies.",
+              "placeholder": "State concrete impact and reversibility.",
+              "required": true
+            },
+            {
+              "id": "risk_constraints",
+              "type": "textarea",
+              "label": "Risk constraints",
+              "description": "List required gates and prohibited operations.",
+              "placeholder": "One constraint per line.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "verification_and_evidence",
+          "heading": "Verification and evidence",
+          "fields": [
+            {
+              "id": "verification_commands",
+              "type": "textarea",
+              "label": "Verification commands",
+              "description": "List deterministic commands that must run against the current head.",
+              "placeholder": "One exact command per line.",
+              "required": true
+            },
+            {
+              "id": "evidence_requirements",
+              "type": "textarea",
+              "label": "Evidence requirements",
+              "description": "State required fields, result semantics, URLs, and current-head bindings.",
+              "placeholder": "Name every acceptance receipt and binding.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "routing_and_execution",
+          "heading": "Routing and execution",
+          "fields": [
+            {
+              "id": "routing",
+              "type": "textarea",
+              "label": "Routing",
+              "description": "Declare supervisor, writer topology, and escalation route.",
+              "placeholder": "Name responsibility and stop conditions without claiming identity guarantees.",
+              "required": true
+            },
+            {
+              "id": "execution",
+              "type": "textarea",
+              "label": "Execution",
+              "description": "State branch, worktree, pull-request boundary, and approved actuators.",
+              "placeholder": "Describe the bounded execution plan.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "completion_and_relationships",
+          "heading": "Completion and relationships",
+          "fields": [
+            {
+              "id": "completion_conditions",
+              "type": "textarea",
+              "label": "Completion conditions",
+              "description": "State Task completion conditions and the repository-level incomplete boundary.",
+              "placeholder": "List Task gates and preserve release_blocked until the completion PR.",
+              "required": true
+            },
+            {
+              "id": "relationships",
+              "type": "textarea",
+              "label": "Relationships",
+              "description": "List the Epic, primary pull request when known, and related durable records.",
+              "placeholder": "Use canonical same-repository URLs or None where allowed.",
+              "required": true
+            },
+            {
+              "id": "task_execution_envelope_ref",
+              "type": "input",
+              "label": "Task execution envelope reference (optional and opaque)",
+              "description": "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K10 evidence.",
+              "placeholder": "Leave blank unless a later contract supplies an opaque reference.",
+              "required": false
+            },
+            {
+              "id": "loop_event_ref",
+              "type": "input",
+              "label": "Loop event reference (optional and opaque)",
+              "description": "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K11 evidence.",
+              "placeholder": "Leave blank unless a later contract supplies an opaque reference.",
+              "required": false
+            }
+          ]
+        }
+      ]
+    },
+    "pull_request": {
+      "template_path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "template": {
+        "title": "Pull request ledger record"
+      },
+      "locator_fields": ["record_type", "pr_url", "task_url"],
+      "sections": [
+        {
+          "id": "task_relationship",
+          "heading": "Task relationship",
+          "fields": [
+            {
+              "id": "task_relationship",
+              "type": "input",
+              "label": "Task relationship",
+              "description": "Enter exactly Closes or Refs followed by one canonical same-repository Task Issue URL; a bare URL is invalid.",
+              "placeholder": "Closes or Refs followed by one canonical same-repository Task Issue URL; no default.",
+              "required": true
+            },
+            {
+              "id": "plan_comment_url",
+              "type": "input",
+              "label": "Plan comment URL",
+              "description": "A concrete same-Task issuecomment URL; offline validation does not prove existence, authorship, edit history, or chronology.",
+              "placeholder": "Enter one concrete issuecomment URL belonging to the primary Task.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "summary_and_scope",
+          "heading": "Summary and scope",
+          "fields": [
+            {
+              "id": "summary",
+              "type": "textarea",
+              "label": "Summary",
+              "description": "Summarize the durable outcome.",
+              "placeholder": "Describe what changed and why.",
+              "required": true
+            },
+            {
+              "id": "scope",
+              "type": "textarea",
+              "label": "Scope",
+              "description": "List changed surfaces and explicit exclusions.",
+              "placeholder": "One included or excluded surface per line.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "evidence_table",
+          "heading": "Evidence table",
+          "fields": [
+            {
+              "id": "head_sha",
+              "type": "input",
+              "label": "Exact head SHA",
+              "description": "Bind evidence to the exact 40-character lowercase pull-request head SHA.",
+              "placeholder": "Enter the exact 40-character lowercase pull-request head SHA.",
+              "required": true
+            },
+            {
+              "id": "evidence",
+              "type": "textarea",
+              "label": "Evidence",
+              "description": "For every row provide ID, Task criterion ID, check, result, evidence URL, head SHA, and observed-at timestamp. Commit/check URLs are SHA-bound; Actions URL-to-head association is not proven offline.",
+              "placeholder": "| ID | Criterion ID | Check | Result | Evidence URL | Head SHA | Observed at |\n|---|---|---|---|---|---|---|",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "risks_and_limitations",
+          "heading": "Risks and limitations",
+          "fields": [
+            {
+              "id": "risks",
+              "type": "textarea",
+              "label": "Risks",
+              "description": "List remaining risks. Use None only when no risk remains.",
+              "placeholder": "One risk per line, or None.",
+              "required": true
+            },
+            {
+              "id": "limitations",
+              "type": "textarea",
+              "label": "Limitations",
+              "description": "State unimplemented or unverified boundaries without overclaiming.",
+              "placeholder": "One limitation per line, or None.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "deferred_evidence",
+          "heading": "Deferred evidence",
+          "fields": [
+            {
+              "id": "deferred_evidence",
+              "type": "textarea",
+              "label": "Deferred evidence",
+              "description": "Use None, or provide ID, Task criterion ID, reason, owner, and same-repository follow-up Issue URL for every deferred item.",
+              "placeholder": "None, or use: | ID | Criterion ID | Reason | Owner | Follow-up Issue URL |\n|---|---|---|---|---|",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
