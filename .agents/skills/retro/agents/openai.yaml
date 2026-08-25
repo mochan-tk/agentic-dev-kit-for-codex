@@ -1,0 +1,6 @@
+interface:
+  display_name: "Retrospective Strengthening"
+  short_description: "Turn recurring failures into stronger controls"
+  default_prompt: "Use $retro to turn repeated evidence-backed failures into a bounded preventative mechanism."
+policy:
+  allow_implicit_invocation: false

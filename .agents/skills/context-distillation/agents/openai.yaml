@@ -1,0 +1,6 @@
+interface:
+  display_name: "Context Distillation"
+  short_description: "Distill pinned evidence into reviewed agreements"
+  default_prompt: "Use $context-distillation to turn verified context into reviewable requirements and decisions."
+policy:
+  allow_implicit_invocation: false

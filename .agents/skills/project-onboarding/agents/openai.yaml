@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Onboarding"
+  short_description: "Assess and propose safe repository onboarding"
+  default_prompt: "Use $project-onboarding to assess this repository and propose bounded onboarding changes."
+policy:
+  allow_implicit_invocation: false

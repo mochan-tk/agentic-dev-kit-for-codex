@@ -1,0 +1,6 @@
+interface:
+  display_name: "Context Collection"
+  short_description: "Collect bounded source context with provenance"
+  default_prompt: "Use $context-collection to collect bounded source material with durable provenance."
+policy:
+  allow_implicit_invocation: false

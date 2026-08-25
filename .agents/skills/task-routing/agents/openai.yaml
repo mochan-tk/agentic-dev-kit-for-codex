@@ -1,0 +1,6 @@
+interface:
+  display_name: "Task Routing"
+  short_description: "Recommend a bounded route from capability evidence"
+  default_prompt: "Use $task-routing to recommend a bounded execution route from current capability evidence."
+policy:
+  allow_implicit_invocation: false
