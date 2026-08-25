@@ -117,7 +117,7 @@
     {
       "id": "T07",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/phase-1-ledger-templates",
       "base_commit": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
       "base_tree": "fe96b1eb5c825be6b4d936fa4850e26a51b7b3d0",
@@ -127,15 +127,41 @@
         {"path": ".github/ISSUE_TEMPLATE/epic.yml", "mode": "100644"},
         {"path": ".github/PULL_REQUEST_TEMPLATE.md", "mode": "100644"},
         {"path": ".github/governance/ledger-contracts.v1.json", "mode": "100644"},
-        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
         {"path": ".github/scripts/check-ledger-templates.py", "mode": "100644"},
-        {"path": ".github/workflows/ci.yml", "mode": "100644"},
         {"path": "tests/conformance/test_ledger_templates.py", "mode": "100644"},
-        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
         {"path": "tests/ledger/fixtures/epic-rendered.md", "mode": "100644"},
         {"path": "tests/ledger/fixtures/ledger-valid.v1.json", "mode": "100644"},
         {"path": "tests/ledger/fixtures/pull-request-rendered.md", "mode": "100644"},
         {"path": "tests/ledger/fixtures/task-rendered.md", "mode": "100644"}
+      ]
+    },
+    {
+      "id": "T08",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10",
+      "state": "active",
+      "branch": "codex/phase-1-context-contracts",
+      "base_commit": "0adb4ef232ebd853df8af788db96c02bde6576ae",
+      "base_tree": "e755dfba299b73d06f97fe7caeba6d520225c202",
+      "path_transitions": [],
+      "owned_paths": [
+        {"path": ".github/connectors/README.md", "mode": "100644"},
+        {"path": ".github/connectors/connector-contract.v1.json", "mode": "100644"},
+        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
+        {"path": ".github/scripts/check-portable-contracts.py", "mode": "100644"},
+        {"path": ".github/workflows/ci.yml", "mode": "100644"},
+        {"path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md", "mode": "100644"},
+        {"path": "docs/agreements/decisions/DEC-0001.json", "mode": "100644"},
+        {"path": "docs/agreements/portable-context-contract.md", "mode": "100644"},
+        {"path": "docs/agreements/portable-context-contract.v1.json", "mode": "100644"},
+        {"path": "docs/agreements/requirements/REQ-0001.json", "mode": "100644"},
+        {"path": "docs/context/README.md", "mode": "100644"},
+        {"path": "docs/context/pins/PIN-0001.context-pin.v1.json", "mode": "100644"},
+        {"path": "tests/conformance/test_portable_contracts.py", "mode": "100644"},
+        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
+        {"path": "tests/contracts/fixtures/connector-valid.v1.json", "mode": "100644"},
+        {"path": "tests/contracts/fixtures/context-pin-valid.v1.json", "mode": "100644"},
+        {"path": "tests/contracts/fixtures/decisions-valid.v1.json", "mode": "100644"},
+        {"path": "tests/contracts/fixtures/requirements-valid.v1.json", "mode": "100644"}
       ]
     }
   ]
