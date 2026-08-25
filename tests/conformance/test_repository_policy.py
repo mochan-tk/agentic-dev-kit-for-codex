@@ -21,8 +21,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T06"
-CURRENT_TASK_BRANCH = "codex/phase-1-ci-toolchain"
+CURRENT_TASK_ID = "T07"
+CURRENT_TASK_BRANCH = "codex/phase-1-ledger-templates"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -494,11 +494,11 @@ class RepositoryPolicyTest(unittest.TestCase):
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
 
-    def test_active_task_helper_selects_t06_among_disjoint_active_tasks(self):
+    def test_active_task_helper_selects_t07_among_disjoint_active_tasks(self):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T06", self.active_task(payload)["id"])
+        self.assertEqual("T07", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assertEqual([], errors)
@@ -1930,8 +1930,8 @@ jobs:
         active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T07",
-                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+                "id": "T08",
+                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10",
                 "state": "active",
                 "branch": "codex/phase-1-next-task",
                 "base_commit": subprocess.check_output(
@@ -2140,7 +2140,7 @@ jobs:
         self.assertEqual("copy", task["path_transitions"][0]["operation"])
 
         malformed = copy.deepcopy(payload)
-        next(owner for owner in malformed["tasks"] if owner["id"] == "T06")[
+        next(owner for owner in malformed["tasks"] if owner["id"] == "T07")[
             "path_transitions"
         ][0]["unreviewed"] = True
         errors = []
@@ -2202,8 +2202,8 @@ jobs:
         )
         historical["owned_paths"].remove(manifest_entry)
         active = {
-            "id": "T07",
-            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+            "id": "T08",
+            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10",
             "state": "active",
             "branch": historical["branch"],
             "base_commit": historical["base_commit"],
@@ -2570,7 +2570,7 @@ jobs:
     def test_local_branch_allows_checking_active_owned_dirty_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        relative = ".github/scripts/check-repository-policy.py"
+        relative = ".github/scripts/check-ledger-templates.py"
         self.assertIn(relative, {entry["path"] for entry in active["owned_paths"]})
         path = fixture / relative
         path.write_text(
@@ -2583,7 +2583,7 @@ jobs:
 
     def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
         fixture = self.local_branch_fixture()
-        relative = ".github/governance/ci-tools.lock.v1.json"
+        relative = ".github/governance/ledger-contracts.v1.json"
         self.assertEqual(
             "A",
             subprocess.check_output(

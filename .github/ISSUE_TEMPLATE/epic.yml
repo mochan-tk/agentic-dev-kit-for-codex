@@ -1,0 +1,93 @@
+name: "Epic"
+description: "Define a durable Epic in the canonical Issue graph."
+title: "[Epic] "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: "## Goal"
+  - type: textarea
+    id: goal
+    attributes:
+      label: "Goal"
+      description: "State the durable outcome and why it matters."
+      placeholder: "Describe one durable repository outcome."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Scope and non-goals"
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Scope"
+      description: "List the repository outcomes included in this Epic."
+      placeholder: "One scoped outcome per line."
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: "Non-goals"
+      description: "List explicit exclusions. Use None only when there are no exclusions."
+      placeholder: "One exclusion per line, or None."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Decomposition and dependency graph"
+  - type: textarea
+    id: task_graph
+    attributes:
+      label: "Task graph"
+      description: "List same-repository Task Issue URLs and each Task's explicit dependencies."
+      placeholder: "Task URL -> None, or Task URL -> dependency Task URL(s)."
+    validations:
+      required: true
+  - type: textarea
+    id: dependency_policy
+    attributes:
+      label: "Dependency policy"
+      description: "Describe sequencing, blocked-by rules, and rolling-wave boundaries."
+      placeholder: "State how the graph may change and when human judgment is required."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Acceptance and evidence"
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance criteria"
+      description: "Provide uniquely identified, testable criteria."
+      placeholder: "AC-01: verifiable outcome."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence_requirements
+    attributes:
+      label: "Evidence requirements"
+      description: "Define current-head target-side evidence required for acceptance."
+      placeholder: "Name commands, checks, receipts, and required bindings."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Planning and control"
+  - type: input
+    id: planning_owner
+    attributes:
+      label: "Planning owner"
+      description: "Name the accountable owner or repository role."
+      placeholder: "Repository owner"
+    validations:
+      required: true
+  - type: textarea
+    id: control_policy
+    attributes:
+      label: "Control policy"
+      description: "State risk gates, scope-change gates, and final acceptance authority."
+      placeholder: "Describe Human-on-the-Loop boundaries and escalation triggers."
+    validations:
+      required: true

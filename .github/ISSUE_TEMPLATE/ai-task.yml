@@ -1,0 +1,178 @@
+name: "Task"
+description: "Define one bounded Task under an Epic Issue."
+title: "[Task] "
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: "## Objective and scope"
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective"
+      description: "State one bounded Task outcome."
+      placeholder: "Describe the result this Task must produce."
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Scope"
+      description: "List included work and explicit exclusions."
+      placeholder: "Included paths and behavior; then out-of-scope work."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Acceptance criteria"
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance criteria"
+      description: "Provide uniquely identified, deterministic criteria."
+      placeholder: "AC-01: verifiable outcome."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Dependencies and references"
+  - type: input
+    id: epic_url
+    attributes:
+      label: "Parent Epic Issue URL"
+      description: "Use one canonical same-repository Epic Issue URL."
+      placeholder: "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Dependencies"
+      description: "Use None or list same-repository Task Issue URLs."
+      placeholder: "None, or one Task Issue URL per line."
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: "References"
+      description: "List durable same-repository references. Use None when empty."
+      placeholder: "One Issue, pull request, commit, or comment URL per line, or None."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Ownership"
+  - type: textarea
+    id: ownership
+    attributes:
+      label: "Owned paths"
+      description: "List normalized exact paths or terminal /** patterns with Git modes; ownership must not overlap."
+      placeholder: "100644 path/to/file, one entry per line."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Risk and constraints"
+  - type: dropdown
+    id: risk_tier
+    attributes:
+      label: "Risk tier"
+      description: "Select the reviewed A-D risk classification."
+      options:
+        - "A"
+        - "B"
+        - "C"
+        - "D"
+    validations:
+      required: true
+  - type: textarea
+    id: risk_rationale
+    attributes:
+      label: "Risk rationale"
+      description: "Explain why the selected tier applies."
+      placeholder: "State concrete impact and reversibility."
+    validations:
+      required: true
+  - type: textarea
+    id: risk_constraints
+    attributes:
+      label: "Risk constraints"
+      description: "List required gates and prohibited operations."
+      placeholder: "One constraint per line."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Verification and evidence"
+  - type: textarea
+    id: verification_commands
+    attributes:
+      label: "Verification commands"
+      description: "List deterministic commands that must run against the current head."
+      placeholder: "One exact command per line."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence_requirements
+    attributes:
+      label: "Evidence requirements"
+      description: "State required fields, result semantics, URLs, and current-head bindings."
+      placeholder: "Name every acceptance receipt and binding."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Routing and execution"
+  - type: textarea
+    id: routing
+    attributes:
+      label: "Routing"
+      description: "Declare supervisor, writer topology, and escalation route."
+      placeholder: "Name responsibility and stop conditions without claiming identity guarantees."
+    validations:
+      required: true
+  - type: textarea
+    id: execution
+    attributes:
+      label: "Execution"
+      description: "State branch, worktree, pull-request boundary, and approved actuators."
+      placeholder: "Describe the bounded execution plan."
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "## Completion and relationships"
+  - type: textarea
+    id: completion_conditions
+    attributes:
+      label: "Completion conditions"
+      description: "State Task completion conditions and the repository-level incomplete boundary."
+      placeholder: "List Task gates and preserve release_blocked until the completion PR."
+    validations:
+      required: true
+  - type: textarea
+    id: relationships
+    attributes:
+      label: "Relationships"
+      description: "List the Epic, primary pull request when known, and related durable records."
+      placeholder: "Use canonical same-repository URLs or None where allowed."
+    validations:
+      required: true
+  - type: input
+    id: task_execution_envelope_ref
+    attributes:
+      label: "Task execution envelope reference (optional and opaque)"
+      description: "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K10 evidence."
+      placeholder: "Leave blank unless a later contract supplies an opaque reference."
+    validations:
+      required: false
+  - type: input
+    id: loop_event_ref
+    attributes:
+      label: "Loop event reference (optional and opaque)"
+      description: "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K11 evidence."
+      placeholder: "Leave blank unless a later contract supplies an opaque reference."
+    validations:
+      required: false
