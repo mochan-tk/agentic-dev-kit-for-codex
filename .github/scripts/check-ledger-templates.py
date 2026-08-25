@@ -26,6 +26,7 @@ RENDERED_PATHS = {
 }
 MAX_FILE_BYTES = 1_048_576
 MAX_STRING_LENGTH = 16_384
+MAX_JSON_NESTING_DEPTH = 128
 REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 ISSUE_URL = re.compile(
     rf"https://github\.com/{re.escape(REPOSITORY)}/issues/([1-9][0-9]*)\Z"
@@ -399,13 +400,25 @@ def read_regular_text(root: Path, relative: str) -> str:
 def load_json(root: Path, relative: str) -> Any:
     text = read_regular_text(root, relative)
     try:
-        return json.loads(text, object_pairs_hook=_unique_object)
+        value = json.loads(text, object_pairs_hook=_unique_object)
     except (json.JSONDecodeError, DuplicateKeyError) as exc:
         raise ValueError(f"invalid JSON in {relative}: {exc}") from exc
     except RecursionError as exc:
         raise ValueError(
             f"invalid JSON in {relative}: nesting depth exceeds the safe limit"
         ) from exc
+    pending: list[tuple[Any, int]] = [(value, 0)]
+    while pending:
+        current, depth = pending.pop()
+        if depth > MAX_JSON_NESTING_DEPTH:
+            raise ValueError(
+                f"invalid JSON in {relative}: nesting depth exceeds the safe limit"
+            )
+        if isinstance(current, dict):
+            pending.extend((item, depth + 1) for item in current.values())
+        elif isinstance(current, list):
+            pending.extend((item, depth + 1) for item in current)
+    return value
 
 
 def exact_keys(

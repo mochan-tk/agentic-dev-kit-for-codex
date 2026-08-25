@@ -1043,6 +1043,21 @@ class LedgerTemplatesTest(unittest.TestCase):
         (root / CONTRACT_PATH).write_text(deeply_nested, encoding="utf-8")
         self.assert_error(self.checker.validate_repository(root), "nesting depth exceeds")
 
+    def test_json_nesting_limit_has_an_explicit_cross_platform_boundary(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        at_limit = "leaf"
+        for _ in range(self.checker.MAX_JSON_NESTING_DEPTH):
+            at_limit = [at_limit]
+        self.write_json(root, "at-limit.json", at_limit)
+        self.assertEqual(at_limit, self.checker.load_json(root, "at-limit.json"))
+
+        over_limit = [at_limit]
+        self.write_json(root, "over-limit.json", over_limit)
+        with self.assertRaisesRegex(ValueError, "nesting depth exceeds"):
+            self.checker.load_json(root, "over-limit.json")
+
     def test_safe_reader_fails_closed_when_required_platform_flags_are_unavailable(self):
         for flag in ("O_DIRECTORY", "O_NOFOLLOW", "O_NONBLOCK"):
             with self.subTest(flag=flag), mock.patch.object(self.checker.os, flag, 0):
