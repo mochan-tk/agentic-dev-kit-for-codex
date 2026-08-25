@@ -14,6 +14,7 @@
     "required_quality_commands": [
       "python3 -I .github/scripts/check-phase0-contracts.py",
       "python3 -I .github/scripts/check-repository-policy.py",
+      "python3 -I .github/scripts/check-ledger-templates.py",
       "python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination \"$RUNNER_TEMP/agentic-ci-tools\" --check-repository",
       "python3 -I .github/scripts/conformance-catalog.py check",
       "bash .github/scripts/check-action-pins.sh",
@@ -99,21 +100,42 @@
     {
       "id": "T06",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/phase-1-ci-toolchain",
       "base_commit": "1c949b01a25208d91e0c7380facfd6ed9d48f833",
       "base_tree": "85153f261e574d1287970d7ce14c3446e4e0d020",
       "path_transitions": [],
       "owned_paths": [
         {"path": ".github/governance/ci-tools.lock.v1.json", "mode": "100644"},
-        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
         {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
         {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644"},
         {"path": ".github/scripts/install-ci-tools.py", "mode": "100644"},
         {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
+        {"path": "tests/conformance/test_ci_toolchain.py", "mode": "100644"}
+      ]
+    },
+    {
+      "id": "T07",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+      "state": "active",
+      "branch": "codex/phase-1-ledger-templates",
+      "base_commit": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
+      "base_tree": "fe96b1eb5c825be6b4d936fa4850e26a51b7b3d0",
+      "path_transitions": [],
+      "owned_paths": [
+        {"path": ".github/ISSUE_TEMPLATE/ai-task.yml", "mode": "100644"},
+        {"path": ".github/ISSUE_TEMPLATE/epic.yml", "mode": "100644"},
+        {"path": ".github/PULL_REQUEST_TEMPLATE.md", "mode": "100644"},
+        {"path": ".github/governance/ledger-contracts.v1.json", "mode": "100644"},
+        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
+        {"path": ".github/scripts/check-ledger-templates.py", "mode": "100644"},
         {"path": ".github/workflows/ci.yml", "mode": "100644"},
-        {"path": "tests/conformance/test_ci_toolchain.py", "mode": "100644"},
-        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"}
+        {"path": "tests/conformance/test_ledger_templates.py", "mode": "100644"},
+        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
+        {"path": "tests/ledger/fixtures/epic-rendered.md", "mode": "100644"},
+        {"path": "tests/ledger/fixtures/ledger-valid.v1.json", "mode": "100644"},
+        {"path": "tests/ledger/fixtures/pull-request-rendered.md", "mode": "100644"},
+        {"path": "tests/ledger/fixtures/task-rendered.md", "mode": "100644"}
       ]
     }
   ]
