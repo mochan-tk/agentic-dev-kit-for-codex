@@ -14,6 +14,7 @@
     "required_quality_commands": [
       "python3 -I .github/scripts/check-phase0-contracts.py",
       "python3 -I .github/scripts/check-repository-policy.py",
+      "python3 -I .github/scripts/check-portable-contracts.py",
       "python3 -I .github/scripts/check-ledger-templates.py",
       "python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination \"$RUNNER_TEMP/agentic-ci-tools\" --check-repository",
       "python3 -I .github/scripts/conformance-catalog.py check",

@@ -1,0 +1,49 @@
+{
+  "schema": "connector-neutral-interface/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "scope": {
+    "metadata_validation": "deferred",
+    "concrete_connector_definitions": "not-shipped",
+    "external_services": "not-required"
+  },
+  "operations": [
+    {
+      "name": "discover",
+      "mutation": "read-only",
+      "output": "bounded-source-inventory"
+    },
+    {
+      "name": "retrieve",
+      "mutation": "read-only",
+      "output": "bounded-in-memory-provenance-records"
+    },
+    {
+      "name": "pin",
+      "mutation": "explicit-proposal-actuator",
+      "output": "context-pin/v1"
+    },
+    {
+      "name": "verify",
+      "mutation": "read-only",
+      "output": "validity-and-selected-freshness"
+    }
+  ],
+  "evidence": {
+    "states": ["pass", "fail", "drift", "UNKNOWN", "UNCHECKABLE"],
+    "success_states": ["pass"],
+    "unknown_is_success": false,
+    "uncheckable_is_success": false
+  },
+  "dependencies": {
+    "mandatory_external_service": false,
+    "mandatory_network": false,
+    "mandatory_credential": false,
+    "mandatory_connector": false
+  },
+  "core_record": {
+    "connector_specific_fields": [],
+    "raw_payload_storage": "forbidden",
+    "silent_repin": "forbidden",
+    "repository_landing": "separate-explicit-proposal-actuator"
+  }
+}

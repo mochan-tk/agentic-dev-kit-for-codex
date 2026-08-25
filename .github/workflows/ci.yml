@@ -24,6 +24,8 @@ jobs:
         run: python3 -I .github/scripts/check-phase0-contracts.py
       - name: Validate live repository policy
         run: python3 -I .github/scripts/check-repository-policy.py
+      - name: Validate portable context contracts
+        run: python3 -I .github/scripts/check-portable-contracts.py
       - name: Validate ledger contracts and templates
         run: python3 -I .github/scripts/check-ledger-templates.py
       - name: Install and verify pinned CI tools

@@ -1,0 +1,141 @@
+{
+  "schema": "portable-context-contract/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "document_bindings": [
+    {"path": ".github/connectors/README.md", "sha256": "24430131bc2d21376a28bbc41da533e9712d0b47274e317789e63a161c414461"},
+    {"path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md", "sha256": "39a1c86f027534e600b630a4073e7d6f0a0293cfbbb852317cdcbf593705c160"},
+    {"path": "docs/agreements/portable-context-contract.md", "sha256": "8cae4b44afd8d2cf05874f73d2e8f19b211cd4891630e9474321442dcf4a069f"},
+    {"path": "docs/context/README.md", "sha256": "aea59dc90f55cec1b6e3250600af52deab7f860287d72c6634829740ecc53b7c"}
+  ],
+  "record_locations": {
+    "requirements": "docs/agreements/requirements",
+    "decisions": "docs/agreements/decisions",
+    "pins": "docs/context/pins"
+  },
+  "identifiers": {
+    "requirement": {
+      "schema": "portable-requirement/v1",
+      "pattern": "^REQ-[0-9]{4}$",
+      "filename_pattern": "^REQ-[0-9]{4}\\.json$",
+      "reuse": "forbidden",
+      "immutable_after_task_base": true
+    },
+    "decision": {
+      "schema": "portable-decision/v1",
+      "pattern": "^DEC-[0-9]{4}$",
+      "filename_pattern": "^DEC-[0-9]{4}\\.json$",
+      "reuse": "forbidden",
+      "immutable_after_task_base": true
+    },
+    "pin": {
+      "schema": "context-pin/v1",
+      "pattern": "^PIN-[0-9]{4}$",
+      "filename_pattern": "^PIN-[0-9]{4}\\.context-pin\\.v1\\.json$",
+      "reuse": "forbidden"
+    }
+  },
+  "history": {
+    "semantic_change": "new-record-only",
+    "supersedes": "explicit-earlier-only-same-kind",
+    "acyclic": true,
+    "non_forking": true,
+    "historical_records": "retained-byte-identical"
+  },
+  "context_conditions": {
+    "required": [
+      "verifiable-stable-requirements",
+      "immutable-append-only-decisions",
+      "reachable-from-every-declared-execution-surface",
+      "stable-exact-task-reference"
+    ],
+    "t08_evidence": "stable-id-closed-shape-nonempty-verification-and-immutable-history-only",
+    "semantic_verifiability": "requires-human-review-and-sufficiency-test",
+    "cross_surface_reachability": "not-proven"
+  },
+  "sufficiency": {
+    "test": "epic-decomposition",
+    "criterion": "next-epic-tasks-have-verifiable-acceptance-without-missing-fundamentals",
+    "canonical_state": "not-run",
+    "proven": false
+  },
+  "pin_verification": {
+    "revision": "full-git-commit-id",
+    "tree": "exact-git-tree-id",
+    "source_kind": "regular-git-blob",
+    "path_form": "normalized-nfc-repository-relative",
+    "per_source_digest": "sha256",
+    "aggregate_canonicalization": "context-pin-v1-lines",
+    "aggregate_lines": [
+      "context-pin/v1",
+      "repository<TAB>{repository}",
+      "revision<TAB>{revision}",
+      "tree<TAB>{tree}",
+      "{path}<TAB>{mode}<TAB>{blob}<TAB>{sha256} sorted by path"
+    ],
+    "aggregate_encoding": "utf-8-lf-with-trailing-lf",
+    "git_object_resolution": "required-no-worktree-fallback",
+    "self_pin": "forbidden",
+    "validity": "exact-historical-object-and-digest-match",
+    "freshness": "selected-pin-sources-match-head-index-live-worktree",
+    "historic_staleness": "allowed-when-not-selected",
+    "selected_pin_count": 1,
+    "selection": "highest-pin-id",
+    "required_before": ["decomposition", "execution"],
+    "success_states": ["pass"],
+    "non_success_states": ["drift", "UNKNOWN", "UNCHECKABLE", "fail"]
+  },
+  "connector_interface": {
+    "contract": ".github/connectors/connector-contract.v1.json",
+    "operations": ["discover", "retrieve", "pin", "verify"],
+    "mandatory_external_service": false,
+    "mandatory_credential": false,
+    "connector_specific_core_fields": []
+  },
+  "task_reference": {
+    "ledger_field": "References",
+    "semantics": "durable-linkage-only",
+    "proves_pin_validity": false,
+    "proves_pin_freshness": false
+  },
+  "privacy": {
+    "record_shape": "closed-field-allowlists",
+    "forbidden_categories": [
+      "secrets",
+      "credential-values",
+      "access-tokens",
+      "private-keys",
+      "environment-dumps",
+      "raw-transcripts",
+      "raw-logs",
+      "private-absolute-local-paths"
+    ],
+    "high_confidence_value_signatures": "rejected",
+    "arbitrary_secret_absence": "requires-human-review"
+  },
+  "implementation": {
+    "K01": "static-contract-advanced",
+    "K02": "static-contract-advanced",
+    "K05": "static-contract-advanced",
+    "K06": "static-contract-only-runtime-unproven",
+    "K10": "planned-unimplemented",
+    "K11": "planned-unimplemented",
+    "K16": "boundary-only-feedback-transport-unimplemented",
+    "K18": "static-contract-advanced",
+    "K19": "static-contract-advanced",
+    "live_task_ritual": "not-implemented",
+    "runtime_adapter": "not-implemented"
+  },
+  "scenario_families": {
+    "C": {"canonical_state": "not-run", "t08_effect": "static-contract-fixtures-only"},
+    "D": {"canonical_state": "not-run", "t08_effect": "static-contract-fixtures-only"},
+    "I": {"canonical_state": "not-run", "t08_effect": "static-contract-fixtures-only"},
+    "P": {"canonical_state": "not-run", "t08_effect": "static-contract-fixtures-only"},
+    "S": {"canonical_state": "not-run", "t08_effect": "static-contract-fixtures-only"},
+    "X": {"canonical_state": "not-run", "t08_effect": "static-contract-fixtures-only"}
+  },
+  "completion": {
+    "results_empty": true,
+    "release_blocked": true,
+    "repository_complete": false
+  }
+}
