@@ -208,6 +208,20 @@ class PortableContractsTest(unittest.TestCase):
                 self.checker.validate_pin_shape(pin, PIN, "pin", errors)
                 self.assertTrue(errors)
 
+    def test_repository_record_payloads_require_objects_without_traceback(self):
+        for relative, kind in ((REQ, "requirement"), (DEC, "decision"), (PIN, "pin")):
+            for payload in ([], 7, "scalar"):
+                with self.subTest(relative=relative, payload=payload):
+                    root = self.copy_fixture()
+                    self.write_json(root, relative, payload)
+                    errors = self.checker.validate_repository(root)
+                    self.assert_error(errors, f"{kind} record must be an object")
+
+            root = self.copy_fixture()
+            self.write_json(root, relative, {"unexpected": "field"})
+            errors = self.checker.validate_repository(root)
+            self.assert_error(errors, "unsupported or missing fields")
+
     def test_supersedes_must_be_present_earlier_same_kind_and_nonforking(self):
         fixture = self.read_json(ROOT, "tests/contracts/fixtures/decisions-valid.v1.json")["records"]
         missing = copy.deepcopy(fixture)

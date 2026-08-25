@@ -1159,7 +1159,10 @@ def validate_repository(root: Path) -> list[str]:
         except ValueError as exc:
             errors.append(str(exc))
             continue
-        identifier = record.get("id") if isinstance(record, dict) else None
+        if not isinstance(record, dict):
+            errors.append(f"requirement record must be an object: {path}")
+            continue
+        identifier = record.get("id")
         if PurePosixPath(path).name != f"{identifier}.json":
             errors.append(f"requirement filename does not match stable ID: {path}")
         requirements.append(record)
@@ -1169,7 +1172,10 @@ def validate_repository(root: Path) -> list[str]:
         except ValueError as exc:
             errors.append(str(exc))
             continue
-        identifier = record.get("id") if isinstance(record, dict) else None
+        if not isinstance(record, dict):
+            errors.append(f"decision record must be an object: {path}")
+            continue
+        identifier = record.get("id")
         if PurePosixPath(path).name != f"{identifier}.json":
             errors.append(f"decision filename does not match stable ID: {path}")
         decisions.append(record)
@@ -1197,8 +1203,11 @@ def validate_repository(root: Path) -> list[str]:
         except ValueError as exc:
             errors.append(str(exc))
             continue
+        if not isinstance(pin, dict):
+            errors.append(f"pin record must be an object: {path}")
+            continue
         number = validate_pin_shape(pin, path, f"pin record {path}", errors)
-        if number is not None and isinstance(pin, dict):
+        if number is not None:
             pins.append((number, path, pin))
     if not pins:
         errors.append("at least one context pin is required")
