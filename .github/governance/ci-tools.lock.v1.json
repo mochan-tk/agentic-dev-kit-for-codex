@@ -1,0 +1,56 @@
+{
+  "schema": "ci-tools-lock/v1",
+  "platform": {
+    "os": "linux",
+    "architecture": "x86_64"
+  },
+  "tools": [
+    {
+      "name": "actionlint",
+      "version": "1.7.12",
+      "source": {
+        "repository": "https://github.com/rhysd/actionlint",
+        "commit": "914e7df21a07ef503a81201c76d2b11c789d3fca"
+      },
+      "archive": {
+        "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz",
+        "format": "tar.gz",
+        "size": 2353908,
+        "sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+        "member": "actionlint"
+      },
+      "binary": {
+        "size": 6074530,
+        "sha256": "c872d6db8c6bf83a8eaa704fc93999f027d55dffbc63b8a6abdccb47df5f4cd4",
+        "version_arguments": [
+          "-version"
+        ],
+        "version_output_line": "1.7.12",
+        "platform_output_pattern": "^built with go[0-9.]+ compiler for linux/amd64$"
+      }
+    },
+    {
+      "name": "shellcheck",
+      "version": "0.11.0",
+      "source": {
+        "repository": "https://github.com/koalaman/shellcheck",
+        "commit": "aac0823e6b58f8a499e856e93738082691cbf212"
+      },
+      "archive": {
+        "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz",
+        "format": "tar.xz",
+        "size": 2559196,
+        "sha256": "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198",
+        "member": "shellcheck-v0.11.0/shellcheck"
+      },
+      "binary": {
+        "size": 16213136,
+        "sha256": "4da528ddb3a4d1b7b24a59d4e16eb2f5fd960f4bd9a3708a15baddbdf1d5a55b",
+        "version_arguments": [
+          "--version"
+        ],
+        "version_output_line": "version: 0.11.0"
+      }
+    }
+  ]
+}

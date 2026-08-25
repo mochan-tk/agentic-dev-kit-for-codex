@@ -11,6 +11,7 @@ import stat
 import subprocess
 import sys
 import unicodedata
+from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping
 
@@ -94,8 +95,34 @@ on:
 
 permissions: {}
 
+# NON-EXECUTABLE Phase 0 compatibility markers; isolated steps below are authoritative.
+# run: python3 .github/scripts/check-phase0-contracts.py
+# run: python3 .github/scripts/check-repository-policy.py
 jobs:
 """
+REVIEWED_QUALITY_ANCHORS = [
+    "python3 -I .github/scripts/check-phase0-contracts.py",
+    "python3 -I .github/scripts/check-repository-policy.py",
+    "python3 -I .github/scripts/install-ci-tools.py --lock "
+    ".github/governance/ci-tools.lock.v1.json --destination "
+    '"$RUNNER_TEMP/agentic-ci-tools" --check-repository',
+    "python3 -I .github/scripts/conformance-catalog.py check",
+    "bash .github/scripts/check-action-pins.sh",
+    "bash .github/scripts/tests/test-action-pins.sh",
+    "bash .github/scripts/check-workflow-permissions.sh",
+    "bash .github/scripts/tests/test-workflow-permissions.sh",
+    "python3 -I -m compileall -q .github/scripts tests/conformance",
+]
+REQUIRED_QUALITY_GUARD_PREFIX = REVIEWED_QUALITY_ANCHORS[:2]
+CANONICAL_CONFORMANCE_DISCOVERY = (
+    "python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'"
+)
+REVIEWED_CONFORMANCE_ANCHORS = [CANONICAL_CONFORMANCE_DISCOVERY]
+DIRECT_COMMAND = re.compile(
+    r"^(python3 -I|bash) ((?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+\.(?:py|sh))$"
+)
+GOVERNED_FILE = re.compile(r"^(?:check-|check_|test-|test_).+\.(?:py|sh)$")
+DISCOVERABLE_CONFORMANCE_TEST = re.compile(r"^test_[A-Za-z0-9_]+\.py$")
 
 
 def reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -176,6 +203,30 @@ def git_tree_entries(root: Path, revision: str = "HEAD") -> dict[str, tuple[str,
     return entries
 
 
+def git_tree_objects(
+    root: Path, revision: str
+) -> dict[str, tuple[str, str, str]] | None:
+    """Enumerate one Git tree as path -> (mode, type, object ID)."""
+
+    result = git_command(root, "ls-tree", "-r", "-z", revision)
+    if result.returncode != 0:
+        return None
+    entries: dict[str, tuple[str, str, str]] = {}
+    for record in result.stdout.split(b"\0"):
+        if not record:
+            continue
+        try:
+            metadata, raw_path = record.split(b"\t", 1)
+            mode, object_type, object_id = metadata.decode("ascii").split()
+            path = raw_path.decode("utf-8")
+        except (ValueError, UnicodeError):
+            return None
+        if path in entries or not FULL_SHA.fullmatch(object_id):
+            return None
+        entries[path] = (mode, object_type, object_id)
+    return entries
+
+
 def discover_paths(root: Path, tracked: dict[str, str] | None = None) -> set[str]:
     paths: set[str] = set()
     for path in root.rglob("*"):
@@ -252,6 +303,174 @@ def exact_keys(
         errors.append(f"{label} has unsupported or missing fields")
 
 
+def validate_registry_commands(
+    commands: Any,
+    *,
+    field: str,
+    anchors: list[str],
+    errors: list[str],
+) -> list[str]:
+    if (
+        not isinstance(commands, list)
+        or not commands
+        or any(not isinstance(item, str) or not item for item in commands)
+        or len(commands) != len(set(commands))
+    ):
+        errors.append(
+            f"ownership policy {field} must be a non-empty unique string list"
+        )
+        return []
+    positions: list[int] = []
+    for anchor in anchors:
+        if commands.count(anchor) != 1:
+            errors.append(f"ownership policy {field} is missing a reviewed command anchor")
+            continue
+        positions.append(commands.index(anchor))
+    if positions != sorted(positions):
+        errors.append(f"ownership policy {field} changed reviewed command order")
+    if (
+        field == "required_quality_commands"
+        and commands[: len(REQUIRED_QUALITY_GUARD_PREFIX)]
+        != REQUIRED_QUALITY_GUARD_PREFIX
+    ):
+        errors.append(
+            "ownership policy required_quality_commands must begin with the "
+            "frozen and live policy guards"
+        )
+    for command in commands:
+        if command in anchors:
+            continue
+        match = DIRECT_COMMAND.fullmatch(command)
+        if match is None:
+            errors.append(f"ownership policy {field} has an unsafe registry command")
+            continue
+        interpreter, path = match.groups()
+        if (
+            path.startswith("-")
+            or not valid_relative_path(path)
+            or GOVERNED_FILE.fullmatch(PurePosixPath(path).name) is None
+        ):
+            errors.append(f"ownership policy {field} has an unsafe registry command")
+        elif (interpreter == "python3 -I") != path.endswith(".py"):
+            errors.append(f"ownership policy {field} interpreter does not match its path")
+        elif interpreter == "python3 -I" and re.fullmatch(
+            r"check[-_].+\.py", PurePosixPath(path).name
+        ) is None:
+            errors.append(
+                f"ownership policy {field} direct Python commands must be checkers"
+            )
+    return commands
+
+
+def validate_registry_reachability(
+    paths: set[str], policy: dict[str, Any], errors: list[str]
+) -> None:
+    """Require every governed checker/test to be directly reachable from CI."""
+
+    quality = policy.get("required_quality_commands")
+    conformance = policy.get("required_conformance_commands")
+    commands = {
+        command
+        for registry in (quality, conformance)
+        if isinstance(registry, list)
+        for command in registry
+        if isinstance(command, str)
+    }
+    canonical_discovery = CANONICAL_CONFORMANCE_DISCOVERY in commands
+    for relative in sorted(paths):
+        name = PurePosixPath(relative).name
+        if relative.startswith("tests/conformance/") and relative.endswith(".py"):
+            if (
+                PurePosixPath(relative).parent
+                != PurePosixPath("tests/conformance")
+                or DISCOVERABLE_CONFORMANCE_TEST.fullmatch(name) is None
+            ):
+                errors.append(
+                    "governed conformance Python tests must be top-level canonical "
+                    f"test_*.py files: {relative}"
+                )
+                continue
+        if (
+            relative.endswith(".py")
+            and re.fullmatch(r"test[-_].+\.py", name) is not None
+            and not relative.startswith("tests/conformance/")
+        ):
+            errors.append(
+                "governed Python tests must use canonical top-level conformance "
+                f"discovery: {relative}"
+            )
+            continue
+        if GOVERNED_FILE.fullmatch(name) is None:
+            continue
+        is_conformance = (
+            relative.startswith("tests/conformance/")
+            and name.startswith("test_")
+            and relative.endswith(".py")
+        )
+        directly_discovered = (
+            is_conformance
+            and PurePosixPath(relative).parent == PurePosixPath("tests/conformance")
+            and DISCOVERABLE_CONFORMANCE_TEST.fullmatch(name) is not None
+        )
+        if directly_discovered and canonical_discovery:
+            continue
+        command = (
+            f"python3 -I {relative}"
+            if relative.endswith(".py")
+            else f"bash {relative}"
+        )
+        if command in commands:
+            continue
+        if is_conformance:
+            errors.append(f"governed conformance test is not reachable: {relative}")
+        else:
+            errors.append(f"governed checker or test is not reachable: {relative}")
+
+
+def validate_execution_root_surfaces(paths: set[str], errors: list[str]) -> None:
+    """Reject ambiguous Python and shell files in execution-root directories."""
+
+    fixed_scripts = {
+        ".github/scripts/check-phase0-contracts.py",
+        ".github/scripts/check-repository-policy.py",
+        ".github/scripts/check-action-pins.sh",
+        ".github/scripts/check-workflow-permissions.sh",
+        ".github/scripts/conformance-catalog.py",
+        ".github/scripts/install-ci-tools.py",
+        ".github/scripts/tests/lib.sh",
+    }
+    scripts_root = PurePosixPath(".github/scripts")
+    tests_root = scripts_root / "tests"
+    for relative in sorted(paths):
+        pure = PurePosixPath(relative)
+        name = pure.name
+        if name in {"action.yml", "action.yaml"}:
+            errors.append(
+                f"local Action metadata is unsupported pending recursive validation: {relative}"
+            )
+        if (
+            relative.endswith(".py")
+            and pure.parent == PurePosixPath(".")
+            and GOVERNED_FILE.fullmatch(name) is None
+        ):
+            errors.append(f"Python execution-root shadow surface is forbidden: {relative}")
+        if not relative.startswith(".github/scripts/"):
+            continue
+        if relative in fixed_scripts:
+            continue
+        valid = False
+        if pure.parent == scripts_root:
+            valid = re.fullmatch(r"check[-_].+\.(?:py|sh)", name) is not None
+        elif pure.parent == tests_root:
+            valid = re.fullmatch(r"test[-_].+\.sh", name) is not None
+        if not valid:
+            if relative.endswith(".py"):
+                errors.append(
+                    f"Python execution-root shadow surface is forbidden: {relative}"
+                )
+            errors.append(f"script execution-root surface is unsupported: {relative}")
+
+
 def validate_manifest(
     payload: dict[str, Any], errors: list[str]
 ) -> tuple[dict[str, str], dict[str, Any]]:
@@ -316,36 +535,49 @@ def validate_manifest(
     required_jobs = policy.get("required_jobs")
     if required_jobs != ["quality", "conformance"]:
         errors.append("ownership policy required_jobs must be exactly quality and conformance")
-    for field in ("required_quality_commands", "required_conformance_commands"):
-        commands = policy.get(field)
-        if (
-            not isinstance(commands, list)
-            or not commands
-            or any(not isinstance(item, str) or not item for item in commands)
-            or len(commands) != len(set(commands))
-        ):
-            errors.append(f"ownership policy {field} must be a non-empty unique string list")
+    validate_registry_commands(
+        policy.get("required_quality_commands"),
+        field="required_quality_commands",
+        anchors=REVIEWED_QUALITY_ANCHORS,
+        errors=errors,
+    )
+    validate_registry_commands(
+        policy.get("required_conformance_commands"),
+        field="required_conformance_commands",
+        anchors=REVIEWED_CONFORMANCE_ANCHORS,
+        errors=errors,
+    )
 
     tasks = payload.get("tasks")
     if not isinstance(tasks, list) or not tasks:
         errors.append("ownership tasks must be a non-empty list")
         tasks = []
     task_ids: list[str] = []
+    task_states: dict[str, Any] = {}
     active_branches: list[str] = []
     ownership: dict[str, str] = {}
     modes: dict[str, str] = {}
     manifest_paths: list[str] = []
+    transition_records: list[tuple[str, Any, Any, str]] = []
     for index, task in enumerate(tasks):
         label = f"ownership tasks[{index}]"
         if not isinstance(task, dict):
             errors.append(f"{label} must be an object")
             continue
-        exact_keys(
-            task,
-            {"id", "record", "state", "branch", "base_commit", "base_tree", "owned_paths"},
-            label,
-            errors,
-        )
+        task_fields = {
+            "id",
+            "record",
+            "state",
+            "branch",
+            "base_commit",
+            "base_tree",
+            "owned_paths",
+        }
+        if frozenset(task) not in {
+            frozenset(task_fields),
+            frozenset(task_fields | {"path_transitions"}),
+        }:
+            errors.append(f"{label} has unsupported or missing fields")
         task_id = task.get("id")
         if not isinstance(task_id, str) or not TASK_ID.fullmatch(task_id):
             errors.append(f"{label}.id must match one letter and two digits")
@@ -357,11 +589,15 @@ def validate_manifest(
         state_value = task.get("state")
         if not isinstance(state_value, str) or state_value not in ALLOWED_TASK_STATES:
             errors.append(f"{label}.state is unsupported")
+        task_states.setdefault(task_id, state_value)
         branch = task.get("branch")
         if not isinstance(branch, str) or not BRANCH.fullmatch(branch):
             errors.append(f"{label}.branch must use the codex/ prefix")
         elif state_value == "active":
             active_branches.append(branch)
+        transition_records.append(
+            (task_id, state_value, task.get("path_transitions"), label)
+        )
         for field in ("base_commit", "base_tree"):
             value = task.get(field)
             if not isinstance(value, str) or not FULL_SHA.fullmatch(value):
@@ -399,6 +635,135 @@ def validate_manifest(
             errors.append(f"{label}.owned_paths must be sorted by path")
         if len(observed_task_paths) != len(set(observed_task_paths)):
             errors.append(f"{label}.owned_paths contains duplicate paths")
+
+    for task_id, state_value, transitions, label in transition_records:
+        if transitions is None:
+            continue
+        if not isinstance(transitions, list):
+            errors.append(f"{label}.path_transitions must be a list")
+            continue
+        observed_keys: list[tuple[str, str, str]] = []
+        fingerprints: list[str] = []
+        task_transition_paths: list[str] = []
+        for transition_index, transition in enumerate(transitions):
+            transition_label = f"{label}.path_transitions[{transition_index}]"
+            if not isinstance(transition, dict):
+                errors.append(f"{transition_label} must be an object")
+                continue
+            operation = transition.get("operation")
+            operation_valid = isinstance(operation, str) and operation in {
+                "delete",
+                "rename",
+                "copy",
+            }
+            if not operation_valid:
+                errors.append(f"{transition_label}.operation is unsupported")
+                expected_fields = {
+                    "operation",
+                    "source_path",
+                    "source_owner",
+                    "source_mode",
+                }
+            else:
+                expected_fields = {
+                    "operation",
+                    "source_path",
+                    "source_owner",
+                    "source_mode",
+                }
+                if operation in {"rename", "copy"}:
+                    expected_fields |= {"destination_path", "destination_mode"}
+            exact_keys(transition, expected_fields, transition_label, errors)
+            source_path = transition.get("source_path")
+            source_owner = transition.get("source_owner")
+            source_mode = transition.get("source_mode")
+            destination_path = transition.get("destination_path", "")
+            destination_mode = transition.get("destination_mode")
+            if not isinstance(source_path, str) or not valid_relative_path(source_path):
+                errors.append(
+                    f"{transition_label}.source_path is not a normalized repository path"
+                )
+                source_path = ""
+            if source_owner not in task_ids:
+                errors.append(f"{transition_label}.source_owner is not a known Task")
+            elif (
+                state_value == "active"
+                and source_owner != task_id
+                and task_states.get(str(source_owner)) != "accepted"
+            ):
+                errors.append(
+                    f"{transition_label}.source_owner must be an accepted Task"
+                )
+            if not isinstance(source_mode, str) or source_mode not in ALLOWED_MODES:
+                errors.append(f"{transition_label}.source_mode is unsupported")
+            if operation_valid and operation in {"rename", "copy"}:
+                if not isinstance(destination_path, str) or not valid_relative_path(
+                    destination_path
+                ):
+                    errors.append(
+                        f"{transition_label}.destination_path is not a normalized repository path"
+                    )
+                    destination_path = ""
+                if (
+                    not isinstance(destination_mode, str)
+                    or destination_mode not in ALLOWED_MODES
+                ):
+                    errors.append(f"{transition_label}.destination_mode is unsupported")
+                if source_path and destination_path and source_path == destination_path:
+                    errors.append(f"{transition_label} source and destination must differ")
+                if (
+                    state_value == "active"
+                    and destination_path
+                    and ownership.get(destination_path) != task_id
+                ):
+                    errors.append(f"{transition_label} destination ownership is not active")
+                if (
+                    state_value == "active"
+                    and destination_path
+                    and modes.get(destination_path) != destination_mode
+                ):
+                    errors.append(f"{transition_label} destination mode does not match ownership")
+                if destination_path:
+                    task_transition_paths.append(destination_path)
+            if (
+                state_value == "active"
+                and operation_valid
+                and operation in {"delete", "rename"}
+                and source_path in ownership
+            ):
+                errors.append(f"{transition_label} source must leave current ownership")
+            if (
+                state_value == "active"
+                and operation == "copy"
+                and source_path
+                and ownership.get(source_path) != source_owner
+            ):
+                errors.append(f"{transition_label} copy source must remain with its source owner")
+            if source_path:
+                task_transition_paths.append(source_path)
+            observed_keys.append((str(source_path), str(operation), str(destination_path)))
+            fingerprints.append(
+                json.dumps(transition, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            )
+        if observed_keys != sorted(observed_keys):
+            errors.append(f"{label}.path_transitions must be sorted")
+        if len(fingerprints) != len(set(fingerprints)):
+            errors.append(f"{label}.path_transitions contains duplicate transitions")
+        validate_path_collisions(
+            task_transition_paths, f"{label}.path_transitions", errors
+        )
+        if state_value == "active":
+            duplicate_transition_paths = sorted(
+                path
+                for path, count in Counter(task_transition_paths).items()
+                if count > 1
+            )
+            if duplicate_transition_paths:
+                errors.append(
+                    f"{label}.path_transitions contains duplicate source or "
+                    "destination path(s): "
+                    + ", ".join(duplicate_transition_paths)
+                )
 
     duplicates = sorted(
         identifier for identifier in set(task_ids) if task_ids.count(identifier) > 1
@@ -669,6 +1034,351 @@ def authorize_changed_entries(
     authorize_changed_paths(task, (path for _status, path in observed), errors)
 
 
+def manifest_ownership(payload: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    """Return structurally usable path ownership without granting on bad fields."""
+
+    ownership: dict[str, tuple[str, str]] = {}
+    tasks = payload.get("tasks")
+    if not isinstance(tasks, list):
+        return ownership
+    for task in tasks:
+        if not isinstance(task, dict) or not isinstance(task.get("id"), str):
+            continue
+        entries = task.get("owned_paths")
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            path = entry.get("path")
+            mode = entry.get("mode")
+            if (
+                isinstance(path, str)
+                and valid_relative_path(path)
+                and isinstance(mode, str)
+                and mode in ALLOWED_MODES
+                and path not in ownership
+            ):
+                ownership[path] = (task["id"], mode)
+    return ownership
+
+
+def git_blob_bytes(root: Path, object_id: str) -> bytes | None:
+    result = git_command(root, "cat-file", "blob", object_id)
+    return result.stdout if result.returncode == 0 else None
+
+
+def current_regular_bytes(root: Path, relative: str) -> bytes | None:
+    if filesystem_mode(root / relative) not in ALLOWED_MODES:
+        return None
+    if symlink_component(root, relative) is not None:
+        return None
+    try:
+        return (root / relative).read_bytes()
+    except OSError:
+        return None
+
+
+def validate_accepted_transition_evidence(
+    root: Path, payload: dict[str, Any], errors: list[str]
+) -> None:
+    """Recheck accepted inert transition intent against each Task's exact base."""
+
+    tasks = payload.get("tasks")
+    if not isinstance(tasks, list):
+        return
+    for task in tasks:
+        if not isinstance(task, dict) or task.get("state") != "accepted":
+            continue
+        transitions = task.get("path_transitions")
+        if not isinstance(transitions, list) or not transitions:
+            continue
+        task_id = task.get("id", "?")
+        label = f"accepted Task {task_id} transition evidence"
+        base_commit = task.get("base_commit")
+        base_tree = task.get("base_tree")
+        if not isinstance(base_commit, str) or not FULL_SHA.fullmatch(base_commit):
+            errors.append(f"{label} base commit is invalid")
+            continue
+        if not isinstance(base_tree, str) or not FULL_SHA.fullmatch(base_tree):
+            errors.append(f"{label} base tree is invalid")
+            continue
+        resolved = git_command(root, "rev-parse", f"{base_commit}^{{tree}}")
+        if (
+            resolved.returncode != 0
+            or resolved.stdout.decode("ascii", errors="replace").strip() != base_tree
+        ):
+            errors.append(f"{label} base commit/tree is missing or inconsistent")
+            continue
+        base_entries = git_tree_objects(root, base_commit)
+        if base_entries is None:
+            errors.append(f"{label} base tree is uncheckable")
+            continue
+        manifest_entry = base_entries.get(ROOT_MANIFEST)
+        if manifest_entry is None or manifest_entry[1] != "blob":
+            errors.append(f"{label} base ownership manifest is absent")
+            continue
+        manifest_bytes = git_blob_bytes(root, manifest_entry[2])
+        if manifest_bytes is None:
+            errors.append(f"{label} base ownership manifest is uncheckable")
+            continue
+        try:
+            base_payload = json.loads(
+                manifest_bytes.decode("utf-8"),
+                object_pairs_hook=reject_duplicate_json_keys,
+            )
+        except (UnicodeError, json.JSONDecodeError, ValueError):
+            errors.append(f"{label} base ownership manifest is invalid")
+            continue
+        if not isinstance(base_payload, dict):
+            errors.append(f"{label} base ownership manifest must be an object")
+            continue
+        base_ownership = manifest_ownership(base_payload)
+        for index, transition in enumerate(transitions):
+            if not isinstance(transition, dict):
+                continue
+            record_label = f"{label}[{index}]"
+            operation = transition.get("operation")
+            source_path = transition.get("source_path")
+            source_owner = transition.get("source_owner")
+            source_mode = transition.get("source_mode")
+            if (
+                not isinstance(operation, str)
+                or operation not in {"delete", "rename", "copy"}
+                or not isinstance(source_path, str)
+                or not valid_relative_path(source_path)
+                or not isinstance(source_owner, str)
+                or not isinstance(source_mode, str)
+            ):
+                continue
+            source_entry = base_entries.get(source_path)
+            source_ownership = base_ownership.get(source_path)
+            if source_entry is None or source_entry[1] != "blob":
+                errors.append(f"{record_label} source path is absent from the Task base")
+                continue
+            if source_ownership is None or source_ownership[0] != source_owner:
+                errors.append(f"{record_label} source owner does not match the Task base")
+            if source_ownership is None or source_ownership[1] != source_mode:
+                errors.append(f"{record_label} source mode does not match base ownership")
+            if source_entry[0] != source_mode:
+                errors.append(f"{record_label} source mode does not match the base tree")
+            if operation in {"rename", "copy"}:
+                destination_path = transition.get("destination_path")
+                if isinstance(destination_path, str) and (
+                    destination_path in base_entries
+                    or destination_path in base_ownership
+                ):
+                    errors.append(f"{record_label} destination exists in the Task base")
+
+
+def validate_path_transitions(
+    root: Path,
+    payload: dict[str, Any],
+    task: dict[str, Any],
+    entries: Iterable[tuple[str, str]],
+    errors: list[str],
+) -> None:
+    """Authorize the exact-base Task diff, including declared path transitions."""
+
+    task_id = task.get("id")
+    base_commit = task.get("base_commit")
+    base_tree = task.get("base_tree")
+    if not isinstance(base_commit, str) or not FULL_SHA.fullmatch(base_commit):
+        errors.append("path transition base commit is invalid")
+        return
+    if not isinstance(base_tree, str) or not FULL_SHA.fullmatch(base_tree):
+        errors.append("path transition base tree is invalid")
+        return
+    commit_exists = git_command(root, "cat-file", "-e", f"{base_commit}^{{commit}}")
+    if commit_exists.returncode != 0:
+        errors.append("path transition base commit is missing or uncheckable")
+        return
+    resolved_tree = git_command(root, "rev-parse", f"{base_commit}^{{tree}}")
+    if (
+        resolved_tree.returncode != 0
+        or resolved_tree.stdout.decode("ascii", errors="replace").strip() != base_tree
+    ):
+        errors.append("path transition base tree does not match base commit")
+        return
+    base_entries = git_tree_objects(root, base_commit)
+    if base_entries is None:
+        errors.append("path transition Task base tree is uncheckable")
+        return
+    manifest_entry = base_entries.get(ROOT_MANIFEST)
+    if manifest_entry is None or manifest_entry[1] != "blob":
+        errors.append("ownership manifest is absent from the Task base")
+        return
+    base_manifest_bytes = git_blob_bytes(root, manifest_entry[2])
+    if base_manifest_bytes is None:
+        errors.append("ownership manifest blob in the Task base is uncheckable")
+        return
+    try:
+        base_payload = json.loads(
+            base_manifest_bytes.decode("utf-8"),
+            object_pairs_hook=reject_duplicate_json_keys,
+        )
+    except (UnicodeError, json.JSONDecodeError, ValueError):
+        errors.append("ownership manifest in the Task base is not valid unique-key JSON")
+        return
+    if not isinstance(base_payload, dict):
+        errors.append("ownership manifest in the Task base must contain an object")
+        return
+
+    current_ownership = manifest_ownership(payload)
+    base_ownership = manifest_ownership(base_payload)
+    active_owned = active_owned_paths(task)
+    transitions = task.get("path_transitions", [])
+    if not isinstance(transitions, list):
+        transitions = []
+
+    observed: dict[str, str] = {}
+    observed_paths: list[str] = []
+    for item in entries:
+        if (
+            not isinstance(item, tuple)
+            or len(item) != 2
+            or not all(isinstance(value, str) for value in item)
+        ):
+            errors.append("Task diff contains a malformed change entry")
+            continue
+        status, path = item
+        observed_paths.append(path)
+        previous = observed.get(path)
+        if previous is None:
+            observed[path] = status
+        elif previous != status:
+            errors.append(f"Task diff has conflicting change statuses for {path}")
+    validate_path_collisions(observed_paths, "Task diff", errors)
+
+    consumed: set[tuple[str, str]] = set()
+    declared_destinations: set[str] = set()
+    for index, transition in enumerate(transitions):
+        if not isinstance(transition, dict):
+            continue
+        label = f"Task {task_id or '?'} path transition[{index}]"
+        operation = transition.get("operation")
+        source_path = transition.get("source_path")
+        source_owner = transition.get("source_owner")
+        source_mode = transition.get("source_mode")
+        if (
+            not isinstance(operation, str)
+            or operation not in {"delete", "rename", "copy"}
+            or not isinstance(source_path, str)
+            or not valid_relative_path(source_path)
+            or not isinstance(source_owner, str)
+            or not isinstance(source_mode, str)
+        ):
+            continue
+
+        base_source = base_entries.get(source_path)
+        base_source_ownership = base_ownership.get(source_path)
+        if base_source is None or base_source[1] != "blob":
+            errors.append(f"{label} source path is absent from the Task base")
+            continue
+        if base_source_ownership is None or base_source_ownership[0] != source_owner:
+            errors.append(f"{label} source owner does not match the Task base")
+        if base_source_ownership is None or base_source_ownership[1] != source_mode:
+            errors.append(f"{label} source mode does not match base ownership")
+        if base_source[0] != source_mode:
+            errors.append(f"{label} source mode does not match the Task base tree")
+        source_blob = git_blob_bytes(root, base_source[2])
+        if source_blob is None:
+            errors.append(f"{label} source blob in the Task base is uncheckable")
+            continue
+
+        destination_path = transition.get("destination_path")
+        destination_mode = transition.get("destination_mode")
+        required = {("D", source_path)}
+        if operation == "copy":
+            required.clear()
+        if operation in {"rename", "copy"}:
+            if not isinstance(destination_path, str) or not valid_relative_path(
+                destination_path
+            ):
+                continue
+            declared_destinations.add(destination_path)
+            required.add(("A", destination_path))
+            if destination_path in base_entries or destination_path in base_ownership:
+                errors.append(f"{label} destination exists in the Task base")
+            destination_owner = current_ownership.get(destination_path)
+            if destination_owner is None or destination_owner[0] != task_id:
+                errors.append(f"{label} destination ownership is not the active Task")
+            if destination_owner is None or destination_owner[1] != destination_mode:
+                errors.append(f"{label} destination ownership mode is inconsistent")
+            actual_mode = filesystem_mode(root / destination_path)
+            if actual_mode != destination_mode:
+                errors.append(f"{label} destination mode does not match the declaration")
+            destination_blob = current_regular_bytes(root, destination_path)
+            if destination_blob is None or destination_blob != source_blob:
+                errors.append(f"{label} destination blob does not match the base source")
+
+        if operation in {"delete", "rename"}:
+            if source_path in current_ownership or (root / source_path).exists() or (
+                root / source_path
+            ).is_symlink():
+                errors.append(f"{label} source must be absent after {operation}")
+        else:
+            current_source = current_ownership.get(source_path)
+            if current_source is None or current_source[0] != source_owner:
+                errors.append(f"{label} copy source must remain with its source owner")
+            if filesystem_mode(root / source_path) != source_mode:
+                errors.append(f"{label} copy source must remain at its reviewed mode")
+            if current_regular_bytes(root, source_path) != source_blob:
+                errors.append(f"{label} copy source must remain at its reviewed blob")
+
+        if not all(observed.get(path) == status for status, path in required):
+            errors.append(f"{label} transition is not consumed by the Task diff")
+        else:
+            consumed.update(required)
+
+    base_object_paths: dict[str, list[str]] = {}
+    for base_path, (_mode, object_type, object_id) in base_entries.items():
+        if object_type == "blob":
+            base_object_paths.setdefault(object_id, []).append(base_path)
+
+    for path, status in observed.items():
+        if (status, path) in consumed:
+            continue
+        if not valid_relative_path(path):
+            errors.append(f"Task diff contains an unsupported path: {path!r}")
+            continue
+        if status == "D":
+            errors.append(f"undeclared deletion: {path}")
+            errors.append(f"Task ownership does not support deletion in this phase: {path}")
+            if path not in active_owned:
+                errors.append(
+                    f"Task diff path is outside active Task {task_id or '?'} ownership: {path}"
+                )
+        elif status == "A":
+            if path not in active_owned:
+                errors.append(f"undeclared addition: {path}")
+                errors.append(
+                    f"Task diff path is outside active Task {task_id or '?'} ownership: {path}"
+                )
+                continue
+            if path not in declared_destinations and path not in base_entries:
+                object_result = git_command(root, "hash-object", "--no-filters", "--", path)
+                if object_result.returncode == 0:
+                    object_id = object_result.stdout.decode(
+                        "ascii", errors="replace"
+                    ).strip()
+                    if any(
+                        base_path != path
+                        for base_path in base_object_paths.get(object_id, [])
+                    ):
+                        errors.append(
+                            f"addition appears to be an unconsumed transition: {path}"
+                        )
+        elif status == "M":
+            if path not in active_owned:
+                errors.append(f"undeclared modification: {path}")
+                errors.append(
+                    f"Task diff path is outside active Task {task_id or '?'} ownership: {path}"
+                )
+        else:
+            errors.append(f"Task diff has unsupported change status {status!r}: {path}")
+
+
 def validate_execution_authorization(
     root: Path,
     payload: dict[str, Any],
@@ -778,9 +1488,7 @@ def validate_execution_authorization(
             )
             return
         diff_sources = [
-            ([f"{main_sha}...HEAD"], "committed local Task diff"),
-            (["--cached", "HEAD"], "staged local Task diff"),
-            ([], "unstaged local Task diff"),
+            ([main_sha], "local Task diff from exact main base to the worktree"),
         ]
     else:
         errors.append(f"unsupported Task-diff execution context: {context_name}")
@@ -791,7 +1499,7 @@ def validate_execution_authorization(
         if entries is None:
             return
         changed_entries.extend(entries)
-    authorize_changed_entries(task, changed_entries, errors)
+    validate_path_transitions(root, payload, task, changed_entries, errors)
 
 
 def invariant_digest(invariants: Iterable[tuple[str, str]]) -> str:
@@ -1318,6 +2026,10 @@ def validate_action_uses(path: str, text: str, errors: list[str]) -> None:
         uses += 1
         reference, comment = match.groups()
         if reference.startswith("./"):
+            errors.append(
+                f"{path}:{line_number} local Actions are unsupported until "
+                "recursive composite validation is reviewed"
+            )
             continue
         if not FULL_ACTION_REF.fullmatch(reference):
             errors.append(f"{path}:{line_number} Action reference must use a full commit SHA")
@@ -1367,6 +2079,8 @@ def validate_workflows(root: Path, policy: dict[str, Any], errors: list[str]) ->
     except (OSError, UnicodeError) as exc:
         errors.append(f"cannot read live CI workflow: {exc}")
         return
+    if "Run Phase 0 conformance tests" in text:
+        errors.append("ci workflow contains stale Phase 0 conformance step label")
     if not text.startswith(CI_PREAMBLE):
         errors.append(
             "ci trigger/preamble must enable pull_request and push to main with empty permissions"
@@ -1473,12 +2187,15 @@ def validate_repository(
 
     if verify_git:
         validate_git_evidence(root, payload, errors)
+        validate_accepted_transition_evidence(root, payload, errors)
         validate_execution_authorization(
             root, payload, os.environ if environment is None else environment, errors
         )
     validate_invariants(root, policy, errors)
     validate_hierarchy_and_completion(root, errors)
     validate_workflows(root, policy, errors)
+    validate_execution_root_surfaces(paths, errors)
+    validate_registry_reachability(paths, policy, errors)
     validate_text_policy(root, paths, errors)
     return errors
 
