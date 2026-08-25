@@ -1,0 +1,13 @@
+{
+  "schema": "portable-decision/v1",
+  "id": "DEC-0001",
+  "title": "Use a connector-neutral exact context contract",
+  "status": "accepted-on-owner-merge",
+  "decision": "Core planning and execution consume stable requirement and decision records plus verified context-pin/v1 records through exactly discover, retrieve, pin, and verify; no external connector or service is mandatory.",
+  "rationale": "A small repository-owned interface keeps durable inputs reachable and verifiable across execution surfaces without making a vendor service authoritative.",
+  "supersedes": [],
+  "references": [
+    "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10"
+  ]
+}

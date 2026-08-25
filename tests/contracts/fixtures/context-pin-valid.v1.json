@@ -1,0 +1,45 @@
+{
+  "schema": "context-pin/v1",
+  "id": "PIN-0001",
+  "purpose": "bootstrap-governance-inputs",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "revision": "0adb4ef232ebd853df8af788db96c02bde6576ae",
+  "tree": "e755dfba299b73d06f97fe7caeba6d520225c202",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "blob": "c13b939b14de8a694428ce660251139458e2e542",
+      "sha256": "77a4f8156d6808ad601c7b72a042da87ad58e92b33c9eb6263243c6033c5b738"
+    },
+    {
+      "path": "docs/planning/phase-0-orientation.md",
+      "mode": "100644",
+      "blob": "3125bb544f4b471af9f829952e42d4a823bf8606",
+      "sha256": "31f9b94fe8fdd71d747b647a2580a981f6502a3f007e736160f036ac7e4b1b0a"
+    },
+    {
+      "path": "tests/conformance/manifest.json",
+      "mode": "100644",
+      "blob": "b769ba53dd96d179406478fd753c726e6ae80b26",
+      "sha256": "aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be"
+    }
+  ],
+  "aggregate": {
+    "algorithm": "sha256",
+    "canonicalization": "context-pin-v1-lines",
+    "sha256": "e6d81c225a3abb796b6baedfb471ee84d6476fc24c24c5a237bd002f3f2e3af9"
+  },
+  "claim_boundary": {
+    "proves_listed_sources_only": true,
+    "proves_context_completeness": false,
+    "proves_sufficiency": false,
+    "binds_t08_new_records": false
+  },
+  "verification": {
+    "required_before": ["decomposition", "execution"],
+    "success_state": "pass",
+    "non_success_states": ["drift", "UNKNOWN", "UNCHECKABLE", "fail"],
+    "references_semantics": "durable-linkage-only-not-validity-or-freshness-evidence"
+  }
+}

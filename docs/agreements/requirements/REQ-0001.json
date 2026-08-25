@@ -1,0 +1,16 @@
+{
+  "schema": "portable-requirement/v1",
+  "id": "REQ-0001",
+  "title": "Verify selected context before governed work",
+  "statement": "The selected exact context pin must pass validity and freshness checks before decomposition or execution; drift, UNKNOWN, UNCHECKABLE, and fail block both gates.",
+  "status": "accepted-on-owner-merge",
+  "supersedes": [],
+  "source_references": [
+    "https://github.com/mochan-tk/agentic-dev-kit-for-copilot/blob/fd265ddef150fab86cd54d0e383c2c25fe297ffb/.github/connectors/README.md",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-copilot/blob/fd265ddef150fab86cd54d0e383c2c25fe297ffb/.github/docs/agreements/requirements.md"
+  ],
+  "verification": [
+    "python3 -I .github/scripts/check-portable-contracts.py",
+    "python3 -I -m unittest discover -s tests/conformance -p 'test_portable_contracts.py'"
+  ]
+}
