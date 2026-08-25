@@ -623,7 +623,51 @@ class PortableContractsTest(unittest.TestCase):
         )
         errors = []
         self.checker.validate_accepted_main_history(root, {REQ}, errors)
-        self.assert_error(errors, "deleted or renamed in intervening history")
+        self.assert_error(errors, "changed, deleted, renamed, or type-changed")
+
+    def test_accepted_main_modify_then_restore_remains_an_immutability_violation(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "repository"
+        root.mkdir()
+        subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+        subprocess.run(["git", "branch", "-M", "main"], cwd=root, check=True)
+        target = root / REQ
+        target.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / REQ, target)
+        subprocess.run(["git", "add", REQ], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "accepted main"],
+            cwd=root,
+            check=True,
+        )
+        subprocess.run(["git", "checkout", "--quiet", "-b", "feature"], cwd=root, check=True)
+        original = target.read_bytes()
+        target.write_bytes(original + b"\n")
+        subprocess.run(["git", "add", REQ], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "mutate history"],
+            cwd=root,
+            check=True,
+        )
+        target.write_bytes(original)
+        subprocess.run(["git", "add", REQ], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--quiet", "-m", "restore bytes"],
+            cwd=root,
+            check=True,
+        )
+        errors = []
+        self.checker.validate_accepted_main_history(root, {REQ}, errors)
+        self.assert_error(errors, "changed, deleted, renamed, or type-changed")
+
+    def test_missing_canonical_main_ref_is_uncheckable_for_accepted_history(self):
+        root = self.copy_fixture()
+        subprocess.run(["git", "update-ref", "-d", "refs/remotes/origin/main"], cwd=root, check=True)
+        subprocess.run(["git", "update-ref", "-d", "refs/heads/main"], cwd=root, check=True)
+        errors = []
+        self.checker.validate_accepted_main_history(root, {REQ, DEC, PIN}, errors)
+        self.assert_error(errors, "UNCHECKABLE: no canonical local or origin main ref")
 
     def test_fixed_json_inputs_reject_symlink_fifo_oversize_duplicate_and_deep_json(self):
         root = self.copy_fixture()

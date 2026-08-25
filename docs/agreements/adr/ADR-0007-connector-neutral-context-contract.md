@@ -71,7 +71,7 @@ Git-object verification does.
   are present at an active Task base.
 - Historical pins remain valid when their exact objects remain available even
   if they become stale. Only the selected pin is compared with the current
-  tree.
+  `HEAD` tree, Git index, and bounded no-follow live worktree.
 - Missing or uncheckable objects yield non-success evidence instead of a guess.
 - Durable machine records exclude sensitive raw material through closed field
   schemas.

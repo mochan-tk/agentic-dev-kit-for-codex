@@ -82,8 +82,8 @@ EXPECTED_CONTRACT = {
     "repository": REPOSITORY,
     "document_bindings": [
         {"path": CONNECTOR_README, "sha256": "24430131bc2d21376a28bbc41da533e9712d0b47274e317789e63a161c414461"},
-        {"path": ADR_PATH, "sha256": "39a1c86f027534e600b630a4073e7d6f0a0293cfbbb852317cdcbf593705c160"},
-        {"path": HUMAN_PATH, "sha256": "8cae4b44afd8d2cf05874f73d2e8f19b211cd4891630e9474321442dcf4a069f"},
+        {"path": ADR_PATH, "sha256": "41b7b1855d5ba07672be4bcb1da2976a91d23bbd7163d365500c6acc6a275c9f"},
+        {"path": HUMAN_PATH, "sha256": "b5193257a9bc520c704ed806481cdbc9beb184cc13fd6c1b543fb72fd4801589"},
         {"path": CONTEXT_README, "sha256": "aea59dc90f55cec1b6e3250600af52deab7f860287d72c6634829740ecc53b7c"},
     ],
     "record_locations": {
@@ -981,6 +981,7 @@ def validate_immutable_history(root: Path, ownership: Any, current_paths: set[st
 def validate_accepted_main_history(root: Path, current_paths: set[str], errors: list[str]) -> None:
     """Keep records already present on a resolvable main ref byte-immutable."""
     observed_trees: set[str] = set()
+    resolved_main = False
     for reference in ("refs/remotes/origin/main", "refs/heads/main"):
         result = run_git(root, "show-ref", "--verify", "--hash", reference)
         if result is None:
@@ -997,7 +998,13 @@ def validate_accepted_main_history(root: Path, current_paths: set[str], errors: 
             errors.append(f"UNCHECKABLE: malformed accepted main object for {reference}")
             continue
         tree = git_text(root, ("rev-parse", f"{commit}^{{tree}}"), f"accepted main tree {reference}", errors)
-        if tree is None or tree in observed_trees:
+        if tree is None:
+            continue
+        if FULL_OID.fullmatch(tree) is None:
+            errors.append(f"UNCHECKABLE: malformed accepted main tree for {reference}")
+            continue
+        resolved_main = True
+        if tree in observed_trees:
             continue
         observed_trees.add(tree)
         accepted_paths: set[str] = set()
@@ -1021,10 +1028,11 @@ def validate_accepted_main_history(root: Path, current_paths: set[str], errors: 
             history = run_git(
                 root,
                 "log",
+                "-m",
                 "--format=",
                 "--name-only",
                 "-z",
-                "--diff-filter=DR",
+                "--diff-filter=DMRT",
                 f"{commit}..HEAD",
                 "--",
                 REQUIREMENT_DIRECTORY,
@@ -1037,7 +1045,7 @@ def validate_accepted_main_history(root: Path, current_paths: set[str], errors: 
                 errors.append(f"UNKNOWN: append-only history is unavailable from {reference}")
             else:
                 try:
-                    removed = {
+                    changed = {
                         item.strip(b"\n").decode("utf-8")
                         for item in history.stdout.split(b"\0")
                         if item.strip(b"\n")
@@ -1045,12 +1053,17 @@ def validate_accepted_main_history(root: Path, current_paths: set[str], errors: 
                 except UnicodeError:
                     errors.append(f"UNCHECKABLE: malformed append-only history from {reference}")
                 else:
-                    violations = sorted(accepted_paths & removed)
+                    violations = sorted(accepted_paths & changed)
                     if violations:
                         errors.append(
-                            "accepted main historical record was deleted or renamed in intervening history: "
+                            "accepted main historical record changed, deleted, renamed, or type-changed "
+                            "in intervening history: "
                             + ", ".join(violations)
                         )
+    if not resolved_main:
+        errors.append(
+            "UNCHECKABLE: no canonical local or origin main ref is available for accepted-record immutability"
+        )
 
 
 def validate_documents(root: Path, errors: list[str]) -> None:

@@ -66,8 +66,9 @@ ID is the selected pin, so adding a reviewed higher ID changes selection
 without editing history. Pin validity and pin freshness are different facts.
 Validity means the record matches its exact historical Git objects and digests. A valid historical pin
 may be stale. Freshness is evaluated only for the one selected pin by comparing
-its source bindings with the current Git tree. Drift blocks both decomposition
-and execution until a reviewed new pin is added and selected.
+its source bindings with the current `HEAD` tree, Git index, and bounded
+no-follow live worktree. Drift blocks both decomposition and execution until a
+reviewed new pin is added and selected.
 
 Freshness is three-way: selected sources must match the exact `HEAD` tree, the
 Git index, and bounded no-follow reads of live worktree bytes and modes.

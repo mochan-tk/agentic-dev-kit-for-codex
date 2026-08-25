@@ -3,8 +3,8 @@
   "repository": "mochan-tk/agentic-dev-kit-for-codex",
   "document_bindings": [
     {"path": ".github/connectors/README.md", "sha256": "24430131bc2d21376a28bbc41da533e9712d0b47274e317789e63a161c414461"},
-    {"path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md", "sha256": "39a1c86f027534e600b630a4073e7d6f0a0293cfbbb852317cdcbf593705c160"},
-    {"path": "docs/agreements/portable-context-contract.md", "sha256": "8cae4b44afd8d2cf05874f73d2e8f19b211cd4891630e9474321442dcf4a069f"},
+    {"path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md", "sha256": "41b7b1855d5ba07672be4bcb1da2976a91d23bbd7163d365500c6acc6a275c9f"},
+    {"path": "docs/agreements/portable-context-contract.md", "sha256": "b5193257a9bc520c704ed806481cdbc9beb184cc13fd6c1b543fb72fd4801589"},
     {"path": "docs/context/README.md", "sha256": "aea59dc90f55cec1b6e3250600af52deab7f860287d72c6634829740ecc53b7c"}
   ],
   "record_locations": {
