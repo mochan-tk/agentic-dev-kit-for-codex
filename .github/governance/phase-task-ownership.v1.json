@@ -12,16 +12,18 @@
     "invariant_digest": "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6",
     "required_jobs": ["quality", "conformance"],
     "required_quality_commands": [
-      "python3 .github/scripts/check-phase0-contracts.py",
-      "python3 .github/scripts/check-repository-policy.py",
+      "python3 -I .github/scripts/check-phase0-contracts.py",
+      "python3 -I .github/scripts/check-repository-policy.py",
+      "python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination \"$RUNNER_TEMP/agentic-ci-tools\" --check-repository",
+      "python3 -I .github/scripts/conformance-catalog.py check",
       "bash .github/scripts/check-action-pins.sh",
       "bash .github/scripts/tests/test-action-pins.sh",
       "bash .github/scripts/check-workflow-permissions.sh",
       "bash .github/scripts/tests/test-workflow-permissions.sh",
-      "python3 -m py_compile .github/scripts/check-phase0-contracts.py .github/scripts/check-repository-policy.py tests/conformance/test_phase0_contracts.py tests/conformance/test_repository_policy.py"
+      "python3 -I -m compileall -q .github/scripts tests/conformance"
     ],
     "required_conformance_commands": [
-      "python3 -m unittest discover -s tests/conformance -p 'test_*.py'"
+      "python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'"
     ]
   },
   "tasks": [
@@ -35,10 +37,8 @@
       "owned_paths": [
         {"path": ".gitattributes", "mode": "100644"},
         {"path": ".github/scripts/check-action-pins.sh", "mode": "100644"},
-        {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644"},
         {"path": ".github/scripts/tests/lib.sh", "mode": "100644"},
         {"path": ".github/scripts/tests/test-action-pins.sh", "mode": "100644"},
-        {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
         {"path": ".gitignore", "mode": "100644"},
         {"path": "LICENSE", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md", "mode": "100644"},
@@ -55,7 +55,6 @@
       "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
       "owned_paths": [
         {"path": ".github/scripts/check-phase0-contracts.py", "mode": "100644"},
-        {"path": ".github/workflows/ci.yml", "mode": "100644"},
         {"path": "tests/conformance/phase0-snapshot.json", "mode": "100644"},
         {"path": "tests/conformance/test_phase0_contracts.py", "mode": "100644"}
       ]
@@ -83,20 +82,37 @@
     {
       "id": "T05",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/phase-1-hierarchy-agreement",
       "base_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
       "base_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
       "owned_paths": [
-        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
-        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
         {"path": "AGENTS.md", "mode": "100644"},
         {"path": "README.md", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md", "mode": "100644"},
         {"path": "docs/agreements/repository-completion.md", "mode": "100644"},
         {"path": "tests/conformance/coverage.json", "mode": "100644"},
         {"path": "tests/conformance/manifest.json", "mode": "100644"},
-        {"path": "tests/conformance/test_conformance_catalog.py", "mode": "100644"},
+        {"path": "tests/conformance/test_conformance_catalog.py", "mode": "100644"}
+      ]
+    },
+    {
+      "id": "T06",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
+      "state": "active",
+      "branch": "codex/phase-1-ci-toolchain",
+      "base_commit": "1c949b01a25208d91e0c7380facfd6ed9d48f833",
+      "base_tree": "85153f261e574d1287970d7ce14c3446e4e0d020",
+      "path_transitions": [],
+      "owned_paths": [
+        {"path": ".github/governance/ci-tools.lock.v1.json", "mode": "100644"},
+        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
+        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
+        {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644"},
+        {"path": ".github/scripts/install-ci-tools.py", "mode": "100644"},
+        {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
+        {"path": ".github/workflows/ci.yml", "mode": "100644"},
+        {"path": "tests/conformance/test_ci_toolchain.py", "mode": "100644"},
         {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"}
       ]
     }

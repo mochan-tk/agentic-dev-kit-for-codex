@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -20,8 +21,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T05"
-CURRENT_TASK_BRANCH = "codex/phase-1-hierarchy-agreement"
+CURRENT_TASK_ID = "T06"
+CURRENT_TASK_BRANCH = "codex/phase-1-ci-toolchain"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -47,6 +48,22 @@ OVERALL_COMPLETION_CONDITION = (
     "completion pull request changing `release_blocked` to `false` is merged."
 )
 REQUIRED_CONTRACTS = [f"K{number:02d}" for number in range(1, 21)]
+REVIEWED_T06_QUALITY_ANCHORS = [
+    "python3 -I .github/scripts/check-phase0-contracts.py",
+    "python3 -I .github/scripts/check-repository-policy.py",
+    "python3 -I .github/scripts/install-ci-tools.py --lock "
+    ".github/governance/ci-tools.lock.v1.json --destination "
+    '"$RUNNER_TEMP/agentic-ci-tools" --check-repository',
+    "python3 -I .github/scripts/conformance-catalog.py check",
+    "bash .github/scripts/check-action-pins.sh",
+    "bash .github/scripts/tests/test-action-pins.sh",
+    "bash .github/scripts/check-workflow-permissions.sh",
+    "bash .github/scripts/tests/test-workflow-permissions.sh",
+    "python3 -I -m compileall -q .github/scripts tests/conformance",
+]
+REVIEWED_T06_CONFORMANCE_ANCHORS = [
+    "python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'"
+]
 
 
 class RepositoryPolicyTest(unittest.TestCase):
@@ -141,10 +158,179 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.write_ownership(root, payload)
         return path
 
-    def assert_rejected(self, errors, token):
+    def add_declared_file(self, root, relative, text="fixture\n"):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        payload = self.ownership_payload(root)
+        task = self.active_task(payload)
+        task["owned_paths"].append({"path": relative, "mode": "100644"})
+        task["owned_paths"].sort(key=lambda item: item["path"])
+        self.write_ownership(root, payload)
+        return path
+
+    def set_quality_registry(self, root, commands):
+        payload = self.ownership_payload(root)
+        payload["policy"]["required_quality_commands"] = list(commands)
+        self.write_ownership(root, payload)
+        path = root / ".github/workflows/ci.yml"
+        text = path.read_text(encoding="utf-8")
+        start = text.index("  quality:\n")
+        end = text.index("\n  conformance:\n")
+        command_steps = "".join(
+            f"      - name: Registry command {index}\n"
+            f"        run: {command}\n"
+            for index, command in enumerate(commands, start=1)
+        )
+        quality = (
+            "  quality:\n"
+            "    runs-on: ubuntu-latest\n"
+            "    permissions:\n"
+            "      contents: read\n"
+            "    steps:\n"
+            "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n"
+            "        with:\n"
+            "          fetch-depth: 0\n"
+            "          persist-credentials: false\n"
+            f"{command_steps}"
+        )
+        path.write_text(text[:start] + quality + text[end:], encoding="utf-8")
+
+    def transition_fixture(self, operation, *, destination=None):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        fixture = Path(temporary.name) / "repository"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--no-checkout", str(ROOT), str(fixture)],
+            check=True,
+        )
+        payload = copy.deepcopy(self.ownership_payload())
+        task = self.active_task(payload)
+        subprocess.run(
+            ["git", "checkout", "--quiet", "--detach", task["base_commit"]],
+            cwd=fixture,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "branch", "--force", "main", task["base_commit"]],
+            cwd=fixture,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "checkout",
+                "--quiet",
+                "-B",
+                task["branch"],
+                task["base_commit"],
+            ],
+            cwd=fixture,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "core.filemode", "true"], cwd=fixture, check=True
+        )
+        for relative in self.declared_paths(payload):
+            source_path = ROOT / relative
+            self.assertTrue(
+                source_path.is_file(), f"transition source missing: {relative}"
+            )
+            target_path = fixture / relative
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, target_path)
+        source = ".github/scripts/check-action-pins.sh"
+        source_owner = next(
+            owner
+            for owner in payload["tasks"]
+            if any(entry["path"] == source for entry in owner["owned_paths"])
+        )
+        source_entry = next(
+            entry for entry in source_owner["owned_paths"] if entry["path"] == source
+        )
+        transition = {
+            "operation": operation,
+            "source_path": source,
+            "source_owner": source_owner["id"],
+            "source_mode": source_entry["mode"],
+        }
+        if operation in {"delete", "rename"}:
+            source_owner["owned_paths"].remove(source_entry)
+        if operation in {"rename", "copy"}:
+            self.assertIsNotNone(destination)
+            transition.update(
+                {"destination_path": destination, "destination_mode": "100644"}
+            )
+            for owner in payload["tasks"]:
+                owner["owned_paths"] = [
+                    entry
+                    for entry in owner["owned_paths"]
+                    if entry["path"] != destination
+                ]
+            task["owned_paths"].append(
+                {"path": destination, "mode": "100644"}
+            )
+            task["owned_paths"].sort(key=lambda entry: entry["path"])
+        task["path_transitions"] = [transition]
+        for owner in payload["tasks"]:
+            owner["owned_paths"].sort(key=lambda entry: entry["path"])
+        self.write_ownership(fixture, payload)
+        source_path = fixture / source
+        if operation == "delete":
+            source_path.unlink()
+            entries = [("D", source)]
+        elif operation == "rename":
+            destination_path = fixture / destination
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination_path)
+            source_path.unlink()
+            entries = [("D", source), ("A", destination)]
+        elif operation == "copy":
+            destination_path = fixture / destination
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, destination_path)
+            entries = [("A", destination)]
+        else:
+            raise AssertionError(f"unsupported transition fixture: {operation}")
+        subprocess.run(["git", "add", "--all"], cwd=fixture, check=True)
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=Transition Test",
+                "-c",
+                "user.email=transition-test@example.invalid",
+                "commit",
+                "--quiet",
+                "-m",
+                f"exercise reviewed {operation} transition",
+            ],
+            cwd=fixture,
+            check=True,
+            env={
+                **os.environ,
+                "GIT_AUTHOR_DATE": "2000-01-01T00:00:00Z",
+                "GIT_COMMITTER_DATE": "2000-01-01T00:00:00Z",
+            },
+        )
+        return fixture, payload, task, entries
+
+    def assert_rejected(self, errors, token=None):
         rendered = "\n".join(errors)
         self.assertTrue(errors, "invalid fixture unexpectedly passed")
-        self.assertIn(token, rendered)
+        if token is not None:
+            self.assertIn(token, rendered)
+
+    def assert_ordered_subsequence(self, anchors, observed):
+        positions = []
+        for anchor in anchors:
+            self.assertEqual(
+                1,
+                observed.count(anchor),
+                f"reviewed registry anchor must occur exactly once: {anchor}",
+            )
+            positions.append(observed.index(anchor))
+        self.assertEqual(sorted(positions), positions, "reviewed registry order drifted")
 
     def current_feature_head(self):
         active_base = self.active_task(self.ownership_payload())["base_commit"]
@@ -308,11 +494,11 @@ class RepositoryPolicyTest(unittest.TestCase):
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
 
-    def test_active_task_helper_selects_t05_among_disjoint_active_tasks(self):
+    def test_active_task_helper_selects_t06_among_disjoint_active_tasks(self):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T05", self.active_task(payload)["id"])
+        self.assertEqual("T06", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assertEqual([], errors)
@@ -1050,6 +1236,16 @@ class RepositoryPolicyTest(unittest.TestCase):
         )
         self.assert_rejected(self.errors_for(fixture), "required job drift")
 
+    def test_t06_registry_preserves_ordered_reviewed_core_while_allowing_growth(self):
+        policy = self.ownership_payload()["policy"]
+        self.assert_ordered_subsequence(
+            REVIEWED_T06_QUALITY_ANCHORS, policy["required_quality_commands"]
+        )
+        self.assert_ordered_subsequence(
+            REVIEWED_T06_CONFORMANCE_ANCHORS,
+            policy["required_conformance_commands"],
+        )
+
     def test_duplicate_required_job_is_rejected(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
@@ -1184,10 +1380,10 @@ jobs:
         path.write_text(
             path.read_text(encoding="utf-8").replace(
                 "      - name: Validate live repository policy\n"
-                "        run: python3 .github/scripts/check-repository-policy.py",
+                "        run: python3 -I .github/scripts/check-repository-policy.py",
                 "      - name: Validate live repository policy\n"
                 "        if: false\n"
-                "        run: python3 .github/scripts/check-repository-policy.py",
+                "        run: python3 -I .github/scripts/check-repository-policy.py",
                 1,
             ),
             encoding="utf-8",
@@ -1237,8 +1433,8 @@ jobs:
             ),
             (
                 "shell",
-                "        run: python3 .github/scripts/check-repository-policy.py\n",
-                "        run: python3 .github/scripts/check-repository-policy.py\n"
+                "        run: python3 -I .github/scripts/check-repository-policy.py\n",
+                "        run: python3 -I .github/scripts/check-repository-policy.py\n"
                 "        shell: bash\n",
                 "unsupported fields or execution modifiers",
             ),
@@ -1274,7 +1470,7 @@ jobs:
         path = fixture / ".github/workflows/ci.yml"
         text = path.read_text(encoding="utf-8").replace(
             "      - name: Validate live repository policy\n"
-            "        run: python3 .github/scripts/check-repository-policy.py\n",
+            "        run: python3 -I .github/scripts/check-repository-policy.py\n",
             "",
             1,
         )
@@ -1318,6 +1514,38 @@ jobs:
         )
         self.assert_rejected(self.errors_for(fixture), "full commit SHA")
 
+    def test_local_action_is_rejected_before_hidden_dependencies_can_run(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(
+            fixture,
+            ".github/actions/local/action.yml",
+            "name: local\nruns:\n  using: composite\n  steps:\n"
+            "    - uses: actions/cache@v4\n",
+        )
+        self.add_declared_workflow(
+            fixture,
+            "name: local-action\non: [push]\npermissions: {}\njobs:\n"
+            "  observe:\n    runs-on: ubuntu-latest\n    permissions:\n"
+            "      contents: read\n    steps:\n"
+            "      - uses: ./.github/actions/local\n",
+            filename="local-action.yml",
+        )
+        self.assert_rejected(self.errors_for(fixture), "local Actions are unsupported")
+
+    def test_dormant_local_action_metadata_is_rejected_repository_wide(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(
+            fixture,
+            ".github/actions/dormant/action.yml",
+            "name: dormant\nruns:\n  using: composite\n  steps:\n"
+            "    - uses: actions/cache@v4\n",
+        )
+        self.assert_rejected(
+            self.errors_for(fixture), "local Action metadata is unsupported"
+        )
+
     def test_invalid_permissions_are_rejected(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
@@ -1334,14 +1562,334 @@ jobs:
         path = fixture / ".github/workflows/ci.yml"
         path.write_text(
             path.read_text(encoding="utf-8").replace(
-                "        run: python3 .github/scripts/check-repository-policy.py",
+                "        run: python3 -I .github/scripts/check-repository-policy.py",
                 "        continue-on-error: true\n"
-                "        run: python3 .github/scripts/check-repository-policy.py",
+                "        run: python3 -I .github/scripts/check-repository-policy.py",
                 1,
             ),
             encoding="utf-8",
         )
         self.assert_rejected(self.errors_for(fixture), "forbidden continue-on-error")
+
+    def test_all_required_job_execution_escape_metadata_is_rejected(self):
+        mutations = (
+            ("needs", "    needs: bootstrap\n"),
+            ("timeout", "    timeout-minutes: 1\n"),
+            ("environment", "    environment: production\n"),
+            ("container", "    container: alpine:3\n"),
+            ("services", "    services: {}\n"),
+            ("concurrency", "    concurrency: never\n"),
+            ("continue", "    continue-on-error: false\n"),
+        )
+        for label, metadata in mutations:
+            with self.subTest(label=label):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / ".github/workflows/ci.yml"
+                path.write_text(
+                    path.read_text(encoding="utf-8").replace(
+                        "  quality:\n    runs-on:",
+                        f"  quality:\n{metadata}    runs-on:",
+                        1,
+                    ),
+                    encoding="utf-8",
+                )
+                self.assert_rejected(
+                    self.errors_for(fixture), "unsupported job metadata"
+                )
+
+    def test_new_governed_checkers_and_tests_pass_when_reachable(self):
+        cases = (
+            (
+                ".github/scripts/check-future.py",
+                "raise SystemExit(0)\n",
+                "python3 -I .github/scripts/check-future.py",
+            ),
+            (
+                ".github/scripts/check-future.sh",
+                "#!/usr/bin/env bash\nexit 0\n",
+                "bash .github/scripts/check-future.sh",
+            ),
+            (
+                ".github/scripts/check_future.py",
+                "raise SystemExit(0)\n",
+                "python3 -I .github/scripts/check_future.py",
+            ),
+            (
+                ".github/scripts/tests/test-future.sh",
+                "#!/usr/bin/env bash\nexit 0\n",
+                "bash .github/scripts/tests/test-future.sh",
+            ),
+        )
+        for relative, content, command in cases:
+            with self.subTest(relative=relative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                self.add_declared_file(fixture, relative, content)
+                commands = self.ownership_payload(fixture)["policy"][
+                    "required_quality_commands"
+                ]
+                commands.append(command)
+                self.set_quality_registry(fixture, commands)
+                self.assertEqual([], self.errors_for(fixture))
+
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(
+            fixture,
+            "tests/conformance/test_future.py",
+            "import unittest\n\nclass FutureTest(unittest.TestCase):\n"
+            "    def test_future(self):\n        self.assertTrue(True)\n",
+        )
+        self.assertEqual([], self.errors_for(fixture))
+
+    def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
+        reviewed = "python3 -I .github/scripts/check-repository-policy.py"
+        escapes = (
+            f"{reviewed} || true",
+            f"{reviewed} | true",
+            f"{reviewed}; true",
+            f"{reviewed}\ntrue",
+            f"{reviewed} &",
+            f"({reviewed})",
+            f"$({reviewed})",
+        )
+        for command in escapes:
+            with self.subTest(command=command):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                commands = self.ownership_payload(fixture)["policy"][
+                    "required_quality_commands"
+                ]
+                commands[commands.index(reviewed)] = command
+                self.set_quality_registry(fixture, commands)
+                self.assert_rejected(self.errors_for(fixture))
+
+    def test_command_registry_rejects_reviewed_command_reordering(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        commands = self.ownership_payload(fixture)["policy"][
+            "required_quality_commands"
+        ]
+        commands[0], commands[1] = commands[1], commands[0]
+        self.set_quality_registry(fixture, commands)
+        self.assert_rejected(self.errors_for(fixture))
+
+    def test_quality_registry_requires_policy_guards_as_exact_prefix(self):
+        for position in (0, 1):
+            with self.subTest(position=position):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                relative = ".github/scripts/check-pre-guard.sh"
+                self.add_declared_file(
+                    fixture, relative, "#!/usr/bin/env bash\nexit 0\n"
+                )
+                commands = self.ownership_payload(fixture)["policy"][
+                    "required_quality_commands"
+                ]
+                commands.insert(position, f"bash {relative}")
+                self.set_quality_registry(fixture, commands)
+                self.assert_rejected(
+                    self.errors_for(fixture),
+                    "must begin with the frozen and live policy guards",
+                )
+
+    def test_isolated_python_invocation_defeats_script_directory_shadowing(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(
+            fixture,
+            ".github/scripts/json.py",
+            "import os\nos._exit(0)\n",
+        )
+        unsafe = subprocess.run(
+            ["python3", ".github/scripts/check-repository-policy.py"],
+            cwd=fixture,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(0, unsafe.returncode, "shadow exploit fixture is ineffective")
+        isolated = subprocess.run(
+            ["python3", "-I", ".github/scripts/check-repository-policy.py"],
+            cwd=fixture,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertNotEqual(0, isolated.returncode)
+        self.assertIn("Python execution-root shadow surface", isolated.stderr)
+        self.assert_rejected(
+            self.errors_for(fixture), "Python execution-root shadow surface"
+        )
+
+    def test_command_registry_rejects_governed_checker_omission(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        commands = self.ownership_payload(fixture)["policy"][
+            "required_quality_commands"
+        ]
+        commands.remove("python3 -I .github/scripts/check-repository-policy.py")
+        self.set_quality_registry(fixture, commands)
+        self.assert_rejected(self.errors_for(fixture))
+
+    def test_direct_registry_path_cannot_be_interpreter_option(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        relative = "-Wignore/test_future.py"
+        self.add_declared_file(fixture, relative, "raise SystemExit(1)\n")
+        commands = self.ownership_payload(fixture)["policy"][
+            "required_quality_commands"
+        ]
+        commands.append(f"python3 -I {relative}")
+        self.set_quality_registry(fixture, commands)
+        self.assert_rejected(
+            self.errors_for(fixture), "unsafe registry command"
+        )
+
+    def test_governed_checker_and_shell_test_discovery_fail_closed(self):
+        for relative, content in (
+            (".github/scripts/check-extra-policy.py", "raise SystemExit(0)\n"),
+            (".github/scripts/check_extra_policy.py", "raise SystemExit(0)\n"),
+            (".github/scripts/tests/test-extra-policy.sh", "#!/usr/bin/env bash\nexit 0\n"),
+        ):
+            with self.subTest(relative=relative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                self.add_declared_file(fixture, relative, content)
+                self.assert_rejected(self.errors_for(fixture))
+
+    def test_ambiguous_shell_execution_root_surfaces_fail_closed(self):
+        for relative in (
+            ".github/scripts/validate-future.sh",
+            ".github/scripts/tests/integration-future.sh",
+            ".github/scripts/nested/check-future.sh",
+            ".github/scripts/check-future",
+            ".github/scripts/check-future.bash",
+            ".github/scripts/tests/test-future",
+            ".github/scripts/tests/test-future.bash",
+        ):
+            with self.subTest(relative=relative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                self.add_declared_file(
+                    fixture, relative, "#!/usr/bin/env bash\nexit 0\n"
+                )
+                self.assert_rejected(
+                    self.errors_for(fixture), "script execution-root surface"
+                )
+
+    def test_python_tests_outside_canonical_conformance_discovery_are_rejected(self):
+        relative = ".github/scripts/tests/test_silent.py"
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(
+            fixture,
+            relative,
+            "import unittest\n\nclass Silent(unittest.TestCase):\n"
+            "    def test_fails(self):\n        self.fail('must run')\n",
+        )
+        commands = self.ownership_payload(fixture)["policy"][
+            "required_quality_commands"
+        ]
+        commands.append(f"python3 -I {relative}")
+        self.set_quality_registry(fixture, commands)
+        self.assert_rejected(
+            self.errors_for(fixture),
+            "governed Python tests must use canonical top-level conformance discovery",
+        )
+
+    def test_nested_conformance_test_requires_direct_registry_reachability(self):
+        relative = "tests/conformance/nested/test_future.py"
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(fixture, relative, "raise SystemExit(0)\n")
+        self.assert_rejected(
+            self.errors_for(fixture), "must be top-level canonical"
+        )
+
+        commands = self.ownership_payload(fixture)["policy"][
+            "required_quality_commands"
+        ]
+        commands.append(f"python3 -I {relative}")
+        self.set_quality_registry(fixture, commands)
+        self.assert_rejected(
+            self.errors_for(fixture), "must be top-level canonical"
+        )
+
+    def test_nonimportable_conformance_basename_requires_direct_execution(self):
+        relative = "tests/conformance/test_future-hidden.py"
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        self.add_declared_file(fixture, relative, "raise SystemExit(0)\n")
+        self.assert_rejected(
+            self.errors_for(fixture), "must be top-level canonical"
+        )
+
+        commands = self.ownership_payload(fixture)["policy"][
+            "required_quality_commands"
+        ]
+        commands.append(f"python3 -I {relative}")
+        self.set_quality_registry(fixture, commands)
+        self.assert_rejected(
+            self.errors_for(fixture), "must be top-level canonical"
+        )
+
+    def test_echo_comment_and_compile_mentions_do_not_establish_reachability(self):
+        mentions = (
+            "echo bash .github/scripts/tests/test-extra-policy.sh",
+            "# bash .github/scripts/tests/test-extra-policy.sh",
+            "python3 -I -m py_compile .github/scripts/tests/test-extra-policy.sh",
+        )
+        for command in mentions:
+            with self.subTest(command=command):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                relative = ".github/scripts/tests/test-extra-policy.sh"
+                self.add_declared_file(
+                    fixture, relative, "#!/usr/bin/env bash\nexit 0\n"
+                )
+                commands = self.ownership_payload(fixture)["policy"][
+                    "required_quality_commands"
+                ]
+                commands.append(command)
+                self.set_quality_registry(fixture, commands)
+                self.assert_rejected(self.errors_for(fixture))
+
+    def test_conformance_discovery_pattern_cannot_hide_governed_tests(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        payload = self.ownership_payload(fixture)
+        payload["policy"]["required_conformance_commands"] = [
+            "python3 -I -m unittest discover -s tests/conformance -p 'test_phase0*.py'"
+        ]
+        self.write_ownership(fixture, payload)
+        path = fixture / ".github/workflows/ci.yml"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'",
+                "python3 -I -m unittest discover -s tests/conformance -p 'test_phase0*.py'",
+            ),
+            encoding="utf-8",
+        )
+        self.assert_rejected(
+            self.errors_for(fixture),
+            "governed conformance test is not reachable",
+        )
+
+    def test_stale_phase0_conformance_step_label_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / ".github/workflows/ci.yml"
+        text = path.read_text(encoding="utf-8").replace(
+            "Run repository conformance tests", "Run Phase 0 conformance tests"
+        )
+        path.write_text(text, encoding="utf-8")
+        self.assert_rejected(
+            self.errors_for(fixture), "stale Phase 0 conformance step label"
+        )
 
     def test_stale_or_missing_base_evidence_is_rejected(self):
         payload = self.ownership_payload()
@@ -1382,8 +1930,8 @@ jobs:
         active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T06",
-                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
+                "id": "T07",
+                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
                 "state": "active",
                 "branch": "codex/phase-1-next-task",
                 "base_commit": subprocess.check_output(
@@ -1403,6 +1951,524 @@ jobs:
         self.assertIsNotNone(task)
         self.checker.authorize_changed_paths(task, [OWNERSHIP], errors)
         self.assertEqual([], errors)
+
+    def test_exact_path_transition_schema_accepts_delete_rename_and_copy(self):
+        cases = (
+            ("delete", None),
+            ("rename", ".github/scripts/check-action-pins-renamed.sh"),
+            ("copy", ".github/scripts/check-action-pins-copy.sh"),
+        )
+        for operation, destination in cases:
+            with self.subTest(operation=operation):
+                _fixture, payload, _task, _entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                errors = []
+                self.checker.validate_manifest(payload, errors)
+                self.assertEqual([], errors)
+
+    def test_active_transition_requires_an_accepted_source_owner(self):
+        cases = (
+            ("delete", None),
+            ("rename", ".github/scripts/active-source-renamed.sh"),
+            ("copy", ".github/scripts/active-source-copy.sh"),
+        )
+        for operation, destination in cases:
+            with self.subTest(operation=operation):
+                _fixture, payload, task, _entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                source_owner = task["path_transitions"][0]["source_owner"]
+                next(
+                    owner for owner in payload["tasks"] if owner["id"] == source_owner
+                )["state"] = "active"
+                errors = []
+                self.checker.validate_manifest(payload, errors)
+                self.assert_rejected(
+                    errors, "source_owner must be an accepted Task"
+                )
+
+    def test_active_transition_may_reference_its_own_exact_base_owner(self):
+        for operation, destination in (
+            ("delete", None),
+            ("rename", ".github/scripts/self-renamed.sh"),
+            ("copy", ".github/scripts/self-copy.sh"),
+        ):
+            with self.subTest(operation=operation):
+                _fixture, payload, task, _entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                transition = task["path_transitions"][0]
+                transition["source_owner"] = task["id"]
+                if operation == "copy":
+                    source = transition["source_path"]
+                    source_entry = None
+                    for owner in payload["tasks"]:
+                        for entry in list(owner["owned_paths"]):
+                            if entry["path"] == source:
+                                source_entry = entry
+                                owner["owned_paths"].remove(entry)
+                    self.assertIsNotNone(source_entry)
+                    task["owned_paths"].append(source_entry)
+                    for owner in payload["tasks"]:
+                        owner["owned_paths"].sort(key=lambda item: item["path"])
+                errors = []
+                self.checker.validate_manifest(payload, errors)
+                self.assertEqual([], errors)
+
+    def test_path_transition_schema_rejects_missing_extra_and_invalid_fields(self):
+        mutations = (
+            (
+                "missing",
+                lambda transition: transition.pop("destination_mode"),
+                "unsupported or missing fields",
+            ),
+            (
+                "extra",
+                lambda transition: transition.__setitem__("reason", "trust me"),
+                "unsupported or missing fields",
+            ),
+            (
+                "operation",
+                lambda transition: transition.__setitem__("operation", "move"),
+                "operation is unsupported",
+            ),
+            (
+                "unhashable-operation",
+                lambda transition: transition.__setitem__("operation", []),
+                "operation is unsupported",
+            ),
+            (
+                "source-path",
+                lambda transition: transition.__setitem__("source_path", "../source"),
+                "source_path is not a normalized repository path",
+            ),
+            (
+                "destination-mode",
+                lambda transition: transition.__setitem__("destination_mode", "120000"),
+                "destination_mode is unsupported",
+            ),
+        )
+        for label, mutation, token in mutations:
+            with self.subTest(label=label):
+                _fixture, payload, task, _entries = self.transition_fixture(
+                    "rename",
+                    destination=".github/scripts/check-action-pins-renamed.sh",
+                )
+                mutation(task["path_transitions"][0])
+                errors = []
+                self.checker.validate_manifest(payload, errors)
+                self.assert_rejected(errors, token)
+
+    def test_path_transitions_reject_duplicate_unsorted_and_colliding_entries(self):
+        fixture, payload, task, _entries = self.transition_fixture(
+            "rename", destination=".github/scripts/renamed.sh"
+        )
+        original = copy.deepcopy(task["path_transitions"][0])
+        cases = (
+            ("duplicate", [original, copy.deepcopy(original)], "duplicate"),
+            (
+                "duplicate-source",
+                [
+                    original,
+                    {
+                        **original,
+                        "operation": "copy",
+                        "destination_path": ".github/scripts/second-copy.sh",
+                    },
+                ],
+                "duplicate source or destination",
+            ),
+            (
+                "duplicate-destination",
+                [
+                    original,
+                    {
+                        **original,
+                        "source_path": "other-source.sh",
+                    },
+                ],
+                "duplicate source or destination",
+            ),
+            (
+                "unsorted",
+                [
+                    {
+                        **original,
+                        "source_path": "z-source.sh",
+                        "destination_path": "z-destination.sh",
+                    },
+                    original,
+                ],
+                "must be sorted",
+            ),
+            (
+                "collision",
+                [
+                    original,
+                    {
+                        **original,
+                        "source_path": "other-source.sh",
+                        "destination_path": ".github/scripts/RENAMED.sh",
+                    },
+                ],
+                "path collision",
+            ),
+        )
+        for label, transitions, token in cases:
+            with self.subTest(label=label):
+                candidate = copy.deepcopy(payload)
+                self.active_task(candidate)["path_transitions"] = transitions
+                errors = []
+                self.checker.validate_manifest(candidate, errors)
+                self.assert_rejected(errors, token)
+        self.assertTrue(fixture.is_dir())
+
+    def test_accepted_historical_task_retains_strict_inert_transition_evidence(self):
+        _fixture, payload, task, _entries = self.transition_fixture(
+            "copy", destination=".github/scripts/historical-copy.sh"
+        )
+        task["state"] = "accepted"
+        next(owner for owner in payload["tasks"] if owner["id"] == "T05")[
+            "state"
+        ] = "active"
+        errors = []
+        self.checker.validate_manifest(payload, errors)
+        self.assertEqual([], errors)
+        self.checker.validate_accepted_transition_evidence(_fixture, payload, errors)
+        self.assertEqual([], errors)
+        self.assertEqual("copy", task["path_transitions"][0]["operation"])
+
+        malformed = copy.deepcopy(payload)
+        next(owner for owner in malformed["tasks"] if owner["id"] == "T06")[
+            "path_transitions"
+        ][0]["unreviewed"] = True
+        errors = []
+        self.checker.validate_manifest(malformed, errors)
+        self.assert_rejected(errors, "unsupported or missing fields")
+
+    def test_accepted_transition_evidence_remains_exact_base_bound(self):
+        cases = (
+            (
+                "source",
+                lambda transition: transition.__setitem__(
+                    "source_path", ".github/scripts/not-in-base.sh"
+                ),
+                "source path is absent from the Task base",
+            ),
+            (
+                "owner",
+                lambda transition: transition.__setitem__("source_owner", "T03"),
+                "source owner",
+            ),
+            (
+                "mode",
+                lambda transition: transition.__setitem__("source_mode", "100755"),
+                "source mode",
+            ),
+            (
+                "destination",
+                lambda transition: transition.__setitem__(
+                    "destination_path", "README.md"
+                ),
+                "destination exists in the Task base",
+            ),
+        )
+        for name, mutation, token in cases:
+            with self.subTest(name=name):
+                fixture, payload, task, _entries = self.transition_fixture(
+                    "copy", destination=".github/scripts/historical-copy.sh"
+                )
+                task["state"] = "accepted"
+                next(owner for owner in payload["tasks"] if owner["id"] == "T05")[
+                    "state"
+                ] = "active"
+                mutation(task["path_transitions"][0])
+                errors = []
+                self.checker.validate_accepted_transition_evidence(
+                    fixture, payload, errors
+                )
+                self.assert_rejected(errors, token)
+
+    def test_accepted_transition_cannot_authorize_active_task_diff(self):
+        fixture, payload, historical, _entries = self.transition_fixture(
+            "rename", destination=".github/scripts/historical-rename.sh"
+        )
+        historical["state"] = "accepted"
+        manifest_entry = next(
+            entry
+            for entry in historical["owned_paths"]
+            if entry["path"] == OWNERSHIP
+        )
+        historical["owned_paths"].remove(manifest_entry)
+        active = {
+            "id": "T07",
+            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+            "state": "active",
+            "branch": historical["branch"],
+            "base_commit": historical["base_commit"],
+            "base_tree": historical["base_tree"],
+            "path_transitions": [],
+            "owned_paths": [manifest_entry],
+        }
+        payload["tasks"].append(active)
+        self.write_ownership(fixture, payload)
+        errors = []
+        self.checker.validate_manifest(payload, errors)
+        self.assertEqual([], errors)
+        selected = self.checker.active_task_for_branch(
+            payload, active["branch"], errors
+        )
+        self.assertIs(selected, active)
+        self.checker.validate_execution_authorization(fixture, payload, {}, errors)
+        rendered = "\n".join(errors)
+        self.assertIn(
+            "undeclared deletion: .github/scripts/check-action-pins.sh", rendered
+        )
+        self.assertIn(
+            "undeclared addition: .github/scripts/historical-rename.sh", rendered
+        )
+
+    def test_path_transition_authorization_positive_cases_are_exact_base_bound(self):
+        cases = (
+            ("delete", None),
+            ("rename", ".github/scripts/renamed-action-pins.sh"),
+            ("copy", ".github/scripts/copied-action-pins.sh"),
+        )
+        for operation, destination in cases:
+            with self.subTest(operation=operation):
+                fixture, payload, task, entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, entries, errors
+                )
+                self.assertEqual([], errors)
+
+    def test_real_git_diff_execution_authorization_accepts_reviewed_transitions(self):
+        cases = (
+            ("delete", None),
+            ("rename", ".github/scripts/check-e2e-renamed-action-pins.sh"),
+            ("copy", ".github/scripts/check-e2e-copied-action-pins.sh"),
+        )
+        for operation, destination in cases:
+            with self.subTest(operation=operation):
+                fixture, payload, _task, _entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                if destination is not None:
+                    commands = payload["policy"]["required_quality_commands"]
+                    commands.append(f"bash {destination}")
+                    self.set_quality_registry(fixture, commands)
+                    payload = self.ownership_payload(fixture)
+                errors = []
+                self.checker.validate_execution_authorization(
+                    fixture, payload, {}, errors
+                )
+                self.assertEqual([], errors)
+                self.assertEqual(
+                    [], self.checker.validate_repository(fixture, environment={})
+                )
+
+    def test_execution_authorization_actually_wires_transition_validator(self):
+        fixture, payload, _task, _entries = self.transition_fixture(
+            "copy", destination=".github/scripts/e2e-wired-copy.sh"
+        )
+        validator = self.checker.validate_path_transitions
+        with mock.patch.object(
+            self.checker, "validate_path_transitions", wraps=validator
+        ) as observed:
+            errors = []
+            self.checker.validate_execution_authorization(
+                fixture, payload, {}, errors
+            )
+        self.assertEqual([], errors)
+        self.assertGreaterEqual(observed.call_count, 1)
+
+    def test_real_git_diff_rejects_unconsumed_undeclared_and_wrong_base_changes(self):
+        cases = (
+            ("unconsumed", "transition"),
+            ("undeclared-add", "unowned.txt"),
+            ("undeclared-delete", "LICENSE"),
+            ("wrong-base", "base_commit"),
+            ("base-missing-source", "source path is absent from the Task base"),
+        )
+        for defect, token in cases:
+            with self.subTest(defect=defect):
+                fixture, payload, task, _entries = self.transition_fixture(
+                    "copy", destination=".github/scripts/e2e-negative-copy.sh"
+                )
+                if defect == "unconsumed":
+                    task["path_transitions"] = []
+                    self.write_ownership(fixture, payload)
+                elif defect == "undeclared-add":
+                    (fixture / "unowned.txt").write_text("unowned\n", encoding="utf-8")
+                elif defect == "undeclared-delete":
+                    (fixture / "LICENSE").unlink()
+                elif defect == "wrong-base":
+                    task["base_commit"] = "0" * 40
+                    task["base_tree"] = "f" * 40
+                    self.write_ownership(fixture, payload)
+                else:
+                    task["path_transitions"][0]["source_path"] = (
+                        ".github/scripts/not-in-task-base.sh"
+                    )
+                    self.write_ownership(fixture, payload)
+                subprocess.run(["git", "add", "--all"], cwd=fixture, check=True)
+                errors = []
+                self.checker.validate_execution_authorization(
+                    fixture, payload, {}, errors
+                )
+                self.assert_rejected(errors, token)
+
+    def test_path_transition_rejects_wrong_source_owner_mode_or_base(self):
+        mutations = (
+            (
+                "owner",
+                lambda task: task["path_transitions"][0].__setitem__(
+                    "source_owner", "T03"
+                ),
+                "source owner",
+            ),
+            (
+                "mode",
+                lambda task: task["path_transitions"][0].__setitem__(
+                    "source_mode", "100755"
+                ),
+                "source mode",
+            ),
+            (
+                "commit",
+                lambda task: task.__setitem__("base_commit", "0" * 40),
+                "base commit",
+            ),
+            (
+                "tree",
+                lambda task: task.__setitem__("base_tree", "f" * 40),
+                "base tree",
+            ),
+        )
+        for label, mutation, token in mutations:
+            with self.subTest(label=label):
+                fixture, payload, task, entries = self.transition_fixture("delete")
+                mutation(task)
+                self.write_ownership(fixture, payload)
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, entries, errors
+                )
+                self.assert_rejected(errors, token)
+
+    def test_path_transition_rejects_unconsumed_or_undeclared_diff_entries(self):
+        cases = (
+            ("unconsumed", [], "transition is not consumed"),
+            ("undeclared-delete", [("D", "LICENSE")], "undeclared deletion"),
+            ("undeclared-add", [("A", "unowned.txt")], "undeclared addition"),
+            ("undeclared-modify", [("M", "README.md")], "undeclared modification"),
+        )
+        for label, extra_entries, token in cases:
+            with self.subTest(label=label):
+                fixture, payload, task, entries = self.transition_fixture("delete")
+                observed = extra_entries if label == "unconsumed" else entries + extra_entries
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, observed, errors
+                )
+                self.assert_rejected(errors, token)
+
+    def test_rename_and_copy_require_new_owned_destination_with_base_blob_content(self):
+        cases = (
+            ("rename", ".github/scripts/renamed-action-pins.sh"),
+            ("copy", ".github/scripts/copied-action-pins.sh"),
+        )
+        for operation, destination in cases:
+            with self.subTest(operation=operation, defect="ownership"):
+                fixture, payload, task, entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                task["owned_paths"] = [
+                    entry for entry in task["owned_paths"] if entry["path"] != destination
+                ]
+                self.write_ownership(fixture, payload)
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, entries, errors
+                )
+                self.assert_rejected(errors, "destination ownership")
+
+            with self.subTest(operation=operation, defect="content"):
+                fixture, payload, task, entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                (fixture / destination).write_text("changed during transition\n", encoding="utf-8")
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, entries, errors
+                )
+                self.assert_rejected(errors, "destination blob")
+
+            with self.subTest(operation=operation, defect="mode"):
+                fixture, payload, task, entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                (fixture / destination).chmod(0o755)
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, entries, errors
+                )
+                self.assert_rejected(errors, "destination mode")
+
+    def test_transition_destination_must_not_exist_in_exact_base(self):
+        fixture, payload, task, entries = self.transition_fixture(
+            "rename", destination="README.md"
+        )
+        errors = []
+        self.checker.validate_path_transitions(
+            fixture, payload, task, entries, errors
+        )
+        self.assert_rejected(errors, "destination exists in the Task base")
+
+    def test_delete_and_rename_require_source_absent_but_copy_requires_source_present(self):
+        cases = (
+            ("delete", None, True, "source must be absent"),
+            (
+                "rename",
+                ".github/scripts/renamed-action-pins.sh",
+                True,
+                "source must be absent",
+            ),
+            (
+                "copy",
+                ".github/scripts/copied-action-pins.sh",
+                False,
+                "copy source must remain",
+            ),
+        )
+        for operation, destination, recreate, token in cases:
+            with self.subTest(operation=operation):
+                fixture, payload, task, entries = self.transition_fixture(
+                    operation, destination=destination
+                )
+                source = fixture / task["path_transitions"][0]["source_path"]
+                if recreate:
+                    base_blob = subprocess.check_output(
+                        [
+                            "git",
+                            "show",
+                            f"{task['base_commit']}:{task['path_transitions'][0]['source_path']}",
+                        ],
+                        cwd=fixture,
+                    )
+                    source.parent.mkdir(parents=True, exist_ok=True)
+                    source.write_bytes(base_blob)
+                else:
+                    source.unlink()
+                errors = []
+                self.checker.validate_path_transitions(
+                    fixture, payload, task, entries, errors
+                )
+                self.assert_rejected(errors, token)
 
     def test_local_branch_execution_context_passes(self):
         fixture = self.local_branch_fixture()
@@ -1504,12 +2570,8 @@ jobs:
     def test_local_branch_allows_checking_active_owned_dirty_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        relative = next(
-            entry["path"]
-            for entry in active["owned_paths"]
-            if entry["path"].endswith(".md")
-            and entry["path"] != "docs/conformance/catalog.md"
-        )
+        relative = ".github/scripts/check-repository-policy.py"
+        self.assertIn(relative, {entry["path"] for entry in active["owned_paths"]})
         path = fixture / relative
         path.write_text(
             path.read_text(encoding="utf-8") + "\n",
@@ -1518,6 +2580,28 @@ jobs:
         self.assertEqual(
             [], self.checker.validate_repository(fixture, environment={})
         )
+
+    def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
+        fixture = self.local_branch_fixture()
+        relative = ".github/governance/ci-tools.lock.v1.json"
+        self.assertEqual(
+            "A",
+            subprocess.check_output(
+                [
+                    "git",
+                    "diff",
+                    "--name-status",
+                    self.active_task(self.ownership_payload(fixture))["base_commit"],
+                    "--",
+                    relative,
+                ],
+                cwd=fixture,
+                text=True,
+            ).split()[0],
+        )
+        path = fixture / relative
+        path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        self.assertEqual([], self.local_authorization_errors(fixture))
 
     def test_github_pull_request_synthetic_ref_context_passes(self):
         fixture, head, merge = self.synthetic_pull_request_fixture()

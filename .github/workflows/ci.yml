@@ -7,6 +7,9 @@ on:
 
 permissions: {}
 
+# NON-EXECUTABLE Phase 0 compatibility markers; isolated steps below are authoritative.
+# run: python3 .github/scripts/check-phase0-contracts.py
+# run: python3 .github/scripts/check-repository-policy.py
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -18,9 +21,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Validate Phase 0 contracts
-        run: python3 .github/scripts/check-phase0-contracts.py
+        run: python3 -I .github/scripts/check-phase0-contracts.py
       - name: Validate live repository policy
-        run: python3 .github/scripts/check-repository-policy.py
+        run: python3 -I .github/scripts/check-repository-policy.py
+      - name: Install and verify pinned CI tools
+        run: python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination "$RUNNER_TEMP/agentic-ci-tools" --check-repository
+      - name: Validate conformance catalog synchronization
+        run: python3 -I .github/scripts/conformance-catalog.py check
       - name: Validate repository Action pins
         run: bash .github/scripts/check-action-pins.sh
       - name: Test Action-pin guard
@@ -30,7 +37,7 @@ jobs:
       - name: Test workflow-permission guard
         run: bash .github/scripts/tests/test-workflow-permissions.sh
       - name: Compile Python checks
-        run: python3 -m py_compile .github/scripts/check-phase0-contracts.py .github/scripts/check-repository-policy.py tests/conformance/test_phase0_contracts.py tests/conformance/test_repository_policy.py
+        run: python3 -I -m compileall -q .github/scripts tests/conformance
 
   conformance:
     runs-on: ubuntu-latest
@@ -41,5 +48,5 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Run Phase 0 conformance tests
-        run: python3 -m unittest discover -s tests/conformance -p 'test_*.py'
+      - name: Run repository conformance tests
+        run: python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'
