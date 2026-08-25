@@ -20,10 +20,13 @@ ROOT = Path(__file__).resolve().parents[2]
 SKILLS_ROOT = ".agents/skills"
 PARITY_PATH = "docs/agreements/skill-parity.v1.json"
 SOURCE_MANIFEST_PATH = "tests/skills/fixtures/source-manifest.v1.json"
-EXPECTED_PARITY_SHA256 = "53fd3c9a7fe959642f23c7f283e73216bee344a15d36d65f8f03c70561adebb4"
+EXPECTED_PARITY_SHA256 = "5afdf968f021d81b370bcdc3955ecf8a4155b670fe903596bd7c71b0727d54df"
 MAX_FILE_BYTES = 262_144
 MAX_DIRECTORY_ENTRIES = 64
 MAX_LIST_ITEMS = 32
+MAX_JSON_DEPTH = 32
+MAX_JSON_NODES = 4096
+MAX_JSON_STRING_LENGTH = 4096
 
 REQUIRED_SKILLS = [
     "project-onboarding",
@@ -77,6 +80,38 @@ REFERENCE_FILES = {
     "plan-management": "references/issue-graph-procedure.md",
     "project-onboarding": "references/onboarding-procedure.md",
     "session-orchestration": "references/orchestration-protocols.md",
+}
+
+ONBOARDING_CONTRACT_PATHS = (
+    ".agents/skills/project-onboarding/SKILL.md",
+    ".agents/skills/project-onboarding/references/onboarding-procedure.md",
+)
+
+ONBOARDING_CONTRACTS = {
+    "ONBOARD-REMOTE-DEFAULT-GATE": (
+        "Do not perform any GitHub write, including labels, Ruleset changes, "
+        "or Epic creation, until the kit baseline is reachable from the remote "
+        "default branch."
+    ),
+    "ONBOARD-COMMAND-EVIDENCE": (
+        "For every candidate command, record the exact command, environment "
+        "prerequisites, runtime, and result from a clean checkout."
+    ),
+    "ONBOARD-NO-UNRUN-PROMOTION": "Never promote an unrun command.",
+    "ONBOARD-EVIDENCE-PR-BOUNDARY": (
+        "Onboarding is not complete until an evidence PR exists or an exact "
+        "blocked-PR receipt and creation command are durably recorded."
+    ),
+    "ONBOARD-DEFERRED-LEDGER": (
+        "Write every unfinished or unverified item to a durable "
+        "`## Deferred from onboarding` ledger in the first active Epic or "
+        "evidence PR."
+    ),
+    "ONBOARD-CHAT-NOT-CARRIER": "Chat is not a carrier for deferred work.",
+    "ONBOARD-DURABLE-HANDOFF": (
+        "Replace the source Project-session step with a Codex-native durable "
+        "handoff to the first approved Epic/Task frontier."
+    ),
 }
 
 EXPECTED_FILES = {
@@ -288,7 +323,7 @@ def _pairs_without_duplicates(pairs):
     result = {}
     for key, value in pairs:
         if key in result:
-            raise DuplicateKeyError(f"duplicate JSON key: {key}")
+            raise DuplicateKeyError("duplicate JSON key")
         result[key] = value
     return result
 
@@ -542,10 +577,57 @@ def parse_json(root, relative, errors):
         return None, None
     try:
         value = json.loads(text, object_pairs_hook=_pairs_without_duplicates)
+    except RecursionError:
+        errors.append(f"invalid JSON in {relative}: parser recursion limit exceeded")
+        return None, text
     except (json.JSONDecodeError, DuplicateKeyError, ValueError) as exc:
         errors.append(f"invalid JSON in {relative}: {exc}")
         return None, text
+    if not validate_json_bounds(value, relative, errors):
+        return None, text
     return value, text
+
+
+def validate_json_bounds(value, relative, errors):
+    """Validate parsed JSON iteratively with root depth one and bounded work."""
+    stack = [(value, 1)]
+    nodes = 0
+    while stack:
+        current, depth = stack.pop()
+        if depth > MAX_JSON_DEPTH:
+            errors.append(f"JSON depth exceeds {MAX_JSON_DEPTH} in {relative}")
+            return False
+        nodes += 1
+        if nodes > MAX_JSON_NODES:
+            errors.append(f"JSON node count exceeds {MAX_JSON_NODES} in {relative}")
+            return False
+        if isinstance(current, str) and len(current) > MAX_JSON_STRING_LENGTH:
+            errors.append(f"JSON string length exceeds {MAX_JSON_STRING_LENGTH} in {relative}")
+            return False
+
+        if isinstance(current, dict):
+            child_count = len(current) * 2
+        elif isinstance(current, list):
+            child_count = len(current)
+        else:
+            child_count = 0
+        if child_count == 0:
+            continue
+
+        child_depth = depth + 1
+        if child_depth > MAX_JSON_DEPTH:
+            errors.append(f"JSON depth exceeds {MAX_JSON_DEPTH} in {relative}")
+            return False
+        if nodes + len(stack) + child_count > MAX_JSON_NODES:
+            errors.append(f"JSON node count exceeds {MAX_JSON_NODES} in {relative}")
+            return False
+        if isinstance(current, dict):
+            for key, child in current.items():
+                stack.append((child, child_depth))
+                stack.append((key, child_depth))
+        else:
+            stack.extend((child, child_depth) for child in reversed(current))
+    return True
 
 
 def _check_exact_keys(value, expected, label, errors):
@@ -835,6 +917,24 @@ def _visible_markdown_lines(text):
     return visible_lines
 
 
+def validate_onboarding_contracts(texts, errors):
+    """Require each onboarding contract in both reviewed visible Markdown files."""
+    for relative in ONBOARDING_CONTRACT_PATHS:
+        text = texts.get(relative)
+        if not isinstance(text, str):
+            for contract_id in ONBOARDING_CONTRACTS:
+                errors.append(f"missing {contract_id} in {relative}")
+            continue
+        visible = " ".join(
+            line.strip()
+            for line in _visible_markdown_lines(text)
+            if line.strip()
+        )
+        for contract_id, marker in ONBOARDING_CONTRACTS.items():
+            if marker not in visible:
+                errors.append(f"missing {contract_id} in {relative}")
+
+
 def _markdown_anchors(text):
     anchors = set()
     occurrences = {}
@@ -964,6 +1064,7 @@ def validate_skills(root, errors):
         canonical = [unicodedata.normalize("NFC", value).casefold() for value in values]
         if len(values) != len(REQUIRED_SKILLS) or len(set(canonical)) != len(REQUIRED_SKILLS):
             errors.append(f"Skill UI {label} must be present and unique by NFC casefold")
+    validate_onboarding_contracts(dict(all_text), errors)
     return all_text
 
 

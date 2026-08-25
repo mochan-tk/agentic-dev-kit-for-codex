@@ -98,6 +98,83 @@ class SkillContractTest(unittest.TestCase):
             self.checker.REFERENCE_FILES,
         )
 
+    def test_project_onboarding_load_bearing_contracts_are_required(self):
+        expected = {
+            "ONBOARD-REMOTE-DEFAULT-GATE": (
+                "Do not perform any GitHub write, including labels, Ruleset changes, "
+                "or Epic creation, until the kit baseline is reachable from the remote "
+                "default branch."
+            ),
+            "ONBOARD-COMMAND-EVIDENCE": (
+                "For every candidate command, record the exact command, environment "
+                "prerequisites, runtime, and result from a clean checkout."
+            ),
+            "ONBOARD-NO-UNRUN-PROMOTION": (
+                "Never promote an unrun command."
+            ),
+            "ONBOARD-EVIDENCE-PR-BOUNDARY": (
+                "Onboarding is not complete until an evidence PR exists or an exact "
+                "blocked-PR receipt and creation command are durably recorded."
+            ),
+            "ONBOARD-DEFERRED-LEDGER": (
+                "Write every unfinished or unverified item to a durable "
+                "`## Deferred from onboarding` ledger in the first active Epic or "
+                "evidence PR."
+            ),
+            "ONBOARD-CHAT-NOT-CARRIER": (
+                "Chat is not a carrier for deferred work."
+            ),
+            "ONBOARD-DURABLE-HANDOFF": (
+                "Replace the source Project-session step with a Codex-native durable "
+                "handoff to the first approved Epic/Task frontier."
+            ),
+        }
+        self.assertEqual(expected, self.checker.ONBOARDING_CONTRACTS)
+        paths = (
+            ".agents/skills/project-onboarding/SKILL.md",
+            ".agents/skills/project-onboarding/references/onboarding-procedure.md",
+        )
+        self.assertEqual(paths, self.checker.ONBOARDING_CONTRACT_PATHS)
+
+        complete = {relative: "\n".join(expected.values()) + "\n" for relative in paths}
+        for relative in paths:
+            visible = " ".join(
+                line.strip()
+                for line in self.checker._visible_markdown_lines(
+                    (ROOT / relative).read_text(encoding="utf-8")
+                )
+                if line.strip()
+            )
+            for marker in expected.values():
+                self.assertIn(marker, visible)
+
+        errors = []
+        self.checker.validate_onboarding_contracts(complete, errors)
+        self.assertEqual([], errors)
+
+        for contract_id, marker in expected.items():
+            for relative in paths:
+                with self.subTest(contract_id=contract_id, relative=relative):
+                    mutated = dict(complete)
+                    mutated[relative] = mutated[relative].replace(marker, "", 1)
+                    errors = []
+                    self.checker.validate_onboarding_contracts(mutated, errors)
+                    self.assert_rejected(errors, f"{contract_id} in {relative}")
+
+        for label, hidden in (
+            ("comment", "<!-- {marker} -->\n"),
+            ("fence", "```text\n{marker}\n```\n"),
+        ):
+            with self.subTest(hidden=label):
+                contract_id, marker = next(iter(expected.items()))
+                relative = paths[0]
+                mutated = dict(complete)
+                mutated[relative] = mutated[relative].replace(marker, "", 1)
+                mutated[relative] += hidden.format(marker=marker)
+                errors = []
+                self.checker.validate_onboarding_contracts(mutated, errors)
+                self.assert_rejected(errors, f"{contract_id} in {relative}")
+
     def test_missing_and_extra_skill_roots_are_rejected(self):
         fixture = self.copy_fixture()
         shutil.rmtree(fixture / ".agents/skills/retro")
@@ -737,6 +814,158 @@ class SkillContractTest(unittest.TestCase):
                 text = (fixture / relative).read_text(encoding="utf-8")
                 self.replace(fixture, relative, "{\n", '{\n  "schema": "duplicate",\n')
                 self.assert_rejected(self.errors_for(fixture), "duplicate JSON key")
+
+    def test_json_depth_node_and_string_limits_accept_exact_boundaries(self):
+        self.assertEqual(32, self.checker.MAX_JSON_DEPTH)
+        self.assertEqual(4096, self.checker.MAX_JSON_NODES)
+        self.assertEqual(4096, self.checker.MAX_JSON_STRING_LENGTH)
+
+        depth_value = 0
+        for _ in range(self.checker.MAX_JSON_DEPTH - 1):
+            depth_value = [depth_value]
+
+        node_value = {
+            f"key-{index:04d}": 0
+            for index in range((self.checker.MAX_JSON_NODES - 2) // 2)
+        }
+        node_value["key-0000"] = [0]
+
+        cases = (
+            ("depth", depth_value),
+            ("nodes-including-object-keys", node_value),
+            ("string-value", "x" * self.checker.MAX_JSON_STRING_LENGTH),
+            ("string-key", {"x" * self.checker.MAX_JSON_STRING_LENGTH: 0}),
+        )
+        for relative in (PARITY, SOURCE):
+            for label, payload in cases:
+                with self.subTest(relative=relative, label=label):
+                    temporary = tempfile.TemporaryDirectory()
+                    self.addCleanup(temporary.cleanup)
+                    root = Path(temporary.name) / "repository"
+                    target = root / relative
+                    target.parent.mkdir(parents=True)
+                    target.write_text(json.dumps(payload), encoding="utf-8")
+                    errors = []
+                    parsed, _ = self.checker.parse_json(root, relative, errors)
+                    self.assertIsNotNone(parsed)
+                    self.assertEqual([], errors)
+
+    def test_json_depth_node_and_string_limits_reject_over_boundaries(self):
+        self.assertEqual(32, self.checker.MAX_JSON_DEPTH)
+        self.assertEqual(4096, self.checker.MAX_JSON_NODES)
+        self.assertEqual(4096, self.checker.MAX_JSON_STRING_LENGTH)
+
+        depth_value = 0
+        for _ in range(self.checker.MAX_JSON_DEPTH):
+            depth_value = [depth_value]
+
+        cases = (
+            ("depth", depth_value, "JSON depth exceeds 32"),
+            (
+                "nodes-including-object-keys",
+                {
+                    f"key-{index:04d}": 0
+                    for index in range(self.checker.MAX_JSON_NODES // 2)
+                },
+                "JSON node count exceeds 4096",
+            ),
+            (
+                "string-value",
+                "x" * (self.checker.MAX_JSON_STRING_LENGTH + 1),
+                "JSON string length exceeds 4096",
+            ),
+            (
+                "string-key",
+                {"x" * (self.checker.MAX_JSON_STRING_LENGTH + 1): 0},
+                "JSON string length exceeds 4096",
+            ),
+        )
+        for relative in (PARITY, SOURCE):
+            for label, payload, token in cases:
+                with self.subTest(relative=relative, label=label):
+                    temporary = tempfile.TemporaryDirectory()
+                    self.addCleanup(temporary.cleanup)
+                    root = Path(temporary.name) / "repository"
+                    target = root / relative
+                    target.parent.mkdir(parents=True)
+                    target.write_text(json.dumps(payload), encoding="utf-8")
+                    errors = []
+                    parsed, _ = self.checker.parse_json(root, relative, errors)
+                    self.assertIsNone(parsed)
+                    self.assertEqual(1, len(errors), errors)
+                    self.assert_rejected(errors, token)
+                    for error in errors:
+                        self.assertLess(len(error), 512)
+                        self.assertNotIn("Traceback", error)
+
+    def test_json_recursion_failure_is_bounded_and_has_no_traceback(self):
+        for relative in (PARITY, SOURCE):
+            with self.subTest(relative=relative, kind="direct"):
+                temporary = tempfile.TemporaryDirectory()
+                self.addCleanup(temporary.cleanup)
+                root = Path(temporary.name) / "repository"
+                target = root / relative
+                target.parent.mkdir(parents=True)
+                target.write_text("{}\n", encoding="utf-8")
+                errors = []
+                with mock.patch.object(
+                    self.checker.json,
+                    "loads",
+                    side_effect=RecursionError("synthetic JSON recursion"),
+                ):
+                    parsed, _ = self.checker.parse_json(root, relative, errors)
+                self.assertIsNone(parsed)
+                self.assertEqual(1, len(errors), errors)
+                self.assert_rejected(errors, "parser recursion limit exceeded")
+                self.assertLess(len(errors[0]), 512)
+                self.assertNotIn("Traceback", errors[0])
+
+            with self.subTest(relative=relative, kind="cli"):
+                fixture = self.copy_fixture()
+                (fixture / relative).write_text(
+                    "[" * 2000 + "0" + "]" * 2000,
+                    encoding="utf-8",
+                )
+                checker = fixture / ".github/scripts/check-skills.py"
+                checker.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(CHECKER, checker)
+                completed = subprocess.run(
+                    ["python3", "-I", str(checker)],
+                    cwd=fixture,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertNotEqual(0, completed.returncode)
+                self.assertNotIn("Traceback", completed.stderr)
+                self.assertLess(len(completed.stderr), 4096)
+                self.assertTrue(
+                    "parser recursion limit exceeded" in completed.stderr
+                    or "JSON depth exceeds 32" in completed.stderr,
+                    completed.stderr,
+                )
+
+    def test_oversized_duplicate_json_key_has_a_fixed_bounded_error(self):
+        oversized_key = "x" * 4097
+        duplicate = json.dumps({oversized_key: 0})[:-1] + "," + json.dumps(oversized_key) + ":1}"
+        for relative in (PARITY, SOURCE):
+            with self.subTest(relative=relative):
+                temporary = tempfile.TemporaryDirectory()
+                self.addCleanup(temporary.cleanup)
+                root = Path(temporary.name) / "repository"
+                target = root / relative
+                target.parent.mkdir(parents=True)
+                target.write_text(duplicate, encoding="utf-8")
+                errors = []
+                parsed, _ = self.checker.parse_json(root, relative, errors)
+                self.assertIsNone(parsed)
+                self.assertEqual(
+                    [f"invalid JSON in {relative}: duplicate JSON key"],
+                    errors,
+                )
+                self.assertLess(len(errors[0]), 512)
+                self.assertNotIn(oversized_key, errors[0])
+                self.assertNotIn("Traceback", errors[0])
 
     def test_incomplete_invocation_evidence_is_rejected(self):
         fixture = self.copy_fixture()

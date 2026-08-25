@@ -17,9 +17,9 @@
         {"path": ".github/skills/project-onboarding/SKILL.md", "blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943"}
       ],
       "target_files": [
-        {"path": ".agents/skills/project-onboarding/SKILL.md", "sha256": "075b6024b64d3a3a0595f65c924be3f3d003a6f4aa7a3b6f4068c8f72483aa81"},
+        {"path": ".agents/skills/project-onboarding/SKILL.md", "sha256": "9956ce9e09c822bbe1fab9fb2602958ef0f5c82802c088e1f5064da248b31fb4"},
         {"path": ".agents/skills/project-onboarding/agents/openai.yaml", "sha256": "0dfc1ddb56dd06faa09931aff688071bea283ea1805c747f74902ceb2f1faeb6"},
-        {"path": ".agents/skills/project-onboarding/references/onboarding-procedure.md", "sha256": "6f126afda11297fdfbc5babddc95b910d02e694d158850efcd0eead0ae36f744"}
+        {"path": ".agents/skills/project-onboarding/references/onboarding-procedure.md", "sha256": "a29315afc5c8be772e677073f9801256cdc0c6eb99443eaa379b4ff887f42a29"}
       ],
       "trigger": {
         "use_when": "adopting this kit in a repository or explicitly re-tuning an existing adoption",
@@ -27,52 +27,108 @@
         "allow_implicit_invocation": false
       },
       "inputs": ["repository objective and default branch", "read-only code and governance inventory", "named human authority and adopter constraints"],
-      "outputs": ["evidence-backed inventory", "bounded onboarding intent and dry-run differences", "initial initiative or Epic proposals"],
-      "durable_records": ["reviewed repository diff", "Issue graph links", "exact-state verification and read-back evidence"],
-      "chronology": ["status", "inventory", "interview-and-intent", "verify-by-running", "approved-apply", "prove", "record"],
+      "outputs": ["evidence-backed inventory and bounded onboarding intent", "review-only repository initiative or Epic-set and initial Epic-body proposals", "clean-checkout command prerequisite runtime and result records", "guidance and verification for a separately owned explicitly approved application", "evidence PR or exact durable blocked-PR receipt and creation command", "Deferred from onboarding ledger and durable approved-frontier handoff"],
+      "durable_records": ["remote-default kit-baseline reachability evidence before GitHub writes", "durable proposed initiative Epic set and initial Epic bodies for human review", "exact command environment prerequisites runtime and result evidence", "reviewed application diff and effective-state read-back", "evidence PR URL or exact blocked-PR receipt and creation command", "Deferred from onboarding ledger in the first active Epic or evidence PR", "handoff to the first approved Epic and current Task frontier"],
+      "chronology": ["remote-default-preflight", "read-only-status-and-inventory", "interview-and-intent", "clean-checkout-verify-by-running", "separately-owned-explicitly-approved-application", "prove-and-read-back", "evidence-PR-or-durable-blocked-receipt", "deferred-ledger", "durable-approved-frontier-handoff"],
       "ownership": ["preserve adopter-owned truth", "separate sensors from actuators", "do not mutate outside approved onboarding scope"],
       "escalation": ["ambiguous authority", "destructive migration", "broad permission change", "privacy or agreement change"],
-      "verification": ["synchronize documented commands quality registry workflow and named environment evidence", "characterize legacy behavior before semantic migration", "compare approved intent with final diff", "read effective GitHub state back"],
-      "runtime_dependencies": ["no mandatory connector or installer", "authorized GitHub access only when a separately approved actuator is used"],
+      "verification": ["prove the remote default branch reaches the kit baseline before any GitHub write", "bind every promoted command to its clean-checkout command prerequisites runtime and result", "reject promotion of every unrun command", "compare approved intent with the final diff and effective-state read-back", "require an evidence PR or exact durable blocked-PR receipt and creation command", "require the durable Deferred from onboarding ledger and approved-frontier handoff"],
+      "runtime_dependencies": ["no mandatory connector installer setup script automatic actuator live Project session or runtime routing", "a separately owned explicitly approved executor for application", "authorized GitHub access only for that separately approved actuator", "clean-checkout environment capable of running each promoted command"],
       "adaptations": [
         {
           "id": "ADAPT-ONBOARD-001",
           "classification": "codex-native-adaptation",
-          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L30-L288",
-          "target_behavior": "Preserve the source P0 through P6 chronology while using the Option B Issue graph and current repository evidence.",
-          "rationale": "The target authority model is the reviewed Issue graph rather than source-specific Projects or label state.",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L32-L69",
+          "target_behavior": "Require remote-default reachability before every application or GitHub write while allowing only read-only assessment and proposal when the precondition is unmet.",
+          "rationale": "This preserves the source no-labels-no-Ruleset-no-Epic gate and fails closed for the target's sensor and actuator boundary.",
           "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
-        },
-        {
-          "id": "LIMIT-ONBOARD-001",
-          "classification": "documented-limitation",
-          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L188-L224",
-          "target_behavior": "T09 produces onboarding proposals but supplies no installer, upgrade mechanism, or automatic setup actuator.",
-          "rationale": "Installer and upgrade safety are later contracts and cannot be claimed by a procedural Skill.",
-          "evidence_path": ".agents/skills/project-onboarding/SKILL.md"
         },
         {
           "id": "ADAPT-ONBOARD-002",
           "classification": "codex-native-adaptation",
-          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L1-L4",
-          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
-          "rationale": "Onboarding can propose broad repository and external-state changes, so the durable T09 plan requires deliberate selection without claiming client preload behavior.",
-          "evidence_path": "docs/agreements/skill-parity.v1.json"
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L188-L194",
+          "target_behavior": "Run candidate commands in a clean checkout and record the exact command environment prerequisites runtime and result; never promote an unrun command.",
+          "rationale": "The target retains the source evidence-before-command contract without claiming an unavailable cloud setup workflow.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
         },
         {
           "id": "ADAPT-ONBOARD-003",
           "classification": "codex-native-adaptation",
-          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L13-L28",
-          "target_behavior": "Preserve evidence-before-command and onboarding-does-not-build boundaries while synchronizing documented commands the versioned quality registry workflow and named execution-environment evidence.",
-          "rationale": "The target replaces the source Sync Triangle with reviewed repository policy and explicit environment evidence without claiming an installer or product implementation.",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L238-L275",
+          "target_behavior": "Require an evidence PR or exact durable blocked-PR receipt and creation command plus a Deferred from onboarding ledger in the first active Epic or evidence PR; chat cannot carry deferred work.",
+          "rationale": "The target Issue graph and pull-request ledger replace source-specific storage paths while retaining the durable P6 completion and deferred-work boundaries.",
           "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
         },
         {
           "id": "ADAPT-ONBOARD-004",
           "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L258-L291",
+          "target_behavior": "Replace the source live Project session with a durable handoff naming the first approved Epic current Task frontier dependencies and acceptance gate.",
+          "rationale": "Live Task ritual and cross-surface runtime orchestration are unimplemented, while the canonical Issue graph is durable authority.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "LIMIT-ONBOARD-001",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L143-L186",
+          "target_behavior": "Ship no setup-label or setup-Ruleset scripts and do not create Epic Issues automatically; retain review-only Epic-body proposals and guide or verify only a separately owned explicitly approved application.",
+          "rationale": "GitHub mutations and setup automation are external actuators outside T09 while static proposals preserve the source planning semantics.",
+          "evidence_path": ".agents/skills/project-onboarding/SKILL.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-005",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L13-L28",
+          "target_behavior": "Synchronize documented commands the versioned quality registry workflow steps and named execution-environment evidence without copying the source Sync Triangle.",
+          "rationale": "The target repository policy supplies equivalent static command reachability while cloud setup and installer behavior remain unimplemented.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-006",
+          "classification": "codex-native-adaptation",
           "source_anchor": ".github/skills/project-onboarding/SKILL.md#L293-L309",
           "target_behavior": "Propose reviewed characterization tests before semantic migration in legacy or explicitly re-tuned repositories.",
           "rationale": "Characterizing adopter truth preserves the frozen migration safety rule while leaving application changes outside onboarding.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-007",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the reviewed T09 trigger policy and leave all runtime selection evidence not-run.",
+          "rationale": "Onboarding can cross agreement privacy and actuator boundaries, so selection remains deliberate without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        },
+        {
+          "id": "ADAPT-ONBOARD-008",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L89-L142",
+          "target_behavior": "Generalize the connector material-intake and model-choice interview to bounded connector-neutral source references privacy constraints and a model-neutral execution preference.",
+          "rationale": "T08 defines connector-neutral context operations and T09 cannot require a concrete connector upload surface or runtime model selector.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "LIMIT-ONBOARD-002",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L196-L224",
+          "target_behavior": "Bundle no source-specific CUSTOMIZE CODEOWNERS source-activation model-block or AGENTS application scripts; a separately owned explicitly approved executor maps reviewed intent to adopter surfaces.",
+          "rationale": "Those source paths and setup scripts are not portable target contracts and automatic application is outside T09 ownership.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-009",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L225-L236",
+          "target_behavior": "Replace source tuning-status and cloud-setup proof with current documented commands versioned quality-registry and workflow reachability exact environment evidence and effective-state read-back.",
+          "rationale": "The target has reviewed quality and conformance topology but no source cloud setup workflow or tuning-status contract.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-010",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L240-L244",
+          "target_behavior": "Record project-agnostic improvement observations as bounded evidence-PR candidates without appending an absent retro-log or automatically opening or transmitting upstream feedback.",
+          "rationale": "Feedback transport and automatic retro or upstream actuators are outside T09 while durable candidate evidence remains portable.",
           "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
         }
       ],
