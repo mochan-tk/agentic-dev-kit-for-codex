@@ -2426,7 +2426,7 @@ jobs:
             ("unconsumed", [], "transition is not consumed"),
             ("undeclared-delete", [("D", "LICENSE")], "undeclared deletion"),
             ("undeclared-add", [("A", "unowned.txt")], "undeclared addition"),
-            ("undeclared-modify", [("M", "AGENTS.md")], "undeclared modification"),
+            ("undeclared-modify", [("M", "LICENSE")], "undeclared modification"),
         )
         for label, extra_entries, token in cases:
             with self.subTest(label=label):
