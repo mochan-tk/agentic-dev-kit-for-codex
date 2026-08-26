@@ -1,9 +1,11 @@
 # Known limitations
 
 Observed and documentation-derived statements are current through
-`2026-08-26`. Phase 0 is complete. Phase 1 portable-core implementation is
-complete in this reviewed T10 tree; durable owner acceptance remains pending
-merge and exact post-merge receipt. This tree is the **Phase 1 portable-core acceptance candidate**.
+`2026-08-26`. Phase 0 is complete. This exact T10 tree is the **Phase 1
+portable-core acceptance candidate**. When its exact-head `quality` and
+`conformance` checks are green and no blocking finding remains, the Phase 1
+portable-core implementation is complete in that exact tree; durable owner
+acceptance remains pending merge and exact post-merge receipt.
 The overall repository implementation remains incomplete, the repository is
 not installable, and it is not a parity release. `release_blocked` remains `true`.
 

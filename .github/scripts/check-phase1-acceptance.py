@@ -44,6 +44,19 @@ REQUIRED_INPUT_PATHS = (
     README_PATH,
     LIMITATIONS_PATH,
     AGENTS_PATH,
+    "docs/agreements/adr/ADR-0005-issue-graph-authority.md",
+    ".agents/skills/verification/SKILL.md",
+    ".github/governance/ledger-contracts.v1.json",
+    ".agents/skills/session-orchestration/SKILL.md",
+    ".github/scripts/check-repository-policy.py",
+    "docs/agreements/portable-context-contract.v1.json",
+    ".github/scripts/check-portable-contracts.py",
+    ".github/scripts/check-ledger-templates.py",
+    "docs/agreements/skill-parity.v1.json",
+    ".github/scripts/check-skills.py",
+    ".github/governance/ci-tools.lock.v1.json",
+    ".agents/skills/retro/SKILL.md",
+    "docs/planning/phase-0-orientation.md",
 )
 
 MAX_FILE_BYTES = 262_144
@@ -59,7 +72,6 @@ COMPATIBILITY_MANIFEST_SHA256 = (
 ACCEPTANCE_COMMAND = "python3 -I .github/scripts/check-phase1-acceptance.py"
 EXPECTED_TASK_IDS = [f"T{number:02d}" for number in range(1, 10)]
 EXPECTED_CONTRACT_IDS = [f"K{number:02d}" for number in range(1, 21)]
-LATER_CONTRACT_IDS = {f"K{number:02d}" for number in range(9, 17)} | {"K20"}
 ALLOWED_SCENARIO_STATES = {
     "pass",
     "fail",
@@ -70,15 +82,19 @@ ALLOWED_SCENARIO_STATES = {
     "UNKNOWN",
     "UNCHECKABLE",
 }
-SUCCESS_STATES = {"pass"}
+ACTION_EVIDENCE_CLASSES = {
+    "static-scenario-action",
+    "runtime-scenario-action",
+    "external-state-scenario-action",
+}
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
-ISSUE_URL = re.compile(
-    rf"{re.escape(REPOSITORY_URL)}/issues/[1-9][0-9]*(?:#issuecomment-[1-9][0-9]*)?\Z"
-)
-PULL_URL = re.compile(rf"{re.escape(REPOSITORY_URL)}/pull/[1-9][0-9]*\Z")
 ACTION_URL = re.compile(
     rf"{re.escape(REPOSITORY_URL)}/actions/runs/[1-9][0-9]*/job/[1-9][0-9]*\Z"
+)
+ISO_UTC = re.compile(
+    r"[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])"
+    r"T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z\Z"
 )
 INVARIANT_ROW = re.compile(r"^\|\s*(I\d{2})\s*\|\s*(.*?)\s*\|\s*$")
 PRIVATE_PATH = re.compile(
@@ -158,12 +174,20 @@ EXPECTED_TASK_EVIDENCE = {
         "issue": 3,
         "plan": "issues/3#issuecomment-5388861150",
         "receipt": "issues/3#issuecomment-5388863356",
+        "head": "32615344ad4f0310948bc59d234a84718741788a",
+        "tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+        "quality": "actions/runs/32663677641/job/97253594482",
+        "conformance": "actions/runs/32663677641/job/97253594322",
     },
     "T02": {
         "title": "Activate and verify the approved solo-profile main Ruleset",
         "issue": 4,
         "plan": "issues/4",
         "receipt": "issues/4#issuecomment-5388863497",
+        "head": "32615344ad4f0310948bc59d234a84718741788a",
+        "tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+        "quality": "actions/runs/32663677641/job/97253594482",
+        "conformance": "actions/runs/32663677641/job/97253594322",
     },
     "T03": {
         "title": "Separate frozen Phase 0 verification from live repository policy",
@@ -276,6 +300,194 @@ EXPECTED_TASK_EVIDENCE = {
         ],
         "quality": "actions/runs/32917569601/job/98024375395",
         "conformance": "actions/runs/32917569601/job/98024375513",
+    },
+}
+
+FUTURE_LANES = {
+    "portable-residual": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required",
+    },
+    "repository-release": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required",
+    },
+}
+
+EXPECTED_CONTRACT_DETAILS = {
+    "K01": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            "AGENTS.md",
+            "docs/agreements/adr/ADR-0005-issue-graph-authority.md",
+        ],
+        "advanced": "Option B hierarchy and accepted Task evidence are durable.",
+        "remaining": "Runtime recovery and live ritual evidence remain absent.",
+        "lane": "portable-residual",
+    },
+    "K02": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            ".agents/skills/verification/SKILL.md",
+            ".github/governance/ledger-contracts.v1.json",
+        ],
+        "advanced": "Static record, evidence, and escalation contracts are present.",
+        "remaining": "Live orchestration and current-attempt enforcement remain absent.",
+        "lane": "portable-residual",
+    },
+    "K03": {
+        "status": "partial-incomplete",
+        "evidence": [
+            "AGENTS.md",
+            ".agents/skills/session-orchestration/SKILL.md",
+        ],
+        "advanced": "Policy and orchestration guidance define the topology.",
+        "remaining": "Authenticated roles and six custom agents remain unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K04": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            ".github/governance/phase-task-ownership.v1.json",
+            ".github/scripts/check-repository-policy.py",
+        ],
+        "advanced": "Versioned exact-path ownership and overlap rejection are active in CI.",
+        "remaining": "Envelope and cross-surface runtime enforcement remain absent.",
+        "lane": "portable-residual",
+    },
+    "K05": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            "AGENTS.md",
+            ".github/governance/ledger-contracts.v1.json",
+        ],
+        "advanced": "Human gates and risk fields are durable static contracts.",
+        "remaining": "Runtime identity and universal control-plane enforcement remain absent.",
+        "lane": "portable-residual",
+    },
+    "K06": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            "docs/agreements/portable-context-contract.v1.json",
+            ".github/scripts/check-portable-contracts.py",
+        ],
+        "advanced": "Stable requirements, decisions, context pins, and connector-neutral operations are checked.",
+        "remaining": "External connectors and cross-surface runtime reachability are not proven.",
+        "lane": "portable-residual",
+    },
+    "K07": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            ".github/governance/ledger-contracts.v1.json",
+            ".github/scripts/check-ledger-templates.py",
+        ],
+        "advanced": "Epic, Task, and PR human/machine contracts are synchronized and checked.",
+        "remaining": "Live Task ritual and GitHub-body equality require later runtime work.",
+        "lane": "portable-residual",
+    },
+    "K08": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            "docs/agreements/skill-parity.v1.json",
+            ".github/scripts/check-skills.py",
+        ],
+        "advanced": "Exactly eight Skills and source-to-target parity records are statically checked.",
+        "remaining": "Runtime invocation, implicit selection, and cross-surface evidence remain not-run.",
+        "lane": "portable-residual",
+    },
+    "K09": {
+        "status": "incomplete-later-phase",
+        "evidence": ["AGENTS.md"],
+        "advanced": "Role semantics exist only as policy.",
+        "remaining": "Six custom agents and authenticated role evidence are unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K10": {
+        "status": "incomplete-later-phase",
+        "evidence": ["docs/known-limitations.md"],
+        "advanced": "No Phase 1 implementation claim is made.",
+        "remaining": "task-execution-envelope/v1 is unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K11": {
+        "status": "incomplete-later-phase",
+        "evidence": ["docs/known-limitations.md"],
+        "advanced": "No Phase 1 implementation claim is made.",
+        "remaining": "loop-event/v1 is unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K12": {
+        "status": "incomplete-later-phase",
+        "evidence": ["docs/known-limitations.md"],
+        "advanced": "The machine-readable surface boundary is documented.",
+        "remaining": "The codex exec adapter and normalized stream handling are unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K13": {
+        "status": "incomplete-later-phase",
+        "evidence": ["AGENTS.md", "docs/known-limitations.md"],
+        "advanced": "Upgrade preservation remains a canonical invariant.",
+        "remaining": "Installer, upgrade, adoption, and rollback behavior are unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K14": {
+        "status": "incomplete-later-phase",
+        "evidence": [".github/governance/ledger-contracts.v1.json"],
+        "advanced": "Ledger fields provide a static foundation only.",
+        "remaining": "The live Task ritual and current-attempt enforcement are unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K15": {
+        "status": "partial-incomplete",
+        "evidence": [
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497"
+        ],
+        "advanced": "The solo-fast Ruleset used sensor, intent, explicit actuator, and verification.",
+        "remaining": "General adopter governance activation and reconciliation remain later work.",
+        "lane": "portable-residual",
+    },
+    "K16": {
+        "status": "incomplete-later-phase",
+        "evidence": [".agents/skills/retro/SKILL.md"],
+        "advanced": "The Retro Skill provides static failure-to-harness guidance.",
+        "remaining": "Consent-aware feedback transport and telemetry are unimplemented.",
+        "lane": "portable-residual",
+    },
+    "K17": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            ".github/workflows/ci.yml",
+            ".github/governance/ci-tools.lock.v1.json",
+        ],
+        "advanced": "Pinned tools, least privilege, stable required jobs, and deterministic discovery are checked.",
+        "remaining": "Release, clean-adopter E2E, and all runtime matrices remain later work.",
+        "lane": "repository-release",
+    },
+    "K18": {
+        "status": "phase-1-static-advanced",
+        "evidence": [
+            "docs/planning/phase-0-orientation.md",
+            "docs/agreements/skill-parity.v1.json",
+        ],
+        "advanced": "Known defects and Codex-native adaptations have durable records and regressions.",
+        "remaining": "Full source parity reconciliation remains later work.",
+        "lane": "repository-release",
+    },
+    "K19": {
+        "status": "phase-1-static-advanced",
+        "evidence": ["AGENTS.md", "docs/known-limitations.md"],
+        "advanced": "Core contracts remain model-neutral and control-plane limits are explicit.",
+        "remaining": "No universal authenticated runtime identity or control plane exists.",
+        "lane": "portable-residual",
+    },
+    "K20": {
+        "status": "blocked-release",
+        "evidence": ["tests/conformance/results.json"],
+        "advanced": "The canonical catalog and empty result store make the release boundary explicit.",
+        "remaining": "Full static/runtime parity, 136 scenario passes, clean-adopter E2E, and release evidence are absent.",
+        "lane": "repository-release",
     },
 }
 
@@ -485,15 +697,6 @@ def exact_keys(value: Any, expected: set[str], label: str, errors: list[str]) ->
     return True
 
 
-def valid_evidence_reference(value: Any) -> bool:
-    return isinstance(value, str) and (
-        valid_relative_path(value)
-        or ISSUE_URL.fullmatch(value) is not None
-        or PULL_URL.fullmatch(value) is not None
-        or ACTION_URL.fullmatch(value) is not None
-    )
-
-
 def validate_task_index(tasks: Any, errors: list[str]) -> None:
     if not isinstance(tasks, list) or [item.get("id") for item in tasks if isinstance(item, dict)] != EXPECTED_TASK_IDS:
         errors.append("Task evidence index must contain T01-T09 exactly once in order")
@@ -507,6 +710,7 @@ def validate_task_index(tasks: Any, errors: list[str]) -> None:
         "plan_or_intent_url",
         "receipt_url",
         "pull_request",
+        "revision_evidence_class",
         "reviewed_head",
         "reviewed_tree",
         "merge_commit",
@@ -534,16 +738,35 @@ def validate_task_index(tasks: Any, errors: list[str]) -> None:
             marker = "not-applicable-external-state-task"
             for field in (
                 "pull_request",
-                "reviewed_head",
-                "reviewed_tree",
                 "merge_commit",
                 "merge_tree",
-                "checks",
             ):
                 if entry.get(field) != marker:
                     errors.append(f"{task_id} {field} must explicitly be not applicable")
             if entry.get("parents") != []:
                 errors.append(f"{task_id} parents must be empty for an external-state Task")
+            if entry.get("revision_evidence_class") != "baseline-pre-actuator-observation":
+                errors.append(f"{task_id} revision must be labeled as a baseline observation")
+            if entry.get("reviewed_head") != expected["head"]:
+                errors.append(f"{task_id} observed baseline commit is invalid")
+            if entry.get("reviewed_tree") != expected["tree"]:
+                errors.append(f"{task_id} observed baseline tree is invalid")
+            checks = entry.get("checks")
+            if not exact_keys(checks, {"quality", "conformance"}, f"{task_id} checks", errors):
+                continue
+            for name in ("quality", "conformance"):
+                evidence = checks.get(name)
+                expected_check = {
+                    "evidence_class": "baseline-pre-actuator-check",
+                    "target_commit": expected["head"],
+                    "target_tree": expected["tree"],
+                    "result": "success",
+                    "url": f"{REPOSITORY_URL}/{expected[name]}",
+                }
+                if evidence != expected_check:
+                    errors.append(
+                        f"{task_id} {name} must match the exact baseline check evidence"
+                    )
             continue
 
         expected_fields = {
@@ -557,6 +780,8 @@ def validate_task_index(tasks: Any, errors: list[str]) -> None:
         for field, value in expected_fields.items():
             if entry.get(field) != value:
                 errors.append(f"{task_id} {field} does not match accepted evidence")
+        if entry.get("revision_evidence_class") != "reviewed-pr-head":
+            errors.append(f"{task_id} revision must be labeled as a reviewed PR head")
         checks = entry.get("checks")
         if not exact_keys(checks, {"quality", "conformance"}, f"{task_id} checks", errors):
             continue
@@ -574,7 +799,10 @@ def validate_task_index(tasks: Any, errors: list[str]) -> None:
 
 
 def validate_contracts(
-    contracts: Any, canonical_contracts: Any, errors: list[str]
+    contracts: Any,
+    canonical_contracts: Any,
+    snapshots: dict[str, bytes],
+    errors: list[str],
 ) -> None:
     if not isinstance(canonical_contracts, list):
         errors.append("conformance manifest contract inventory is invalid")
@@ -600,32 +828,69 @@ def validate_contracts(
         contract_id = entry["id"]
         if not exact_keys(entry, fields, f"{contract_id} disposition", errors):
             continue
-        if entry.get("contract") != expected_names.get(contract_id):
-            errors.append(f"{contract_id} canonical contract text drifted")
-        if entry.get("status") not in {
-            "phase-1-static-advanced",
-            "policy-advanced",
-            "external-state-advanced",
-            "partial-incomplete",
-            "incomplete-later-phase",
-            "blocked-release",
-        }:
-            errors.append(f"{contract_id} has an unsupported status")
-        if contract_id in LATER_CONTRACT_IDS and entry.get("status") not in {
-            "partial-incomplete",
-            "incomplete-later-phase",
-            "blocked-release",
-        }:
-            errors.append(f"{contract_id} must remain incomplete")
-        if not isinstance(entry.get("evidence"), list) or any(
-            not valid_evidence_reference(item) for item in entry.get("evidence", [])
+        detail = EXPECTED_CONTRACT_DETAILS[contract_id]
+        expected_entry = {
+            "id": contract_id,
+            "contract": expected_names.get(contract_id),
+            "status": detail["status"],
+            "evidence": detail["evidence"],
+            "advanced": detail["advanced"],
+            "remaining": detail["remaining"],
+            "later_owner": FUTURE_LANES[detail["lane"]],
+        }
+        if entry != expected_entry:
+            errors.append(f"{contract_id} exact reviewed disposition drifted")
+        for reference in detail["evidence"]:
+            if valid_relative_path(reference) and reference not in snapshots:
+                errors.append(
+                    f"{contract_id} repository evidence is missing or unreadable: {reference}"
+                )
+
+
+def validate_scenario_action_evidence(
+    evidence: Any, scenario_id: str, status_value: str, errors: list[str]
+) -> None:
+    if not isinstance(evidence, list) or not evidence:
+        errors.append(
+            f"scenario {scenario_id} {status_value} requires exact scenario-action evidence"
+        )
+        return
+    expected_result = "success" if status_value == "pass" else "failure"
+    fields = {
+        "command",
+        "execution_class",
+        "target_commit",
+        "target_tree",
+        "result",
+        "url",
+        "observed_at",
+    }
+    for index, item in enumerate(evidence):
+        label = f"scenario {scenario_id} evidence {index}"
+        if not exact_keys(item, fields, label, errors):
+            continue
+        command = item.get("command")
+        if (
+            not isinstance(command, str)
+            or not command.strip()
+            or len(command) > 4096
+            or any(unicodedata.category(character).startswith("C") for character in command)
+            or PRIVATE_PATH.search(command)
+            or SECRET.search(command)
         ):
-            errors.append(f"{contract_id} evidence must be bounded repository or GitHub references")
-        for field in ("advanced", "remaining"):
-            if not isinstance(entry.get(field), str) or not entry[field].strip():
-                errors.append(f"{contract_id} {field} must be explicit")
-        if entry.get("later_owner") != f"{REPOSITORY_URL}/issues/2":
-            errors.append(f"{contract_id} later owner must be Epic #2")
+            errors.append(f"{label} command must be a bounded public exact action")
+        if item.get("execution_class") not in ACTION_EVIDENCE_CLASSES:
+            errors.append(f"{label} must distinguish static, runtime, or external-state action")
+        for field in ("target_commit", "target_tree"):
+            value = item.get(field)
+            if SHA.fullmatch(str(value or "")) is None or value == "0" * 40:
+                errors.append(f"{label} {field} must be a nonzero exact Git object")
+        if item.get("result") != expected_result:
+            errors.append(f"{label} result must be {expected_result}")
+        if ACTION_URL.fullmatch(str(item.get("url", ""))) is None:
+            errors.append(f"{label} URL must be a same-repository durable check URL")
+        if ISO_UTC.fullmatch(str(item.get("observed_at", ""))) is None:
+            errors.append(f"{label} observed_at must be an exact UTC timestamp")
 
 
 def validate_scenarios(
@@ -695,30 +960,25 @@ def validate_scenarios(
             errors.append(f"scenario {scenario_id} has an unsupported evidence state")
             continue
         status_counts[status_value] += 1
-        if status_value in SUCCESS_STATES:
+        if status_value == "pass":
             family_counts[family_id]["pass"] += 1
-            if not isinstance(evidence, list) or not evidence:
-                errors.append(
-                    f"scenario {scenario_id} pass requires exact scenario-action evidence"
-                )
-            elif any(
-                not isinstance(item, dict)
-                or set(item)
-                != {"command", "target_revision", "result", "url", "observed_at"}
-                or item.get("result") != "success"
-                or SHA.fullmatch(str(item.get("target_revision", ""))) is None
-                or ACTION_URL.fullmatch(str(item.get("url", ""))) is None
-                for item in evidence
-            ):
-                errors.append(
-                    f"scenario {scenario_id} pass requires exact scenario-action evidence"
-                )
+            validate_scenario_action_evidence(
+                evidence, scenario_id, status_value, errors
+            )
         else:
             family_counts[family_id]["non_pass"] += 1
-            if evidence != []:
-                errors.append(
-                    f"scenario {scenario_id} non-pass evidence must remain an empty result list"
+            if status_value == "fail":
+                validate_scenario_action_evidence(
+                    evidence, scenario_id, status_value, errors
                 )
+            elif status_value == "not-run" and evidence != []:
+                errors.append(
+                    f"scenario {scenario_id} not-run evidence must remain an empty result list"
+                )
+        if status_value != "not-run":
+            errors.append(
+                f"T10 candidate scenario {scenario_id} must remain exactly not-run"
+            )
 
     successful = sum(counts["pass"] for counts in family_counts.values())
     non_pass = sum(counts["non_pass"] for counts in family_counts.values())
@@ -737,6 +997,8 @@ def validate_scenarios(
     }
     if summary != expected_summary:
         errors.append("scenario summary does not match per-scenario evidence states")
+    if successful != 0 or non_pass != 136 or status_counts != Counter({"not-run": 136}):
+        errors.append("T10 candidate must contain exactly 136 not-run scenario records")
 
 
 def validate_document_bindings(
@@ -770,7 +1032,10 @@ def validate_live_documents(
     combined = "\n".join(texts.values())
     required_markers = (
         "Phase 1 portable-core acceptance candidate",
-        "Phase 1 portable-core implementation is complete in this reviewed T10 tree",
+        "implementation-complete gate",
+        "Phase 1 portable-core implementation is complete in that exact tree",
+        "exact-head `quality` and `conformance` checks",
+        "no blocking finding remains",
         "durable owner acceptance remains pending merge and exact post-merge receipt",
         "overall repository implementation remains incomplete",
         "`release_blocked` remains `true`",
@@ -781,11 +1046,26 @@ def validate_live_documents(
     for marker in required_markers:
         if marker not in combined:
             errors.append(f"Phase 1 documentation marker is missing: {marker}")
+    per_document_status = (
+        "Phase 0 is complete.",
+        "This exact T10 tree is the **Phase 1 portable-core acceptance candidate**.",
+        "When its exact-head `quality` and `conformance` checks are green and no blocking finding remains, the Phase 1 portable-core implementation is complete in that exact tree; durable owner acceptance remains pending merge and exact post-merge receipt.",
+        "overall repository implementation remains incomplete",
+        "not installable",
+        "not a parity release",
+        "`release_blocked` remains `true`",
+    )
+    for path in (README_PATH, LIMITATIONS_PATH):
+        normalized = " ".join(texts[path].split())
+        for marker in per_document_status:
+            if marker not in normalized:
+                errors.append(f"{path} status marker is missing: {marker}")
     forbidden = (
         "repository implementation is complete",
         "`release_blocked` is `false`",
         "all 136 scenarios pass",
         "full parity is complete",
+        "Phase 1 portable-core implementation is complete in this reviewed T10 tree",
     )
     for marker in forbidden:
         if marker in combined:
@@ -824,9 +1104,21 @@ def validate_live_documents(
             )
     contracts = phase1.get("contracts")
     for entry in contracts if isinstance(contracts, list) else []:
-        if isinstance(entry, dict) and scorecard.count(f"| {entry.get('id')} |") != 1:
+        if not isinstance(entry, dict):
+            continue
+        later_owner = entry.get("later_owner")
+        lane = later_owner.get("lane") if isinstance(later_owner, dict) else ""
+        owner_state = (
+            later_owner.get("state") if isinstance(later_owner, dict) else ""
+        )
+        row = (
+            f"| {entry.get('id')} | `{entry.get('status')}` | "
+            f"{entry.get('advanced')} | {entry.get('remaining')} | "
+            f"`{lane}` (`{owner_state}`) |"
+        )
+        if scorecard.count(row) != 1:
             errors.append(
-                f"scorecard contract row is not synchronized: {entry.get('id')}"
+                f"scorecard exact contract row is not synchronized: {entry.get('id')}"
             )
     tasks = phase1.get("task_index")
     for entry in tasks if isinstance(tasks, list) else []:
@@ -838,11 +1130,19 @@ def validate_live_documents(
             str(entry.get("issue_url", "")),
             str(entry.get("plan_or_intent_url", "")),
             str(entry.get("receipt_url", "")),
+            str(entry.get("reviewed_head", "")),
         ]
-        if task_id not in {"T01", "T02"}:
-            required.extend(
-                [str(entry.get("pull_request", "")), str(entry.get("reviewed_head", ""))]
-            )
+        if task_id in {"T01", "T02"}:
+            checks = entry.get("checks")
+            required.append(str(entry.get("reviewed_tree", "")))
+            if isinstance(checks, dict):
+                required.extend(
+                    str(checks.get(name, {}).get("url", ""))
+                    for name in ("quality", "conformance")
+                    if isinstance(checks.get(name), dict)
+                )
+        else:
+            required.append(str(entry.get("pull_request", "")))
         if any(marker not in acceptance for marker in required):
             errors.append(f"acceptance document Task row is not synchronized: {task_id}")
     for path, text in texts.items():
@@ -1067,7 +1367,10 @@ def validate_repository(root: Path = ROOT) -> list[str]:
 
     validate_task_index(phase1.get("task_index"), errors)
     validate_contracts(
-        phase1.get("contracts"), parsed[MANIFEST_PATH].get("contracts"), errors
+        phase1.get("contracts"),
+        parsed[MANIFEST_PATH].get("contracts"),
+        snapshots,
+        errors,
     )
     validate_scenarios(
         phase1.get("scenarios"),
@@ -1089,14 +1392,20 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         "consent-feedback-transport",
         "clean-adopter-e2e-and-full-parity-release",
     ]
-    expected_handoffs = [
-        {
-            "area": area,
-            "state": "task-not-created",
-            "owner": f"{REPOSITORY_URL}/issues/2",
-        }
-        for area in expected_areas
-    ]
+    expected_handoffs = []
+    for area in expected_areas:
+        lane_key = (
+            "repository-release"
+            if area == "clean-adopter-e2e-and-full-parity-release"
+            else "portable-residual"
+        )
+        expected_handoffs.append(
+            {
+                "area": area,
+                "state": "task-not-created",
+                "later_owner": FUTURE_LANES[lane_key],
+            }
+        )
     if handoffs != expected_handoffs:
         errors.append("later Phase 1 handoffs must remain explicit and unactivated")
 
@@ -1157,7 +1466,7 @@ def main() -> int:
         return 1
     print(
         "phase1-acceptance: PASS — T01-T09 evidence, K01-K20 disposition, "
-        "136 non-pass scenario records, and the release blocker are exact"
+        "136 not-run scenario records, and the release blocker are exact"
     )
     return 0
 

@@ -850,7 +850,9 @@ class RepositoryPolicyTest(unittest.TestCase):
         for marker in (
             "Phase 0 is complete",
             "Phase 1 portable-core acceptance candidate",
-            "Phase 1 portable-core implementation is complete",
+            "Phase 1 portable-core implementation is complete in that exact tree",
+            "exact-head `quality` and `conformance` checks",
+            "no blocking finding remains",
             "durable owner acceptance remains pending",
             "post-merge receipt",
             "not installable",

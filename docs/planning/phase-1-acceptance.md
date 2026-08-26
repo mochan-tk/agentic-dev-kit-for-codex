@@ -3,9 +3,12 @@
 ## Status and authority
 
 This tree is a **Phase 1 portable-core acceptance candidate** for T10 / Issue
-#12. Phase 0 is complete. Phase 1 portable-core implementation is complete in
-this reviewed T10 tree; durable owner acceptance remains pending merge and
-exact post-merge receipt. Phase 1 becomes accepted only after the repository
+#12. Phase 0 is complete. This exact T10 tree is a Phase 1 portable-core
+acceptance candidate. When its exact-head `quality` and `conformance` checks
+are green and no blocking finding remains, it satisfies the portable-core
+implementation-complete gate: the Phase 1 portable-core implementation is
+complete in that exact tree. Durable owner acceptance remains pending merge
+and exact post-merge receipt. Phase 1 becomes accepted only after the repository
 owner merges the exact reviewed T10 head and the receipt verifies the
 merge tree and required checks. The overall repository implementation remains incomplete,
 is not installable, and is not a parity release. `release_blocked` remains `true`.
@@ -24,10 +27,12 @@ machine record, GitHub evidence, or owner judgment.
 | `later_repository` | `non-pass` | Later reviewed Tasks must implement and verify runtime, distribution, migration, and release contracts. |
 
 A tracked file cannot contain its own final commit or tree without changing
-that object. The committed package therefore binds immutable T01–T09 evidence
-and the exact T10 base. The exact T10 PR head/tree and CI URLs are an external
-GitHub binding. Missing, stale, `UNKNOWN`, `UNCHECKABLE`, deferred, and
-not-run evidence are non-success states.
+that object. The committed package therefore binds immutable Git objects and
+check-run receipts for T01–T09, records observed links to mutable Issue, PR,
+and comment records, and binds the exact T10 base. Mutable GitHub records
+require a current read-back at owner judgment. The exact T10 PR head/tree and
+CI URLs are an external GitHub binding. Missing, stale, `UNKNOWN`,
+`UNCHECKABLE`, deferred, and not-run evidence are non-success states.
 
 ## Compatibility-layer replan
 
@@ -60,8 +65,8 @@ portable-contract guard was weakened.
 
 | Task | Issue | Plan or intent | PR / outcome | Reviewed head | Merge / external receipt |
 |---|---|---|---|---|---|
-| T01 | [#3](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3) | [intent v3](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388861150) | External-state sensor; no PR | N/A | [completion receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388863356) |
-| T02 | [#4](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4) | [Task record](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4) | Explicit Ruleset actuator; no PR | N/A | [actuator receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497) |
+| T01 | [#3](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3) | [intent v3](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388861150) | External-state sensor; no PR | Baseline observation `32615344ad4f0310948bc59d234a84718741788a` / tree `33259721ec9f378fa67392ef8e1c7645db1321f9`; [quality](https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594482), [conformance](https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594322) | [completion receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388863356) |
+| T02 | [#4](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4) | [Task record](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4) | Explicit Ruleset actuator; no PR | Pre-actuator baseline `32615344ad4f0310948bc59d234a84718741788a` / tree `33259721ec9f378fa67392ef8e1c7645db1321f9`; [quality](https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594482), [conformance](https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594322) | [actuator receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497) |
 | T03 | [#5](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5) | [plan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5#issuecomment-5388869324) | [PR #13](https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/13) | `94f92af978839efc48f0ca6afd77514bf291b9f6` | [receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5#issuecomment-5389844185) |
 | T04 | [#6](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6) | [plan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6#issuecomment-5389938555) | [PR #14](https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/14) | `95ad638787047194a1bcf6ca074c1b0a9309f1da` | [receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6#issuecomment-5392427841) |
 | T05 | [#7](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7) | [plan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7#issuecomment-5396759095) | [PR #15](https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/15) | `562818ee902fb089dcdd8077b4dace0dd94c341c` | [receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7#issuecomment-5398125586) |
@@ -88,8 +93,11 @@ K09–K16 and K20 remain incomplete. In particular, the repository has no six
 custom-agent implementation, authenticated role boundary, task-execution
 envelope/v1, loop-event/v1, hooks, `codex exec` adapter, installer/upgrade,
 live Task ritual, feedback transport, clean-adopter E2E, or full source-parity
-evidence. Their durable later owner is Epic #2's rolling-wave frontier; a new
-reviewed Task must exist before implementation.
+evidence. Epic #2 does not own that out-of-scope remainder and closes only the
+portable-core acceptance frontier. No later owner is currently assigned. The
+machine record separates a future runtime/distribution/governance lane from a
+future repository-release/parity lane; a human-reviewed Phase, Epic, or Task
+must claim either lane before implementation.
 
 ## Scenario result boundary
 

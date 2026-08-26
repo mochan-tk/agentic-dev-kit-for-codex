@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 import os
 import shutil
@@ -91,6 +92,57 @@ class Phase1AcceptanceTest(unittest.TestCase):
         errors = self.errors_for(fixture)
         self.assert_rejected(errors, "pass requires exact scenario-action evidence")
 
+    def test_plausible_scenario_pass_missing_tree_and_execution_class_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        payload = self.read_json(fixture, PHASE1)
+        payload["scenarios"][0]["status"] = "pass"
+        payload["scenarios"][0]["evidence"] = [
+            {
+                "command": "python3 -I .github/scripts/check-repository-policy.py",
+                "target_commit": "1" * 40,
+                "result": "success",
+                "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/1/job/1",
+                "observed_at": "2026-08-26T12:00:00Z",
+            }
+        ]
+        self.write_json(fixture, PHASE1, payload)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "unsupported or missing fields")
+        self.assert_rejected(errors, "must remain exactly not-run")
+
+    def test_unexplained_fail_cannot_replace_candidate_not_run_state(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        payload = self.read_json(fixture, PHASE1)
+        payload["scenarios"][0]["status"] = "fail"
+        payload["scenarios"][0]["evidence"] = []
+        self.write_json(fixture, PHASE1, payload)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "fail requires exact scenario-action evidence")
+        self.assert_rejected(errors, "must remain exactly not-run")
+
+    def test_static_generic_check_cannot_promote_candidate_scenario(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        payload = self.read_json(fixture, PHASE1)
+        payload["scenarios"][0]["status"] = "pass"
+        payload["scenarios"][0]["evidence"] = [
+            {
+                "command": "python3 -I .github/scripts/check-repository-policy.py",
+                "execution_class": "static-scenario-action",
+                "target_commit": "1" * 40,
+                "target_tree": "2" * 40,
+                "result": "success",
+                "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/1/job/1",
+                "observed_at": "2026-08-26T12:00:00Z",
+            }
+        ]
+        self.write_json(fixture, PHASE1, payload)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "must remain exactly not-run")
+        self.assert_rejected(errors, "exactly 136 not-run")
+
     def test_unknown_and_uncheckable_are_non_success(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
@@ -112,6 +164,13 @@ class Phase1AcceptanceTest(unittest.TestCase):
             self.assertNotEqual("complete", by_id[contract_id]["status"])
             self.assertTrue(by_id[contract_id]["remaining"])
             self.assertTrue(by_id[contract_id]["later_owner"])
+        self.assertTrue(
+            all(entry["later_owner"]["state"] == "unassigned" for entry in payload["contracts"])
+        )
+        self.assertNotIn(
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+            json.dumps(payload["contracts"] + payload["later_handoffs"]),
+        )
 
     def test_complete_later_contract_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -122,7 +181,30 @@ class Phase1AcceptanceTest(unittest.TestCase):
         ] = "complete"
         self.write_json(fixture, PHASE1, payload)
         errors = self.errors_for(fixture)
-        self.assert_rejected(errors, "K10 must remain incomplete")
+        self.assert_rejected(errors, "K10 exact reviewed disposition drifted")
+
+    def test_arbitrary_contract_claim_or_missing_evidence_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        payload = self.read_json(fixture, PHASE1)
+        contract = next(entry for entry in payload["contracts"] if entry["id"] == "K10")
+        contract["advanced"] = "The task execution envelope is implemented."
+        contract["evidence"] = ["does/not/exist.md"]
+        self.write_json(fixture, PHASE1, payload)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "K10 exact reviewed disposition drifted")
+
+    def test_contract_evidence_path_must_be_readable_without_symlink_follow(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        relative = ".agents/skills/verification/SKILL.md"
+        target = fixture / relative
+        external = fixture / "verification-skill-held.md"
+        external.write_bytes(target.read_bytes())
+        target.unlink()
+        target.symlink_to(external)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, f"cannot read {relative}")
 
     def test_task_index_is_exact_and_evidence_bound(self):
         payload = self.read_json(ROOT, PHASE1)
@@ -137,7 +219,24 @@ class Phase1AcceptanceTest(unittest.TestCase):
             self.assertTrue(entry["receipt_url"].startswith("https://github.com/"))
             if entry["id"] in {"T01", "T02"}:
                 self.assertEqual("not-applicable-external-state-task", entry["pull_request"])
+                self.assertEqual(
+                    "baseline-pre-actuator-observation",
+                    entry["revision_evidence_class"],
+                )
+                self.assertEqual(
+                    "32615344ad4f0310948bc59d234a84718741788a",
+                    entry["reviewed_head"],
+                )
+                self.assertEqual(
+                    "33259721ec9f378fa67392ef8e1c7645db1321f9",
+                    entry["reviewed_tree"],
+                )
+                for check in entry["checks"].values():
+                    self.assertEqual("baseline-pre-actuator-check", check["evidence_class"])
+                    self.assertEqual(entry["reviewed_head"], check["target_commit"])
+                    self.assertEqual(entry["reviewed_tree"], check["target_tree"])
             else:
+                self.assertEqual("reviewed-pr-head", entry["revision_evidence_class"])
                 self.assertRegex(entry["reviewed_head"], r"^[0-9a-f]{40}$")
                 self.assertRegex(entry["merge_commit"], r"^[0-9a-f]{40}$")
                 self.assertEqual("success", entry["checks"]["quality"]["result"])
@@ -192,6 +291,27 @@ class Phase1AcceptanceTest(unittest.TestCase):
         self.write_json(fixture2, MANIFEST, manifest)
         errors = self.errors_for(fixture2)
         self.assert_rejected(errors, "Phase 0 compatibility manifest must remain exact")
+
+    def test_human_contract_table_must_match_machine_semantics(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        scorecard_path = fixture / SCORECARD_DOC
+        scorecard_path.write_text(
+            scorecard_path.read_text(encoding="utf-8").replace(
+                "task-execution-envelope/v1 is unimplemented.",
+                "task-execution-envelope/v1 is implemented.",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        payload = self.read_json(fixture, PHASE1)
+        binding = next(
+            item for item in payload["document_bindings"] if item["path"] == SCORECARD_DOC
+        )
+        binding["sha256"] = hashlib.sha256(scorecard_path.read_bytes()).hexdigest()
+        self.write_json(fixture, PHASE1, payload)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "scorecard exact contract row is not synchronized: K10")
 
     def test_standalone_package_is_deterministically_discoverable(self):
         phase1 = self.read_json(ROOT, PHASE1)
@@ -358,7 +478,10 @@ class Phase1AcceptanceTest(unittest.TestCase):
         limitations = (ROOT / "docs/known-limitations.md").read_text(encoding="utf-8")
         for marker in (
             "Phase 1 portable-core acceptance candidate",
-            "Phase 1 portable-core implementation is complete in this reviewed T10 tree",
+            "implementation-complete gate",
+            "Phase 1 portable-core implementation is complete in that exact tree",
+            "exact-head `quality` and `conformance` checks",
+            "no blocking finding remains",
             "durable owner acceptance remains pending merge and exact post-merge receipt",
             "post-merge receipt",
             "repository implementation remains incomplete",
@@ -366,6 +489,18 @@ class Phase1AcceptanceTest(unittest.TestCase):
         ):
             self.assertIn(marker, acceptance + scorecard + readme + limitations)
         self.assertNotIn("repository implementation is complete", readme)
+
+    def test_readme_and_limitations_each_require_the_full_status_boundary(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        limitations = fixture / "docs/known-limitations.md"
+        body = limitations.read_text(encoding="utf-8")
+        limitations.write_text(
+            "# Known limitations\n\n" + body.split("## The portable core", 1)[1],
+            encoding="utf-8",
+        )
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "docs/known-limitations.md status marker is missing")
 
 
 if __name__ == "__main__":

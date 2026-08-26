@@ -119,12 +119,28 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388861150",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388863356",
       "pull_request": "not-applicable-external-state-task",
-      "reviewed_head": "not-applicable-external-state-task",
-      "reviewed_tree": "not-applicable-external-state-task",
+      "revision_evidence_class": "baseline-pre-actuator-observation",
+      "reviewed_head": "32615344ad4f0310948bc59d234a84718741788a",
+      "reviewed_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
       "merge_commit": "not-applicable-external-state-task",
       "merge_tree": "not-applicable-external-state-task",
       "parents": [],
-      "checks": "not-applicable-external-state-task"
+      "checks": {
+        "quality": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594482"
+        },
+        "conformance": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594322"
+        }
+      }
     },
     {
       "id": "T02",
@@ -135,12 +151,28 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497",
       "pull_request": "not-applicable-external-state-task",
-      "reviewed_head": "not-applicable-external-state-task",
-      "reviewed_tree": "not-applicable-external-state-task",
+      "revision_evidence_class": "baseline-pre-actuator-observation",
+      "reviewed_head": "32615344ad4f0310948bc59d234a84718741788a",
+      "reviewed_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
       "merge_commit": "not-applicable-external-state-task",
       "merge_tree": "not-applicable-external-state-task",
       "parents": [],
-      "checks": "not-applicable-external-state-task"
+      "checks": {
+        "quality": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594482"
+        },
+        "conformance": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594322"
+        }
+      }
     },
     {
       "id": "T03",
@@ -151,6 +183,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5#issuecomment-5388869324",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5#issuecomment-5389844185",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/13",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "94f92af978839efc48f0ca6afd77514bf291b9f6",
       "reviewed_tree": "f7132c5867023a2b971e0383d95a6c4184e20f35",
       "merge_commit": "3065afcf80ee348796a7d159f6aaefeeac65ad10",
@@ -179,6 +212,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6#issuecomment-5389938555",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6#issuecomment-5392427841",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/14",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "95ad638787047194a1bcf6ca074c1b0a9309f1da",
       "reviewed_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
       "merge_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
@@ -207,6 +241,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7#issuecomment-5396759095",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7#issuecomment-5398125586",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/15",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "562818ee902fb089dcdd8077b4dace0dd94c341c",
       "reviewed_tree": "85153f261e574d1287970d7ce14c3446e4e0d020",
       "merge_commit": "1c949b01a25208d91e0c7380facfd6ed9d48f833",
@@ -235,6 +270,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8#issuecomment-5402644687",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8#issuecomment-5403935064",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/16",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "0ef66c2d0baf9b7dee30dee8d1e4744ba4b7f75c",
       "reviewed_tree": "fe96b1eb5c825be6b4d936fa4850e26a51b7b3d0",
       "merge_commit": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
@@ -263,6 +299,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9#issuecomment-5404518469",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9#issuecomment-5409052229",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/17",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "952fb273fd6eb2811dd0ad6ebfea062e682c1155",
       "reviewed_tree": "e755dfba299b73d06f97fe7caeba6d520225c202",
       "merge_commit": "0adb4ef232ebd853df8af788db96c02bde6576ae",
@@ -291,6 +328,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10#issuecomment-5409182342",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10#issuecomment-5412449204",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/18",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "557c1086351e08f56b3d5c7ad2ab538fc5b6d4f8",
       "reviewed_tree": "f006ed8963d600a2a9bbf1b3917dc57e6f6a41d8",
       "merge_commit": "539c01822c005e639438331e70c592891e136430",
@@ -319,6 +357,7 @@
       "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11#issuecomment-5412882001",
       "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11#issuecomment-5419149972",
       "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/19",
+      "revision_evidence_class": "reviewed-pr-head",
       "reviewed_head": "19879ed8f4608399058ea3ecffea30ab6a5924e3",
       "reviewed_tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09",
       "merge_commit": "509362e6e12cf0160e58853b0d6c0b6871aa895c",
@@ -350,7 +389,11 @@
       ],
       "advanced": "Option B hierarchy and accepted Task evidence are durable.",
       "remaining": "Runtime recovery and live ritual evidence remain absent.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K02",
@@ -362,7 +405,11 @@
       ],
       "advanced": "Static record, evidence, and escalation contracts are present.",
       "remaining": "Live orchestration and current-attempt enforcement remain absent.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K03",
@@ -374,7 +421,11 @@
       ],
       "advanced": "Policy and orchestration guidance define the topology.",
       "remaining": "Authenticated roles and six custom agents remain unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K04",
@@ -386,7 +437,11 @@
       ],
       "advanced": "Versioned exact-path ownership and overlap rejection are active in CI.",
       "remaining": "Envelope and cross-surface runtime enforcement remain absent.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K05",
@@ -398,7 +453,11 @@
       ],
       "advanced": "Human gates and risk fields are durable static contracts.",
       "remaining": "Runtime identity and universal control-plane enforcement remain absent.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K06",
@@ -410,7 +469,11 @@
       ],
       "advanced": "Stable requirements, decisions, context pins, and connector-neutral operations are checked.",
       "remaining": "External connectors and cross-surface runtime reachability are not proven.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K07",
@@ -422,7 +485,11 @@
       ],
       "advanced": "Epic, Task, and PR human/machine contracts are synchronized and checked.",
       "remaining": "Live Task ritual and GitHub-body equality require later runtime work.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K08",
@@ -434,7 +501,11 @@
       ],
       "advanced": "Exactly eight Skills and source-to-target parity records are statically checked.",
       "remaining": "Runtime invocation, implicit selection, and cross-surface evidence remain not-run.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K09",
@@ -445,43 +516,72 @@
       ],
       "advanced": "Role semantics exist only as policy.",
       "remaining": "Six custom agents and authenticated role evidence are unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K10",
       "contract": "Task execution envelope",
       "status": "incomplete-later-phase",
-      "evidence": [],
+      "evidence": [
+        "docs/known-limitations.md"
+      ],
       "advanced": "No Phase 1 implementation claim is made.",
       "remaining": "task-execution-envelope/v1 is unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K11",
       "contract": "normalized loop event receipts",
       "status": "incomplete-later-phase",
-      "evidence": [],
+      "evidence": [
+        "docs/known-limitations.md"
+      ],
       "advanced": "No Phase 1 implementation claim is made.",
       "remaining": "loop-event/v1 is unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K12",
       "contract": "Codex execution adapter",
       "status": "incomplete-later-phase",
-      "evidence": [],
+      "evidence": [
+        "docs/known-limitations.md"
+      ],
       "advanced": "The machine-readable surface boundary is documented.",
       "remaining": "The codex exec adapter and normalized stream handling are unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K13",
       "contract": "installer and upgrade safety",
       "status": "incomplete-later-phase",
-      "evidence": [],
+      "evidence": [
+        "AGENTS.md",
+        "docs/known-limitations.md"
+      ],
       "advanced": "Upgrade preservation remains a canonical invariant.",
       "remaining": "Installer, upgrade, adoption, and rollback behavior are unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K14",
@@ -492,7 +592,11 @@
       ],
       "advanced": "Ledger fields provide a static foundation only.",
       "remaining": "The live Task ritual and current-attempt enforcement are unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K15",
@@ -503,7 +607,11 @@
       ],
       "advanced": "The solo-fast Ruleset used sensor, intent, explicit actuator, and verification.",
       "remaining": "General adopter governance activation and reconciliation remain later work.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K16",
@@ -514,7 +622,11 @@
       ],
       "advanced": "The Retro Skill provides static failure-to-harness guidance.",
       "remaining": "Consent-aware feedback transport and telemetry are unimplemented.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K17",
@@ -526,7 +638,11 @@
       ],
       "advanced": "Pinned tools, least privilege, stable required jobs, and deterministic discovery are checked.",
       "remaining": "Release, clean-adopter E2E, and all runtime matrices remain later work.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K18",
@@ -538,7 +654,11 @@
       ],
       "advanced": "Known defects and Codex-native adaptations have durable records and regressions.",
       "remaining": "Full source parity reconciliation remains later work.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K19",
@@ -550,7 +670,11 @@
       ],
       "advanced": "Core contracts remain model-neutral and control-plane limits are explicit.",
       "remaining": "No universal authenticated runtime identity or control plane exists.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "id": "K20",
@@ -561,7 +685,11 @@
       ],
       "advanced": "The canonical catalog and empty result store make the release boundary explicit.",
       "remaining": "Full static/runtime parity, 136 scenario passes, clean-adopter E2E, and release evidence are absent.",
-      "later_owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     }
   ],
   "scenarios": [
@@ -1629,42 +1757,66 @@
     {
       "area": "custom-agents-and-role-runtime",
       "state": "task-not-created",
-      "owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "area": "execution-envelope-and-loop-events",
       "state": "task-not-created",
-      "owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "area": "hooks-and-codex-exec-adapter",
       "state": "task-not-created",
-      "owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "area": "installer-upgrade-and-live-task-ritual",
       "state": "task-not-created",
-      "owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "area": "consent-feedback-transport",
       "state": "task-not-created",
-      "owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     },
     {
       "area": "clean-adopter-e2e-and-full-parity-release",
       "state": "task-not-created",
-      "owner": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2"
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
     }
   ],
   "document_bindings": [
     {
       "path": "docs/planning/phase-1-acceptance.md",
-      "sha256": "a6238aeb7bdd389c737dfca43d6f30f3da65ed3ac18b2f17eb4ded4ec4aa7504"
+      "sha256": "cae0f4f929923868f4883cccca93241d9b4808867e1632d841ef53658f390319"
     },
     {
       "path": "docs/conformance/phase-1-scorecard.md",
-      "sha256": "9ba484d7fbf78fb8c7a577a7b085889eae5dd3ce0dfa13f6a11ee7ce92b5c54a"
+      "sha256": "c92c08339e75ffe228911d0940ff6ac1ba158442d1c322ce67153bf2ac7bbf8a"
     }
   ],
   "completion": {

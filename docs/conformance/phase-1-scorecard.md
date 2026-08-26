@@ -7,8 +7,11 @@ candidate. It covers all 136 canonical scenarios across all 14 families, but
 records **zero scenario-action passes**. Every scenario remains `not-run`.
 That is an explicit non-pass state, not a failure hidden by an aggregate.
 
-Phase 1 portable-core implementation is complete in this reviewed T10 tree;
-durable owner acceptance remains pending merge and exact post-merge receipt.
+This exact T10 tree is the Phase 1 portable-core acceptance candidate. When
+its exact-head `quality` and `conformance` checks are green and no blocking
+finding remains, it satisfies the portable-core implementation-complete gate;
+the Phase 1 portable-core implementation is complete in that exact tree.
+Durable owner acceptance remains pending merge and exact post-merge receipt.
 
 The overall repository implementation remains incomplete and
 `release_blocked` remains `true`. A later post-merge receipt can accept the
@@ -191,32 +194,34 @@ records that compatibility boundary.
 
 ## Contract disposition
 
-| Contract | Phase 1 disposition | Later boundary |
-|---|---|---|
-| K01 | Static hierarchy and durable-truth foundation advanced | Runtime recovery and ritual evidence remain later work. |
-| K02 | Static record/verify/escalate contracts advanced | Live orchestration remains later work. |
-| K03 | Constitution and Skill guidance advanced | Authenticated supervisor/worker runtime is absent. |
-| K04 | Deterministic ownership and single-writer policy advanced | Envelope/runtime enforcement is absent. |
-| K05 | Human authority and risk gates advanced | Runtime identity/control-plane enforcement is absent. |
-| K06 | Connector-neutral context contract advanced | Cross-surface connector runtime is not proven. |
-| K07 | Epic/Task/PR ledger schemas advanced | Live Task ritual is not implemented. |
-| K08 | Eight repository Skills statically verified | Runtime invocation and cross-surface evidence remain not-run. |
-| K09 | Policy only | Six custom agents and role-runtime evidence are unimplemented. |
-| K10 | Incomplete | `task-execution-envelope/v1` is unimplemented. |
-| K11 | Incomplete | `loop-event/v1` is unimplemented. |
-| K12 | Incomplete | The `codex exec` adapter is unimplemented. |
-| K13 | Incomplete | Installer and upgrade safety are unimplemented. |
-| K14 | Incomplete | Live Task ritual and current-attempt enforcement are unimplemented. |
-| K15 | Ruleset sensor/intent/actuator evidence advanced | General adopter governance activation remains later work. |
-| K16 | Retro Skill static guidance only | Consent feedback transport is unimplemented. |
-| K17 | Pinned least-privilege CI and deterministic registry advanced | Release and adopter E2E validation remain later work. |
-| K18 | Source-deviation records and regressions advanced | Full source parity audit remains later work. |
-| K19 | Model-neutral contracts and limits documented | No universal runtime identity/control plane exists. |
-| K20 | Blocked | Full static/runtime parity, 136 scenario passes, and release evidence are absent. |
+| Contract | Machine status | Advanced | Remaining | Later lane / owner state |
+|---|---|---|---|---|
+| K01 | `phase-1-static-advanced` | Option B hierarchy and accepted Task evidence are durable. | Runtime recovery and live ritual evidence remain absent. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K02 | `phase-1-static-advanced` | Static record, evidence, and escalation contracts are present. | Live orchestration and current-attempt enforcement remain absent. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K03 | `partial-incomplete` | Policy and orchestration guidance define the topology. | Authenticated roles and six custom agents remain unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K04 | `phase-1-static-advanced` | Versioned exact-path ownership and overlap rejection are active in CI. | Envelope and cross-surface runtime enforcement remain absent. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K05 | `phase-1-static-advanced` | Human gates and risk fields are durable static contracts. | Runtime identity and universal control-plane enforcement remain absent. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K06 | `phase-1-static-advanced` | Stable requirements, decisions, context pins, and connector-neutral operations are checked. | External connectors and cross-surface runtime reachability are not proven. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K07 | `phase-1-static-advanced` | Epic, Task, and PR human/machine contracts are synchronized and checked. | Live Task ritual and GitHub-body equality require later runtime work. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K08 | `phase-1-static-advanced` | Exactly eight Skills and source-to-target parity records are statically checked. | Runtime invocation, implicit selection, and cross-surface evidence remain not-run. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K09 | `incomplete-later-phase` | Role semantics exist only as policy. | Six custom agents and authenticated role evidence are unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K10 | `incomplete-later-phase` | No Phase 1 implementation claim is made. | task-execution-envelope/v1 is unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K11 | `incomplete-later-phase` | No Phase 1 implementation claim is made. | loop-event/v1 is unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K12 | `incomplete-later-phase` | The machine-readable surface boundary is documented. | The codex exec adapter and normalized stream handling are unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K13 | `incomplete-later-phase` | Upgrade preservation remains a canonical invariant. | Installer, upgrade, adoption, and rollback behavior are unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K14 | `incomplete-later-phase` | Ledger fields provide a static foundation only. | The live Task ritual and current-attempt enforcement are unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K15 | `partial-incomplete` | The solo-fast Ruleset used sensor, intent, explicit actuator, and verification. | General adopter governance activation and reconciliation remain later work. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K16 | `incomplete-later-phase` | The Retro Skill provides static failure-to-harness guidance. | Consent-aware feedback transport and telemetry are unimplemented. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K17 | `phase-1-static-advanced` | Pinned tools, least privilege, stable required jobs, and deterministic discovery are checked. | Release, clean-adopter E2E, and all runtime matrices remain later work. | `future-repository-release-and-parity` (`unassigned`) |
+| K18 | `phase-1-static-advanced` | Known defects and Codex-native adaptations have durable records and regressions. | Full source parity reconciliation remains later work. | `future-repository-release-and-parity` (`unassigned`) |
+| K19 | `phase-1-static-advanced` | Core contracts remain model-neutral and control-plane limits are explicit. | No universal authenticated runtime identity or control plane exists. | `future-runtime-distribution-and-governance` (`unassigned`) |
+| K20 | `blocked-release` | The canonical catalog and empty result store make the release boundary explicit. | Full static/runtime parity, 136 scenario passes, clean-adopter E2E, and release evidence are absent. | `future-repository-release-and-parity` (`unassigned`) |
 
-All incomplete items remain owned by the rolling-wave frontier under
-[Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2).
-No later implementation is authorized merely by this scorecard.
+Epic #2 does not own the out-of-scope remainder. No later owner is currently
+assigned. The machine record separates a future
+`future-runtime-distribution-and-governance` lane from a future
+`future-repository-release-and-parity` lane. A human-reviewed Phase, Epic, or
+Task must claim a lane before implementation; this scorecard authorizes none.
 
 ## Evidence boundary
 

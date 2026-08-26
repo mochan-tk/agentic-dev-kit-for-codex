@@ -1,15 +1,16 @@
 # Agentic Development Kit for Codex
 
 > [!WARNING]
-> **Current status:** Phase 0 is complete. Phase 1 portable-core implementation is complete in this reviewed T10 tree; durable owner acceptance remains pending merge and exact post-merge receipt. This is the **Phase 1 portable-core acceptance candidate**.
+> **Current status:** Phase 0 is complete. This exact T10 tree is the **Phase 1 portable-core acceptance candidate**. When its exact-head `quality` and `conformance` checks are green and no blocking finding remains, the Phase 1 portable-core implementation is complete in that exact tree; durable owner acceptance remains pending merge and exact post-merge receipt.
 > The overall repository implementation remains incomplete, not installable, and not a parity release.
 > `release_blocked` remains `true`.
 
 This project is the Codex-native edition of the governed agentic-development
 harness in
 [`mochan-tk/agentic-dev-kit-for-copilot`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot).
-It preserves product-independent behavior and governance while replacing
-Copilot-specific execution surfaces with verified Codex-native adapters.
+It preserves product-independent behavior and governance while building
+toward later verified Codex-native replacements for Copilot-specific execution
+surfaces. Those runtime adapters are not implemented in this tree.
 
 The frozen behavioral source is commit
 [`fd265ddef150fab86cd54d0e383c2c25fe297ffb`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot/commit/fd265ddef150fab86cd54d0e383c2c25fe297ffb).
@@ -92,9 +93,11 @@ any capability.
 5. **Parity release:** static and runtime probes, all 136 conformance
    scenarios, adopter migration, and independently reviewed evidence.
 
-Phase 0 has been human-accepted. Phase 1 portable-core implementation is
-complete in this reviewed T10 tree, while durable owner acceptance remains
-pending merge and exact post-merge receipt. Later Tasks remain subject to their own scoped evidence and owner
+Phase 0 has been human-accepted. This exact T10 tree is the Phase 1
+portable-core acceptance candidate. When its exact-head `quality` and
+`conformance` checks are green and no blocking finding remains, the Phase 1
+portable-core implementation is complete in that exact tree; durable owner acceptance remains pending merge and
+exact post-merge receipt. Later Tasks remain subject to their own scoped evidence and owner
 merge gates. An unavailable runtime probe is `unverified`, `not-run`,
 `UNKNOWN`, or `UNCHECKABLE`, never passed.
 
