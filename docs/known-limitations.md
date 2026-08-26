@@ -1,18 +1,31 @@
 # Known limitations
 
-Observed and documentation-derived statements are dated `2026-08-24`. This
-document is part of the Phase 0 contract. The repository is not installable and
-is not a parity release.
+Observed and documentation-derived statements are current through
+`2026-08-26`. Phase 0 is complete. Phase 1 portable-core implementation is
+complete in this reviewed T10 tree; durable owner acceptance remains pending
+merge and exact post-merge receipt. This tree is the **Phase 1 portable-core acceptance candidate**.
+The overall repository implementation remains incomplete, the repository is
+not installable, and it is not a parity release. `release_blocked` remains `true`.
 
-## Phase 0 contains policy, not the operating harness
+## The portable core is not the operating harness
 
-The GitHub ledger templates, eight Skills, six custom agents, hooks, execution
-envelope, loop-event schema, CLI adapter, installer, Task ritual, governance
-controls, runtime probes, and adopter migration are not implemented yet. A
-constitution or manifest does not make those controls active.
+Phase 1 now contains the Option B agreement, frozen/live policy split,
+conformance catalog, pinned CI/toolchain policy, Epic/Task/PR ledger templates,
+connector-neutral context contracts, and all eight repository Skills. These
+are static repository contracts and accepted external-state receipts, not a
+universal runtime control plane.
 
-The conformance result set is empty and `release_blocked` is true. Source CI
-and source test results are provenance only; they are not target passes.
+The six custom agents, hooks, execution envelope, loop-event schema, CLI
+adapter, installer/upgrade, live Task ritual, consent feedback transport,
+runtime probes, and adopter migration are not implemented. A constitution,
+Skill, schema, manifest, or green generic CI run does not make those controls
+active and does not prove an individual conformance scenario.
+
+The release-level conformance result set is empty and `release_blocked` is
+true. The Phase 1 scorecard inventories 136 scenarios, all `not-run`, with zero
+scenario-action passes. Source CI, source test results, static target tests,
+and family aggregates are related evidence only; they are not a substitute
+for executing each scenario's exact action.
 
 The Phase 0 workflow guards intentionally accept only the reviewed canonical
 block-style YAML shape and fail closed on unsupported syntax. They are not a
