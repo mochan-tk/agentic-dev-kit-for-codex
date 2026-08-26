@@ -1,0 +1,6 @@
+interface:
+  display_name: "Plan Management"
+  short_description: "Maintain the canonical Issue graph and frontier"
+  default_prompt: "Use $plan-management to decompose or replan work in the canonical Issue graph."
+policy:
+  allow_implicit_invocation: false

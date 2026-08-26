@@ -53,9 +53,15 @@ class PortableContractsTest(unittest.TestCase):
         )
         subprocess.run(["git", "checkout", "--quiet", "--detach", "HEAD"], cwd=fixture, check=True)
         ownership = self.read_json(ROOT, OWNERSHIP)
-        active = [task for task in ownership["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T08"], [task["id"] for task in active])
-        for entry in active[0]["owned_paths"]:
+        t08 = [
+            task
+            for task in ownership["tasks"]
+            if task["id"] == "T08"
+            and task["branch"] == "codex/phase-1-context-contracts"
+        ]
+        self.assertEqual(1, len(t08), "exact T08 ownership fixture is missing")
+        self.assertEqual("accepted", t08[0]["state"])
+        for entry in t08[0]["owned_paths"]:
             source = ROOT / entry["path"]
             if not source.exists():
                 continue
@@ -593,7 +599,7 @@ class PortableContractsTest(unittest.TestCase):
         self.checker.validate_immutable_history(root, ownership, {base_path, lower}, errors)
         self.assert_error(errors, "must exceed active Task base maximum 0002")
 
-    def test_accepted_main_record_remains_immutable_while_t08_is_still_active(self):
+    def test_accepted_main_record_remains_immutable_after_t08_acceptance(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name) / "repository"

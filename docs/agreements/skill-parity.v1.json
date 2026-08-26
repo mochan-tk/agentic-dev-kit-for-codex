@@ -1,0 +1,617 @@
+{
+  "schema": "skill-parity/v1",
+  "source_manifest": {
+    "path": "tests/skills/fixtures/source-manifest.v1.json",
+    "sha256": "5b1b97d85867bdcb5fc36592a9ecb89a9e2907454adf512d8a87951f788cf16f"
+  },
+  "target": {
+    "repository": "mochan-tk/agentic-dev-kit-for-codex",
+    "task": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11",
+    "base_commit": "539c01822c005e639438331e70c592891e136430",
+    "base_tree": "f006ed8963d600a2a9bbf1b3917dc57e6f6a41d8"
+  },
+  "skills": [
+    {
+      "id": "project-onboarding",
+      "source_artifacts": [
+        {"path": ".github/skills/project-onboarding/SKILL.md", "blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/project-onboarding/SKILL.md", "sha256": "9956ce9e09c822bbe1fab9fb2602958ef0f5c82802c088e1f5064da248b31fb4"},
+        {"path": ".agents/skills/project-onboarding/agents/openai.yaml", "sha256": "0dfc1ddb56dd06faa09931aff688071bea283ea1805c747f74902ceb2f1faeb6"},
+        {"path": ".agents/skills/project-onboarding/references/onboarding-procedure.md", "sha256": "a29315afc5c8be772e677073f9801256cdc0c6eb99443eaa379b4ff887f42a29"}
+      ],
+      "trigger": {
+        "use_when": "adopting this kit in a repository or explicitly re-tuning an existing adoption",
+        "do_not_use": "ordinary feature implementation or an unapproved repository mutation",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["repository objective and default branch", "read-only code and governance inventory", "named human authority and adopter constraints"],
+      "outputs": ["evidence-backed inventory and bounded onboarding intent", "review-only repository initiative or Epic-set and initial Epic-body proposals", "clean-checkout command prerequisite runtime and result records", "guidance and verification for a separately owned explicitly approved application", "evidence PR or exact durable blocked-PR receipt and creation command", "Deferred from onboarding ledger and durable approved-frontier handoff"],
+      "durable_records": ["remote-default kit-baseline reachability evidence before GitHub writes", "durable proposed initiative Epic set and initial Epic bodies for human review", "exact command environment prerequisites runtime and result evidence", "reviewed application diff and effective-state read-back", "evidence PR URL or exact blocked-PR receipt and creation command", "Deferred from onboarding ledger in the first active Epic or evidence PR", "handoff to the first approved Epic and current Task frontier"],
+      "chronology": ["remote-default-preflight", "read-only-status-and-inventory", "interview-and-intent", "clean-checkout-verify-by-running", "separately-owned-explicitly-approved-application", "prove-and-read-back", "evidence-PR-or-durable-blocked-receipt", "deferred-ledger", "durable-approved-frontier-handoff"],
+      "ownership": ["preserve adopter-owned truth", "separate sensors from actuators", "do not mutate outside approved onboarding scope"],
+      "escalation": ["ambiguous authority", "destructive migration", "broad permission change", "privacy or agreement change"],
+      "verification": ["prove the remote default branch reaches the kit baseline before any GitHub write", "bind every promoted command to its clean-checkout command prerequisites runtime and result", "reject promotion of every unrun command", "compare approved intent with the final diff and effective-state read-back", "require an evidence PR or exact durable blocked-PR receipt and creation command", "require the durable Deferred from onboarding ledger and approved-frontier handoff"],
+      "runtime_dependencies": ["no mandatory connector installer setup script automatic actuator live Project session or runtime routing", "a separately owned explicitly approved executor for application", "authorized GitHub access only for that separately approved actuator", "clean-checkout environment capable of running each promoted command"],
+      "adaptations": [
+        {
+          "id": "ADAPT-ONBOARD-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L32-L69",
+          "target_behavior": "Require remote-default reachability before every application or GitHub write while allowing only read-only assessment and proposal when the precondition is unmet.",
+          "rationale": "This preserves the source no-labels-no-Ruleset-no-Epic gate and fails closed for the target's sensor and actuator boundary.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L188-L194",
+          "target_behavior": "Run candidate commands in a clean checkout and record the exact command environment prerequisites runtime and result; never promote an unrun command.",
+          "rationale": "The target retains the source evidence-before-command contract without claiming an unavailable cloud setup workflow.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L238-L275",
+          "target_behavior": "Require an evidence PR or exact durable blocked-PR receipt and creation command plus a Deferred from onboarding ledger in the first active Epic or evidence PR; chat cannot carry deferred work.",
+          "rationale": "The target Issue graph and pull-request ledger replace source-specific storage paths while retaining the durable P6 completion and deferred-work boundaries.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-004",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L258-L291",
+          "target_behavior": "Replace the source live Project session with a durable handoff naming the first approved Epic current Task frontier dependencies and acceptance gate.",
+          "rationale": "Live Task ritual and cross-surface runtime orchestration are unimplemented, while the canonical Issue graph is durable authority.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "LIMIT-ONBOARD-001",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L143-L186",
+          "target_behavior": "Ship no setup-label or setup-Ruleset scripts and do not create Epic Issues automatically; retain review-only Epic-body proposals and guide or verify only a separately owned explicitly approved application.",
+          "rationale": "GitHub mutations and setup automation are external actuators outside T09 while static proposals preserve the source planning semantics.",
+          "evidence_path": ".agents/skills/project-onboarding/SKILL.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-005",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L13-L28",
+          "target_behavior": "Synchronize documented commands the versioned quality registry workflow steps and named execution-environment evidence without copying the source Sync Triangle.",
+          "rationale": "The target repository policy supplies equivalent static command reachability while cloud setup and installer behavior remain unimplemented.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-006",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L293-L309",
+          "target_behavior": "Propose reviewed characterization tests before semantic migration in legacy or explicitly re-tuned repositories.",
+          "rationale": "Characterizing adopter truth preserves the frozen migration safety rule while leaving application changes outside onboarding.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-007",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the reviewed T09 trigger policy and leave all runtime selection evidence not-run.",
+          "rationale": "Onboarding can cross agreement privacy and actuator boundaries, so selection remains deliberate without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        },
+        {
+          "id": "ADAPT-ONBOARD-008",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L89-L142",
+          "target_behavior": "Generalize the connector material-intake and model-choice interview to bounded connector-neutral source references privacy constraints and a model-neutral execution preference.",
+          "rationale": "T08 defines connector-neutral context operations and T09 cannot require a concrete connector upload surface or runtime model selector.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "LIMIT-ONBOARD-002",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L196-L224",
+          "target_behavior": "Bundle no source-specific CUSTOMIZE CODEOWNERS source-activation model-block or AGENTS application scripts; a separately owned explicitly approved executor maps reviewed intent to adopter surfaces.",
+          "rationale": "Those source paths and setup scripts are not portable target contracts and automatic application is outside T09 ownership.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-009",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L225-L236",
+          "target_behavior": "Replace source tuning-status and cloud-setup proof with current documented commands versioned quality-registry and workflow reachability exact environment evidence and effective-state read-back.",
+          "rationale": "The target has reviewed quality and conformance topology but no source cloud setup workflow or tuning-status contract.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        },
+        {
+          "id": "ADAPT-ONBOARD-010",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/project-onboarding/SKILL.md#L240-L244",
+          "target_behavior": "Record project-agnostic improvement observations as bounded evidence-PR candidates without appending an absent retro-log or automatically opening or transmitting upstream feedback.",
+          "rationale": "Feedback transport and automatic retro or upstream actuators are outside T09 while durable candidate evidence remains portable.",
+          "evidence_path": ".agents/skills/project-onboarding/references/onboarding-procedure.md"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "context-collection",
+      "source_artifacts": [
+        {"path": ".github/skills/context-collection/SKILL.md", "blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/context-collection/SKILL.md", "sha256": "7f949b5495c6ed3b37a5eb63dfe92a5c870309deff8a17220463d572579e824b"},
+        {"path": ".agents/skills/context-collection/agents/openai.yaml", "sha256": "23af4506d093d236ad4afe72a1b6560a4d2fddb1ca2392424c0d77904e7009f4"}
+      ],
+      "trigger": {
+        "use_when": "requirements or decisions need bounded source material and provenance",
+        "do_not_use": "approving agreements, storing raw transcripts, or executing implementation",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["authorized collection scope", "source references and sensitivity constraints", "selected context pin and connector-neutral contract"],
+      "outputs": ["bounded source references and provenance", "context-pin inventory contradictions and redaction facts", "proposed context-pin or landing update"],
+      "durable_records": ["repository-relative source binding", "exact revision and digest", "reviewed landing diff when authorized"],
+      "chronology": ["discover", "retrieve-read-only", "privacy-screen", "record-provenance-and-inventory", "preserve-and-classify", "pin", "verify", "approved-landing-and-read-back"],
+      "ownership": ["external sources remain external authority", "retrieval is read-only", "landing is a separate explicit proposal"],
+      "escalation": ["secret exposure", "unclear source authority", "unbounded retrieval", "stale or uncheckable pin"],
+      "verification": ["verify provenance and digest", "verify exclusions without payload disclosure", "read durable landing back"],
+      "runtime_dependencies": ["no mandatory external connector", "connector-neutral discover retrieve pin verify operations when a connector is used"],
+      "adaptations": [
+        {
+          "id": "ADAPT-COLLECT-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-collection/SKILL.md#L43-L59",
+          "target_behavior": "Use the T08 connector-neutral operations and distinguish in-memory retrieval from an explicit repository landing actuator.",
+          "rationale": "The target context contract makes source observation portable and preserves I10.",
+          "evidence_path": ".agents/skills/context-collection/SKILL.md"
+        },
+        {
+          "id": "ADAPT-COLLECT-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-collection/SKILL.md#L54-L56",
+          "target_behavior": "Exclude secrets, credentials, private local paths, raw transcripts, and raw logs from durable receipts.",
+          "rationale": "Target privacy policy is stricter and transport history is not durable truth.",
+          "evidence_path": ".agents/skills/context-collection/SKILL.md"
+        },
+        {
+          "id": "ADAPT-COLLECT-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-collection/SKILL.md#L15-L41",
+          "target_behavior": "Replace topic INDEX.md files and free-form provenance headers with bounded T08 context-pin inventories and linked provenance records while preserving source method sensitivity and conflict facts.",
+          "rationale": "The target uses exact revision digest and repository-relative bindings and must exclude raw transcript and log payloads.",
+          "evidence_path": ".agents/skills/context-collection/SKILL.md"
+        },
+        {
+          "id": "ADAPT-COLLECT-004",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-collection/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
+          "rationale": "Collection may cross privacy and repository-landing boundaries, so the durable plan requires deliberate selection without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "context-distillation",
+      "source_artifacts": [
+        {"path": ".github/skills/context-distillation/SKILL.md", "blob": "4f2e57a7f613cdadb7c7d76306c3a04458ca7b08"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/context-distillation/SKILL.md", "sha256": "f47de3faa056116e0dc8b98eb73682d2108fedfeaec6b767779d53f04d5f98a5"},
+        {"path": ".agents/skills/context-distillation/agents/openai.yaml", "sha256": "38d160d9ced831eef9d159e6ea0fe15b0be681df36750701b91cb30179d11018"}
+      ],
+      "trigger": {
+        "use_when": "verified context must become reviewable requirements decisions terms or non-goals",
+        "do_not_use": "raw source collection, silent conflict resolution, or implementation",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["valid and fresh selected context pin", "bounded sources and existing agreements", "named human agreement authority"],
+      "outputs": ["promotion-bar disposition with most knowledge retained locally", "stable requirement proposals", "append-only decision proposals", "explicit conflicts terms assumptions and non-goals", "always-on scoped or on-demand delivery tier"],
+      "durable_records": ["REQ-#### records", "DEC-#### supersession records", "append-only consumption or distillation receipt", "reviewed agreement pull request source links and new pin"],
+      "chronology": ["verify-pin", "extract-candidates", "apply-four-part-promotion-bar", "compare-history", "draft-new-records", "human-conflict-decision", "select-delivery-tier", "review-and-merge", "append-consumption-receipt", "re-pin"],
+      "ownership": ["humans retain agreement authority", "historical records remain immutable", "new meaning uses new IDs and links"],
+      "escalation": ["competing interpretations", "invalid or stale pin", "ambiguous supersession", "canonical invariant change"],
+      "verification": ["stable ID and filename checks", "acyclic earlier-only supersession", "default-branch read-back after human-reviewed merge"],
+      "runtime_dependencies": ["no mandatory external service", "T08 repository context records and Git history for validation"],
+      "adaptations": [
+        {
+          "id": "ADAPT-DISTILL-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-distillation/SKILL.md#L15-L57",
+          "target_behavior": "Write stable REQ-#### and append-only DEC-#### records with explicit supersedes links under the T08 contract.",
+          "rationale": "The target provides a machine-checkable immutable agreement model absent from the source procedure.",
+          "evidence_path": ".agents/skills/context-distillation/SKILL.md"
+        },
+        {
+          "id": "ADAPT-DISTILL-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-distillation/SKILL.md#L55-L70",
+          "target_behavior": "Preserve always-on scoped and on-demand tiering while mapping delivery to lean AGENTS.md guidance durable Task or path references and repository Skills or reviewed documents.",
+          "rationale": "The target must respect Codex AGENTS discovery semantics and avoid source-specific instruction-file preload claims.",
+          "evidence_path": ".agents/skills/context-distillation/SKILL.md"
+        },
+        {
+          "id": "ADAPT-DISTILL-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-distillation/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
+          "rationale": "Distillation proposes human agreements and instruction-tier changes, so the durable plan requires deliberate selection without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        },
+        {
+          "id": "ADAPT-DISTILL-004",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-distillation/SKILL.md#L24-L39",
+          "target_behavior": "Apply the frozen four-part promotion bar and keep most knowledge pinned Task-local or on-demand; a no-agreement result remains valid.",
+          "rationale": "Only cross-Task verifiable requirements expensive decisions actually misread terms and tempting non-goals belong in durable agreements.",
+          "evidence_path": ".agents/skills/context-distillation/SKILL.md"
+        },
+        {
+          "id": "ADAPT-DISTILL-005",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/context-distillation/SKILL.md#L72-L80",
+          "target_behavior": "Replace in-place status distilled mutation with an append-only consumption or distillation receipt or reviewed index entry plus a new pin or durable link.",
+          "rationale": "T08 makes historical pinned sources immutable, so processing state must be expressed in a new linked record rather than by rewriting source bytes.",
+          "evidence_path": ".agents/skills/context-distillation/SKILL.md"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "plan-management",
+      "source_artifacts": [
+        {"path": ".github/skills/plan-management/SKILL.md", "blob": "4c76ec1a95516358b038f915668e01eac7f126e5"},
+        {"path": ".github/skills/plan-management/scripts/frontier.sh", "blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c"},
+        {"path": ".github/skills/plan-management/scripts/new-task.sh", "blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda"},
+        {"path": ".github/skills/plan-management/templates/epic-body.md", "blob": "b01a35256b48f1c1e1c31c4d1e35822767bd5551"},
+        {"path": ".github/skills/plan-management/templates/task-body.md", "blob": "2338d2e79db0afad54e498d5582b80ad63fa198f"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/plan-management/SKILL.md", "sha256": "6f801133e165396302048fb040af4eb2e97c66a3f981e559346454af94b07aa0"},
+        {"path": ".agents/skills/plan-management/agents/openai.yaml", "sha256": "a78f60067fc74eae6b1abfb64709536b871920f66771ce38498f10ebc646a61d"},
+        {"path": ".agents/skills/plan-management/references/issue-graph-procedure.md", "sha256": "98f5d496c30a1430ee799ade2ce9dfd350eac7356215ef1c4f2ef2febded32ad"}
+      ],
+      "trigger": {
+        "use_when": "decomposing an approved Epic or replanning durable Issue graph work",
+        "do_not_use": "executing a Task or mutating GitHub without a separately approved actuator",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["initiative Epic and Task Issues", "accepted agreements and fresh context", "dependencies ownership risk and current observations"],
+      "outputs": ["Option B Issue graph", "bounded Task proposals and dependency frontier", "replan rationale and affected relationships"],
+      "durable_records": ["T07 Epic and Task ledger fields", "Issue and pull-request relationships", "approved actuator intent and read-back evidence"],
+      "chronology": ["verify-context", "outline-epics", "decompose-frontier", "partition-ownership", "validate-ledger", "sensor-intent-approval-actuator-read-back", "replan"],
+      "ownership": ["Issue graph is canonical", "Projects board is optional projection", "parallel Tasks require disjoint ownership"],
+      "escalation": ["agreement or Epic scope change", "dependency cycle", "ownership overlap", "new external actuator", "changed acceptance meaning"],
+      "verification": ["read Issue bodies and links back", "check frontier blockers", "confirm independently verifiable acceptance"],
+      "runtime_dependencies": ["no live planning actuator supplied by T09", "authorized GitHub observation or mutation is separate from the Skill"],
+      "adaptations": [
+        {
+          "id": "ADAPT-PLAN-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/plan-management/SKILL.md#L17-L35",
+          "target_behavior": "Use the Option B Issue graph and synchronized T07 Epic Task and pull-request ledger contracts.",
+          "rationale": "The target's reviewed authority model makes GitHub Projects optional and ledger fields machine-readable.",
+          "evidence_path": ".agents/skills/plan-management/references/issue-graph-procedure.md"
+        },
+        {
+          "id": "LIMIT-PLAN-001",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/plan-management/scripts/frontier.sh",
+          "target_behavior": "Do not copy the source label-dependent frontier sensor; describe a connector-neutral read-only observation procedure instead.",
+          "rationale": "Source labels cannot outrank target Issue relationships and a live governance sensor is outside T09.",
+          "evidence_path": ".agents/skills/plan-management/references/issue-graph-procedure.md"
+        },
+        {
+          "id": "LIMIT-PLAN-002",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/plan-management/scripts/new-task.sh",
+          "target_behavior": "Do not copy the source GitHub actuator; require explicit intent approval application and read-back through separately authorized work.",
+          "rationale": "T09 must not claim the later live Task ritual or governance actuator contracts.",
+          "evidence_path": ".agents/skills/plan-management/references/issue-graph-procedure.md"
+        },
+        {
+          "id": "ADAPT-PLAN-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/plan-management/templates/epic-body.md",
+          "target_behavior": "Use the synchronized T07 Epic Issue form and ledger contract as the Codex-native template replacement.",
+          "rationale": "T07 already defines the reviewed machine-readable target form.",
+          "evidence_path": ".github/governance/ledger-contracts.v1.json"
+        },
+        {
+          "id": "ADAPT-PLAN-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/plan-management/templates/task-body.md",
+          "target_behavior": "Use the synchronized T07 Task Issue form and ledger contract as the Codex-native template replacement.",
+          "rationale": "T07 already defines the reviewed machine-readable target form.",
+          "evidence_path": ".github/governance/ledger-contracts.v1.json"
+        },
+        {
+          "id": "ADAPT-PLAN-004",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/plan-management/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
+          "rationale": "Planning can propose Issue graph and external-state actuators, so the durable plan requires deliberate selection without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "task-routing",
+      "source_artifacts": [
+        {"path": ".github/skills/task-routing/SKILL.md", "blob": "30a6b0123f82b15f6379a4b1e62f5c6d30c7e984"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/task-routing/SKILL.md", "sha256": "bdb089f1d8bddcc2e944d4ee3dda5e112ab5060a22d6b699071ee2f9047559cf"},
+        {"path": ".agents/skills/task-routing/agents/openai.yaml", "sha256": "8e4116592b9e797b5ff735018200ef8eba26f3fba3a643c7713e9658c0363f87"}
+      ],
+      "trigger": {
+        "use_when": "a planned Task needs an evidence-based execution and review recommendation",
+        "do_not_use": "dispatching work or claiming an unverified client capability",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["Task scope ownership risk and sensitivity", "local dependency parallelism and reasoning needs", "named-client capability evidence"],
+      "outputs": ["bounded route recommendation", "rationale fallback and reviewer needs", "unresolved capability evidence"],
+      "durable_records": ["Task plan routing field", "named client version and date for capability evidence", "release reason before replacement"],
+      "chronology": ["classify-task", "observe-capabilities", "derive-review-needs", "reject-incompatible-routes", "record-recommendation", "human-gate", "authorized-dispatch", "release-and-reroute"],
+      "ownership": ["recommendation does not dispatch", "one active writer remains authoritative", "data boundary follows approved Task risk"],
+      "escalation": ["unknown required capability", "privacy conflict", "unsupported local dependency", "broad permission or high-risk route"],
+      "verification": ["bind capability to named client version and date", "check route against ownership and data boundaries", "verify durable relationship after dispatch"],
+      "runtime_dependencies": ["no runtime adapter or cross-surface dependency", "surface observation is required before a surface-specific claim"],
+      "adaptations": [
+        {
+          "id": "ADAPT-ROUTE-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/task-routing/SKILL.md#L39-L60",
+          "target_behavior": "Replace source product presets with named-client version date and evidence-class observations and emit only a recommendation.",
+          "rationale": "Codex surfaces evolve and model or surface names do not establish authority or capability.",
+          "evidence_path": ".agents/skills/task-routing/SKILL.md"
+        },
+        {
+          "id": "LIMIT-ROUTE-001",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/task-routing/SKILL.md#L61-L120",
+          "target_behavior": "T09 does not implement dispatch cloud SDK worktree or app runtime routing.",
+          "rationale": "Runtime adapter and execution contracts arrive in later Tasks.",
+          "evidence_path": ".agents/skills/task-routing/SKILL.md"
+        },
+        {
+          "id": "ADAPT-ROUTE-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/task-routing/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
+          "rationale": "Routing can influence sensitive data and external dispatch, so the durable plan requires deliberate selection without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        },
+        {
+          "id": "ADAPT-ROUTE-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/task-routing/SKILL.md#L121-L141",
+          "target_behavior": "Derive human or dated named-client advisory review needs from ambiguity risk sensitivity evidence quality agreement impact and mutation scope while deferring custom reviewer Rubber Duck and role-picker behavior.",
+          "rationale": "The target can record a portable review requirement and bounded observation but T09 provides no authenticated custom reviewer or live role router.",
+          "evidence_path": ".agents/skills/task-routing/SKILL.md"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "session-orchestration",
+      "source_artifacts": [
+        {"path": ".github/skills/session-orchestration/SKILL.md", "blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/session-orchestration/SKILL.md", "sha256": "32a437e1bb035ec2a86a9c2a70966f1d943f0e78f0205150b773fb3ae461f7b8"},
+        {"path": ".agents/skills/session-orchestration/agents/openai.yaml", "sha256": "f69a1838627fca6fa41a8ee98ff7532de2dcaa71961dcfa07687cf0fd490a1c7"},
+        {"path": ".agents/skills/session-orchestration/references/orchestration-protocols.md", "sha256": "1e64a8352a04308474c6b3031d18704a56a6026487c1ecb61c0dde9b5043bfcc"}
+      ],
+      "trigger": {
+        "use_when": "supervising bounded Task attempts dispatch replacement or crash recovery",
+        "do_not_use": "asserting runtime identity authentication or an implemented live ritual",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["Task plan acceptance and ownership", "branch pull request and fresh context", "one active supervisor responsibility and writer"],
+      "outputs": ["bounded dispatch and monitoring record", "attempt outcome blockers and deviations", "exact-head acceptance evidence and recovery state"],
+      "durable_records": ["Task plan and Issue comments when available", "pull request commits and checks", "outcome and replacement links"],
+      "chronology": ["claim", "plan", "route", "dispatch-or-exemption", "monitor", "verify", "outcome", "release-before-replacement", "recover-from-durable-truth", "three-per-tier-escalation", "two-identical-crash-human-gate"],
+      "ownership": ["one Task has one active supervisor responsibility", "one PR has one active writer branch and worktree", "contexts are replaceable transport"],
+      "escalation": ["ownership overlap", "stale context", "changed scope", "destructive recovery", "repeated bounded failure", "final acceptance"],
+      "verification": ["durable plan chronology where available", "owned-path and branch checks", "exact head tree and required checks", "single replacement writer"],
+      "runtime_dependencies": ["no authenticated runtime role or session dependency", "GitHub and committed files are sufficient for recovery"],
+      "adaptations": [
+        {
+          "id": "ADAPT-ORCH-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/session-orchestration/SKILL.md#L14-L109",
+          "target_behavior": "Map source sessions to replaceable execution contexts while keeping one durable supervisor responsibility and GitHub authority.",
+          "rationale": "Codex threads subagents worktrees and cloud tasks are contexts rather than authenticated identities.",
+          "evidence_path": ".agents/skills/session-orchestration/references/orchestration-protocols.md"
+        },
+        {
+          "id": "LIMIT-ORCH-001",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/session-orchestration/SKILL.md#L110-L253",
+          "target_behavior": "Describe plan dispatch monitoring outcome and recovery chronology without claiming live enforcement envelope events hooks or adapter support.",
+          "rationale": "T09 is a procedural Skill Task and later contracts own deterministic runtime enforcement.",
+          "evidence_path": ".agents/skills/session-orchestration/SKILL.md"
+        },
+        {
+          "id": "ADAPT-ORCH-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/session-orchestration/SKILL.md#L389-L434",
+          "target_behavior": "Preserve matching failure signatures three attempts per execution tier direct human gates and the two-identical-crash exception in model-neutral recovery guidance.",
+          "rationale": "The target keeps the source's bounded retry semantics without treating a Codex thread as an authenticated or durable session identity.",
+          "evidence_path": ".agents/skills/session-orchestration/references/orchestration-protocols.md"
+        },
+        {
+          "id": "ADAPT-ORCH-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/session-orchestration/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
+          "rationale": "Orchestration can dispatch and replace execution contexts, so the durable plan requires deliberate selection without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        },
+        {
+          "id": "LIMIT-ORCH-002",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/session-orchestration/SKILL.md#L254-L388",
+          "target_behavior": "Preserve initiative and Epic coordination plus responsibility release in the Issue graph while replacing Project parent and app session trees tool naming and teardown behavior with durable links and manual confirmed context release.",
+          "rationale": "No app tool session tree naming convention or teardown command is a portable runtime guarantee in T09.",
+          "evidence_path": ".agents/skills/session-orchestration/references/orchestration-protocols.md"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "verification",
+      "source_artifacts": [
+        {"path": ".github/skills/verification/SKILL.md", "blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/verification/SKILL.md", "sha256": "aa02482f8b0c5de3472c841e6ae1d8043656b518ee4523adba8a8bb895cd53a5"},
+        {"path": ".agents/skills/verification/agents/openai.yaml", "sha256": "6e456e430d7655c27011b0e440f48fb27bfd33b760c14f0e0fc4ad9c91b384b3"}
+      ],
+      "trigger": {
+        "use_when": "defining Verification sections triaging CI or judging a Task or pull request against exact current evidence",
+        "do_not_use": "approving an agreement merging a pull request or declaring repository completion",
+        "allow_implicit_invocation": true
+      },
+      "inputs": ["Task acceptance verification and risk", "test-first work order or observable human gate", "exact current head tree diff and checks", "requirements decisions and deferred evidence"],
+      "outputs": ["criterion-by-criterion evidence table", "bounded failures drift and limitations", "pre-merge or post-merge exact-target receipt"],
+      "durable_records": ["pull-request evidence table", "check result URLs", "Task acceptance or post-merge receipt reviewed by a human"],
+      "chronology": ["test-first-measuring-stick", "validate-criteria", "read-authoritative-check-records", "run-implementer-checks-or-rerun-missing-stale-contradictory-evidence", "security-checks", "advisory-review", "ownership-and-permission-review", "classify-ci-failure", "map-current-evidence", "human-judgment"],
+      "ownership": ["verification remains read-only unless an actuator is separately authorized", "humans retain final acceptance", "stale evidence is non-success"],
+      "escalation": ["head changes", "out-of-scope diff", "skipped required check", "unknown or uncheckable evidence", "high-risk exception"],
+      "verification": ["bind evidence URLs to one exact head", "confirm quality and conformance reachability", "read merged state before post-merge receipt"],
+      "runtime_dependencies": ["repository tests and GitHub checks named by the Task", "no custom-agent hook or runtime adapter dependency"],
+      "adaptations": [
+        {
+          "id": "ADAPT-VERIFY-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/verification/SKILL.md#L25-L66",
+          "target_behavior": "Preserve deterministic security advisory and human layers while binding all evidence through the T07 pull-request ledger to an exact head.",
+          "rationale": "The target requires machine-readable exact-head evidence and treats UNKNOWN UNCHECKABLE and deferred states as non-success.",
+          "evidence_path": ".agents/skills/verification/SKILL.md"
+        },
+        {
+          "id": "ADAPT-VERIFY-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/verification/SKILL.md#L15-L23",
+          "target_behavior": "Preserve test-first measurable work orders when feasible and require an explicit observable human gate when a deterministic test is impossible.",
+          "rationale": "The target keeps the source measuring-stick boundary without claiming every criterion is executable.",
+          "evidence_path": ".agents/skills/verification/SKILL.md"
+        },
+        {
+          "id": "ADAPT-VERIFY-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/verification/SKILL.md#L98-L127",
+          "target_behavior": "Preserve work-order plan diff and evidence diagnosis plus environment defect and specification-mismatch CI triage using current target ledger terms.",
+          "rationale": "The source triage remains load-bearing while source-specific labels and custom reviewer claims are not portable.",
+          "evidence_path": ".agents/skills/verification/SKILL.md"
+        },
+        {
+          "id": "ADAPT-VERIFY-004",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/verification/SKILL.md#L1-L4",
+          "target_behavior": "Allow implicit discovery while defining Verification sections triaging CI and judging Task or pull-request evidence under the reviewed discriminating boundary.",
+          "rationale": "These three source trigger cases select the same read-only verification procedure and do not grant approval or merge authority.",
+          "evidence_path": ".agents/skills/verification/SKILL.md"
+        },
+        {
+          "id": "ADAPT-VERIFY-005",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/verification/SKILL.md#L54-L66",
+          "target_behavior": "Implementers run documented local checks and CI establishes the authoritative record; reviewers read current records first and rerun only missing stale contradictory or non-equivalent evidence.",
+          "rationale": "This preserves CI authority and avoids replacing current durable evidence with unconditional local reruns.",
+          "evidence_path": ".agents/skills/verification/SKILL.md"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    },
+    {
+      "id": "retro",
+      "source_artifacts": [
+        {"path": ".github/skills/retro/SKILL.md", "blob": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3"}
+      ],
+      "target_files": [
+        {"path": ".agents/skills/retro/SKILL.md", "sha256": "70f960c4b0a5f61fe0bc3179cc6fbd4145954386713320a663821d0411ad4a04"},
+        {"path": ".agents/skills/retro/agents/openai.yaml", "sha256": "25e01b5c922d45a83ef300a38a2538e4075f1ff2c4cde2610abbd43d419c4258"}
+      ],
+      "trigger": {
+        "use_when": "two durable occurrences recur or a material incident rejected agent pull request or scheduled hygiene finding warrants review",
+        "do_not_use": "one-off repair automatic promotion or consent and feedback transport",
+        "allow_implicit_invocation": false
+      },
+      "inputs": ["two linked occurrences or one material incident rejected agent pull request or hygiene finding", "affected agreements checks and existing candidates", "root-cause and scope evidence"],
+      "outputs": ["one linked candidate", "smallest preventative asset proposal", "named-client checkpoint when platform behavior matters", "verification limitations and review rationale"],
+      "durable_records": ["Option-B candidate Issue and occurrence links", "reviewed retrospective pull request and accepted mechanism", "optional upstream or adopter link", "deterministic regression or documented limitation"],
+      "chronology": ["search", "record-first-occurrence", "link-recurrence-or-immediate-promotion-rationale", "scheduled-stale-guidance-review", "classify", "record-named-client-checkpoint-when-relevant", "regression-first", "human-review", "verify-and-link-upstream-optionally"],
+      "ownership": ["do not duplicate candidates", "keep the change inside candidate scope", "human review controls global procedure changes"],
+      "escalation": ["unrelated occurrences", "private payload", "canonical invariant change", "security privacy or broad-permission policy"],
+      "verification": ["reproduce prior failure safely", "prove the mechanism rejects recurrence", "run unaffected checks", "bind exact-head evidence"],
+      "runtime_dependencies": ["no feedback transport or automatic tracker", "GitHub records are used only through separately authorized actions"],
+      "adaptations": [
+        {
+          "id": "ADAPT-RETRO-001",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/retro/SKILL.md#L57-L82",
+          "target_behavior": "Use model-neutral evidence and current named-client observations instead of source-specific platform checkpoints.",
+          "rationale": "Target governance cannot freeze volatile client behavior into a universal procedure.",
+          "evidence_path": ".agents/skills/retro/SKILL.md"
+        },
+        {
+          "id": "LIMIT-RETRO-001",
+          "classification": "documented-limitation",
+          "source_anchor": ".github/skills/retro/SKILL.md#L24-L41",
+          "target_behavior": "Describe candidate and recurrence records without implementing consent feedback transport or automatic promotion.",
+          "rationale": "T09 advances the procedure boundary only; later Tasks own live feedback and governance mechanisms.",
+          "evidence_path": ".agents/skills/retro/SKILL.md"
+        },
+        {
+          "id": "ADAPT-RETRO-002",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/retro/SKILL.md#L14-L22",
+          "target_behavior": "Preserve the second-occurrence threshold immediate material-incident or rejected-PR review and scheduled stale-guidance hygiene in a static procedure.",
+          "rationale": "The trigger semantics are load-bearing even though T09 supplies no monthly job automatic promotion or feedback transport.",
+          "evidence_path": ".agents/skills/retro/SKILL.md"
+        },
+        {
+          "id": "ADAPT-RETRO-003",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/retro/SKILL.md#L1-L4",
+          "target_behavior": "Require explicit invocation under the owner-approved T09 trigger policy and leave runtime selection evidence not-run.",
+          "rationale": "Retrospective changes can alter future agent behavior, so the durable plan requires deliberate selection without claiming client preload behavior.",
+          "evidence_path": "docs/agreements/skill-parity.v1.json"
+        },
+        {
+          "id": "ADAPT-RETRO-004",
+          "classification": "codex-native-adaptation",
+          "source_anchor": ".github/skills/retro/SKILL.md#L84-L123",
+          "target_behavior": "Replace the frozen retro log and upstream lifecycle with one Option-B candidate Issue occurrence links a reviewed pull request accepted mechanism and an optional upstream or adopter link without feedback transport or automatic promotion.",
+          "rationale": "The canonical target Issue graph provides traceability while T09 cannot claim tracker automation or delivery to an upstream project.",
+          "evidence_path": ".agents/skills/retro/SKILL.md"
+        }
+      ],
+      "evidence_status": {"static_contract": "present", "runtime_invocation": "not-run", "implicit_selection": "not-run", "progressive_disclosure_runtime": "not-run", "cross_surface_support": "not-run"}
+    }
+  ],
+  "contract_effects": {
+    "K08": "static-repository-skill-contracts",
+    "advanced": ["K02", "K03", "K04", "K05", "K06", "K14", "K16", "K18", "K19"],
+    "boundaries": ["K10-not-implemented", "K11-not-implemented", "K12-not-implemented", "K13-not-implemented", "K14-live-ritual-not-implemented", "K15-live-actuators-not-implemented", "K16-feedback-transport-not-implemented"]
+  },
+  "scenario_evidence": [
+    {"id": "S-001", "status": "not-run", "t09_effect": "static-inventory-checker-and-fixtures-only"},
+    {"id": "S-002", "status": "not-run", "t09_effect": "no-runtime-invocation-evidence"},
+    {"id": "S-003", "status": "not-run", "t09_effect": "plan-management-implicit-selection-unavailable-by-reviewed-explicit-only-policy"},
+    {"id": "S-004", "status": "not-run", "t09_effect": "static-resource-resolution-only"},
+    {"id": "S-005", "status": "not-run", "t09_effect": "static-negative-fixtures-only"},
+    {"id": "S-006", "status": "not-run", "t09_effect": "static-negative-fixtures-only"},
+    {"id": "S-007", "status": "not-run", "t09_effect": "installer-out-of-scope"},
+    {"id": "S-008", "status": "not-run", "t09_effect": "static-source-parity-record-only"}
+  ],
+  "explicit_invocation_evidence": [],
+  "results": [],
+  "release_blocked": true,
+  "repository_completion": "incomplete"
+}

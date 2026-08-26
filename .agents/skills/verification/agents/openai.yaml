@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verification"
+  short_description: "Verify acceptance against exact current evidence"
+  default_prompt: "Use $verification to verify this Task or pull request against exact current evidence."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,134 @@
+{
+  "schema": "skill-source-manifest/v1",
+  "source": {
+    "repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+    "tree": "88f96493ec167602750c8dfec044629bd494a586"
+  },
+  "research_pack": {
+    "archive": "agentic-dev-kit-codex-research-pack.zip",
+    "sha256": "55e3e36d581c40a30f4e09e208573fcc15b46a254077da4f177fe7b8adcad0f7"
+  },
+  "artifacts": [
+    {
+      "path": ".github/skills/context-collection/SKILL.md",
+      "mode": "100644",
+      "blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+      "sha256": "2a937f40c00d32b49452b0eb08f05817aa86da97073c9d29a50906d6e50ae0eb",
+      "size": 3220,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/context-collection/SKILL.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/context-distillation/SKILL.md",
+      "mode": "100644",
+      "blob": "4f2e57a7f613cdadb7c7d76306c3a04458ca7b08",
+      "sha256": "98e34a51a92d8a123a6fb6bd2d708751f84fffdf53848565a3d110f92ce9c785",
+      "size": 4748,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/context-distillation/SKILL.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/plan-management/SKILL.md",
+      "mode": "100644",
+      "blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      "sha256": "c547dd2dc0e46a5b694ed31beb7db987f74b45efec2053ae8bf6737e670098ca",
+      "size": 13076,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/plan-management/SKILL.md", ".agents/skills/plan-management/references/issue-graph-procedure.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/plan-management/scripts/frontier.sh",
+      "mode": "100755",
+      "blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+      "sha256": "acb8ad8bbd9a6a15aa490c704b77c336eb06aaff16d0259aab76927beb0f5886",
+      "size": 3817,
+      "classification": "documented-limitation",
+      "target_paths": [".agents/skills/plan-management/references/issue-graph-procedure.md"],
+      "evidence_path": ".agents/skills/plan-management/references/issue-graph-procedure.md"
+    },
+    {
+      "path": ".github/skills/plan-management/scripts/new-task.sh",
+      "mode": "100755",
+      "blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
+      "sha256": "876095fb0dbd52bcef3529b1a1a67c23d30c113639326521f62f78f3316059bf",
+      "size": 2771,
+      "classification": "documented-limitation",
+      "target_paths": [".agents/skills/plan-management/references/issue-graph-procedure.md"],
+      "evidence_path": ".agents/skills/plan-management/references/issue-graph-procedure.md"
+    },
+    {
+      "path": ".github/skills/plan-management/templates/epic-body.md",
+      "mode": "100644",
+      "blob": "b01a35256b48f1c1e1c31c4d1e35822767bd5551",
+      "sha256": "28adc386b85e5d9a4861aede3a476606b9b826a74d08308ac69461232aa248b4",
+      "size": 854,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".github/ISSUE_TEMPLATE/epic.yml", ".github/governance/ledger-contracts.v1.json"],
+      "evidence_path": ".github/governance/ledger-contracts.v1.json"
+    },
+    {
+      "path": ".github/skills/plan-management/templates/task-body.md",
+      "mode": "100644",
+      "blob": "2338d2e79db0afad54e498d5582b80ad63fa198f",
+      "sha256": "9104f12f53998e5ff86a4b1be43fae9bfbf954bcee56c53c2f35437a74d9ba12",
+      "size": 2266,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".github/ISSUE_TEMPLATE/ai-task.yml", ".github/governance/ledger-contracts.v1.json"],
+      "evidence_path": ".github/governance/ledger-contracts.v1.json"
+    },
+    {
+      "path": ".github/skills/project-onboarding/SKILL.md",
+      "mode": "100644",
+      "blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
+      "sha256": "213670b95758ade2e30ac9fcbb2aa2f114910d2176b44973658a324c26b28d29",
+      "size": 17895,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/project-onboarding/SKILL.md", ".agents/skills/project-onboarding/references/onboarding-procedure.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/retro/SKILL.md",
+      "mode": "100644",
+      "blob": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
+      "sha256": "db359435b3443e1d5ab085222b1326f1e7d0c500ed2496f4d7b45f7d72b39cdf",
+      "size": 6798,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/retro/SKILL.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/session-orchestration/SKILL.md",
+      "mode": "100644",
+      "blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+      "sha256": "3e4cced1d9a56ad3f1d4c58e7d471f06bd3e42f4df5969f1f0b125db22891d39",
+      "size": 25914,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/session-orchestration/SKILL.md", ".agents/skills/session-orchestration/references/orchestration-protocols.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/task-routing/SKILL.md",
+      "mode": "100644",
+      "blob": "30a6b0123f82b15f6379a4b1e62f5c6d30c7e984",
+      "sha256": "252f7a12ac45dddaaa55e8b73b06e64047d0ef7196a0c17a711516087bbff100",
+      "size": 8552,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/task-routing/SKILL.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    },
+    {
+      "path": ".github/skills/verification/SKILL.md",
+      "mode": "100644",
+      "blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+      "sha256": "cb310318d776263fa1a506f2f37202aa44bd77b7adb879c0cb120fed897e8fa0",
+      "size": 7329,
+      "classification": "codex-native-adaptation",
+      "target_paths": [".agents/skills/verification/SKILL.md"],
+      "evidence_path": "docs/agreements/skill-parity.v1.json"
+    }
+  ]
+}

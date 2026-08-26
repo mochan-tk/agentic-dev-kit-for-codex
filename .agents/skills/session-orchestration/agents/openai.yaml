@@ -1,0 +1,6 @@
+interface:
+  display_name: "Session Orchestration"
+  short_description: "Coordinate durable Task attempts and recovery"
+  default_prompt: "Use $session-orchestration to coordinate a bounded Task attempt and durable recovery state."
+policy:
+  allow_implicit_invocation: false
