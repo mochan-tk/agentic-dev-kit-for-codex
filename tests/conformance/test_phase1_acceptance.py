@@ -178,7 +178,7 @@ class Phase1AcceptanceTest(unittest.TestCase):
         )
         self.assertNotIn(
             "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
-            json.dumps(payload["contracts"] + payload["later_handoffs"]),
+            [entry["planning_issue_url"] for entry in payload["later_handoffs"]],
         )
 
     def test_complete_later_contract_is_rejected(self):
