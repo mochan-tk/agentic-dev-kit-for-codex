@@ -17,6 +17,7 @@
       "python3 -I .github/scripts/check-portable-contracts.py",
       "python3 -I .github/scripts/check-ledger-templates.py",
       "python3 -I .github/scripts/check-skills.py",
+      "python3 -I .github/scripts/check-phase1-acceptance.py",
       "python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination \"$RUNNER_TEMP/agentic-ci-tools\" --check-repository",
       "python3 -I .github/scripts/conformance-catalog.py check",
       "bash .github/scripts/check-action-pins.sh",
@@ -45,7 +46,6 @@
         {"path": ".gitignore", "mode": "100644"},
         {"path": "LICENSE", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md", "mode": "100644"},
-        {"path": "docs/known-limitations.md", "mode": "100644"},
         {"path": "docs/planning/phase-0-orientation.md", "mode": "100644"}
       ]
     },
@@ -90,12 +90,9 @@
       "base_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
       "base_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
       "owned_paths": [
-        {"path": "AGENTS.md", "mode": "100644"},
-        {"path": "README.md", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md", "mode": "100644"},
         {"path": "docs/agreements/repository-completion.md", "mode": "100644"},
         {"path": "tests/conformance/coverage.json", "mode": "100644"},
-        {"path": "tests/conformance/manifest.json", "mode": "100644"},
         {"path": "tests/conformance/test_conformance_catalog.py", "mode": "100644"}
       ]
     },
@@ -109,7 +106,6 @@
       "path_transitions": [],
       "owned_paths": [
         {"path": ".github/governance/ci-tools.lock.v1.json", "mode": "100644"},
-        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
         {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644"},
         {"path": ".github/scripts/install-ci-tools.py", "mode": "100644"},
         {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
@@ -157,7 +153,6 @@
         {"path": "docs/context/README.md", "mode": "100644"},
         {"path": "docs/context/pins/PIN-0001.context-pin.v1.json", "mode": "100644"},
         {"path": "tests/contracts/fixtures/connector-valid.v1.json", "mode": "100644"},
-        {"path": "tests/contracts/fixtures/context-pin-valid.v1.json", "mode": "100644"},
         {"path": "tests/contracts/fixtures/decisions-valid.v1.json", "mode": "100644"},
         {"path": "tests/contracts/fixtures/requirements-valid.v1.json", "mode": "100644"}
       ]
@@ -165,7 +160,7 @@
     {
       "id": "T09",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/phase-1-eight-skills",
       "base_commit": "539c01822c005e639438331e70c592891e136430",
       "base_tree": "f006ed8963d600a2a9bbf1b3917dc57e6f6a41d8",
@@ -190,14 +185,37 @@
         {"path": ".agents/skills/task-routing/agents/openai.yaml", "mode": "100644"},
         {"path": ".agents/skills/verification/SKILL.md", "mode": "100644"},
         {"path": ".agents/skills/verification/agents/openai.yaml", "mode": "100644"},
-        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
         {"path": ".github/scripts/check-skills.py", "mode": "100644"},
-        {"path": ".github/workflows/ci.yml", "mode": "100644"},
         {"path": "docs/agreements/skill-parity.v1.json", "mode": "100644"},
         {"path": "tests/conformance/test_portable_contracts.py", "mode": "100644"},
-        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
         {"path": "tests/conformance/test_skills.py", "mode": "100644"},
         {"path": "tests/skills/fixtures/source-manifest.v1.json", "mode": "100644"}
+      ]
+    },
+    {
+      "id": "T10",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12",
+      "state": "active",
+      "branch": "codex/phase-1-acceptance",
+      "base_commit": "509362e6e12cf0160e58853b0d6c0b6871aa895c",
+      "base_tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09",
+      "path_transitions": [],
+      "owned_paths": [
+        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
+        {"path": ".github/scripts/check-phase1-acceptance.py", "mode": "100644"},
+        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
+        {"path": ".github/workflows/ci.yml", "mode": "100644"},
+        {"path": "AGENTS.md", "mode": "100644"},
+        {"path": "README.md", "mode": "100644"},
+        {"path": "docs/conformance/phase-1-scorecard.md", "mode": "100644"},
+        {"path": "docs/context/pins/PIN-0002.context-pin.v1.json", "mode": "100644"},
+        {"path": "docs/known-limitations.md", "mode": "100644"},
+        {"path": "docs/planning/phase-1-acceptance.md", "mode": "100644"},
+        {"path": "tests/conformance/manifest.json", "mode": "100644"},
+        {"path": "tests/conformance/results/phase-1.json", "mode": "100644"},
+        {"path": "tests/conformance/test_phase1_acceptance.py", "mode": "100644"},
+        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
+        {"path": "tests/contracts/fixtures/context-pin-valid.v1.json", "mode": "100644"}
       ]
     }
   ]

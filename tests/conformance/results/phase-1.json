@@ -1,0 +1,1975 @@
+{
+  "schema": "phase-1-acceptance/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "phase": "phase-1",
+  "task": "T10",
+  "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12",
+  "task_base": {
+    "commit": "509362e6e12cf0160e58853b0d6c0b6871aa895c",
+    "tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09",
+    "source": "accepted-main-after-T09"
+  },
+  "compatibility_layer": {
+    "phase0_manifest": {
+      "path": "tests/conformance/manifest.json",
+      "sha256": "aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be",
+      "state": "unchanged-manifest-pin-fresh",
+      "selected_pin": "docs/context/pins/PIN-0002.context-pin.v1.json"
+    },
+    "compatibility_replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5419726866",
+    "pin_replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5420690165",
+    "continuation_replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421277687",
+    "phase1_discovery": [
+      "README.md",
+      ".github/scripts/check-phase1-acceptance.py",
+      ".github/governance/phase-task-ownership.v1.json",
+      ".github/workflows/ci.yml"
+    ]
+  },
+    "acceptance_status": {
+        "implementation_gate": {
+            "state": "satisfied",
+            "scope": "phase-1-portable-core",
+            "binding": "this-versioned-tree",
+            "exact_head_evidence": "external-pr-and-issue-receipt"
+        },
+        "snapshot_at_tree_creation": {
+            "tree_creation_stage": "pre-merge",
+            "binding": "immutable-tree-creation-snapshot",
+            "current_outcome_claim": "none"
+        },
+        "current_acceptance_authority": {
+            "kind": "external-github-state",
+            "task_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12",
+            "epic_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+            "read_back_required": true
+        },
+        "post_merge_outcome_not_embedded_in_tree": {
+            "state": "not-embedded",
+            "binding": "issue-12-and-epic-2-post-merge-receipts",
+            "required_receipt_fields": [
+                "merge-commit",
+                "merge-tree",
+                "both-parents",
+                "post-merge-quality-url",
+                "post-merge-conformance-url",
+                "task-outcome",
+                "epic-outcome"
+            ]
+        },
+        "later_repository": {
+            "state": "non-pass",
+            "binding": "future-reviewed-tasks",
+            "includes": [
+                "custom-agents",
+                "task-execution-envelope",
+                "loop-events",
+                "hooks",
+                "codex-exec-adapter",
+                "installer-upgrade",
+                "live-task-ritual",
+                "feedback-transport",
+                "clean-adopter-e2e",
+                "full-source-parity",
+                "release"
+            ]
+        }
+    },
+  "governance": {
+    "main": {
+      "commit": "509362e6e12cf0160e58853b0d6c0b6871aa895c",
+      "tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09"
+    },
+        "ruleset": {
+            "snapshot_schema": "github-ruleset-snapshot/v1",
+            "api_version": "2022-11-28",
+            "observed_at": "2026-08-26T05:59:28Z",
+            "snapshot_role": "creation-time-read-only-external-state-observation",
+            "activation_receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497",
+            "snapshot_receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421280882",
+            "managed_ruleset_response_top_level_fields": [
+                "_links",
+                "bypass_actors",
+                "conditions",
+                "created_at",
+                "current_user_can_bypass",
+                "enforcement",
+                "id",
+                "name",
+                "node_id",
+                "rules",
+                "source",
+                "source_type",
+                "target",
+                "updated_at"
+            ],
+            "managed_ruleset_omitted_fields": [],
+            "managed_ruleset": {
+                "id": 21254123,
+                "name": "solo-fast main protection",
+                "target": "branch",
+                "source_type": "Repository",
+                "source": "mochan-tk/agentic-dev-kit-for-codex",
+                "enforcement": "active",
+                "conditions": {
+                    "ref_name": {
+                        "exclude": [],
+                        "include": [
+                            "refs/heads/main"
+                        ]
+                    }
+                },
+                "rules": [
+                    {
+                        "type": "deletion"
+                    },
+                    {
+                        "type": "non_fast_forward"
+                    },
+                    {
+                        "type": "pull_request",
+                        "parameters": {
+                            "required_approving_review_count": 0,
+                            "dismiss_stale_reviews_on_push": false,
+                            "required_reviewers": [],
+                            "require_code_owner_review": false,
+                            "require_last_push_approval": false,
+                            "required_review_thread_resolution": false,
+                            "require_extra_approval_for_unattributed_changes": false,
+                            "allowed_merge_methods": [
+                                "merge",
+                                "rebase",
+                                "squash"
+                            ]
+                        }
+                    },
+                    {
+                        "type": "required_status_checks",
+                        "parameters": {
+                            "strict_required_status_checks_policy": false,
+                            "do_not_enforce_on_create": false,
+                            "required_status_checks": [
+                                {
+                                    "context": "conformance",
+                                    "integration_id": 15368
+                                },
+                                {
+                                    "context": "quality",
+                                    "integration_id": 15368
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "node_id": "RRS_lACqUmVwb3NpdG9yec5QGbwgzgFET-s",
+                "created_at": "2026-08-24T07:37:46.441+09:00",
+                "updated_at": "2026-08-24T07:38:18.261+09:00",
+                "bypass_actors": [
+                    {
+                        "actor_id": 9846618,
+                        "actor_type": "User",
+                        "bypass_mode": "always"
+                    }
+                ],
+                "current_user_can_bypass": "always",
+                "_links": {
+                    "self": {
+                        "href": "https://api.github.com/repos/mochan-tk/agentic-dev-kit-for-codex/rulesets/21254123"
+                    },
+                    "html": {
+                        "href": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/rules/21254123"
+                    }
+                }
+            },
+            "classic_branch_protection": {
+                "state": "not-configured",
+                "branch_summary": {
+                    "endpoint": "repos/mochan-tk/agentic-dev-kit-for-codex/branches/main",
+                    "included_fields": [
+                        "name",
+                        "protected",
+                        "protection"
+                    ],
+                    "omitted_fields": [
+                        "_links",
+                        "commit",
+                        "protection_url"
+                    ],
+                    "name": "main",
+                    "protected": true,
+                    "protection": {
+                        "enabled": false,
+                        "required_status_checks": {
+                            "enforcement_level": "off",
+                            "contexts": [],
+                            "checks": []
+                        }
+                    }
+                },
+                "details_read": {
+                    "endpoint": "repos/mochan-tk/agentic-dev-kit-for-codex/branches/main/protection",
+                    "http_status": 404,
+                    "response": {
+                        "message": "Branch not protected",
+                        "documentation_url": "https://docs.github.com/rest/branches/branch-protection#get-branch-protection",
+                        "status": "404"
+                    }
+                }
+            },
+            "normalization": {
+                "algorithm": "sha256",
+                "digest_scope": [
+                    "managed_ruleset",
+                    "classic_branch_protection"
+                ],
+                "json": "UTF-8 json.dumps(...,sort_keys=True,ensure_ascii=False,separators=(\",\",\":\"),allow_nan=False); no trailing newline",
+                "semantic_array_order": {
+                    "bypass_actors": "actor_type,actor_id,bypass_mode",
+                    "conditions.ref_name.include/exclude": "lexicographic",
+                    "rules": "type",
+                    "allowed_merge_methods": "lexicographic",
+                    "required_reviewers": "canonical JSON",
+                    "required_status_checks": "context,integration_id"
+                },
+                "sha256": "655d99c11deceebdb81222afc7a23e5a2349203a017abd219a46bd873bb60d0e"
+            }
+        }
+  },
+  "catalog": {
+    "path": "tests/conformance/catalog.json",
+    "sha256": "418bf8aa01674dc0c78cc615ad8e278ed06df1a952bb4670ec42e3bdd7dacc3d",
+    "coverage_path": "tests/conformance/coverage.json",
+    "coverage_sha256": "e52fe6f3e73248b69114261d137aa775e9ce021b44602a78c8d10f8bfd327808",
+    "scenario_count": 136,
+    "family_count": 14
+  },
+  "task_index": [
+    {
+      "id": "T01",
+      "title": "Observe branch governance and publish versioned intent",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388861150",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/3#issuecomment-5388863356",
+      "pull_request": "not-applicable-external-state-task",
+      "revision_evidence_class": "baseline-pre-actuator-observation",
+      "reviewed_head": "32615344ad4f0310948bc59d234a84718741788a",
+      "reviewed_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+      "merge_commit": "not-applicable-external-state-task",
+      "merge_tree": "not-applicable-external-state-task",
+      "parents": [],
+      "checks": {
+        "quality": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594482"
+        },
+        "conformance": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594322"
+        }
+      }
+    },
+    {
+      "id": "T02",
+      "title": "Activate and verify the approved solo-profile main Ruleset",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497",
+      "pull_request": "not-applicable-external-state-task",
+      "revision_evidence_class": "baseline-pre-actuator-observation",
+      "reviewed_head": "32615344ad4f0310948bc59d234a84718741788a",
+      "reviewed_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+      "merge_commit": "not-applicable-external-state-task",
+      "merge_tree": "not-applicable-external-state-task",
+      "parents": [],
+      "checks": {
+        "quality": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594482"
+        },
+        "conformance": {
+          "evidence_class": "baseline-pre-actuator-check",
+          "target_commit": "32615344ad4f0310948bc59d234a84718741788a",
+          "target_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32663677641/job/97253594322"
+        }
+      }
+    },
+    {
+      "id": "T03",
+      "title": "Separate frozen Phase 0 verification from live repository policy",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5#issuecomment-5388869324",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/5#issuecomment-5389844185",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/13",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "94f92af978839efc48f0ca6afd77514bf291b9f6",
+      "reviewed_tree": "f7132c5867023a2b971e0383d95a6c4184e20f35",
+      "merge_commit": "3065afcf80ee348796a7d159f6aaefeeac65ad10",
+      "merge_tree": "f7132c5867023a2b971e0383d95a6c4184e20f35",
+      "parents": [
+        "32615344ad4f0310948bc59d234a84718741788a",
+        "94f92af978839efc48f0ca6afd77514bf291b9f6"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32681407695/job/97298627355"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32681407695/job/97298627165"
+        }
+      }
+    },
+    {
+      "id": "T04",
+      "title": "Persist the complete 136-scenario conformance catalog",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6#issuecomment-5389938555",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/6#issuecomment-5392427841",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/14",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "95ad638787047194a1bcf6ca074c1b0a9309f1da",
+      "reviewed_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
+      "merge_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
+      "merge_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
+      "parents": [
+        "3065afcf80ee348796a7d159f6aaefeeac65ad10",
+        "95ad638787047194a1bcf6ca074c1b0a9309f1da"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32704901829/job/97363797952"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32704901829/job/97363798203"
+        }
+      }
+    },
+    {
+      "id": "T05",
+      "title": "Resolve canonical hierarchy terminology and repository completion",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7#issuecomment-5396759095",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7#issuecomment-5398125586",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/15",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "562818ee902fb089dcdd8077b4dace0dd94c341c",
+      "reviewed_tree": "85153f261e574d1287970d7ce14c3446e4e0d020",
+      "merge_commit": "1c949b01a25208d91e0c7380facfd6ed9d48f833",
+      "merge_tree": "85153f261e574d1287970d7ce14c3446e4e0d020",
+      "parents": [
+        "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
+        "562818ee902fb089dcdd8077b4dace0dd94c341c"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32750264886/job/97505301794"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32750264886/job/97505301455"
+        }
+      }
+    },
+    {
+      "id": "T06",
+      "title": "Harden the required CI toolchain",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8#issuecomment-5402644687",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/8#issuecomment-5403935064",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/16",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "0ef66c2d0baf9b7dee30dee8d1e4744ba4b7f75c",
+      "reviewed_tree": "fe96b1eb5c825be6b4d936fa4850e26a51b7b3d0",
+      "merge_commit": "0e863f610267ca1ea454c19db2983ec4039d5d6b",
+      "merge_tree": "fe96b1eb5c825be6b4d936fa4850e26a51b7b3d0",
+      "parents": [
+        "1c949b01a25208d91e0c7380facfd6ed9d48f833",
+        "0ef66c2d0baf9b7dee30dee8d1e4744ba4b7f75c"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32798682441/job/97655150831"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32798682441/job/97655150672"
+        }
+      }
+    },
+    {
+      "id": "T07",
+      "title": "Add synchronized Epic, Task, and pull-request ledger templates",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9#issuecomment-5404518469",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/9#issuecomment-5409052229",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/17",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "952fb273fd6eb2811dd0ad6ebfea062e682c1155",
+      "reviewed_tree": "e755dfba299b73d06f97fe7caeba6d520225c202",
+      "merge_commit": "0adb4ef232ebd853df8af788db96c02bde6576ae",
+      "merge_tree": "e755dfba299b73d06f97fe7caeba6d520225c202",
+      "parents": [
+        "0e863f610267ca1ea454c19db2983ec4039d5d6b",
+        "952fb273fd6eb2811dd0ad6ebfea062e682c1155"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32836943638/job/97767808961"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32836943638/job/97767808627"
+        }
+      }
+    },
+    {
+      "id": "T08",
+      "title": "Establish connector-neutral agreements and context contracts",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10#issuecomment-5409182342",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/10#issuecomment-5412449204",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/18",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "557c1086351e08f56b3d5c7ad2ab538fc5b6d4f8",
+      "reviewed_tree": "f006ed8963d600a2a9bbf1b3917dc57e6f6a41d8",
+      "merge_commit": "539c01822c005e639438331e70c592891e136430",
+      "merge_tree": "f006ed8963d600a2a9bbf1b3917dc57e6f6a41d8",
+      "parents": [
+        "0adb4ef232ebd853df8af788db96c02bde6576ae",
+        "557c1086351e08f56b3d5c7ad2ab538fc5b6d4f8"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32863505284/job/97853005307"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32863505284/job/97853005518"
+        }
+      }
+    },
+    {
+      "id": "T09",
+      "title": "Port and verify the eight repository Skills",
+      "issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11",
+      "issue_state": "CLOSED",
+      "issue_state_reason": "COMPLETED",
+      "plan_or_intent_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11#issuecomment-5412882001",
+      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/11#issuecomment-5419149972",
+      "pull_request": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/19",
+      "revision_evidence_class": "reviewed-pr-head",
+      "reviewed_head": "19879ed8f4608399058ea3ecffea30ab6a5924e3",
+      "reviewed_tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09",
+      "merge_commit": "509362e6e12cf0160e58853b0d6c0b6871aa895c",
+      "merge_tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09",
+      "parents": [
+        "539c01822c005e639438331e70c592891e136430",
+        "19879ed8f4608399058ea3ecffea30ab6a5924e3"
+      ],
+      "checks": {
+        "quality": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32917569601/job/98024375395"
+        },
+        "conformance": {
+          "result": "success",
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/32917569601/job/98024375513"
+        }
+      }
+    }
+  ],
+  "contracts": [
+    {
+      "id": "K01",
+      "contract": "durable GitHub truth and canonical hierarchy",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        "AGENTS.md",
+        "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
+      ],
+      "advanced": "Option B hierarchy and accepted Task evidence are durable.",
+      "remaining": "Runtime recovery and live ritual evidence remain absent.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K02",
+      "contract": "record verify and escalate",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        ".agents/skills/verification/SKILL.md",
+        ".github/governance/ledger-contracts.v1.json"
+      ],
+      "advanced": "Static record, evidence, and escalation contracts are present.",
+      "remaining": "Live orchestration and current-attempt enforcement remain absent.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K03",
+      "contract": "supervisor worker and exemption topology",
+      "status": "partial-incomplete",
+      "evidence": [
+        "AGENTS.md",
+        ".agents/skills/session-orchestration/SKILL.md"
+      ],
+      "advanced": "Policy and orchestration guidance define the topology.",
+      "remaining": "Authenticated roles and six custom agents remain unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K04",
+      "contract": "single writer and ownership serialization",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        ".github/governance/phase-task-ownership.v1.json",
+        ".github/scripts/check-repository-policy.py"
+      ],
+      "advanced": "Versioned exact-path ownership and overlap rejection are active in CI.",
+      "remaining": "Envelope and cross-surface runtime enforcement remain absent.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K05",
+      "contract": "human authority and risk gates",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        "AGENTS.md",
+        ".github/governance/ledger-contracts.v1.json"
+      ],
+      "advanced": "Human gates and risk fields are durable static contracts.",
+      "remaining": "Runtime identity and universal control-plane enforcement remain absent.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K06",
+      "contract": "connector-neutral context contract",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        "docs/agreements/portable-context-contract.v1.json",
+        ".github/scripts/check-portable-contracts.py"
+      ],
+      "advanced": "Stable requirements, decisions, context pins, and connector-neutral operations are checked.",
+      "remaining": "External connectors and cross-surface runtime reachability are not proven.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K07",
+      "contract": "GitHub ledger schemas",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        ".github/governance/ledger-contracts.v1.json",
+        ".github/scripts/check-ledger-templates.py"
+      ],
+      "advanced": "Epic, Task, and PR human/machine contracts are synchronized and checked.",
+      "remaining": "Live Task ritual and GitHub-body equality require later runtime work.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K08",
+      "contract": "eight repository Skills",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        "docs/agreements/skill-parity.v1.json",
+        ".github/scripts/check-skills.py"
+      ],
+      "advanced": "Exactly eight Skills and source-to-target parity records are statically checked.",
+      "remaining": "Runtime invocation, implicit selection, and cross-surface evidence remain not-run.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K09",
+      "contract": "role separation",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        "AGENTS.md"
+      ],
+      "advanced": "Role semantics exist only as policy.",
+      "remaining": "Six custom agents and authenticated role evidence are unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K10",
+      "contract": "Task execution envelope",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        "docs/known-limitations.md"
+      ],
+      "advanced": "No Phase 1 implementation claim is made.",
+      "remaining": "task-execution-envelope/v1 is unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K11",
+      "contract": "normalized loop event receipts",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        "docs/known-limitations.md"
+      ],
+      "advanced": "No Phase 1 implementation claim is made.",
+      "remaining": "loop-event/v1 is unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K12",
+      "contract": "Codex execution adapter",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        "docs/known-limitations.md"
+      ],
+      "advanced": "The machine-readable surface boundary is documented.",
+      "remaining": "The codex exec adapter and normalized stream handling are unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K13",
+      "contract": "installer and upgrade safety",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        "AGENTS.md",
+        "docs/known-limitations.md"
+      ],
+      "advanced": "Upgrade preservation remains a canonical invariant.",
+      "remaining": "Installer, upgrade, adoption, and rollback behavior are unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K14",
+      "contract": "Task ritual and current-attempt evidence",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        ".github/governance/ledger-contracts.v1.json"
+      ],
+      "advanced": "Ledger fields provide a static foundation only.",
+      "remaining": "The live Task ritual and current-attempt enforcement are unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K15",
+      "contract": "governance sensors and actuators",
+      "status": "partial-incomplete",
+      "evidence": [
+        "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497"
+      ],
+      "advanced": "The solo-fast Ruleset used sensor, intent, explicit actuator, and verification.",
+      "remaining": "General adopter governance activation and reconciliation remain later work.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K16",
+      "contract": "consent feedback and retrospective learning",
+      "status": "incomplete-later-phase",
+      "evidence": [
+        ".agents/skills/retro/SKILL.md"
+      ],
+      "advanced": "The Retro Skill provides static failure-to-harness guidance.",
+      "remaining": "Consent-aware feedback transport and telemetry are unimplemented.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K17",
+      "contract": "least-privilege CI and self-check",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        ".github/workflows/ci.yml",
+        ".github/governance/ci-tools.lock.v1.json"
+      ],
+      "advanced": "Pinned tools, least privilege, stable required jobs, and deterministic discovery are checked.",
+      "remaining": "Release, clean-adopter E2E, and all runtime matrices remain later work.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K18",
+      "contract": "source defect deviations",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        "docs/planning/phase-0-orientation.md",
+        "docs/agreements/skill-parity.v1.json"
+      ],
+      "advanced": "Known defects and Codex-native adaptations have durable records and regressions.",
+      "remaining": "Full source parity reconciliation remains later work.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K19",
+      "contract": "model neutrality and control-plane limits",
+      "status": "phase-1-static-advanced",
+      "evidence": [
+        "AGENTS.md",
+        "docs/known-limitations.md"
+      ],
+      "advanced": "Core contracts remain model-neutral and control-plane limits are explicit.",
+      "remaining": "No universal authenticated runtime identity or control plane exists.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "id": "K20",
+      "contract": "full parity evidence",
+      "status": "blocked-release",
+      "evidence": [
+        "tests/conformance/results.json"
+      ],
+      "advanced": "The canonical catalog and empty result store make the release boundary explicit.",
+      "remaining": "Full static/runtime parity, 136 scenario passes, clean-adopter E2E, and release evidence are absent.",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario": "C-001",
+      "family": "C",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "C-002",
+      "family": "C",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "C-003",
+      "family": "C",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "C-004",
+      "family": "C",
+      "scope_disposition": "agreement-decision",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "C-005",
+      "family": "C",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "A-001",
+      "family": "A",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "A-002",
+      "family": "A",
+      "scope_disposition": "target-specialization",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "A-003",
+      "family": "A",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "A-004",
+      "family": "A",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "A-005",
+      "family": "A",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "A-006",
+      "family": "A",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-001",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-002",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-003",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-004",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-005",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-006",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-007",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "S-008",
+      "family": "S",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-001",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-002",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-003",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-004",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-005",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-006",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-007",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-008",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-009",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "R-010",
+      "family": "R",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-001",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-002",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-003",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-004",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-005",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-006",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-007",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-008",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-009",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "E-010",
+      "family": "E",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-001",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-002",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-003",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-004",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-005",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-006",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-007",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-008",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-009",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "H-010",
+      "family": "H",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-001",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-002",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-003",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-004",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-005",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-006",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-007",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-008",
+      "family": "W",
+      "scope_disposition": "target-specialization",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-009",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-010",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-011",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "W-012",
+      "family": "W",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-001",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-002",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-003",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-004",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-005",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-006",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-007",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-008",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-009",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-010",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-011",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-012",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-013",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-014",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-015",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "T-016",
+      "family": "T",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-001",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-002",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-003",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-004",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-005",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-006",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "O-007",
+      "family": "O",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-001",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-002",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-003",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-004",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-005",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-006",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-007",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-008",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-009",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-010",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-011",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-012",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-013",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-014",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "I-015",
+      "family": "I",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-001",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-002",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-003",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-004",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-005",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-006",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-007",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-008",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-009",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-010",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-011",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-012",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "G-013",
+      "family": "G",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-001",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-002",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-003",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-004",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-005",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-006",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-007",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-008",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-009",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-010",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-011",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "P-012",
+      "family": "P",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "D-001",
+      "family": "D",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "D-002",
+      "family": "D",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "D-003",
+      "family": "D",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "D-004",
+      "family": "D",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-001",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-002",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-003",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-004",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-005",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-006",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-007",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    },
+    {
+      "scenario": "X-008",
+      "family": "X",
+      "scope_disposition": "planned",
+      "status": "not-run",
+      "evidence": []
+    }
+  ],
+  "summary": {
+    "successful_scenarios": 0,
+    "non_pass_scenarios": 136,
+    "states": {
+      "not-run": 136
+    },
+    "families": {
+      "C": {
+        "title": "Constitution and durable truth",
+        "total": 5,
+        "pass": 0,
+        "non_pass": 5,
+        "state": "not-run"
+      },
+      "A": {
+        "title": "`AGENTS.md` hierarchy",
+        "total": 6,
+        "pass": 0,
+        "non_pass": 6,
+        "state": "not-run"
+      },
+      "S": {
+        "title": "Repository Skills",
+        "total": 8,
+        "pass": 0,
+        "non_pass": 8,
+        "state": "not-run"
+      },
+      "R": {
+        "title": "Custom agents and subagents",
+        "total": 10,
+        "pass": 0,
+        "non_pass": 10,
+        "state": "not-run"
+      },
+      "E": {
+        "title": "Task Execution Envelope and loop events",
+        "total": 10,
+        "pass": 0,
+        "non_pass": 10,
+        "state": "not-run"
+      },
+      "H": {
+        "title": "Hooks",
+        "total": 10,
+        "pass": 0,
+        "non_pass": 10,
+        "state": "not-run"
+      },
+      "W": {
+        "title": "Local, worktree, cloud, and non-interactive execution",
+        "total": 12,
+        "pass": 0,
+        "non_pass": 12,
+        "state": "not-run"
+      },
+      "T": {
+        "title": "GitHub Task/PR ritual parity",
+        "total": 16,
+        "pass": 0,
+        "non_pass": 16,
+        "state": "not-run"
+      },
+      "O": {
+        "title": "Ownership",
+        "total": 7,
+        "pass": 0,
+        "non_pass": 7,
+        "state": "not-run"
+      },
+      "I": {
+        "title": "Installer and upgrade",
+        "total": 15,
+        "pass": 0,
+        "non_pass": 15,
+        "state": "not-run"
+      },
+      "G": {
+        "title": "Governance, Rulesets, and workflow safety",
+        "total": 13,
+        "pass": 0,
+        "non_pass": 13,
+        "state": "not-run"
+      },
+      "P": {
+        "title": "Feedback and retrospective",
+        "total": 12,
+        "pass": 0,
+        "non_pass": 12,
+        "state": "not-run"
+      },
+      "D": {
+        "title": "Source-defect regression scenarios",
+        "total": 4,
+        "pass": 0,
+        "non_pass": 4,
+        "state": "not-run"
+      },
+      "X": {
+        "title": "End-to-end release scenarios",
+        "total": 8,
+        "pass": 0,
+        "non_pass": 8,
+        "state": "not-run"
+      }
+    }
+  },
+  "later_handoffs": [
+    {
+      "area": "custom-agents-and-role-runtime",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "area": "execution-envelope-and-loop-events",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "area": "hooks-and-codex-exec-adapter",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "area": "installer-upgrade-and-live-task-ritual",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "area": "consent-feedback-transport",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-runtime-distribution-and-governance",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    },
+    {
+      "area": "clean-adopter-e2e-and-full-parity-release",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+      "later_owner": {
+        "state": "unassigned",
+        "lane": "future-repository-release-and-parity",
+        "activation_gate": "future-human-reviewed-phase-epic-or-task-required"
+      }
+    }
+  ],
+  "document_bindings": [
+    {
+      "path": "docs/planning/phase-1-acceptance.md",
+      "sha256": "e9942210b1db631978e9e6d2e17287baa0486459a7b147c14ea60fc70144c7ad"
+    },
+    {
+      "path": "docs/conformance/phase-1-scorecard.md",
+      "sha256": "81f4abd54438c589bb9f6213b035fe9c9793fc5b523c38045baa2df3e64600ee"
+    }
+  ],
+  "completion": {
+    "phase0_complete": true,
+    "phase1_portable_core_implementation_gate": "satisfied",
+    "snapshot_at_tree_creation": "pre-merge",
+    "current_acceptance_authority": "external-github-state",
+    "post_merge_outcome_embedded_in_tree": false,
+    "repository_complete": false,
+    "release_blocked": true,
+    "release_result_count": 0,
+    "release_results": [],
+    "owner_merge_is_acceptance_prerequisite": true,
+    "post_merge_receipt_is_acceptance_prerequisite": true
+  }
+}

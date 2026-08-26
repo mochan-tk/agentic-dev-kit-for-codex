@@ -1723,10 +1723,12 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         "repository completion definition",
         errors,
     )
+    agents_markers = " ".join(agents.split()) if agents is not None else None
+    readme_markers = " ".join(readme.split()) if readme is not None else None
 
     option_b_markers = (CANONICAL_HIERARCHY, PROJECTS_PROJECTION)
     validate_required_markers(
-        agents,
+        agents_markers,
         option_b_markers
         + (
             "durable repository objective",
@@ -1738,13 +1740,18 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         errors,
     )
     validate_required_markers(
-        readme,
+        readme_markers,
         option_b_markers
         + (
             f"]({HIERARCHY_AGREEMENT_PATH})",
             f"]({REPOSITORY_COMPLETION_PATH})",
             "Phase 0 is complete",
-            "Phase 1 is in progress",
+            "Phase 1 portable-core implementation gate",
+            "current durable owner-acceptance outcome is external GitHub state",
+            "creation-time snapshot",
+            "Issue #12",
+            "Epic #2",
+            "post-merge receipt",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
@@ -1752,6 +1759,33 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         "Option B hierarchy or current-status markers are missing from README.md",
         errors,
     )
+    validate_required_markers(
+        agents_markers,
+        (
+            "Phase 0 is complete.",
+            "This tree satisfies the Phase 1 portable-core implementation gate.",
+            "Issue #12 and Epic #2",
+            "Epic, Task, and pull-request ledger contracts",
+            "connector-neutral context contracts",
+            "all eight repository Skills exist",
+            "Custom agents, hooks, task-execution-envelope/v1, loop-event/v1",
+            "installer/upgrade",
+            "live Task ritual",
+            "runtime parity",
+            "release remain incomplete",
+            "overall repository implementation remains incomplete",
+            "`release_blocked` remains `true`",
+        ),
+        "Phase 1 portable-core status markers are missing from AGENTS.md",
+        errors,
+    )
+    stale_phase1_markers = (
+        "Phase 1 is in progress",
+        "the full GitHub ledger arrive",
+        "Until the target's issue and PR templates land",
+    )
+    if agents is not None and any(marker in agents for marker in stale_phase1_markers):
+        errors.append("AGENTS.md contains stale Phase 1 status text")
     for label, text in (("AGENTS.md", agents), ("README.md", readme)):
         if text is not None and any(
             marker in text for marker in FORBIDDEN_LIVE_AUTHORITY_MARKERS
@@ -1764,13 +1798,13 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         OVERALL_COMPLETION_CONDITION,
     )
     validate_required_markers(
-        agents,
+        agents_markers,
         completion_markers + ("## Repository completion boundary",),
         "repository completion boundary markers are missing from AGENTS.md",
         errors,
     )
     validate_required_markers(
-        readme,
+        readme_markers,
         completion_markers,
         "repository completion boundary markers are missing from README.md",
         errors,

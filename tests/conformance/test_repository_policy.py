@@ -21,8 +21,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T09"
-CURRENT_TASK_BRANCH = "codex/phase-1-eight-skills"
+CURRENT_TASK_ID = "T10"
+CURRENT_TASK_BRANCH = "codex/phase-1-acceptance"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -494,11 +494,11 @@ class RepositoryPolicyTest(unittest.TestCase):
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
 
-    def test_active_task_helper_selects_t09_among_disjoint_active_tasks(self):
+    def test_active_task_helper_selects_t10_among_disjoint_active_tasks(self):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T09", self.active_task(payload)["id"])
+        self.assertEqual("T10", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assertEqual([], errors)
@@ -849,12 +849,33 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertIn(f"]({REPOSITORY_COMPLETION})", readme)
         for marker in (
             "Phase 0 is complete",
-            "Phase 1 is in progress",
+            "Phase 1 portable-core implementation gate",
+            "current durable owner-acceptance outcome is external GitHub state",
+            "creation-time snapshot",
+            "Issue #12",
+            "Epic #2",
+            "post-merge receipt",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
         ):
             self.assertIn(marker, readme)
+        for marker in (
+            "Phase 0 is complete.",
+            "This tree satisfies the Phase 1 portable-core implementation gate.",
+            "Issue #12 and Epic #2",
+            "Epic, Task, and pull-request ledger contracts",
+            "connector-neutral context contracts",
+            "all eight repository Skills exist",
+            "Custom agents, hooks, task-execution-envelope/v1, loop-event/v1",
+            "installer/upgrade",
+            "live Task ritual",
+            "runtime parity",
+            "release remain incomplete",
+            "overall repository implementation remains incomplete",
+            "`release_blocked` remains `true`",
+        ):
+            self.assertIn(marker, agents)
         for marker in (
             "durable repository objective",
             "explicitly linked Epic issues",
@@ -897,6 +918,19 @@ class RepositoryPolicyTest(unittest.TestCase):
             "`failed`",
         ):
             self.assertIn(marker, completion)
+
+    def test_stale_phase1_status_in_agents_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        agents = fixture / "AGENTS.md"
+        agents.write_text(
+            agents.read_text(encoding="utf-8")
+            + "\nPhase 1 is in progress; the full GitHub ledger arrives later.\n",
+            encoding="utf-8",
+        )
+        self.assert_rejected(
+            self.errors_for(fixture), "AGENTS.md contains stale Phase 1 status text"
+        )
 
     def test_synchronized_option_a_or_c_invariant_drift_is_rejected(self):
         alternatives = (
@@ -1257,6 +1291,15 @@ class RepositoryPolicyTest(unittest.TestCase):
 
     def test_t09_skill_checker_is_registered_once_and_reachable_from_quality(self):
         command = "python3 -I .github/scripts/check-skills.py"
+        policy = self.ownership_payload()["policy"]
+        self.assertEqual(1, policy["required_quality_commands"].count(command))
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        self.assertEqual(1, workflow.count(f"run: {command}"))
+        self.assertIn("  quality:\n", workflow)
+        self.assertIn("  conformance:\n", workflow)
+
+    def test_t10_acceptance_checker_is_registered_once_and_reachable_from_quality(self):
+        command = "python3 -I .github/scripts/check-phase1-acceptance.py"
         policy = self.ownership_payload()["policy"]
         self.assertEqual(1, policy["required_quality_commands"].count(command))
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -1948,8 +1991,8 @@ jobs:
         active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T10",
-                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12",
+                "id": "T11",
+                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/13",
                 "state": "active",
                 "branch": "codex/phase-1-next-task",
                 "base_commit": subprocess.check_output(
@@ -2220,8 +2263,8 @@ jobs:
         )
         historical["owned_paths"].remove(manifest_entry)
         active = {
-            "id": "T10",
-            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12",
+            "id": "T11",
+            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/13",
             "state": "active",
             "branch": historical["branch"],
             "base_commit": historical["base_commit"],
@@ -2383,7 +2426,7 @@ jobs:
             ("unconsumed", [], "transition is not consumed"),
             ("undeclared-delete", [("D", "LICENSE")], "undeclared deletion"),
             ("undeclared-add", [("A", "unowned.txt")], "undeclared addition"),
-            ("undeclared-modify", [("M", "README.md")], "undeclared modification"),
+            ("undeclared-modify", [("M", "LICENSE")], "undeclared modification"),
         )
         for label, extra_entries, token in cases:
             with self.subTest(label=label):
@@ -2588,7 +2631,7 @@ jobs:
     def test_local_branch_allows_checking_active_owned_dirty_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        relative = ".github/scripts/check-skills.py"
+        relative = ".github/scripts/check-phase1-acceptance.py"
         self.assertIn(relative, {entry["path"] for entry in active["owned_paths"]})
         path = fixture / relative
         path.write_text(
@@ -2601,7 +2644,7 @@ jobs:
 
     def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
         fixture = self.local_branch_fixture()
-        relative = "docs/agreements/skill-parity.v1.json"
+        relative = "docs/planning/phase-1-acceptance.md"
         self.assertEqual(
             "A",
             subprocess.check_output(
