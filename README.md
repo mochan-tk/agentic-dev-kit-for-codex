@@ -1,7 +1,8 @@
 # Agentic Development Kit for Codex
 
 > [!WARNING]
-> **Current status:** Phase 0 is complete. This exact T10 tree is the **Phase 1 portable-core acceptance candidate**. When its exact-head `quality` and `conformance` checks are green and no blocking finding remains, the Phase 1 portable-core implementation is complete in that exact tree; durable owner acceptance remains pending merge and exact post-merge receipt.
+> **Current status:** Phase 0 is complete. This tree satisfies the **Phase 1 portable-core implementation gate**.
+> The current durable owner-acceptance outcome is external GitHub state, authoritative in [Issue #12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12) and [Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2); this immutable tree records only its creation-time snapshot and does not embed a later post-merge outcome.
 > The overall repository implementation remains incomplete, not installable, and not a parity release.
 > `release_blocked` remains `true`.
 
@@ -52,7 +53,7 @@ audit and file-ownership plan lives in
   drift;
 - minimal SHA-pinned, least-privilege `quality` and `conformance` CI jobs.
 
-The Phase 1 portable-core candidate adds:
+The Phase 1 portable core adds:
 
 - the accepted Option B hierarchy and repository-completion agreement;
 - a frozen Phase 0 verifier plus an extensible, fail-closed live policy;
@@ -93,13 +94,13 @@ any capability.
 5. **Parity release:** static and runtime probes, all 136 conformance
    scenarios, adopter migration, and independently reviewed evidence.
 
-Phase 0 has been human-accepted. This exact T10 tree is the Phase 1
-portable-core acceptance candidate. When its exact-head `quality` and
-`conformance` checks are green and no blocking finding remains, the Phase 1
-portable-core implementation is complete in that exact tree; durable owner acceptance remains pending merge and
-exact post-merge receipt. Later Tasks remain subject to their own scoped evidence and owner
-merge gates. An unavailable runtime probe is `unverified`, `not-run`,
-`UNKNOWN`, or `UNCHECKABLE`, never passed.
+Phase 0 is complete. This tree satisfies the Phase 1 portable-core
+implementation gate. The immutable tree records its creation-time acceptance
+snapshot; Issue #12 and Epic #2 are the authoritative records for the current
+durable acceptance outcome, including any later post-merge receipt. Later Tasks
+remain subject to their own scoped evidence and owner merge gates. An
+unavailable runtime probe is `unverified`, `not-run`, `UNKNOWN`, or
+`UNCHECKABLE`, never passed.
 
 ## Repository completion boundary
 

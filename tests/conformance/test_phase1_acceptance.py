@@ -111,7 +111,7 @@ class Phase1AcceptanceTest(unittest.TestCase):
         self.assert_rejected(errors, "unsupported or missing fields")
         self.assert_rejected(errors, "must remain exactly not-run")
 
-    def test_unexplained_fail_cannot_replace_candidate_not_run_state(self):
+    def test_unexplained_fail_cannot_replace_package_not_run_state(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.read_json(fixture, PHASE1)
@@ -122,7 +122,7 @@ class Phase1AcceptanceTest(unittest.TestCase):
         self.assert_rejected(errors, "fail requires exact scenario-action evidence")
         self.assert_rejected(errors, "must remain exactly not-run")
 
-    def test_static_generic_check_cannot_promote_candidate_scenario(self):
+    def test_static_generic_check_cannot_promote_package_scenario(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         payload = self.read_json(fixture, PHASE1)
@@ -166,6 +166,15 @@ class Phase1AcceptanceTest(unittest.TestCase):
             self.assertTrue(by_id[contract_id]["later_owner"])
         self.assertTrue(
             all(entry["later_owner"]["state"] == "unassigned" for entry in payload["contracts"])
+        )
+        self.assertTrue(
+            all(
+                entry["state"] == "deferred-to-planning-intake"
+                and entry["planning_issue_url"]
+                == "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21"
+                and entry["later_owner"]["state"] == "unassigned"
+                for entry in payload["later_handoffs"]
+            )
         )
         self.assertNotIn(
             "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
@@ -251,13 +260,71 @@ class Phase1AcceptanceTest(unittest.TestCase):
         errors = self.errors_for(fixture)
         self.assert_rejected(errors, "T03 quality evidence URL is invalid")
 
-    def test_pre_merge_post_merge_and_later_states_are_separate(self):
+    def test_ruleset_snapshot_is_complete_and_digest_bound(self):
         payload = self.read_json(ROOT, PHASE1)
-        evidence = payload["evidence_classes"]
-        self.assertEqual("candidate", evidence["pre_merge"]["state"])
-        self.assertEqual("pending", evidence["post_merge"]["state"])
-        self.assertEqual("non-pass", evidence["later_repository"]["state"])
-        self.assertEqual("external-pr-and-issue-receipt", evidence["pre_merge"]["binding"])
+        ruleset = payload["governance"]["ruleset"]
+        self.assertEqual([], ruleset["managed_ruleset_omitted_fields"])
+        self.assertEqual(
+            [{"actor_id": 9846618, "actor_type": "User", "bypass_mode": "always"}],
+            ruleset["managed_ruleset"]["bypass_actors"],
+        )
+        self.assertEqual("always", ruleset["managed_ruleset"]["current_user_can_bypass"])
+        self.assertEqual("not-configured", ruleset["classic_branch_protection"]["state"])
+        self.assertEqual(
+            404,
+            ruleset["classic_branch_protection"]["details_read"]["http_status"],
+        )
+        canonical = json.dumps(
+            {
+                "managed_ruleset": ruleset["managed_ruleset"],
+                "classic_branch_protection": ruleset["classic_branch_protection"],
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        self.assertEqual(
+            "655d99c11deceebdb81222afc7a23e5a2349203a017abd219a46bd873bb60d0e",
+            hashlib.sha256(canonical).hexdigest(),
+        )
+
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        drift = self.read_json(fixture, PHASE1)
+        drift["governance"]["ruleset"]["managed_ruleset"]["bypass_actors"][0][
+            "actor_id"
+        ] = 1
+        self.write_json(fixture, PHASE1, drift)
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "owner emergency bypass snapshot drifted")
+        self.assert_rejected(errors, "normalized snapshot digest drifted")
+
+    def test_time_invariant_acceptance_states_are_separate(self):
+        payload = self.read_json(ROOT, PHASE1)
+        status = payload["acceptance_status"]
+        self.assertEqual("satisfied", status["implementation_gate"]["state"])
+        self.assertEqual(
+            "pre-merge", status["snapshot_at_tree_creation"]["tree_creation_stage"]
+        )
+        self.assertEqual(
+            "external-github-state", status["current_acceptance_authority"]["kind"]
+        )
+        self.assertEqual(
+            "not-embedded",
+            status["post_merge_outcome_not_embedded_in_tree"]["state"],
+        )
+        self.assertEqual("non-pass", status["later_repository"]["state"])
+
+    def test_time_invariant_acceptance_status_drift_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        payload = self.read_json(fixture, PHASE1)
+        payload["acceptance_status"]["implementation_gate"]["state"] = "candidate"
+        self.write_json(fixture, PHASE1, payload)
+        self.assert_rejected(
+            self.errors_for(fixture), "time-invariant acceptance status classes drifted"
+        )
 
     def test_release_results_and_completion_boundary_remain_blocked(self):
         payload = self.read_json(ROOT, PHASE1)
@@ -267,6 +334,13 @@ class Phase1AcceptanceTest(unittest.TestCase):
         self.assertIs(release["release_blocked"], True)
         self.assertIs(payload["completion"]["release_blocked"], True)
         self.assertIs(payload["completion"]["repository_complete"], False)
+        self.assertEqual(
+            "satisfied",
+            payload["completion"]["phase1_portable_core_implementation_gate"],
+        )
+        self.assertIs(
+            payload["completion"]["post_merge_outcome_embedded_in_tree"], False
+        )
 
     def test_release_result_success_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -316,10 +390,21 @@ class Phase1AcceptanceTest(unittest.TestCase):
     def test_standalone_package_is_deterministically_discoverable(self):
         phase1 = self.read_json(ROOT, PHASE1)
         compatibility = phase1["compatibility_layer"]
-        self.assertEqual("unchanged-pin-fresh", compatibility["phase0_manifest"]["state"])
+        self.assertEqual(
+            "unchanged-manifest-pin-fresh",
+            compatibility["phase0_manifest"]["state"],
+        )
+        self.assertEqual(
+            "docs/context/pins/PIN-0002.context-pin.v1.json",
+            compatibility["phase0_manifest"]["selected_pin"],
+        )
         self.assertEqual(
             "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5419726866",
-            compatibility["replan_url"],
+            compatibility["compatibility_replan_url"],
+        )
+        self.assertEqual(
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421277687",
+            compatibility["continuation_replan_url"],
         )
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("tests/conformance/results/phase-1.json", readme)
@@ -471,24 +556,38 @@ class Phase1AcceptanceTest(unittest.TestCase):
         errors = self.errors_for(fixture)
         self.assert_rejected(errors, "scenario summary")
 
-    def test_docs_state_candidate_boundary_without_release_claim(self):
+    def test_docs_state_is_time_invariant_without_release_claim(self):
         acceptance = (ROOT / ACCEPTANCE_DOC).read_text(encoding="utf-8")
         scorecard = (ROOT / SCORECARD_DOC).read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         limitations = (ROOT / "docs/known-limitations.md").read_text(encoding="utf-8")
         for marker in (
-            "Phase 1 portable-core acceptance candidate",
-            "implementation-complete gate",
-            "Phase 1 portable-core implementation is complete in that exact tree",
-            "exact-head `quality` and `conformance` checks",
-            "no blocking finding remains",
-            "durable owner acceptance remains pending merge and exact post-merge receipt",
+            "Phase 1 portable-core implementation gate",
+            "creation-time snapshot",
+            "current durable owner-acceptance outcome is external GitHub state",
+            "Issue #12",
+            "Epic #2",
+            "post-merge outcome",
             "post-merge receipt",
             "repository implementation remains incomplete",
             "`release_blocked` remains `true`",
         ):
             self.assertIn(marker, acceptance + scorecard + readme + limitations)
         self.assertNotIn("repository implementation is complete", readme)
+        self.assertNotIn("durable owner acceptance remains pending merge", readme)
+
+    def test_stale_phase1_status_in_agents_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        agents = fixture / "AGENTS.md"
+        agents.write_text(
+            agents.read_text(encoding="utf-8")
+            + "\nPhase 1 is in progress; the full GitHub ledger arrives later.\n",
+            encoding="utf-8",
+        )
+        self.assert_rejected(
+            self.errors_for(fixture), "AGENTS.md contains stale Phase 1 status text"
+        )
 
     def test_readme_and_limitations_each_require_the_full_status_boundary(self):
         temporary, fixture = self.copy_fixture()

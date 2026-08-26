@@ -2,16 +2,17 @@
 
 ## Result
 
-This is the human-readable view of the Phase 1 portable-core acceptance
-candidate. It covers all 136 canonical scenarios across all 14 families, but
+This is the human-readable view of the Phase 1 portable-core implementation
+gate satisfied by this tree. It covers all 136 canonical scenarios across all
+14 families, but
 records **zero scenario-action passes**. Every scenario remains `not-run`.
 That is an explicit non-pass state, not a failure hidden by an aggregate.
 
-This exact T10 tree is the Phase 1 portable-core acceptance candidate. When
-its exact-head `quality` and `conformance` checks are green and no blocking
-finding remains, it satisfies the portable-core implementation-complete gate;
-the Phase 1 portable-core implementation is complete in that exact tree.
-Durable owner acceptance remains pending merge and exact post-merge receipt.
+Phase 0 is complete. This tree satisfies the Phase 1 portable-core
+implementation gate. Its acceptance status is an immutable creation-time
+snapshot. The current durable acceptance outcome is authoritative external
+GitHub state in Issue #12 and Epic #2; any later post-merge outcome is not
+embedded in this tree.
 
 The overall repository implementation remains incomplete and
 `release_blocked` remains `true`. A later post-merge receipt can accept the
@@ -45,11 +46,16 @@ rejects duplicates and omissions, and rejects any `pass` without exact
 scenario-action evidence. `UNKNOWN`, `UNCHECKABLE`, deferred, skipped,
 unverified, stale, and missing evidence are also non-success.
 
-The legacy Phase 0 compatibility manifest remains unchanged and pin-fresh.
+The legacy Phase 0 compatibility manifest remains unchanged and pin-fresh
+under the append-only selected `PIN-0002`.
 This standalone scorecard is discovered through the acceptance checker,
 versioned quality registry/workflow, and README. The
 [bounded T10 replan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5419726866)
-records that compatibility boundary.
+records that compatibility boundary; the later
+[pin-ownership replan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5420690165)
+records the discovered conflict, and the
+[continuation approval](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421277687)
+authorizes the append-only successor pin without weakening freshness.
 
 ## Per-scenario scorecard
 
@@ -218,8 +224,9 @@ records that compatibility boundary.
 | K20 | `blocked-release` | The canonical catalog and empty result store make the release boundary explicit. | Full static/runtime parity, 136 scenario passes, clean-adopter E2E, and release evidence are absent. | `future-repository-release-and-parity` (`unassigned`) |
 
 Epic #2 does not own the out-of-scope remainder. No later owner is currently
-assigned. The machine record separates a future
-`future-runtime-distribution-and-governance` lane from a future
+assigned. [Planning intake Issue #21](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21)
+links, but does not own or activate, the future
+`future-runtime-distribution-and-governance` lane and the future
 `future-repository-release-and-parity` lane. A human-reviewed Phase, Epic, or
 Task must claim a lane before implementation; this scorecard authorizes none.
 
@@ -228,6 +235,7 @@ Task must claim a lane before implementation; this scorecard authorizes none.
 T01–T09 exact Task/PR/merge/check evidence is indexed in the machine record
 and the [acceptance record](../planning/phase-1-acceptance.md). T10 exact-head
 evidence belongs in the PR and Issue #12 receipt because embedding a commit's
-own identifier in that commit is impossible. Post-merge evidence remains
-pending until a later read-back. The release-level result store remains empty:
+own identifier in that commit is impossible. The current acceptance outcome is
+authoritative in Issue #12 and Epic #2; a post-merge outcome is not embedded in
+this creation-time snapshot. The release-level result store remains empty:
 `result_count: 0`, `results: []`, and `release_blocked: true`.

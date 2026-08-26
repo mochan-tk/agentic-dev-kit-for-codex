@@ -6,10 +6,16 @@ threads, subagents, local transcripts, and model memory are replaceable
 transport. If a lower-precedence instruction conflicts with this constitution,
 stop the affected work and record the conflict.
 
-Phase 0 established policy and provenance only. Phase 1 is in progress;
-procedures, custom agents, hooks, installers, and the full GitHub ledger arrive
-only in their later reviewed Tasks. Do not claim that a planned surface already
-exists.
+Phase 0 is complete.
+This tree satisfies the Phase 1 portable-core implementation gate.
+The current durable acceptance outcome is external GitHub
+state authoritative in Issue #12 and Epic #2; this immutable tree records only
+its creation-time snapshot. The Epic, Task, and pull-request ledger contracts,
+connector-neutral context contracts, and all eight repository Skills exist.
+Custom agents, hooks, task-execution-envelope/v1, loop-event/v1, the
+`codex exec` adapter, installer/upgrade, the live Task ritual, runtime parity,
+and release remain incomplete. The overall repository implementation remains
+incomplete, and `release_blocked` remains `true`.
 
 ## Canonical invariants
 
@@ -56,9 +62,9 @@ execution contexts. They do not replace the Issue graph. A Task may use more
 than one thread across supervision, worker attempts, recovery, exploration,
 and independent review.
 
-Until the target's issue and PR templates land, the versioned Phase 0
-orientation record is the bootstrap work order. Do not fabricate retroactive
-issue comments after the ledger becomes available.
+The target's Issue and pull-request templates now provide the ledger contract.
+Do not fabricate retroactive issue comments or treat committed creation-time
+snapshots as current GitHub outcomes.
 
 ## Repository completion boundary
 

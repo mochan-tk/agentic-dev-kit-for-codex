@@ -57,6 +57,8 @@ REQUIRED_INPUT_PATHS = (
     ".github/governance/ci-tools.lock.v1.json",
     ".agents/skills/retro/SKILL.md",
     "docs/planning/phase-0-orientation.md",
+    "docs/context/pins/PIN-0002.context-pin.v1.json",
+    "tests/contracts/fixtures/context-pin-valid.v1.json",
 )
 
 MAX_FILE_BYTES = 262_144
@@ -66,6 +68,10 @@ MAX_JSON_STRING_LENGTH = 16_384
 BASE_COMMIT = "509362e6e12cf0160e58853b0d6c0b6871aa895c"
 BASE_TREE = "69c808a7afc59858213ee68dc89cb6a5a20e3e09"
 INVARIANT_DIGEST = "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6"
+RULESET_SNAPSHOT_DIGEST = (
+    "655d99c11deceebdb81222afc7a23e5a2349203a017abd219a46bd873bb60d0e"
+)
+PLANNING_ISSUE_URL = f"{REPOSITORY_URL}/issues/21"
 COMPATIBILITY_MANIFEST_SHA256 = (
     "aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be"
 )
@@ -112,40 +118,47 @@ T10_OWNED_PATHS = [
     ".github/scripts/check-phase1-acceptance.py",
     ".github/scripts/check-repository-policy.py",
     ".github/workflows/ci.yml",
+    "AGENTS.md",
     "README.md",
     "docs/conformance/phase-1-scorecard.md",
+    "docs/context/pins/PIN-0002.context-pin.v1.json",
     "docs/known-limitations.md",
     "docs/planning/phase-1-acceptance.md",
     "tests/conformance/manifest.json",
     "tests/conformance/results/phase-1.json",
     "tests/conformance/test_phase1_acceptance.py",
     "tests/conformance/test_repository_policy.py",
+    "tests/contracts/fixtures/context-pin-valid.v1.json",
 ]
 
-EXPECTED_EVIDENCE_CLASSES = {
-    "pre_merge": {
-        "state": "candidate",
-        "binding": "external-pr-and-issue-receipt",
-        "success_requires": [
-            "exact-head",
-            "exact-tree",
-            "direct-commands",
-            "quality-url",
-            "conformance-url",
-            "mergeable-pr",
-            "owner-judgment",
-        ],
+EXPECTED_ACCEPTANCE_STATUS = {
+    "implementation_gate": {
+        "state": "satisfied",
+        "scope": "phase-1-portable-core",
+        "binding": "this-versioned-tree",
+        "exact_head_evidence": "external-pr-and-issue-receipt",
     },
-    "post_merge": {
-        "state": "pending",
-        "binding": "future-post-merge-receipt",
-        "success_requires": [
+    "snapshot_at_tree_creation": {
+        "tree_creation_stage": "pre-merge",
+        "binding": "immutable-tree-creation-snapshot",
+        "current_outcome_claim": "none",
+    },
+    "current_acceptance_authority": {
+        "kind": "external-github-state",
+        "task_issue_url": f"{REPOSITORY_URL}/issues/12",
+        "epic_issue_url": f"{REPOSITORY_URL}/issues/2",
+        "read_back_required": True,
+    },
+    "post_merge_outcome_not_embedded_in_tree": {
+        "state": "not-embedded",
+        "binding": "issue-12-and-epic-2-post-merge-receipts",
+        "required_receipt_fields": [
             "merge-commit",
             "merge-tree",
             "both-parents",
             "post-merge-quality-url",
             "post-merge-conformance-url",
-            "issue-outcome",
+            "task-outcome",
             "epic-outcome",
         ],
     },
@@ -977,7 +990,7 @@ def validate_scenarios(
                 )
         if status_value != "not-run":
             errors.append(
-                f"T10 candidate scenario {scenario_id} must remain exactly not-run"
+                f"Phase 1 package scenario {scenario_id} must remain exactly not-run"
             )
 
     successful = sum(counts["pass"] for counts in family_counts.values())
@@ -998,7 +1011,7 @@ def validate_scenarios(
     if summary != expected_summary:
         errors.append("scenario summary does not match per-scenario evidence states")
     if successful != 0 or non_pass != 136 or status_counts != Counter({"not-run": 136}):
-        errors.append("T10 candidate must contain exactly 136 not-run scenario records")
+        errors.append("Phase 1 package must contain exactly 136 not-run scenario records")
 
 
 def validate_document_bindings(
@@ -1031,12 +1044,12 @@ def validate_live_documents(
             texts[path] = ""
     combined = "\n".join(texts.values())
     required_markers = (
-        "Phase 1 portable-core acceptance candidate",
-        "implementation-complete gate",
-        "Phase 1 portable-core implementation is complete in that exact tree",
-        "exact-head `quality` and `conformance` checks",
-        "no blocking finding remains",
-        "durable owner acceptance remains pending merge and exact post-merge receipt",
+        "Phase 1 portable-core implementation gate",
+        "creation-time snapshot",
+        "current durable owner-acceptance outcome is external GitHub state",
+        "Issue #12",
+        "Epic #2",
+        "post-merge outcome",
         "overall repository implementation remains incomplete",
         "`release_blocked` remains `true`",
         "post-merge receipt",
@@ -1048,8 +1061,11 @@ def validate_live_documents(
             errors.append(f"Phase 1 documentation marker is missing: {marker}")
     per_document_status = (
         "Phase 0 is complete.",
-        "This exact T10 tree is the **Phase 1 portable-core acceptance candidate**.",
-        "When its exact-head `quality` and `conformance` checks are green and no blocking finding remains, the Phase 1 portable-core implementation is complete in that exact tree; durable owner acceptance remains pending merge and exact post-merge receipt.",
+        "This tree satisfies the **Phase 1 portable-core implementation gate**.",
+        "current durable owner-acceptance outcome is external GitHub state",
+        "creation-time snapshot",
+        "Issue #12",
+        "Epic #2",
         "overall repository implementation remains incomplete",
         "not installable",
         "not a parity release",
@@ -1066,6 +1082,9 @@ def validate_live_documents(
         "all 136 scenarios pass",
         "full parity is complete",
         "Phase 1 portable-core implementation is complete in this reviewed T10 tree",
+        "Phase 1 portable-core acceptance candidate",
+        "durable owner acceptance remains pending merge",
+        "durable owner acceptance remains pending",
     )
     for marker in forbidden:
         if marker in combined:
@@ -1176,7 +1195,7 @@ def validate_ownership_and_workflow(
             if isinstance(item, dict)
         ]
         if owned != T10_OWNED_PATHS:
-            errors.append("T10 owned paths are not the exact reviewed 12-path boundary")
+            errors.append("T10 owned paths are not the exact reviewed 15-path boundary")
     if isinstance(tasks, list):
         owners: Counter[str] = Counter(
             item.get("path")
@@ -1227,6 +1246,173 @@ def validate_invariants(agents_text: str, errors: list[str]) -> None:
     canonical = "".join(f"{identifier}\t{statement}\n" for identifier, statement in sorted(rows))
     if hashlib.sha256(canonical.encode("utf-8")).hexdigest() != INVARIANT_DIGEST:
         errors.append("AGENTS.md invariant digest drifted")
+    normalized = " ".join(agents_text.split())
+    required_status = (
+        "Phase 0 is complete.",
+        "This tree satisfies the Phase 1 portable-core implementation gate.",
+        "Issue #12 and Epic #2",
+        "Epic, Task, and pull-request ledger contracts",
+        "connector-neutral context contracts",
+        "all eight repository Skills exist",
+        "overall repository implementation remains incomplete",
+        "`release_blocked` remains `true`",
+    )
+    if any(marker not in normalized for marker in required_status):
+        errors.append("AGENTS.md Phase 1 implementation status is incomplete")
+    if any(
+        marker in agents_text
+        for marker in (
+            "Phase 1 is in progress",
+            "the full GitHub ledger arrive",
+            "Until the target's issue and PR templates land",
+        )
+    ):
+        errors.append("AGENTS.md contains stale Phase 1 status text")
+
+
+def validate_ruleset_snapshot(ruleset: Any, errors: list[str]) -> None:
+    expected_fields = [
+        "_links",
+        "bypass_actors",
+        "conditions",
+        "created_at",
+        "current_user_can_bypass",
+        "enforcement",
+        "id",
+        "name",
+        "node_id",
+        "rules",
+        "source",
+        "source_type",
+        "target",
+        "updated_at",
+    ]
+    expected_top = {
+        "snapshot_schema",
+        "api_version",
+        "observed_at",
+        "snapshot_role",
+        "activation_receipt_url",
+        "snapshot_receipt_url",
+        "managed_ruleset_response_top_level_fields",
+        "managed_ruleset_omitted_fields",
+        "managed_ruleset",
+        "classic_branch_protection",
+        "normalization",
+    }
+    if not exact_keys(ruleset, expected_top, "Ruleset snapshot", errors):
+        return
+    expected_scalars = {
+        "snapshot_schema": "github-ruleset-snapshot/v1",
+        "api_version": "2022-11-28",
+        "observed_at": "2026-08-26T05:59:28Z",
+        "snapshot_role": "creation-time-read-only-external-state-observation",
+        "activation_receipt_url": (
+            f"{REPOSITORY_URL}/issues/4#issuecomment-5388863497"
+        ),
+        "snapshot_receipt_url": (
+            f"{REPOSITORY_URL}/issues/12#issuecomment-5421280882"
+        ),
+    }
+    for field, expected in expected_scalars.items():
+        if ruleset.get(field) != expected:
+            errors.append(f"Ruleset snapshot {field} drifted")
+    if ruleset.get("managed_ruleset_response_top_level_fields") != expected_fields:
+        errors.append("Ruleset managed response field inventory drifted")
+    if ruleset.get("managed_ruleset_omitted_fields") != []:
+        errors.append("Ruleset snapshot must declare no omitted managed fields")
+
+    managed = ruleset.get("managed_ruleset")
+    if not isinstance(managed, dict) or sorted(managed) != expected_fields:
+        errors.append("Ruleset managed response is incomplete")
+    else:
+        if managed.get("bypass_actors") != [
+            {"actor_id": 9846618, "actor_type": "User", "bypass_mode": "always"}
+        ]:
+            errors.append("Ruleset owner emergency bypass snapshot drifted")
+        if managed.get("current_user_can_bypass") != "always":
+            errors.append("Ruleset caller-specific bypass observation drifted")
+        rules = managed.get("rules")
+        by_type = {
+            item.get("type"): item
+            for item in rules
+            if isinstance(rules, list) and isinstance(item, dict)
+        } if isinstance(rules, list) else {}
+        if list(by_type) != [
+            "deletion",
+            "non_fast_forward",
+            "pull_request",
+            "required_status_checks",
+        ]:
+            errors.append("Ruleset rule inventory or normalized order drifted")
+        pull = by_type.get("pull_request", {}).get("parameters")
+        if not isinstance(pull, dict) or pull.get("allowed_merge_methods") != [
+            "merge",
+            "rebase",
+            "squash",
+        ] or pull.get("required_approving_review_count") != 0:
+            errors.append("Ruleset pull-request parameters drifted")
+        checks = by_type.get("required_status_checks", {}).get("parameters")
+        if not isinstance(checks, dict) or checks != {
+            "strict_required_status_checks_policy": False,
+            "do_not_enforce_on_create": False,
+            "required_status_checks": [
+                {"context": "conformance", "integration_id": 15368},
+                {"context": "quality", "integration_id": 15368},
+            ],
+        }:
+            errors.append("Ruleset required-check parameters drifted")
+
+    classic = ruleset.get("classic_branch_protection")
+    if not isinstance(classic, dict):
+        errors.append("classic branch-protection snapshot is missing")
+    else:
+        summary = classic.get("branch_summary")
+        detail = classic.get("details_read")
+        if (
+            classic.get("state") != "not-configured"
+            or not isinstance(summary, dict)
+            or summary.get("protected") is not True
+            or summary.get("protection", {}).get("enabled") is not False
+            or not isinstance(detail, dict)
+            or detail.get("http_status") != 404
+            or detail.get("response", {}).get("message") != "Branch not protected"
+        ):
+            errors.append("classic branch-protection read-back drifted")
+
+    normalization = ruleset.get("normalization")
+    expected_normalization = {
+        "algorithm": "sha256",
+        "digest_scope": ["managed_ruleset", "classic_branch_protection"],
+        "json": (
+            "UTF-8 json.dumps(...,sort_keys=True,ensure_ascii=False,"
+            "separators=(\",\",\":\"),allow_nan=False); no trailing newline"
+        ),
+        "semantic_array_order": {
+            "bypass_actors": "actor_type,actor_id,bypass_mode",
+            "conditions.ref_name.include/exclude": "lexicographic",
+            "rules": "type",
+            "allowed_merge_methods": "lexicographic",
+            "required_reviewers": "canonical JSON",
+            "required_status_checks": "context,integration_id",
+        },
+        "sha256": RULESET_SNAPSHOT_DIGEST,
+    }
+    if normalization != expected_normalization:
+        errors.append("Ruleset normalization contract drifted")
+    if isinstance(managed, dict) and isinstance(classic, dict):
+        canonical = json.dumps(
+            {
+                "managed_ruleset": managed,
+                "classic_branch_protection": classic,
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != RULESET_SNAPSHOT_DIGEST:
+            errors.append("Ruleset normalized snapshot digest drifted")
 
 
 def validate_repository(root: Path = ROOT) -> list[str]:
@@ -1271,7 +1457,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         "issue_url",
         "task_base",
         "compatibility_layer",
-        "evidence_classes",
+        "acceptance_status",
         "governance",
         "catalog",
         "task_index",
@@ -1301,10 +1487,12 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         "phase0_manifest": {
             "path": MANIFEST_PATH,
             "sha256": COMPATIBILITY_MANIFEST_SHA256,
-            "state": "unchanged-pin-fresh",
-            "selected_pin": "docs/context/pins/PIN-0001.context-pin.v1.json",
+            "state": "unchanged-manifest-pin-fresh",
+            "selected_pin": "docs/context/pins/PIN-0002.context-pin.v1.json",
         },
-        "replan_url": f"{REPOSITORY_URL}/issues/12#issuecomment-5419726866",
+        "compatibility_replan_url": f"{REPOSITORY_URL}/issues/12#issuecomment-5419726866",
+        "pin_replan_url": f"{REPOSITORY_URL}/issues/12#issuecomment-5420690165",
+        "continuation_replan_url": f"{REPOSITORY_URL}/issues/12#issuecomment-5421277687",
         "phase1_discovery": [
             README_PATH,
             ".github/scripts/check-phase1-acceptance.py",
@@ -1314,35 +1502,15 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     }
     if phase1.get("compatibility_layer") != expected_compatibility:
         errors.append("Phase 0 compatibility and standalone discovery record drifted")
-    if phase1.get("evidence_classes") != EXPECTED_EVIDENCE_CLASSES:
-        errors.append("pre-merge, post-merge, and later evidence classes drifted")
+    if phase1.get("acceptance_status") != EXPECTED_ACCEPTANCE_STATUS:
+        errors.append("time-invariant acceptance status classes drifted")
 
     governance = phase1.get("governance")
-    expected_governance = {
-        "main": {"commit": BASE_COMMIT, "tree": BASE_TREE},
-        "ruleset": {
-            "id": 21254123,
-            "name": "solo-fast main protection",
-            "enforcement": "active",
-            "target": "refs/heads/main",
-            "observed_on": "2026-08-26",
-            "receipt_url": f"{REPOSITORY_URL}/issues/4#issuecomment-5388863497",
-            "rules": [
-                "deletion",
-                "non_fast_forward",
-                "pull_request",
-                "required_status_checks",
-            ],
-            "required_approving_reviews": 0,
-            "required_checks": [
-                {"context": "quality", "integration_id": 15368},
-                {"context": "conformance", "integration_id": 15368},
-            ],
-            "strict_required_status_checks_policy": False,
-        },
-    }
-    if governance != expected_governance:
-        errors.append("accepted main or Ruleset evidence snapshot drifted")
+    if not exact_keys(governance, {"main", "ruleset"}, "governance snapshot", errors):
+        governance = {}
+    if governance.get("main") != {"commit": BASE_COMMIT, "tree": BASE_TREE}:
+        errors.append("accepted main snapshot drifted")
+    validate_ruleset_snapshot(governance.get("ruleset"), errors)
 
     catalog = parsed[CATALOG_PATH]
     coverage = parsed[COVERAGE_PATH]
@@ -1402,7 +1570,8 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         expected_handoffs.append(
             {
                 "area": area,
-                "state": "task-not-created",
+                "state": "deferred-to-planning-intake",
+                "planning_issue_url": PLANNING_ISSUE_URL,
                 "later_owner": FUTURE_LANES[lane_key],
             }
         )
@@ -1412,13 +1581,16 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     completion = phase1.get("completion")
     expected_completion = {
         "phase0_complete": True,
-        "phase1_portable_core": "pre-merge-candidate",
+        "phase1_portable_core_implementation_gate": "satisfied",
+        "snapshot_at_tree_creation": "pre-merge",
+        "current_acceptance_authority": "external-github-state",
+        "post_merge_outcome_embedded_in_tree": False,
         "repository_complete": False,
         "release_blocked": True,
         "release_result_count": 0,
         "release_results": [],
-        "owner_merge_required": True,
-        "post_merge_receipt_required": True,
+        "owner_merge_is_acceptance_prerequisite": True,
+        "post_merge_receipt_is_acceptance_prerequisite": True,
     }
     if completion != expected_completion:
         errors.append("Phase 1 completion boundary is invalid")

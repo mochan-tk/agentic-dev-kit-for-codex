@@ -2,16 +2,16 @@
 
 ## Status and authority
 
-This tree is a **Phase 1 portable-core acceptance candidate** for T10 / Issue
-#12. Phase 0 is complete. This exact T10 tree is a Phase 1 portable-core
-acceptance candidate. When its exact-head `quality` and `conformance` checks
-are green and no blocking finding remains, it satisfies the portable-core
-implementation-complete gate: the Phase 1 portable-core implementation is
-complete in that exact tree. Durable owner acceptance remains pending merge
-and exact post-merge receipt. Phase 1 becomes accepted only after the repository
-owner merges the exact reviewed T10 head and the receipt verifies the
-merge tree and required checks. The overall repository implementation remains incomplete,
-is not installable, and is not a parity release. `release_blocked` remains `true`.
+Phase 0 is complete. This tree satisfies the **Phase 1 portable-core
+implementation gate** for T10 / Issue #12. Its committed acceptance status is
+an immutable creation-time snapshot, not a claim about mutable GitHub state.
+The current durable owner-acceptance outcome is external GitHub state;
+[Issue #12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12)
+and [Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2)
+are authoritative and require a current read-back. A later post-merge outcome
+is not embedded in this tree. The overall repository implementation remains
+incomplete, is not installable, and is not a parity release. `release_blocked`
+remains `true`.
 
 The canonical machine record is
 [`tests/conformance/results/phase-1.json`](../../tests/conformance/results/phase-1.json).
@@ -20,11 +20,12 @@ machine record, GitHub evidence, or owner judgment.
 
 ## Evidence classes
 
-| Class | State in this tree | Success boundary |
+| Class | State in this tree | Authority boundary |
 |---|---|---|
-| `pre_merge` | `candidate` | Exact T10 head, tree, direct commands, and `quality` / `conformance` URLs must be recorded in the PR and Issue #12 receipt. |
-| `post_merge` | `pending` | A later receipt must bind the merge commit/tree, both parents, post-merge checks, Issue #12 outcome, and Epic #2 outcome. |
-| `later_repository` | `non-pass` | Later reviewed Tasks must implement and verify runtime, distribution, migration, and release contracts. |
+| `implementation_gate` | `satisfied` | Bound to this versioned tree; exact-head evidence is external in the PR and Issue receipt. |
+| `snapshot_at_tree_creation` | `pre-merge` | Records only the immutable tree-creation snapshot and makes no current-outcome claim. |
+| `current_acceptance_authority` | `external-github-state` | Issue #12 and Epic #2 are authoritative and must be read back for the current outcome. |
+| `post_merge_outcome_not_embedded_in_tree` | `not-embedded` | Any later merge/tree/parent/check and Task/Epic outcome belongs in GitHub receipts, not a rewritten historical tree. |
 
 A tracked file cannot contain its own final commit or tree without changing
 that object. The committed package therefore binds immutable Git objects and
@@ -38,13 +39,17 @@ CI URLs are an external GitHub binding. Missing, stale, `UNKNOWN`,
 
 The Phase 0 compatibility manifest remains byte-identical at SHA-256
 `aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be`.
-It is a selected `PIN-0001` source and must stay fresh; adding a Phase 1 member
-would cross the approved T10 boundary into context-pin ownership. The
+It remains a source in the append-only selected `PIN-0002` record and must stay
+fresh; adding a Phase 1 member would still cross the compatibility boundary. The
 [bounded replan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5419726866)
 therefore keeps `tests/conformance/results/phase-1.json` standalone. It is
 deterministically discovered by the README, the fixed-path acceptance checker,
-and exactly-once quality registry/workflow execution. No T08 pin or
-portable-contract guard was weakened.
+and exactly-once quality registry/workflow execution. The later
+[pin-ownership replan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5420690165)
+records the 15-path safe correction and paused before expansion. The
+[continuation approval](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421277687)
+authorizes `PIN-0002` and its synchronized fixture after the status sources are
+committed. `PIN-0001` is unchanged and no portable-contract guard was weakened.
 
 ## Exact base and governance observation
 
@@ -52,14 +57,26 @@ portable-contract guard was weakened.
 - T10 base commit: `509362e6e12cf0160e58853b0d6c0b6871aa895c`
 - T10 base tree: `69c808a7afc59858213ee68dc89cb6a5a20e3e09`
 - Base state: accepted T09 merge on `main`
-- Ruleset: `solo-fast main protection`, ID `21254123`, active
-- Ruleset target: `refs/heads/main`
-- Effective rules: deletion protection, non-fast-forward protection, pull
-  request enforcement with zero required approvals, and required `quality` /
-  `conformance` checks from GitHub Actions App ID `15368`
+- Ruleset: complete normalized managed response for `solo-fast main
+  protection`, ID `21254123`, active on `refs/heads/main`
+- Observation: `2026-08-26T05:59:28Z`, GitHub REST API `2022-11-28`, read-only
+- Owner emergency bypass: actor type `User`, actor ID `9846618`, bypass mode
+  `always`; `current_user_can_bypass=always` is caller-specific observation
+- Pull-request parameters: zero approvals; no stale-review dismissal, code
+  owner review, last-push approval, review-thread resolution, or unattributed
+  change approval; allowed methods `merge`, `rebase`, and `squash`
+- Required-check parameters: non-strict `quality` and `conformance`, GitHub
+  Actions App ID `15368`; `do_not_enforce_on_create=false`
+- Classic branch protection: not configured; the detail endpoint returned 404.
+  The branch summary's `protected=true` is Ruleset-derived and its classic
+  `protection.enabled=false`
+- Managed response omitted fields: none. The normalized managed-Ruleset plus
+  classic-protection digest is
+  `655d99c11deceebdb81222afc7a23e5a2349203a017abd219a46bd873bb60d0e`
 - Accepted actuator receipt: [Issue #4 receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497)
-- Ruleset observation used by this record: `2026-08-26`, read-only; the
-  versioned snapshot does not replace a current GitHub read-back at merge time
+- Exact snapshot receipt: [Issue #12 read-back](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421280882)
+- This is a creation-time snapshot. It does not replace a current owner API
+  read-back when judging the external acceptance outcome
 
 ## Accepted Phase 1 Task evidence
 
@@ -95,9 +112,11 @@ envelope/v1, loop-event/v1, hooks, `codex exec` adapter, installer/upgrade,
 live Task ritual, feedback transport, clean-adopter E2E, or full source-parity
 evidence. Epic #2 does not own that out-of-scope remainder and closes only the
 portable-core acceptance frontier. No later owner is currently assigned. The
-machine record separates a future runtime/distribution/governance lane from a
-future repository-release/parity lane; a human-reviewed Phase, Epic, or Task
-must claim either lane before implementation.
+[planning intake Issue #21](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21)
+links both the future runtime/distribution/governance lane and the future
+repository-release/parity lane. It is not an Epic, Task, owner, or activation;
+a later human-reviewed Phase, Epic, or Task must claim a lane before
+implementation.
 
 ## Scenario result boundary
 

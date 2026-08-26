@@ -1,11 +1,11 @@
 # Known limitations
 
 Observed and documentation-derived statements are current through
-`2026-08-26`. Phase 0 is complete. This exact T10 tree is the **Phase 1
-portable-core acceptance candidate**. When its exact-head `quality` and
-`conformance` checks are green and no blocking finding remains, the Phase 1
-portable-core implementation is complete in that exact tree; durable owner
-acceptance remains pending merge and exact post-merge receipt.
+`2026-08-26`. Phase 0 is complete. This tree satisfies the **Phase 1
+portable-core implementation gate**. Its committed status is a creation-time
+snapshot. The current durable owner-acceptance outcome is external GitHub state
+authoritative in Issue #12 and Epic #2; a later post-merge outcome is not
+embedded in this tree.
 The overall repository implementation remains incomplete, the repository is
 not installable, and it is not a parity release. `release_blocked` remains `true`.
 

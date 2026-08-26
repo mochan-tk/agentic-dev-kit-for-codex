@@ -13,10 +13,12 @@
     "phase0_manifest": {
       "path": "tests/conformance/manifest.json",
       "sha256": "aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be",
-      "state": "unchanged-pin-fresh",
-      "selected_pin": "docs/context/pins/PIN-0001.context-pin.v1.json"
+      "state": "unchanged-manifest-pin-fresh",
+      "selected_pin": "docs/context/pins/PIN-0002.context-pin.v1.json"
     },
-    "replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5419726866",
+    "compatibility_replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5419726866",
+    "pin_replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5420690165",
+    "continuation_replan_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421277687",
     "phase1_discovery": [
       "README.md",
       ".github/scripts/check-phase1-acceptance.py",
@@ -24,82 +26,214 @@
       ".github/workflows/ci.yml"
     ]
   },
-  "evidence_classes": {
-    "pre_merge": {
-      "state": "candidate",
-      "binding": "external-pr-and-issue-receipt",
-      "success_requires": [
-        "exact-head",
-        "exact-tree",
-        "direct-commands",
-        "quality-url",
-        "conformance-url",
-        "mergeable-pr",
-        "owner-judgment"
-      ]
+    "acceptance_status": {
+        "implementation_gate": {
+            "state": "satisfied",
+            "scope": "phase-1-portable-core",
+            "binding": "this-versioned-tree",
+            "exact_head_evidence": "external-pr-and-issue-receipt"
+        },
+        "snapshot_at_tree_creation": {
+            "tree_creation_stage": "pre-merge",
+            "binding": "immutable-tree-creation-snapshot",
+            "current_outcome_claim": "none"
+        },
+        "current_acceptance_authority": {
+            "kind": "external-github-state",
+            "task_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12",
+            "epic_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2",
+            "read_back_required": true
+        },
+        "post_merge_outcome_not_embedded_in_tree": {
+            "state": "not-embedded",
+            "binding": "issue-12-and-epic-2-post-merge-receipts",
+            "required_receipt_fields": [
+                "merge-commit",
+                "merge-tree",
+                "both-parents",
+                "post-merge-quality-url",
+                "post-merge-conformance-url",
+                "task-outcome",
+                "epic-outcome"
+            ]
+        },
+        "later_repository": {
+            "state": "non-pass",
+            "binding": "future-reviewed-tasks",
+            "includes": [
+                "custom-agents",
+                "task-execution-envelope",
+                "loop-events",
+                "hooks",
+                "codex-exec-adapter",
+                "installer-upgrade",
+                "live-task-ritual",
+                "feedback-transport",
+                "clean-adopter-e2e",
+                "full-source-parity",
+                "release"
+            ]
+        }
     },
-    "post_merge": {
-      "state": "pending",
-      "binding": "future-post-merge-receipt",
-      "success_requires": [
-        "merge-commit",
-        "merge-tree",
-        "both-parents",
-        "post-merge-quality-url",
-        "post-merge-conformance-url",
-        "issue-outcome",
-        "epic-outcome"
-      ]
-    },
-    "later_repository": {
-      "state": "non-pass",
-      "binding": "future-reviewed-tasks",
-      "includes": [
-        "custom-agents",
-        "task-execution-envelope",
-        "loop-events",
-        "hooks",
-        "codex-exec-adapter",
-        "installer-upgrade",
-        "live-task-ritual",
-        "feedback-transport",
-        "clean-adopter-e2e",
-        "full-source-parity",
-        "release"
-      ]
-    }
-  },
   "governance": {
     "main": {
       "commit": "509362e6e12cf0160e58853b0d6c0b6871aa895c",
       "tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09"
     },
-    "ruleset": {
-      "id": 21254123,
-      "name": "solo-fast main protection",
-      "enforcement": "active",
-      "target": "refs/heads/main",
-      "observed_on": "2026-08-26",
-      "receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497",
-      "rules": [
-        "deletion",
-        "non_fast_forward",
-        "pull_request",
-        "required_status_checks"
-      ],
-      "required_approving_reviews": 0,
-      "required_checks": [
-        {
-          "context": "quality",
-          "integration_id": 15368
-        },
-        {
-          "context": "conformance",
-          "integration_id": 15368
+        "ruleset": {
+            "snapshot_schema": "github-ruleset-snapshot/v1",
+            "api_version": "2022-11-28",
+            "observed_at": "2026-08-26T05:59:28Z",
+            "snapshot_role": "creation-time-read-only-external-state-observation",
+            "activation_receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/4#issuecomment-5388863497",
+            "snapshot_receipt_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5421280882",
+            "managed_ruleset_response_top_level_fields": [
+                "_links",
+                "bypass_actors",
+                "conditions",
+                "created_at",
+                "current_user_can_bypass",
+                "enforcement",
+                "id",
+                "name",
+                "node_id",
+                "rules",
+                "source",
+                "source_type",
+                "target",
+                "updated_at"
+            ],
+            "managed_ruleset_omitted_fields": [],
+            "managed_ruleset": {
+                "id": 21254123,
+                "name": "solo-fast main protection",
+                "target": "branch",
+                "source_type": "Repository",
+                "source": "mochan-tk/agentic-dev-kit-for-codex",
+                "enforcement": "active",
+                "conditions": {
+                    "ref_name": {
+                        "exclude": [],
+                        "include": [
+                            "refs/heads/main"
+                        ]
+                    }
+                },
+                "rules": [
+                    {
+                        "type": "deletion"
+                    },
+                    {
+                        "type": "non_fast_forward"
+                    },
+                    {
+                        "type": "pull_request",
+                        "parameters": {
+                            "required_approving_review_count": 0,
+                            "dismiss_stale_reviews_on_push": false,
+                            "required_reviewers": [],
+                            "require_code_owner_review": false,
+                            "require_last_push_approval": false,
+                            "required_review_thread_resolution": false,
+                            "require_extra_approval_for_unattributed_changes": false,
+                            "allowed_merge_methods": [
+                                "merge",
+                                "rebase",
+                                "squash"
+                            ]
+                        }
+                    },
+                    {
+                        "type": "required_status_checks",
+                        "parameters": {
+                            "strict_required_status_checks_policy": false,
+                            "do_not_enforce_on_create": false,
+                            "required_status_checks": [
+                                {
+                                    "context": "conformance",
+                                    "integration_id": 15368
+                                },
+                                {
+                                    "context": "quality",
+                                    "integration_id": 15368
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "node_id": "RRS_lACqUmVwb3NpdG9yec5QGbwgzgFET-s",
+                "created_at": "2026-08-24T07:37:46.441+09:00",
+                "updated_at": "2026-08-24T07:38:18.261+09:00",
+                "bypass_actors": [
+                    {
+                        "actor_id": 9846618,
+                        "actor_type": "User",
+                        "bypass_mode": "always"
+                    }
+                ],
+                "current_user_can_bypass": "always",
+                "_links": {
+                    "self": {
+                        "href": "https://api.github.com/repos/mochan-tk/agentic-dev-kit-for-codex/rulesets/21254123"
+                    },
+                    "html": {
+                        "href": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/rules/21254123"
+                    }
+                }
+            },
+            "classic_branch_protection": {
+                "state": "not-configured",
+                "branch_summary": {
+                    "endpoint": "repos/mochan-tk/agentic-dev-kit-for-codex/branches/main",
+                    "included_fields": [
+                        "name",
+                        "protected",
+                        "protection"
+                    ],
+                    "omitted_fields": [
+                        "_links",
+                        "commit",
+                        "protection_url"
+                    ],
+                    "name": "main",
+                    "protected": true,
+                    "protection": {
+                        "enabled": false,
+                        "required_status_checks": {
+                            "enforcement_level": "off",
+                            "contexts": [],
+                            "checks": []
+                        }
+                    }
+                },
+                "details_read": {
+                    "endpoint": "repos/mochan-tk/agentic-dev-kit-for-codex/branches/main/protection",
+                    "http_status": 404,
+                    "response": {
+                        "message": "Branch not protected",
+                        "documentation_url": "https://docs.github.com/rest/branches/branch-protection#get-branch-protection",
+                        "status": "404"
+                    }
+                }
+            },
+            "normalization": {
+                "algorithm": "sha256",
+                "digest_scope": [
+                    "managed_ruleset",
+                    "classic_branch_protection"
+                ],
+                "json": "UTF-8 json.dumps(...,sort_keys=True,ensure_ascii=False,separators=(\",\",\":\"),allow_nan=False); no trailing newline",
+                "semantic_array_order": {
+                    "bypass_actors": "actor_type,actor_id,bypass_mode",
+                    "conditions.ref_name.include/exclude": "lexicographic",
+                    "rules": "type",
+                    "allowed_merge_methods": "lexicographic",
+                    "required_reviewers": "canonical JSON",
+                    "required_status_checks": "context,integration_id"
+                },
+                "sha256": "655d99c11deceebdb81222afc7a23e5a2349203a017abd219a46bd873bb60d0e"
+            }
         }
-      ],
-      "strict_required_status_checks_policy": false
-    }
   },
   "catalog": {
     "path": "tests/conformance/catalog.json",
@@ -1756,7 +1890,8 @@
   "later_handoffs": [
     {
       "area": "custom-agents-and-role-runtime",
-      "state": "task-not-created",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
       "later_owner": {
         "state": "unassigned",
         "lane": "future-runtime-distribution-and-governance",
@@ -1765,7 +1900,8 @@
     },
     {
       "area": "execution-envelope-and-loop-events",
-      "state": "task-not-created",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
       "later_owner": {
         "state": "unassigned",
         "lane": "future-runtime-distribution-and-governance",
@@ -1774,7 +1910,8 @@
     },
     {
       "area": "hooks-and-codex-exec-adapter",
-      "state": "task-not-created",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
       "later_owner": {
         "state": "unassigned",
         "lane": "future-runtime-distribution-and-governance",
@@ -1783,7 +1920,8 @@
     },
     {
       "area": "installer-upgrade-and-live-task-ritual",
-      "state": "task-not-created",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
       "later_owner": {
         "state": "unassigned",
         "lane": "future-runtime-distribution-and-governance",
@@ -1792,7 +1930,8 @@
     },
     {
       "area": "consent-feedback-transport",
-      "state": "task-not-created",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
       "later_owner": {
         "state": "unassigned",
         "lane": "future-runtime-distribution-and-governance",
@@ -1801,7 +1940,8 @@
     },
     {
       "area": "clean-adopter-e2e-and-full-parity-release",
-      "state": "task-not-created",
+      "state": "deferred-to-planning-intake",
+      "planning_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
       "later_owner": {
         "state": "unassigned",
         "lane": "future-repository-release-and-parity",
@@ -1812,21 +1952,24 @@
   "document_bindings": [
     {
       "path": "docs/planning/phase-1-acceptance.md",
-      "sha256": "cae0f4f929923868f4883cccca93241d9b4808867e1632d841ef53658f390319"
+      "sha256": "e9942210b1db631978e9e6d2e17287baa0486459a7b147c14ea60fc70144c7ad"
     },
     {
       "path": "docs/conformance/phase-1-scorecard.md",
-      "sha256": "c92c08339e75ffe228911d0940ff6ac1ba158442d1c322ce67153bf2ac7bbf8a"
+      "sha256": "81f4abd54438c589bb9f6213b035fe9c9793fc5b523c38045baa2df3e64600ee"
     }
   ],
   "completion": {
     "phase0_complete": true,
-    "phase1_portable_core": "pre-merge-candidate",
+    "phase1_portable_core_implementation_gate": "satisfied",
+    "snapshot_at_tree_creation": "pre-merge",
+    "current_acceptance_authority": "external-github-state",
+    "post_merge_outcome_embedded_in_tree": false,
     "repository_complete": false,
     "release_blocked": true,
     "release_result_count": 0,
     "release_results": [],
-    "owner_merge_required": true,
-    "post_merge_receipt_required": true
+    "owner_merge_is_acceptance_prerequisite": true,
+    "post_merge_receipt_is_acceptance_prerequisite": true
   }
 }

@@ -849,17 +849,33 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertIn(f"]({REPOSITORY_COMPLETION})", readme)
         for marker in (
             "Phase 0 is complete",
-            "Phase 1 portable-core acceptance candidate",
-            "Phase 1 portable-core implementation is complete in that exact tree",
-            "exact-head `quality` and `conformance` checks",
-            "no blocking finding remains",
-            "durable owner acceptance remains pending",
+            "Phase 1 portable-core implementation gate",
+            "current durable owner-acceptance outcome is external GitHub state",
+            "creation-time snapshot",
+            "Issue #12",
+            "Epic #2",
             "post-merge receipt",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
         ):
             self.assertIn(marker, readme)
+        for marker in (
+            "Phase 0 is complete.",
+            "This tree satisfies the Phase 1 portable-core implementation gate.",
+            "Issue #12 and Epic #2",
+            "Epic, Task, and pull-request ledger contracts",
+            "connector-neutral context contracts",
+            "all eight repository Skills exist",
+            "Custom agents, hooks, task-execution-envelope/v1, loop-event/v1",
+            "installer/upgrade",
+            "live Task ritual",
+            "runtime parity",
+            "release remain incomplete",
+            "overall repository implementation remains incomplete",
+            "`release_blocked` remains `true`",
+        ):
+            self.assertIn(marker, agents)
         for marker in (
             "durable repository objective",
             "explicitly linked Epic issues",
@@ -902,6 +918,19 @@ class RepositoryPolicyTest(unittest.TestCase):
             "`failed`",
         ):
             self.assertIn(marker, completion)
+
+    def test_stale_phase1_status_in_agents_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        agents = fixture / "AGENTS.md"
+        agents.write_text(
+            agents.read_text(encoding="utf-8")
+            + "\nPhase 1 is in progress; the full GitHub ledger arrives later.\n",
+            encoding="utf-8",
+        )
+        self.assert_rejected(
+            self.errors_for(fixture), "AGENTS.md contains stale Phase 1 status text"
+        )
 
     def test_synchronized_option_a_or_c_invariant_drift_is_rejected(self):
         alternatives = (
