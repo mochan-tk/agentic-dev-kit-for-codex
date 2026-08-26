@@ -90,7 +90,6 @@
       "base_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
       "base_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
       "owned_paths": [
-        {"path": "AGENTS.md", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md", "mode": "100644"},
         {"path": "docs/agreements/repository-completion.md", "mode": "100644"},
         {"path": "tests/conformance/coverage.json", "mode": "100644"},
@@ -154,7 +153,6 @@
         {"path": "docs/context/README.md", "mode": "100644"},
         {"path": "docs/context/pins/PIN-0001.context-pin.v1.json", "mode": "100644"},
         {"path": "tests/contracts/fixtures/connector-valid.v1.json", "mode": "100644"},
-        {"path": "tests/contracts/fixtures/context-pin-valid.v1.json", "mode": "100644"},
         {"path": "tests/contracts/fixtures/decisions-valid.v1.json", "mode": "100644"},
         {"path": "tests/contracts/fixtures/requirements-valid.v1.json", "mode": "100644"}
       ]
@@ -207,14 +205,17 @@
         {"path": ".github/scripts/check-phase1-acceptance.py", "mode": "100644"},
         {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
         {"path": ".github/workflows/ci.yml", "mode": "100644"},
+        {"path": "AGENTS.md", "mode": "100644"},
         {"path": "README.md", "mode": "100644"},
         {"path": "docs/conformance/phase-1-scorecard.md", "mode": "100644"},
+        {"path": "docs/context/pins/PIN-0002.context-pin.v1.json", "mode": "100644"},
         {"path": "docs/known-limitations.md", "mode": "100644"},
         {"path": "docs/planning/phase-1-acceptance.md", "mode": "100644"},
         {"path": "tests/conformance/manifest.json", "mode": "100644"},
         {"path": "tests/conformance/results/phase-1.json", "mode": "100644"},
         {"path": "tests/conformance/test_phase1_acceptance.py", "mode": "100644"},
-        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"}
+        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
+        {"path": "tests/contracts/fixtures/context-pin-valid.v1.json", "mode": "100644"}
       ]
     }
   ]
