@@ -668,6 +668,33 @@ class ProcessResult(NamedTuple):
     reaped: bool
 
 
+def parse_linux_process_stat(data: bytes) -> Optional[Tuple[int, int, int, str]]:
+    """Return PID, PPID, process group, and immutable start-time token."""
+    try:
+        text = data.decode("ascii", errors="strict")
+        closing = text.rfind(")")
+        if closing < 2 or text[0:closing].find("(") < 1:
+            raise ValueError
+        pid = int(text[:text.find(" ")])
+        fields = text[closing + 2:].split()
+        if len(fields) < 20:
+            raise ValueError
+        state = fields[0]
+        ppid = int(fields[1])
+        pgid = int(fields[2])
+        start_ticks = int(fields[19])
+    except (UnicodeDecodeError, ValueError):
+        raise ContractError("Linux process birth-identity sensor returned malformed data")
+    # A process group outside the reader's PID namespace is represented as
+    # zero by procfs. It remains valid discovery topology; the immutable
+    # start-time token, not PGID, gates every signal operation.
+    if pid <= 0 or ppid < 0 or pgid < 0 or start_ticks <= 0:
+        raise ContractError("Linux process birth-identity sensor returned invalid data")
+    if state == "Z":
+        return None
+    return pid, ppid, pgid, "linux:" + str(start_ticks)
+
+
 def _linux_process_table_snapshot() -> Dict[int, Tuple[int, int, str]]:
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     try:
@@ -702,25 +729,10 @@ def _linux_process_table_snapshot() -> Dict[int, Tuple[int, int, str]]:
                 continue
             if not data or len(data) > 8192:
                 continue
-            try:
-                text = bytes(data).decode("ascii", errors="strict")
-                closing = text.rfind(")")
-                if closing < 2 or text[0:closing].find("(") < 1:
-                    raise ValueError
-                pid = int(text[:text.find(" ")])
-                fields = text[closing + 2:].split()
-                if len(fields) < 20:
-                    raise ValueError
-                state = fields[0]
-                ppid = int(fields[1])
-                pgid = int(fields[2])
-                start_ticks = int(fields[19])
-            except (UnicodeDecodeError, ValueError):
-                raise ContractError("Linux process birth-identity sensor returned malformed data")
-            if pid <= 0 or ppid < 0 or pgid <= 0 or start_ticks <= 0:
-                raise ContractError("Linux process birth-identity sensor returned invalid data")
-            if state != "Z":
-                table[pid] = (ppid, pgid, "linux:" + str(start_ticks))
+            record = parse_linux_process_stat(bytes(data))
+            if record is not None:
+                pid, ppid, pgid, birth_token = record
+                table[pid] = (ppid, pgid, birth_token)
     finally:
         os.close(proc_descriptor)
     return table

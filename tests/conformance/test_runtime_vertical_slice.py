@@ -477,6 +477,22 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             self.assertTrue(tracker.terminate_descendants(0.01))
         signal_call.assert_not_called()
 
+    def test_linux_stat_parser_accepts_unrepresented_process_group_only(self):
+        valid = b"4321 (worker) S 0 0 4321 0 -1 4194304 0 0 0 0 0 0 0 0 20 0 1 0 98765\n"
+        self.assertEqual(
+            (4321, 0, 0, "linux:98765"),
+            self.adapter.parse_linux_process_stat(valid),
+        )
+        negative_group = valid.replace(b") S 0 0 4321", b") S 0 -1 4321")
+        self.assert_contract_error(
+            lambda: self.adapter.parse_linux_process_stat(negative_group),
+            "invalid data",
+        )
+        self.assert_contract_error(
+            lambda: self.adapter.parse_linux_process_stat(b"4321 malformed\n"),
+            "malformed data",
+        )
+
     def test_worktree_preflight_rejects_unreviewed_layers_symlinks_and_modes(self):
         extras = (".codex/config.toml", "AGENTS.md", ".mcp.json", ".codex/agents/worker.toml", ".agents/skills/x/SKILL.md")
         for extra in extras:

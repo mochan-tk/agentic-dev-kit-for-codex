@@ -45,7 +45,7 @@ RUNTIME_CONTRACT_CHECKER_SHA256 = (
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "9a73fe3ac22cebb31e9bc1bd0bea298fc6efc6ce8b6aaae56c7d4a93c33f357f"
+    "1dc876f5f2ef605be0e88618f525b19a9cfb20cbb0f851e789273f1be53d8aaa"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
