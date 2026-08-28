@@ -13,6 +13,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / ".github/scripts/check-repository-policy.py"
+RUNTIME_CHECKER = ROOT / ".github/scripts/check-runtime-contracts.py"
 OWNERSHIP = ".github/governance/phase-task-ownership.v1.json"
 PHASE_MANIFEST = "tests/conformance/manifest.json"
 COVERAGE = "tests/conformance/coverage.json"
@@ -74,6 +75,15 @@ class RepositoryPolicyTest(unittest.TestCase):
             raise AssertionError(f"cannot load repository policy checker: {CHECKER}")
         cls.checker = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.checker)
+        runtime_spec = importlib.util.spec_from_file_location(
+            "runtime_contract_policy", RUNTIME_CHECKER
+        )
+        if runtime_spec is None or runtime_spec.loader is None:
+            raise AssertionError(
+                f"cannot load runtime contract checker: {RUNTIME_CHECKER}"
+            )
+        cls.runtime_checker = importlib.util.module_from_spec(runtime_spec)
+        runtime_spec.loader.exec_module(cls.runtime_checker)
 
     def ownership_payload(self, root=ROOT):
         return json.loads((root / OWNERSHIP).read_text(encoding="utf-8"))
@@ -137,6 +147,9 @@ class RepositoryPolicyTest(unittest.TestCase):
 
     def errors_for(self, root):
         return self.checker.validate_repository(root, verify_git=False)
+
+    def runtime_errors_for(self, root):
+        return self.runtime_checker.validate_repository(root)
 
     def local_authorization_errors(self, root):
         errors = []
@@ -1524,12 +1537,142 @@ class RepositoryPolicyTest(unittest.TestCase):
             "offline runtime checker references unreviewed runtime callable receipt.main",
         )
 
+    def test_runtime_checker_pins_documented_memory_keys_across_synchronized_drift(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        paths = (
+            self.checker.RUNTIME_ADAPTER,
+            "docs/agreements/runtime/task-execution-envelope.v1.schema.json",
+            "tests/runtime/fixtures/envelope-valid.v1.json",
+            "tests/runtime/fixtures/runtime-receipt-valid.v1.json",
+        )
+        substitutions = (
+            ("memories.generate_memories", "__T11_MEMORY_GENERATE__"),
+            ("memories.use_memories", "__T11_MEMORY_USE__"),
+            ("features.memory_tool_use", "memories.use_memories"),
+            ("features.memory_tool", "memories.generate_memories"),
+            ("__T11_MEMORY_GENERATE__", "features.memory_tool"),
+            ("__T11_MEMORY_USE__", "features.memory_tool_use"),
+        )
+        for relative in paths:
+            path = fixture / relative
+            text = path.read_text(encoding="utf-8")
+            for old, new in substitutions:
+                text = text.replace(old, new)
+            path.write_text(text, encoding="utf-8")
+        errors = self.runtime_errors_for(fixture)
+        self.assert_rejected(errors, "documented memory override key set drifted")
+        self.assert_rejected(errors, "legacy undocumented memory override is forbidden")
+
+    def test_runtime_checker_rejects_missing_or_enabled_documented_memory_key(self):
+        for mutation in ("missing", "true"):
+            with self.subTest(mutation=mutation):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                relative = "tests/runtime/fixtures/envelope-valid.v1.json"
+                payload = self.read_json(fixture, relative)
+                overrides = payload["worker"]["overrides"]
+                if mutation == "missing":
+                    del overrides["memories.generate_memories"]
+                else:
+                    overrides["memories.use_memories"] = True
+                self.write_json(fixture, relative, payload)
+                errors = self.runtime_errors_for(fixture)
+                self.assert_rejected(
+                    errors, "documented memory override must be present and false"
+                )
+
+    def test_runtime_checker_rejects_policy_bypass_in_runtime_script_argv(self):
+        for flag in (
+            "--ignore-rules",
+            "--ignore-rules=all",
+            "--dangerously-bypass-approvals-and-sandbox",
+        ):
+            with self.subTest(flag=flag):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / self.checker.RUNTIME_ADAPTER
+                text = path.read_text(encoding="utf-8").replace(
+                    '"--strict-config", "--ignore-user-config"',
+                    f'"--strict-config", "--ignore-user-config", "{flag}"',
+                    1,
+                )
+                path.write_text(text, encoding="utf-8")
+                self.assert_rejected(
+                    self.runtime_errors_for(fixture),
+                    "runtime/config argv contains forbidden policy bypass",
+                )
+
+    def test_runtime_checker_never_promotes_doctor_to_effective_config_proof(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        schema = self.read_json(fixture, "docs/agreements/runtime/runtime-profile.v1.schema.json")
+        diagnostic = schema["properties"]["evidence"]["properties"]["diagnostic_health"]
+        diagnostic["properties"]["classification"] = {"const": "effective-configuration"}
+        diagnostic["properties"]["codex_issued_effective_configuration_proof"] = {"const": True}
+        self.write_json(fixture, "docs/agreements/runtime/runtime-profile.v1.schema.json", schema)
+        for relative, nested in (
+            ("tests/runtime/fixtures/runtime-profile-valid.v1.json", False),
+            ("tests/runtime/fixtures/runtime-receipt-valid.v1.json", True),
+        ):
+            payload = self.read_json(fixture, relative)
+            profile = payload["artifacts"]["runtime_profile"] if nested else payload
+            profile["evidence"]["diagnostic_health"] = {
+                "classification": "effective-configuration",
+                "status": "pass",
+                "codex_issued_effective_configuration_proof": True,
+            }
+            self.write_json(fixture, relative, payload)
+        errors = self.runtime_errors_for(fixture)
+        self.assert_rejected(errors, "separated runtime evidence schema drifted")
+        self.assert_rejected(
+            errors, "doctor evidence must remain diagnostic-only, never effective-config proof"
+        )
+
+    def test_runtime_profile_schema_requires_all_separated_evidence_lanes(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        relative = "docs/agreements/runtime/runtime-profile.v1.schema.json"
+        schema = self.read_json(fixture, relative)
+        evidence = schema["properties"]["evidence"]
+        evidence["required"].remove("network_sandbox_behavior")
+        del evidence["properties"]["network_sandbox_behavior"]
+        self.write_json(fixture, relative, schema)
+        self.assert_rejected(
+            self.runtime_errors_for(fixture), "separated runtime evidence schema drifted"
+        )
+
+    def test_runtime_profile_match_requires_passing_independent_evidence_lanes(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        relative = "docs/agreements/runtime/runtime-profile.v1.schema.json"
+        schema = self.read_json(fixture, relative)
+        match = next(
+            item for item in schema["allOf"]
+            if item.get("if") == {
+                "properties": {"status": {"const": "match"}},
+                "required": ["status"],
+            }
+        )
+        match["then"]["properties"]["evidence"]["properties"][
+            "network_sandbox_behavior"
+        ]["properties"]["status"] = {"const": "not-run"}
+        self.write_json(fixture, relative, schema)
+        self.assert_rejected(
+            self.runtime_errors_for(fixture),
+            "match does not require passing evidence lane network_sandbox_behavior",
+        )
+
     def test_native_adapter_validator_cannot_reach_live_runtime_helpers(self):
         for helper in (
             "execute_slice",
             "execution_root_inventory",
             "descriptor_xattr_inventory",
             "process_table_snapshot",
+            "materialize_reviewed_rules_profile",
+            "network_sandbox_behavior_probe",
+            "probe_runtime_evidence",
+            "shell_environment_probe",
         ):
             with self.subTest(helper=helper):
                 temporary, fixture = self.copy_fixture()

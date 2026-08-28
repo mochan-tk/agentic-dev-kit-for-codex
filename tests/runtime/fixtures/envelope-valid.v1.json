@@ -48,8 +48,8 @@
       "agents.enabled": false,
       "tools.web_search": false,
       "feedback.enabled": false,
-      "features.memory_tool": false,
-      "features.memory_tool_use": false
+        "memories.generate_memories": false,
+        "memories.use_memories": false
     }
   },
   "verification_commands": [

@@ -45,16 +45,23 @@ TERM/KILL/reap handling, and pre/post Git-state verification.
 Before live execution a sensor must prove a supported runtime profile.
 `profile-drift`, `unsupported-client` (including an unapproved prerelease), `UNKNOWN`, and
 `UNCHECKABLE` are non-success and block the worker. Help output alone is not a
-configuration-recognition probe. Release class is derived from exact version
-syntax. A stable client becomes `match` only when every semantic capability,
-configuration, and explicit shell-environment probe passes; the full sensor is
-rerun and reconciled immediately before the one live worker.
+configuration-recognition probe, and `codex doctor --json` is diagnostic
+health evidence rather than an effective-configuration attestation. The
+adapter records its reviewed documented-key intent and digest as
+adapter-authored evidence with `effective_configuration_proven=false`, then
+keeps shell-environment, network/sandbox behavior, containment, and exact
+worker-argv evidence separate. Release class is derived from exact version
+syntax. A stable client becomes `match` only when every independently required
+lane passes; the full sensor is rerun and reconciled immediately before the
+one live worker.
 
 ## Security and privacy consequences
 
 - The worker has `workspace-write`, approval `never`, network disabled, no
   additional writable roots, ephemeral history, hooks/apps/agents/web search/
-  feedback/memory disabled, strict config, and ignored user config.
+  feedback/memory disabled, strict config, and ignored user config. Its argv
+  never disables execpolicy rules and never uses a dangerous bypass flag; the
+  private runtime home supplies the reviewed rules surface.
 - The shell environment begins empty and adds only the verified executable
   path, private HOME/TMPDIR, locale/timezone, and deterministic Git/Python
   values. No credential, proxy, or unrelated host value is copied.

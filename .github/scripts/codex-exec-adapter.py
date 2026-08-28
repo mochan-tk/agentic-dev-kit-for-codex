@@ -17,6 +17,7 @@ import math
 import os
 import re
 import signal
+import socket
 import stat
 import subprocess
 import sys
@@ -82,8 +83,8 @@ REQUIRED_OVERRIDES = {
     "agents.enabled": False,
     "tools.web_search": False,
     "feedback.enabled": False,
-    "features.memory_tool": False,
-    "features.memory_tool_use": False,
+    "memories.generate_memories": False,
+    "memories.use_memories": False,
 }
 REQUIRED_ENV_VALUES = {
     "LANG": "C.UTF-8",
@@ -94,6 +95,16 @@ REQUIRED_ENV_VALUES = {
     "GIT_TERMINAL_PROMPT": "0",
 }
 REVIEWED_SENSOR_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+SHELL_ENVIRONMENT_NAMES = (
+    "PATH", "HOME", "CODEX_HOME", "TMPDIR", "LANG", "LC_ALL", "TZ",
+    "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT",
+    "GIT_OPTIONAL_LOCKS",
+)
+DYNAMIC_ENVIRONMENT_NAMES = ("CODEX_HOME", "HOME", "PATH", "TMPDIR")
+REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
+REVIEWED_RULES_BYTES = (
+    b"# T11 reviewed empty execpolicy profile. Platform policy remains authoritative.\n"
+)
 TERMINAL_TYPES = {"turn.completed", "turn.failed"}
 KNOWN_RAW_TYPES = {"thread.started", "turn.started", "item.started", "item.updated", "item.completed", "error"} | TERMINAL_TYPES
 VERIFIER_CHECKS = [
@@ -116,6 +127,48 @@ class ContractError(Exception):
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def validate_documented_memory_overrides(overrides: Mapping[str, Any]) -> None:
+    """Reject legacy or non-disabling memory keys before any Codex process."""
+    legacy = ("features.memory_tool", "features.memory_tool_use")
+    if any(key in overrides for key in legacy):
+        raise ContractError("legacy undocumented memory override is forbidden")
+    for key in ("memories.generate_memories", "memories.use_memories"):
+        if key not in overrides or overrides[key] is not False:
+            raise ContractError("documented memory override must be present and false: " + key)
+
+
+def runtime_configuration_intent() -> Dict[str, Any]:
+    """Return stable adapter-authored intent, never effective-config proof.
+
+    The digest deliberately excludes the private, per-run PATH/HOME/CODEX_HOME/
+    TMPDIR values. Their required names and the non-private fixed values remain
+    bound, while the exact runtime observation is a separate evidence lane.
+    """
+    validate_documented_memory_overrides(REQUIRED_OVERRIDES)
+    static_configuration = {
+        "approval_policy": "never",
+        "model_reasoning_effort": "high",
+        "shell_environment_policy": {
+            "inherit": "none",
+            "required_names": list(SHELL_ENVIRONMENT_NAMES),
+            "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"},
+        },
+        "overrides": dict(REQUIRED_OVERRIDES),
+        "execpolicy": {
+            "rules_path_relative_to_codex_home": REVIEWED_RULES_RELATIVE_PATH,
+            "rules_profile_sha256": sha256_bytes(REVIEWED_RULES_BYTES),
+        },
+    }
+    return {
+        "schema": "t11-runtime-configuration-intent/v1",
+        "authority": "adapter-authored",
+        "effective_configuration_proven": False,
+        "configuration_sha256": sha256_bytes(canonical_bytes(static_configuration)),
+        "rules_profile_sha256": sha256_bytes(REVIEWED_RULES_BYTES),
+        "dynamic_environment_values_excluded": list(DYNAMIC_ENVIRONMENT_NAMES),
+    }
 
 
 def runtime_fs_capability_error() -> Optional[str]:
@@ -492,7 +545,7 @@ def validate_envelope(envelope: Any) -> Dict[str, Any]:
 def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[str, Any]:
     if not isinstance(profile, dict):
         raise ContractError("runtime profile must be an object")
-    exact_keys(profile, ("schema", "repository", "observed_at", "scope", "status", "reason", "platform", "client", "capabilities", "auth", "request", "shell_environment", "live_run_allowed"), "runtime profile")
+    exact_keys(profile, ("schema", "repository", "observed_at", "scope", "status", "reason", "platform", "client", "capabilities", "evidence", "auth", "request", "shell_environment", "live_run_allowed"), "runtime profile")
     if profile["schema"] != "runtime-profile/v1" or profile["repository"] != REPOSITORY:
         raise ContractError("runtime profile identity is invalid")
     if not isinstance(profile["observed_at"], str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", profile["observed_at"]) is None:
@@ -523,12 +576,58 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     if release_class != derived_release_class:
         raise ContractError("runtime release class disagrees with exact version output")
     caps = profile["capabilities"]
-    required_caps = ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "config_recognition_probe", "shell_environment_probe", "process_containment_probe", "model", "reasoning", "sandbox", "approval", "overrides")
+    required_caps = ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_containment_probe", "model", "reasoning", "sandbox", "approval", "overrides")
     exact_keys(caps, required_caps, "runtime capabilities")
     for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"):
         require_bool(caps[field], "runtime capability " + field)
-    if caps["config_recognition_probe"] not in ("pass", "fail", "not-proven", "UNCHECKABLE") or caps["shell_environment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE") or caps["process_containment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
+    if caps["documented_config_keys_probe"] not in ("pass", "fail", "not-proven", "UNCHECKABLE") or caps["shell_environment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE") or caps["process_containment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
         raise ContractError("runtime probe status is invalid")
+    evidence = profile["evidence"]
+    if not isinstance(evidence, dict):
+        raise ContractError("runtime evidence must be an object")
+    exact_keys(
+        evidence,
+        ("configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior"),
+        "runtime evidence",
+    )
+    if evidence["configuration_intent"] != runtime_configuration_intent():
+        raise ContractError("adapter-authored runtime configuration intent drifted")
+    diagnostic = evidence["diagnostic_health"]
+    if not isinstance(diagnostic, dict):
+        raise ContractError("runtime diagnostic evidence must be an object")
+    exact_keys(
+        diagnostic,
+        ("classification", "status", "codex_issued_effective_configuration_proof"),
+        "runtime diagnostic evidence",
+    )
+    if diagnostic["classification"] != "diagnostic-only" or diagnostic["status"] not in ("pass", "warning", "fail", "not-run", "UNCHECKABLE") or diagnostic["codex_issued_effective_configuration_proof"] is not False:
+        raise ContractError("runtime diagnostic evidence is invalid")
+    worker_argv_evidence = evidence["exact_worker_argv"]
+    if not isinstance(worker_argv_evidence, dict):
+        raise ContractError("runtime worker argv evidence must be an object")
+    exact_keys(
+        worker_argv_evidence,
+        ("status", "rules_bypass_absent", "dynamic_task_data_stdin_only"),
+        "runtime worker argv evidence",
+    )
+    if worker_argv_evidence["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
+        raise ContractError("runtime worker argv status is invalid")
+    for field in ("rules_bypass_absent", "dynamic_task_data_stdin_only"):
+        require_bool(worker_argv_evidence[field], "runtime worker argv " + field)
+    argv_claims = (
+        worker_argv_evidence["rules_bypass_absent"],
+        worker_argv_evidence["dynamic_task_data_stdin_only"],
+    )
+    if (worker_argv_evidence["status"] == "pass" and argv_claims != (True, True)) or (
+        worker_argv_evidence["status"] != "pass" and argv_claims != (False, False)
+    ):
+        raise ContractError("runtime worker argv evidence is internally inconsistent")
+    network_evidence = evidence["network_sandbox_behavior"]
+    if not isinstance(network_evidence, dict):
+        raise ContractError("runtime network/sandbox evidence must be an object")
+    exact_keys(network_evidence, ("status",), "runtime network/sandbox evidence")
+    if network_evidence["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
+        raise ContractError("runtime network/sandbox status is invalid")
     platform = profile["platform"]
     if not isinstance(platform, dict):
         raise ContractError("runtime platform must be an object")
@@ -545,7 +644,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     if request != {"model": "gpt-5.6-sol", "reasoning_effort": "high", "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"}:
         raise ContractError("runtime model/reasoning/sandbox/approval request drifted")
     shell_env = profile["shell_environment"]
-    exact_names = ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ", "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS"]
+    exact_names = list(SHELL_ENVIRONMENT_NAMES)
     fixed_values = {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}
     expected_shell = {
         "inherit": "none", "required_names": exact_names,
@@ -558,9 +657,12 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     match_ready = (
         status_value == "match"
         and release_class == "stable"
-        and caps["config_recognition_probe"] == "pass"
+        and caps["documented_config_keys_probe"] == "pass"
         and caps["shell_environment_probe"] == "pass"
         and caps["process_containment_probe"] == "pass"
+        and diagnostic["status"] == "pass"
+        and worker_argv_evidence["status"] == "pass"
+        and network_evidence["status"] == "pass"
         and all(caps[field] for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
     )
     if profile["live_run_allowed"] is not match_ready:
@@ -1057,6 +1159,106 @@ def run_bounded_process(
     )
 
 
+def _materialize_reviewed_rules_profile(environment: Mapping[str, str]) -> str:
+    """Create and verify the fixed empty rules profile without following links."""
+    require_runtime_fs_capabilities()
+    home_value = environment.get("HOME")
+    codex_home_value = environment.get("CODEX_HOME")
+    if not isinstance(home_value, str) or not isinstance(codex_home_value, str):
+        raise ContractError("private runtime home or CODEX_HOME is unavailable")
+    home = Path(home_value)
+    codex_home = Path(codex_home_value)
+    if not home.is_absolute() or codex_home != home / ".codex":
+        raise ContractError("CODEX_HOME is not the reviewed private-home layer")
+    if os.mkdir not in getattr(os, "supports_dir_fd", set()):
+        raise ContractError("rules profile requires mkdir(dir_fd) capability")
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    home_descriptor = os.open(str(home), directory_flags)
+    try:
+        home_binding = os.fstat(home_descriptor)
+        if not stat.S_ISDIR(home_binding.st_mode) or stat.S_IMODE(home_binding.st_mode) & 0o077:
+            raise ContractError("private runtime home mode is unsafe")
+        try:
+            os.mkdir(".codex", 0o700, dir_fd=home_descriptor)
+        except FileExistsError:
+            pass
+        codex_descriptor = os.open(".codex", directory_flags, dir_fd=home_descriptor)
+        try:
+            codex_binding = os.fstat(codex_descriptor)
+            named_codex = os.stat(".codex", dir_fd=home_descriptor, follow_symlinks=False)
+            if not stat.S_ISDIR(codex_binding.st_mode) or stat.S_IMODE(codex_binding.st_mode) != 0o700 or (codex_binding.st_dev, codex_binding.st_ino) != (named_codex.st_dev, named_codex.st_ino):
+                raise ContractError("private CODEX_HOME binding or mode is unsafe")
+            try:
+                os.mkdir("rules", 0o700, dir_fd=codex_descriptor)
+            except FileExistsError:
+                pass
+            rules_descriptor = os.open("rules", directory_flags, dir_fd=codex_descriptor)
+            try:
+                rules_binding = os.fstat(rules_descriptor)
+                named_rules = os.stat("rules", dir_fd=codex_descriptor, follow_symlinks=False)
+                if not stat.S_ISDIR(rules_binding.st_mode) or stat.S_IMODE(rules_binding.st_mode) != 0o700 or (rules_binding.st_dev, rules_binding.st_ino) != (named_rules.st_dev, named_rules.st_ino):
+                    raise ContractError("reviewed rules directory binding or mode is unsafe")
+                name = Path(REVIEWED_RULES_RELATIVE_PATH).name
+                try:
+                    file_descriptor = os.open(
+                        name,
+                        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                        0o600,
+                        dir_fd=rules_descriptor,
+                    )
+                except FileExistsError:
+                    file_descriptor = None
+                if file_descriptor is not None:
+                    try:
+                        written = 0
+                        while written < len(REVIEWED_RULES_BYTES):
+                            count = os.write(file_descriptor, REVIEWED_RULES_BYTES[written:])
+                            if count <= 0:
+                                raise ContractError("reviewed rules profile write did not progress")
+                            written += count
+                        os.fsync(file_descriptor)
+                    finally:
+                        os.close(file_descriptor)
+                read_descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=rules_descriptor)
+                try:
+                    info = os.fstat(read_descriptor)
+                    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600 or info.st_size != len(REVIEWED_RULES_BYTES):
+                        raise ContractError("reviewed rules profile mode or size drifted")
+                    data = bytearray()
+                    while len(data) <= len(REVIEWED_RULES_BYTES):
+                        chunk = os.read(read_descriptor, len(REVIEWED_RULES_BYTES) + 1 - len(data))
+                        if not chunk:
+                            break
+                        data.extend(chunk)
+                finally:
+                    os.close(read_descriptor)
+                named_file = os.stat(name, dir_fd=rules_descriptor, follow_symlinks=False)
+                if (named_file.st_dev, named_file.st_ino) != (info.st_dev, info.st_ino) or bytes(data) != REVIEWED_RULES_BYTES:
+                    raise ContractError("reviewed rules profile binding or bytes drifted")
+                os.fsync(rules_descriptor)
+            finally:
+                os.close(rules_descriptor)
+            os.fsync(codex_descriptor)
+        finally:
+            os.close(codex_descriptor)
+        os.fsync(home_descriptor)
+        named_home = os.stat(str(home), follow_symlinks=False)
+        if (named_home.st_dev, named_home.st_ino) != (home_binding.st_dev, home_binding.st_ino):
+            raise ContractError("private runtime home namespace changed")
+    finally:
+        os.close(home_descriptor)
+    return sha256_bytes(REVIEWED_RULES_BYTES)
+
+
+def materialize_reviewed_rules_profile(environment: Mapping[str, str]) -> str:
+    try:
+        return _materialize_reviewed_rules_profile(environment)
+    except ContractError:
+        raise
+    except OSError:
+        raise ContractError("reviewed rules profile cannot be materialized safely")
+
+
 def minimal_environment(executable: Path, private_home: Path, private_tmp: Path, extra: Optional[Mapping[str, str]] = None) -> Dict[str, str]:
     path_parts: List[str] = []
     for candidate in (str(executable.parent), str(Path(sys.executable).resolve().parent), "/usr/bin", "/bin"):
@@ -1065,6 +1267,7 @@ def minimal_environment(executable: Path, private_home: Path, private_tmp: Path,
     environment = {
         "PATH": os.pathsep.join(path_parts),
         "HOME": str(private_home),
+        "CODEX_HOME": str(private_home / ".codex"),
         "TMPDIR": str(private_tmp),
         **REQUIRED_ENV_VALUES,
         "GIT_OPTIONAL_LOCKS": "0",
@@ -1894,7 +2097,7 @@ def toml_literal(value: Any) -> str:
 
 
 def shell_environment_set_toml(environment: Mapping[str, str]) -> str:
-    required = ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ", "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS")
+    required = SHELL_ENVIRONMENT_NAMES
     if any(name not in environment or not isinstance(environment[name], str) for name in required):
         raise ContractError("live shell environment is missing an explicit required value")
     return "{" + ",".join(
@@ -1902,16 +2105,45 @@ def shell_environment_set_toml(environment: Mapping[str, str]) -> str:
     ) + "}"
 
 
+def validate_runtime_argv_policy(argv: Sequence[str], require_memory_overrides: bool = False) -> None:
+    """Reject policy bypasses and legacy/missing memory configuration in argv."""
+    if not argv or any(not isinstance(item, str) or not item or "\x00" in item for item in argv):
+        raise ContractError("runtime argv is invalid")
+    for item in argv:
+        if item == "--ignore-rules" or item.startswith("--ignore-rules="):
+            raise ContractError("runtime argv must not bypass execpolicy rules")
+        if item.startswith("--dangerously-bypass-"):
+            raise ContractError("runtime argv contains a dangerous bypass flag")
+    configuration: Dict[str, str] = {}
+    for index, item in enumerate(argv):
+        if item != "-c":
+            continue
+        if index + 1 >= len(argv) or "=" not in argv[index + 1]:
+            raise ContractError("runtime configuration argv is malformed")
+        key, literal = argv[index + 1].split("=", 1)
+        if key in configuration:
+            raise ContractError("runtime configuration argv contains a duplicate key")
+        configuration[key] = literal
+    legacy = ("features.memory_tool", "features.memory_tool_use")
+    if any(key in configuration for key in legacy):
+        raise ContractError("runtime argv contains a legacy undocumented memory key")
+    if require_memory_overrides:
+        for key in ("memories.generate_memories", "memories.use_memories"):
+            if configuration.get(key) != "false":
+                raise ContractError("runtime argv must set documented memory key false: " + key)
+
+
 def build_live_argv(binary: Path, target_root: Path, repository_root: Path, envelope: Mapping[str, Any], environment: Optional[Mapping[str, str]] = None) -> List[str]:
     role = extract_static_role(repository_root)
     worker = envelope["worker"]
     if environment is None:
         environment = {
-            "PATH": "/verified/bin:/usr/bin:/bin", "HOME": "/private-home", "TMPDIR": "/private-tmp",
+            "PATH": "/verified/bin:/usr/bin:/bin", "HOME": "/private-home",
+            "CODEX_HOME": "/private-home/.codex", "TMPDIR": "/private-tmp",
             **REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0",
         }
     argv = [
-        str(binary), "exec", "--json", "--ephemeral", "--strict-config", "--ignore-user-config", "--ignore-rules",
+        str(binary), "exec", "--json", "--ephemeral", "--strict-config", "--ignore-user-config",
         "--model", worker["model"], "--sandbox", "workspace-write", "-C", str(target_root),
         "--output-schema", str((repository_root / FINAL_SCHEMA_PATH).resolve()),
         "-c", 'approval_policy="never"',
@@ -1926,6 +2158,7 @@ def build_live_argv(binary: Path, target_root: Path, repository_root: Path, enve
     dynamic_markers = (envelope["attempt_id"], "Issue #23")
     if any(any(marker in argument for marker in dynamic_markers) for argument in argv):
         raise ContractError("dynamic Task/context data leaked into worker argv")
+    validate_runtime_argv_policy(argv, require_memory_overrides=True)
     return argv
 
 
@@ -2229,6 +2462,8 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         environment = minimal_environment(executable, private_home, private_tmp, extra)
         harness_binding = None
         if mode == "live":
+            if materialize_reviewed_rules_profile(environment) != runtime_configuration_intent()["rules_profile_sha256"]:
+                raise ContractError("reviewed live execpolicy profile digest drifted")
             if hash_regular_file(executable) != profile["client"]["binary_sha256"]:
                 raise ContractError("Codex binary digest drifted after the runtime sensor")
             version_result = bounded_capture([str(executable), "--version"], container, environment)
@@ -2406,16 +2641,13 @@ def auth_class(binary: Path, cwd: Path, env: Mapping[str, str]) -> str:
 
 
 def reviewed_runtime_configuration(env: Mapping[str, str]) -> Dict[str, Any]:
+    validate_documented_memory_overrides(REQUIRED_OVERRIDES)
     return {
         "approval_policy": "never",
         "model_reasoning_effort": "high",
         "shell_environment_policy.inherit": "none",
         "shell_environment_policy.set": {
-            name: env[name] for name in (
-                "PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ",
-                "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM",
-                "GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS",
-            )
+            name: env[name] for name in SHELL_ENVIRONMENT_NAMES
         },
         **REQUIRED_OVERRIDES,
     }
@@ -2423,84 +2655,214 @@ def reviewed_runtime_configuration(env: Mapping[str, str]) -> Dict[str, Any]:
 
 def runtime_configuration_argv(binary: Path, env: Mapping[str, str]) -> List[str]:
     values = reviewed_runtime_configuration(env)
-    argv = [str(binary), "--strict-config", "--ignore-user-config"]
+    # doctor and sandbox accept the global strict/config flags, but
+    # --ignore-user-config is an exec-specific option. The private CODEX_HOME
+    # contains no config.toml, so these no-model probes do not need that bypass.
+    argv = [str(binary), "--strict-config"]
     for key in ("approval_policy", "model_reasoning_effort"):
         argv.extend(["-c", "{}={}".format(key, toml_literal(values[key]))])
     argv.extend(["-c", 'shell_environment_policy.inherit="none"'])
     argv.extend(["-c", "shell_environment_policy.set=" + shell_environment_set_toml(env)])
     for key in sorted(REQUIRED_OVERRIDES):
         argv.extend(["-c", "{}={}".format(key, toml_literal(REQUIRED_OVERRIDES[key]))])
+    validate_runtime_argv_policy(argv, require_memory_overrides=True)
     return argv
 
 
-def probe_runtime_configuration(binary: Path, root: Path, env: Mapping[str, str]) -> Tuple[str, str]:
-    """Run no-model semantic probes for every reviewed live setting.
-
-    Help text is insufficient because the current alpha accepts unknown
-    ``-c`` keys under strict-config.  A conforming stable client must emit the
-    bounded effective-configuration attestation below and must independently
-    demonstrate the exact inherited environment in the sandbox probe.
-    """
-    required = reviewed_runtime_configuration(env)
-    attestation_argv = runtime_configuration_argv(binary, env) + ["doctor", "--json"]
-    attested = bounded_capture(attestation_argv, root, env)
-    if attested.timed_out or attested.stdout_overflow or attested.stderr_overflow or not attested.reaped:
-        return "UNCHECKABLE", "UNCHECKABLE"
-    if attested.exit_code != 0:
-        return "fail", "not-run"
+def doctor_diagnostic_health(result: ProcessResult) -> Dict[str, Any]:
+    """Normalize a real doctor report without treating it as config proof."""
+    evidence = {
+        "classification": "diagnostic-only",
+        "status": "UNCHECKABLE",
+        "codex_issued_effective_configuration_proof": False,
+    }
+    if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped or result.exit_code is None:
+        return evidence
     try:
-        attestation = decode_json_object(attested.stdout, "runtime configuration attestation")
+        report = decode_json_object(result.stdout, "Codex doctor diagnostic report")
         exact_keys(
-            attestation,
-            ("schema", "effective_configuration_sha256", "model_invoked"),
-            "runtime configuration attestation",
+            report,
+            ("schemaVersion", "generatedAt", "codexVersion", "overallStatus", "checks"),
+            "Codex doctor diagnostic report",
         )
+        if type(report["schemaVersion"]) is not int or report["schemaVersion"] < 1:
+            raise ContractError("Codex doctor schemaVersion is invalid")
+        if not isinstance(report["generatedAt"], str) or not report["generatedAt"]:
+            raise ContractError("Codex doctor generatedAt is invalid")
+        if not isinstance(report["codexVersion"], str) or not report["codexVersion"]:
+            raise ContractError("Codex doctor version is invalid")
+        overall = report["overallStatus"]
+        if overall not in ("ok", "warning", "fail"):
+            raise ContractError("Codex doctor overallStatus is invalid")
+        checks = report["checks"]
+        if not isinstance(checks, dict) or not 1 <= len(checks) <= 128:
+            raise ContractError("Codex doctor checks are invalid")
+        for check_id, check in checks.items():
+            if not isinstance(check_id, str) or not check_id or not isinstance(check, dict):
+                raise ContractError("Codex doctor check entry is invalid")
+            required = {"id", "category", "status", "summary", "details", "durationMs", "remediation"}
+            if not required.issubset(check) or set(check) - required - {"issues"}:
+                raise ContractError("Codex doctor check fields are invalid")
+            if check["id"] != check_id or check["status"] not in ("ok", "warning", "fail"):
+                raise ContractError("Codex doctor check identity/status is invalid")
+            if not isinstance(check["category"], str) or not isinstance(check["summary"], str) or not isinstance(check["details"], dict):
+                raise ContractError("Codex doctor check content is invalid")
+            if type(check["durationMs"]) is not int or check["durationMs"] < 0:
+                raise ContractError("Codex doctor duration is invalid")
+            if check["remediation"] is not None and not isinstance(check["remediation"], str):
+                raise ContractError("Codex doctor remediation is invalid")
+            if "issues" in check and not isinstance(check["issues"], list):
+                raise ContractError("Codex doctor issues are invalid")
     except ContractError:
-        return "not-proven", "not-run"
-    expected_digest = sha256_bytes(canonical_bytes(required))
-    if attestation != {
-        "schema": "t11-runtime-configuration-probe/v1",
-        "effective_configuration_sha256": expected_digest,
-        "model_invoked": False,
-    }:
-        return "not-proven", "not-run"
+        return evidence
+    normalized = {"ok": "pass", "warning": "warning", "fail": "fail"}[overall]
+    if result.exit_code != 0 and normalized == "pass":
+        normalized = "fail"
+    evidence["status"] = normalized
+    return evidence
 
-    # This second probe invokes no model. A forbidden parent sentinel must be
-    # filtered while the exact reviewed set reaches the direct sandbox command.
+
+def shell_environment_probe(
+    binary: Path,
+    root: Path,
+    env: Mapping[str, str],
+    required: Mapping[str, Any],
+) -> str:
     probe_env = dict(env)
     probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
     set_values = dict(required["shell_environment_policy.set"])
     env_program = Path("/usr/bin/env")
     if not env_program.is_file():
-        return "UNCHECKABLE", "UNCHECKABLE"
+        return "UNCHECKABLE"
     argv = runtime_configuration_argv(binary, env) + [
         "sandbox", "--sandbox-state-disable-network", "-C", str(root),
         str(env_program), "-0",
     ]
+    validate_runtime_argv_policy(argv, require_memory_overrides=True)
     result = bounded_capture(argv, root, probe_env)
     if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped:
-        return "UNCHECKABLE", "UNCHECKABLE"
+        return "UNCHECKABLE"
     if result.exit_code != 0:
-        return "fail", "fail"
+        return "fail"
     entries = result.stdout.split(b"\0")
     parsed: Dict[str, bytes] = {}
     for entry in entries:
         if not entry:
             continue
         if b"=" not in entry:
-            return "fail", "fail"
+            return "fail"
         name, value = entry.split(b"=", 1)
         try:
             key = name.decode("ascii")
         except UnicodeDecodeError:
-            return "fail", "fail"
+            return "fail"
         parsed[key] = value
     if any(parsed.get(name) != value.encode("utf-8") for name, value in set_values.items()) or "T11_FORBIDDEN_SENTINEL" in parsed:
-        return "pass", "fail"
+        return "fail"
     permitted_automatic = {"PWD", "SHLVL", "_", "__CF_USER_TEXT_ENCODING"}
     if set(parsed) - set(set_values) - permitted_automatic or any(SECRET_NAME_RE.search(name) for name in parsed):
-        return "pass", "fail"
-    return "pass", "pass"
+        return "fail"
+    return "pass"
+
+
+def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, str]) -> str:
+    """Prove that a sandboxed direct loopback connect is denied."""
+    script = (
+        "import socket,sys\n"
+        "sock=socket.socket()\n"
+        "sock.settimeout(2)\n"
+        "try:\n"
+        " sock.connect(('127.0.0.1',int(sys.argv[1])))\n"
+        "except OSError:\n"
+        " raise SystemExit(0)\n"
+        "raise SystemExit(42)\n"
+    )
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(2)
+            port = listener.getsockname()[1]
+            # Establish the control condition: the endpoint is reachable before
+            # the sandbox is applied, so a later denial is behavior evidence.
+            with socket.create_connection(("127.0.0.1", port), timeout=2):
+                pass
+            argv = runtime_configuration_argv(binary, env) + [
+                "sandbox", "--sandbox-state-disable-network", "-C", str(root),
+                str(Path(sys.executable).resolve()), "-I", "-c", script, str(port),
+            ]
+            validate_runtime_argv_policy(argv, require_memory_overrides=True)
+            result = bounded_capture(argv, root, env)
+    except OSError:
+        return "UNCHECKABLE"
+    if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped:
+        return "UNCHECKABLE"
+    if result.exit_code == 0:
+        return "pass"
+    if result.exit_code == 42:
+        return "fail"
+    return "UNCHECKABLE"
+
+
+def probe_runtime_evidence(binary: Path, root: Path, env: Mapping[str, str], repository_root: Path) -> Dict[str, Any]:
+    """Collect bounded independent lanes; no lane claims effective config."""
+    required = reviewed_runtime_configuration(env)
+    rules_digest = materialize_reviewed_rules_profile(env)
+    intent = runtime_configuration_intent()
+    if rules_digest != intent["rules_profile_sha256"]:
+        raise ContractError("materialized rules profile digest drifted")
+
+    diagnostic_argv = runtime_configuration_argv(binary, env) + ["doctor", "--json"]
+    validate_runtime_argv_policy(diagnostic_argv, require_memory_overrides=True)
+    diagnostic = doctor_diagnostic_health(bounded_capture(diagnostic_argv, root, env))
+
+    worker_status = "pass"
+    try:
+        envelope = load_repository_json(repository_root, "tests/runtime/fixtures/envelope-valid.v1.json")
+        worker_argv = build_live_argv(binary, root, repository_root, envelope, env)
+        validate_runtime_argv_policy(worker_argv, require_memory_overrides=True)
+    except (ContractError, OSError, KeyError, TypeError, ValueError):
+        worker_status = "fail"
+    shell_status = shell_environment_probe(binary, root, env, required)
+    network_status = network_sandbox_behavior_probe(binary, root, env)
+    return {
+        "documented_config_keys_probe": "pass",
+        "shell_environment_probe": shell_status,
+        "evidence": {
+            "configuration_intent": intent,
+            "diagnostic_health": diagnostic,
+            "exact_worker_argv": {
+                "status": worker_status,
+                "rules_bypass_absent": worker_status == "pass",
+                "dynamic_task_data_stdin_only": worker_status == "pass",
+            },
+            "network_sandbox_behavior": {"status": network_status},
+        },
+    }
+
+
+def probe_runtime_configuration(binary: Path, root: Path, env: Mapping[str, str], repository_root: Optional[Path] = None) -> Tuple[str, str]:
+    """Compatibility projection of the separated runtime evidence lanes."""
+    if repository_root is None:
+        repository_root = Path(__file__).resolve().parents[2]
+    observed = probe_runtime_evidence(binary, root, env, repository_root)
+    return observed["documented_config_keys_probe"], observed["shell_environment_probe"]
+
+
+def not_run_runtime_evidence() -> Dict[str, Any]:
+    return {
+        "configuration_intent": runtime_configuration_intent(),
+        "diagnostic_health": {
+            "classification": "diagnostic-only",
+            "status": "not-run",
+            "codex_issued_effective_configuration_proof": False,
+        },
+        "exact_worker_argv": {
+            "status": "not-run",
+            "rules_bypass_absent": False,
+            "dynamic_task_data_stdin_only": False,
+        },
+        "network_sandbox_behavior": {"status": "not-run"},
+    }
 
 
 def observe_runtime_profile(repository_root: Path, model: str, reasoning: str) -> Dict[str, Any]:
@@ -2513,10 +2875,11 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str) -
             "scope": "exact-head-live-sensor", "status": "UNKNOWN", "reason": "Codex executable is unavailable",
             "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
             "client": {"version_output": "unavailable", "release_class": "unknown", "binary_sha256": "0" * 64, "exec_help_sha256": "0" * 64, "resolved_path_recorded": False},
-            "capabilities": {"exec_json": False, "ephemeral": False, "strict_config": False, "ignore_user_config": False, "workspace_write": False, "approval_never": False, "config_recognition_probe": "UNCHECKABLE", "shell_environment_probe": "UNCHECKABLE", "process_containment_probe": "UNCHECKABLE", "model": False, "reasoning": False, "sandbox": False, "approval": False, "overrides": False},
+            "capabilities": {"exec_json": False, "ephemeral": False, "strict_config": False, "ignore_user_config": False, "workspace_write": False, "approval_never": False, "documented_config_keys_probe": "UNCHECKABLE", "shell_environment_probe": "UNCHECKABLE", "process_containment_probe": "UNCHECKABLE", "model": False, "reasoning": False, "sandbox": False, "approval": False, "overrides": False},
+            "evidence": not_run_runtime_evidence(),
             "auth": {"class": "unavailable", "credential_values_recorded": False},
             "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
-            "shell_environment": {"inherit": "none", "required_names": ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ", "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS"], "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
+            "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
             "live_run_allowed": False,
         }
     binary = Path(resolved).resolve()
@@ -2548,16 +2911,27 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str) -
             "sandbox": "--sandbox" in help_text,
         }
         if release_class == "stable":
-            config_probe, shell_probe = probe_runtime_configuration(binary, work, env)
+            probe = probe_runtime_evidence(binary, work, env, repository_root)
+            config_probe = probe["documented_config_keys_probe"]
+            shell_probe = probe["shell_environment_probe"]
+            evidence = probe["evidence"]
             containment_probe = "pass" if live_containment_proven() else "UNCHECKABLE"
         else:
             config_probe, shell_probe = "not-proven", "not-run"
+            evidence = not_run_runtime_evidence()
             containment_probe = "not-run"
-        config_ok = config_probe == "pass" and shell_probe == "pass" and containment_probe == "pass"
+        config_ok = (
+            config_probe == "pass"
+            and shell_probe == "pass"
+            and containment_probe == "pass"
+            and evidence["diagnostic_health"]["status"] == "pass"
+            and evidence["exact_worker_argv"]["status"] == "pass"
+            and evidence["network_sandbox_behavior"]["status"] == "pass"
+        )
         caps = {
             **flags,
             "approval_never": config_ok,
-            "config_recognition_probe": config_probe,
+            "documented_config_keys_probe": config_probe,
             "shell_environment_probe": shell_probe,
             "process_containment_probe": containment_probe,
             "reasoning": config_ok,
@@ -2582,9 +2956,10 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str) -
             "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
             "client": {"version_output": version_output, "release_class": release_class, "binary_sha256": hash_regular_file(binary), "exec_help_sha256": sha256_bytes(help_bytes), "resolved_path_recorded": False},
             "capabilities": caps,
+            "evidence": evidence,
             "auth": {"class": auth_class(binary, work, env), "credential_values_recorded": False},
             "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
-            "shell_environment": {"inherit": "none", "required_names": ["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "TZ", "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS"], "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
+            "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
             "live_run_allowed": profile_status == "match",
         }
         validate_runtime_profile(profile)

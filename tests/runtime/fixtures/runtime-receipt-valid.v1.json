@@ -37,7 +37,7 @@
         "ignore_user_config": true,
         "workspace_write": true,
         "approval_never": true,
-        "config_recognition_probe": "pass",
+        "documented_config_keys_probe": "pass",
         "shell_environment_probe": "pass",
         "process_containment_probe": "pass",
         "model": true,
@@ -45,6 +45,27 @@
         "sandbox": true,
         "approval": true,
         "overrides": true
+      },
+      "evidence": {
+        "configuration_intent": {
+          "schema": "t11-runtime-configuration-intent/v1",
+          "authority": "adapter-authored",
+          "effective_configuration_proven": false,
+          "configuration_sha256": "dfea7207aa1326de479dba57c0d8c68a308e245d0c2def5c4ce5ca5bd040247e",
+          "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
+          "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]
+        },
+        "diagnostic_health": {
+          "classification": "diagnostic-only",
+          "status": "pass",
+          "codex_issued_effective_configuration_proof": false
+        },
+        "exact_worker_argv": {
+          "status": "pass",
+          "rules_bypass_absent": true,
+          "dynamic_task_data_stdin_only": true
+        },
+        "network_sandbox_behavior": {"status": "pass"}
       },
       "auth": {
         "class": "signed-in-client",
@@ -62,6 +83,7 @@
         "required_names": [
           "PATH",
           "HOME",
+          "CODEX_HOME",
           "TMPDIR",
           "LANG",
           "LC_ALL",
@@ -140,8 +162,8 @@
           "agents.enabled": false,
           "tools.web_search": false,
           "feedback.enabled": false,
-          "features.memory_tool": false,
-          "features.memory_tool_use": false
+          "memories.generate_memories": false,
+          "memories.use_memories": false
         }
       },
       "verification_commands": [
@@ -788,8 +810,8 @@
         "record_sha256": "eadf6a4de1854f600255940213aebc966ecfe5185d48a9f34c83db3e2ce0af12"
       },
       "digests": {
-        "envelope_sha256": "ad642a5dc8b53b50a3a0e5bd185a08e368b79eb5383eeea02457c475bb074356",
-        "runtime_profile_sha256": "5e4ad7b1892d48dacbd424201dd01b313c61bcf66e181af9cb564d1cf5951b72"
+        "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
+        "runtime_profile_sha256": "4c26c3fdac9acf58da381eace9f0583ee3540cd7779c5c800da8864bdf2e3500"
       },
       "privacy": {
         "raw_jsonl_retained": false,

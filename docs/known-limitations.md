@@ -31,6 +31,13 @@ profile, or a posted runtime receipt. A later exact-head owner-run observation
 must be `match` on an approved supported non-prerelease before those actions
 are permitted.
 
+`codex doctor --json` is treated only as a redacted diagnostic support report.
+It does not expose or attest the exact T11 override set. The documented config
+keys and their stable digest are adapter-authored intent evidence with
+`effective_configuration_proven=false`; separate behavior probes and exact
+worker-argv validation are still required. Live argv does not use
+`--ignore-rules` or a `--dangerously-bypass-*` flag.
+
 The final six-role topology, native runtime routing, hooks, recovery,
 installer/upgrade, live generalized Task ritual, consent feedback transport,
 cross-surface runtime probes, and adopter migration remain incomplete. A

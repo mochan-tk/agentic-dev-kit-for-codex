@@ -52,6 +52,26 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         extra = {"T11_FAKE_BEHAVIOR": behavior} if behavior else None
         return self.adapter.minimal_environment(Path(sys.executable).resolve(), home, tmp, extra)
 
+    def passing_runtime_probe(self):
+        return {
+            "documented_config_keys_probe": "pass",
+            "shell_environment_probe": "pass",
+            "evidence": {
+                "configuration_intent": self.adapter.runtime_configuration_intent(),
+                "diagnostic_health": {
+                    "classification": "diagnostic-only",
+                    "status": "pass",
+                    "codex_issued_effective_configuration_proof": False,
+                },
+                "exact_worker_argv": {
+                    "status": "pass",
+                    "rules_bypass_absent": True,
+                    "dynamic_task_data_stdin_only": True,
+                },
+                "network_sandbox_behavior": {"status": "pass"},
+            },
+        }
+
     def test_repository_runtime_contract_checker_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
         result = subprocess.run(
@@ -103,7 +123,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             profile["live_run_allowed"] = False
             if state != "unsupported-client":
                 profile["client"]["release_class"] = "stable"
-            profile["capabilities"]["config_recognition_probe"] = "UNCHECKABLE"
+            profile["capabilities"]["documented_config_keys_probe"] = "UNCHECKABLE"
             profile["capabilities"]["shell_environment_probe"] = "UNCHECKABLE"
             self.adapter.validate_runtime_profile(profile)
             with self.subTest(state=state):
@@ -140,7 +160,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
 
         with mock.patch.object(self.adapter, "resolve_executable_from_path", return_value=Path(sys.executable)), \
              mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
-             mock.patch.object(self.adapter, "probe_runtime_configuration", return_value=("pass", "pass")), \
+             mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=self.passing_runtime_probe()), \
              mock.patch.object(self.adapter, "live_containment_proven", return_value=True), \
              mock.patch.object(self.adapter, "auth_class", return_value="signed-in-client"), \
              mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64):
@@ -174,7 +194,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
 
         with mock.patch.object(self.adapter, "resolve_executable_from_path", return_value=Path(sys.executable)), \
              mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
-             mock.patch.object(self.adapter, "probe_runtime_configuration", return_value=("pass", "pass")), \
+             mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=self.passing_runtime_probe()), \
              mock.patch.object(self.adapter, "live_containment_proven", return_value=False), \
              mock.patch.object(self.adapter, "auth_class", return_value="signed-in-client"), \
              mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64):
@@ -215,59 +235,168 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         gate.assert_called_once()
         stdin_read.assert_not_called()
 
-    def test_strict_configuration_probe_exercises_every_live_setting(self):
-        calls = []
-        attestation = {
+    def real_doctor_report_fixture(self, overall="ok"):
+        return {
+            "schemaVersion": 1,
+            "generatedAt": "2026-08-28T00:00:00Z",
+            "codexVersion": "1.2.3",
+            "overallStatus": overall,
+            "checks": {
+                "config.load": {
+                    "id": "config.load",
+                    "category": "config",
+                    "status": overall,
+                    "summary": "redacted diagnostic row",
+                    "details": {"config.toml": "redacted"},
+                    "durationMs": 1,
+                    "remediation": None,
+                }
+            },
+        }
+
+    def test_documented_memory_keys_and_runtime_argv_policy_fail_closed(self):
+        self.assertFalse(self.adapter.REQUIRED_OVERRIDES["memories.generate_memories"])
+        self.assertFalse(self.adapter.REQUIRED_OVERRIDES["memories.use_memories"])
+        self.assertNotIn("features.memory_tool", self.adapter.REQUIRED_OVERRIDES)
+        self.assertNotIn("features.memory_tool_use", self.adapter.REQUIRED_OVERRIDES)
+        self.adapter.validate_documented_memory_overrides(self.adapter.REQUIRED_OVERRIDES)
+        for mutation in ("missing-generate", "missing-use", "true-generate", "true-use", "legacy"):
+            values = dict(self.adapter.REQUIRED_OVERRIDES)
+            if mutation == "missing-generate":
+                values.pop("memories.generate_memories")
+            elif mutation == "missing-use":
+                values.pop("memories.use_memories")
+            elif mutation == "true-generate":
+                values["memories.generate_memories"] = True
+            elif mutation == "true-use":
+                values["memories.use_memories"] = True
+            else:
+                values["features.memory_tool"] = False
+            with self.subTest(mutation=mutation):
+                self.assert_contract_error(
+                    lambda v=values: self.adapter.validate_documented_memory_overrides(v),
+                    "memory",
+                )
+
+        valid = [
+            "/reviewed/codex", "-c", "memories.generate_memories=false",
+            "-c", "memories.use_memories=false",
+        ]
+        self.adapter.validate_runtime_argv_policy(valid, require_memory_overrides=True)
+        for forbidden in ("--ignore-rules", "--ignore-rules=true", "--dangerously-bypass-approvals-and-sandbox"):
+            with self.subTest(forbidden=forbidden):
+                self.assert_contract_error(
+                    lambda f=forbidden: self.adapter.validate_runtime_argv_policy(valid + [f], True),
+                    "bypass",
+                )
+        for invalid in (
+            ["/reviewed/codex", "-c", "memories.use_memories=false"],
+            ["/reviewed/codex", "-c", "memories.generate_memories=true", "-c", "memories.use_memories=false"],
+            ["/reviewed/codex", "-c", "features.memory_tool=false", "-c", "memories.generate_memories=false", "-c", "memories.use_memories=false"],
+        ):
+            self.assert_contract_error(
+                lambda value=invalid: self.adapter.validate_runtime_argv_policy(value, True),
+                "memory",
+            )
+
+    def test_configuration_intent_is_adapter_authored_stable_and_rules_are_no_follow(self):
+        intent = self.adapter.runtime_configuration_intent()
+        self.assertEqual("adapter-authored", intent["authority"])
+        self.assertFalse(intent["effective_configuration_proven"])
+        self.assertEqual(["CODEX_HOME", "HOME", "PATH", "TMPDIR"], intent["dynamic_environment_values_excluded"])
+        self.assertNotRegex(self.adapter.canonical_bytes(intent).decode("utf-8"), r"/Users/|/tmp/|/private/")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = root / "first"
+            second = root / "second"
+            for home in (first, second):
+                home.mkdir(mode=0o700)
+                tmp = home / "tmp"
+                tmp.mkdir(mode=0o700)
+                env = self.adapter.minimal_environment(Path(sys.executable).resolve(), home, tmp)
+                self.assertEqual(intent["rules_profile_sha256"], self.adapter.materialize_reviewed_rules_profile(env))
+                rules = Path(env["CODEX_HOME"]) / self.adapter.REVIEWED_RULES_RELATIVE_PATH
+                self.assertEqual(self.adapter.REVIEWED_RULES_BYTES, rules.read_bytes())
+                self.assertEqual(0o600, stat.S_IMODE(os.stat(rules, follow_symlinks=False).st_mode))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            attacker = root / "attacker"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            attacker.mkdir(mode=0o700)
+            (home / ".codex").symlink_to(attacker, target_is_directory=True)
+            environment = self.adapter.minimal_environment(Path(sys.executable).resolve(), home, tmp)
+            self.assert_contract_error(
+                lambda: self.adapter.materialize_reviewed_rules_profile(environment),
+                "safely",
+            )
+        self.assertEqual(intent, self.adapter.runtime_configuration_intent())
+
+    def test_real_doctor_report_is_diagnostic_only_even_with_nonzero_exit(self):
+        report = self.real_doctor_report_fixture("fail")
+        result = self.adapter.ProcessResult(
+            1, None, False, False, False,
+            self.adapter.canonical_bytes(report), 0, True,
+        )
+        evidence = self.adapter.doctor_diagnostic_health(result)
+        self.assertEqual("diagnostic-only", evidence["classification"])
+        self.assertEqual("fail", evidence["status"])
+        self.assertFalse(evidence["codex_issued_effective_configuration_proof"])
+
+        impossible = {
             "schema": "t11-runtime-configuration-probe/v1",
             "effective_configuration_sha256": "0" * 64,
             "model_invoked": False,
         }
+        not_doctor = self.adapter.doctor_diagnostic_health(self.adapter.ProcessResult(
+            0, None, False, False, False,
+            self.adapter.canonical_bytes(impossible), 0, True,
+        ))
+        self.assertEqual("UNCHECKABLE", not_doctor["status"])
+        self.assertFalse(not_doctor["codex_issued_effective_configuration_proof"])
 
-        def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
-            del stdin_bytes, timeout
-            calls.append(list(argv))
-            payload = self.adapter.canonical_bytes(attestation) if "doctor" in argv else b"PATH=/bin\0"
-            return self.adapter.ProcessResult(0, None, False, False, False, payload, 0, True)
+    def test_separated_runtime_probe_never_promotes_doctor_to_effective_config(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            work = root / "work"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            work.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(Path(sys.executable).resolve(), home, tmp)
+            expected = self.adapter.reviewed_runtime_configuration(environment)
+            report = self.real_doctor_report_fixture("fail")
 
-        with mock.patch.object(self.adapter, "bounded_capture", side_effect=capture):
-            config_status, _shell_status = self.adapter.probe_runtime_configuration(
-                Path("/reviewed/codex"), ROOT, {"PATH": "/bin", "HOME": "/private-home", "TMPDIR": "/private-tmp", **self.adapter.REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}
-            )
-        self.assertNotEqual("pass", config_status)
+            def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
+                del stdin_bytes, timeout
+                calls.append(list(argv))
+                if "doctor" in argv:
+                    return self.adapter.ProcessResult(1, None, False, False, False, self.adapter.canonical_bytes(report), 0, True)
+                if str(Path("/usr/bin/env")) in argv:
+                    payload = b"\0".join(
+                        (name + "=" + value).encode("utf-8")
+                        for name, value in sorted(expected["shell_environment_policy.set"].items())
+                    ) + b"\0"
+                    return self.adapter.ProcessResult(0, None, False, False, False, payload, 0, True)
+                return self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)
+
+            with mock.patch.object(self.adapter, "bounded_capture", side_effect=capture):
+                probe = self.adapter.probe_runtime_evidence(Path(sys.executable).resolve(), work, environment, ROOT)
+        self.assertEqual("pass", probe["documented_config_keys_probe"])
+        self.assertEqual("pass", probe["shell_environment_probe"])
+        self.assertEqual("fail", probe["evidence"]["diagnostic_health"]["status"])
+        self.assertFalse(probe["evidence"]["configuration_intent"]["effective_configuration_proven"])
+        self.assertEqual("pass", probe["evidence"]["exact_worker_argv"]["status"])
+        self.assertEqual("pass", probe["evidence"]["network_sandbox_behavior"]["status"])
         rendered = "\n".join("\n".join(call) for call in calls)
         for key, value in self.adapter.REQUIRED_OVERRIDES.items():
             self.assertIn("{}={}".format(key, self.adapter.toml_literal(value)), rendered)
-        self.assertIn('approval_policy="never"', rendered)
-        self.assertIn('model_reasoning_effort="high"', rendered)
-
-    def test_strict_configuration_probe_has_a_conforming_no_model_match(self):
-        environment = {
-            "PATH": "/bin", "HOME": "/private-home", "TMPDIR": "/private-tmp",
-            **self.adapter.REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0",
-        }
-        expected = self.adapter.reviewed_runtime_configuration(environment)
-        attestation = {
-            "schema": "t11-runtime-configuration-probe/v1",
-            "effective_configuration_sha256": self.adapter.sha256_bytes(self.adapter.canonical_bytes(expected)),
-            "model_invoked": False,
-        }
-
-        def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
-            del stdin_bytes, timeout
-            if "doctor" in argv:
-                payload = self.adapter.canonical_bytes(attestation)
-            else:
-                payload = b"\0".join(
-                    (name + "=" + value).encode("utf-8")
-                    for name, value in sorted(expected["shell_environment_policy.set"].items())
-                ) + b"\0"
-            return self.adapter.ProcessResult(0, None, False, False, False, payload, 0, True)
-
-        with mock.patch.object(self.adapter, "bounded_capture", side_effect=capture):
-            self.assertEqual(
-                ("pass", "pass"),
-                self.adapter.probe_runtime_configuration(Path("/reviewed/codex"), ROOT, environment),
-            )
+        self.assertNotIn("--ignore-rules", rendered)
+        self.assertNotIn("--dangerously-bypass-", rendered)
 
     def test_live_argv_contains_exact_isolation_and_no_dynamic_task_data(self):
         argv = self.adapter.build_live_argv(Path("/reviewed/codex"), Path("/isolated-target"), ROOT, self.envelope)
@@ -278,6 +407,9 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertNotIn(self.envelope["attempt_id"], rendered)
         self.assertNotIn("Issue #23", rendered)
         self.assertNotIn("--add-dir", argv)
+        self.assertNotIn("--ignore-rules", argv)
+        self.assertFalse(any(value.startswith("--dangerously-bypass-") for value in argv))
+        self.adapter.validate_runtime_argv_policy(argv, require_memory_overrides=True)
         for key, value in self.adapter.REQUIRED_OVERRIDES.items():
             self.assertIn("{}={}".format(key, self.adapter.toml_literal(value)), argv)
 

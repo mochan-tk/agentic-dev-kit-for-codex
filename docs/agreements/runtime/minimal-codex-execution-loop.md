@@ -54,18 +54,23 @@ features.apps=false
 agents.enabled=false
 tools.web_search=false
 feedback.enabled=false
-features.memory_tool=false
-features.memory_tool_use=false
+memories.generate_memories=false
+memories.use_memories=false
 shell_environment_policy.inherit="none"
 ```
 
 The last setting is usable only after an actual capability probe confirms the
-required set/filter behavior. A separate no-model strict-config probe must
-exercise every reviewed override plus `approval_policy="never"` and
-`model_reasoning_effort="high"`, and must return the exact bounded effective-
-configuration attestation. Help output is not recognition evidence. The
-explicit environment contains bounded PATH,
-private HOME and TMPDIR, `LANG=C.UTF-8`, `LC_ALL=C.UTF-8`, `TZ=UTC`,
+required set/filter behavior. The adapter validates the documented config-key
+allowlist and records a stable adapter-authored intent digest, with
+`effective_configuration_proven=false`; it is not a Codex-issued attestation.
+A no-model runtime probe must separately exercise the reviewed settings that
+the selected client can prove behaviorally. Help output and successful parsing
+of an unknown `-c` key are not recognition evidence. `codex doctor --json` is
+a redacted diagnostic support report only. The adapter records a bounded,
+allowlisted health summary separately and never promotes it to effective-
+configuration evidence. The explicit environment contains bounded PATH,
+private HOME, its exact private CODEX_HOME, and private TMPDIR,
+`LANG=C.UTF-8`, `LC_ALL=C.UTF-8`, `TZ=UTC`,
 `PYTHONHASHSEED=0`, `GIT_CONFIG_NOSYSTEM=1`, and
 `GIT_TERMINAL_PROMPT=0`. It excludes credential-, token-, secret-, proxy-, and
 unrelated host variables. `GIT_OPTIONAL_LOCKS=0` makes read-only verification
@@ -73,6 +78,9 @@ avoid optional index writes.
 Git and Codex executable discovery uses only the explicit reviewed PATH;
 selected executables are direct no-follow regular-file bindings and are
 digested rather than resolved through the ambient host environment.
+The private runtime home supplies the reviewed execpolicy surface. Live and
+probe argv must not contain `--ignore-rules` or any
+`--dangerously-bypass-*` argument.
 
 Before worker invocation, descriptor-aware checks require the worktree root and
 `work-item.txt` to keep their directory/file bindings. The only permitted
@@ -142,9 +150,12 @@ Only `match` permits live execution. `profile-drift`, `unsupported-client`,
 candidate, or other prerelease is `unsupported-client`. The committed
 task-start profile is a historical sensor snapshot, not a promise that a later
 client matches. Release class is derived from exact version output rather than
-trusted as caller metadata. A stable client can reach `match` only after every
-semantic configuration, shell-environment, and process-containment probe
-passes. Immediately before a
+trusted as caller metadata. A stable client can reach `match` only after the
+documented config-key intent, exact worker argv, diagnostic-health,
+shell-environment, network/sandbox-behavior, and process-containment lanes have
+their independently required success evidence. An adapter-authored intent
+digest or doctor health result alone never proves effective configuration.
+Immediately before a
 live worker, the full sensor runs again and must equal the supplied semantic
 profile except for its observation timestamp.
 

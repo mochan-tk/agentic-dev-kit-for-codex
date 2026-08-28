@@ -77,7 +77,7 @@
         "overrides": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["sandbox_workspace_write.network_access", "hide_agent_reasoning", "show_raw_agent_reasoning", "history.persistence", "features.hooks", "features.apps", "agents.enabled", "tools.web_search", "feedback.enabled", "features.memory_tool", "features.memory_tool_use"],
+          "required": ["sandbox_workspace_write.network_access", "hide_agent_reasoning", "show_raw_agent_reasoning", "history.persistence", "features.hooks", "features.apps", "agents.enabled", "tools.web_search", "feedback.enabled", "memories.generate_memories", "memories.use_memories"],
           "properties": {
             "sandbox_workspace_write.network_access": {"const": false},
             "hide_agent_reasoning": {"const": true},
@@ -88,8 +88,8 @@
             "agents.enabled": {"const": false},
             "tools.web_search": {"const": false},
             "feedback.enabled": {"const": false},
-            "features.memory_tool": {"const": false},
-            "features.memory_tool_use": {"const": false}
+            "memories.generate_memories": {"const": false},
+            "memories.use_memories": {"const": false}
           }
         }
       }

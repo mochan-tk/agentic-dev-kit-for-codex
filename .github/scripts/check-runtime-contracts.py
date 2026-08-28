@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -56,6 +57,44 @@ EXPECTED_FINAL = b"status=complete\n"
 OID = re.compile(r"[0-9a-f]{40}\Z")
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 PRIVATE_PATH = re.compile(r"(?i)(?:^|[\s'\"])(?:/users/|/home/|/root/|/tmp/|/private/|/var/folders/|~/|[a-z]:[\\/]|\\\\)")
+DOCUMENTED_MEMORY_OVERRIDES = {
+    "memories.generate_memories": False,
+    "memories.use_memories": False,
+}
+LEGACY_MEMORY_OVERRIDES = {
+    "features.memory_tool",
+    "features.memory_tool_use",
+}
+EXPECTED_RUNTIME_OVERRIDES = {
+    "sandbox_workspace_write.network_access": False,
+    "hide_agent_reasoning": True,
+    "show_raw_agent_reasoning": False,
+    "history.persistence": "none",
+    "features.hooks": False,
+    "features.apps": False,
+    "agents.enabled": False,
+    "tools.web_search": False,
+    "feedback.enabled": False,
+    **DOCUMENTED_MEMORY_OVERRIDES,
+}
+EXPECTED_SHELL_ENVIRONMENT_NAMES = [
+    "PATH", "HOME", "CODEX_HOME", "TMPDIR", "LANG", "LC_ALL", "TZ",
+    "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT",
+    "GIT_OPTIONAL_LOCKS",
+]
+EXPECTED_FIXED_ENVIRONMENT = {
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TZ": "UTC",
+    "PYTHONHASHSEED": "0",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_TERMINAL_PROMPT": "0",
+    "GIT_OPTIONAL_LOCKS": "0",
+}
+REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
+REVIEWED_RULES_BYTES = (
+    b"# T11 reviewed empty execpolicy profile. Platform policy remains authoritative.\n"
+)
 
 
 def sha256(data: bytes) -> str:
@@ -64,6 +103,243 @@ def sha256(data: bytes) -> str:
 
 def canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode("utf-8")
+
+
+def expected_runtime_configuration_intent() -> Dict[str, Any]:
+    """Return the checker-owned T11 intent anchor, independent of the adapter."""
+    rules_digest = sha256(REVIEWED_RULES_BYTES)
+    static_configuration = {
+        "approval_policy": "never",
+        "model_reasoning_effort": "high",
+        "shell_environment_policy": {
+            "inherit": "none",
+            "required_names": EXPECTED_SHELL_ENVIRONMENT_NAMES,
+            "fixed_values": EXPECTED_FIXED_ENVIRONMENT,
+        },
+        "overrides": EXPECTED_RUNTIME_OVERRIDES,
+        "execpolicy": {
+            "rules_path_relative_to_codex_home": REVIEWED_RULES_RELATIVE_PATH,
+            "rules_profile_sha256": rules_digest,
+        },
+    }
+    return {
+        "schema": "t11-runtime-configuration-intent/v1",
+        "authority": "adapter-authored",
+        "effective_configuration_proven": False,
+        "configuration_sha256": sha256(canonical_bytes(static_configuration)),
+        "rules_profile_sha256": rules_digest,
+        "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
+    }
+
+
+def validate_memory_overrides(value: Any, label: str, errors: List[str]) -> None:
+    """Pin the documented memory keys even if every producer drifts together."""
+    if not isinstance(value, dict):
+        errors.append(label + ": runtime override mapping must be an object")
+        return
+    observed_memory = {
+        key for key in value
+        if isinstance(key, str)
+        and (key.startswith("memories.") or key.startswith("features.memory"))
+    }
+    if observed_memory != set(DOCUMENTED_MEMORY_OVERRIDES):
+        errors.append(label + ": documented memory override key set drifted")
+    for key, expected in DOCUMENTED_MEMORY_OVERRIDES.items():
+        if value.get(key) is not expected:
+            errors.append(label + ": documented memory override must be present and false: " + key)
+    if LEGACY_MEMORY_OVERRIDES & set(value):
+        errors.append(label + ": legacy undocumented memory override is forbidden")
+
+
+def validate_runtime_override_mapping(value: Any, label: str, errors: List[str]) -> None:
+    validate_memory_overrides(value, label, errors)
+    if isinstance(value, dict) and value != EXPECTED_RUNTIME_OVERRIDES:
+        errors.append(label + ": exact reviewed runtime override mapping drifted")
+
+
+def validate_runtime_override_schema(schema: Any, errors: List[str]) -> None:
+    label = "docs/agreements/runtime/task-execution-envelope.v1.schema.json"
+    try:
+        overrides = schema["properties"]["worker"]["properties"]["overrides"]
+    except (KeyError, TypeError):
+        errors.append(label + ": worker override schema is missing")
+        return
+    expected_properties = {
+        key: {"const": value} for key, value in EXPECTED_RUNTIME_OVERRIDES.items()
+    }
+    if (
+        not isinstance(overrides, dict)
+        or overrides.get("type") != "object"
+        or overrides.get("additionalProperties") is not False
+        or overrides.get("required") != list(EXPECTED_RUNTIME_OVERRIDES)
+        or overrides.get("properties") != expected_properties
+    ):
+        errors.append(label + ": exact reviewed runtime override schema drifted")
+    validate_memory_overrides(
+        {
+            key: definition.get("const")
+            for key, definition in overrides.get("properties", {}).items()
+            if isinstance(definition, dict)
+        } if isinstance(overrides, dict) else None,
+        label,
+        errors,
+    )
+
+
+def expected_profile_evidence_schema() -> Dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "configuration_intent", "diagnostic_health", "exact_worker_argv",
+            "network_sandbox_behavior",
+        ],
+        "properties": {
+            "configuration_intent": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "schema", "authority", "effective_configuration_proven",
+                    "configuration_sha256", "rules_profile_sha256",
+                    "dynamic_environment_values_excluded",
+                ],
+                "properties": {
+                    "schema": {"const": "t11-runtime-configuration-intent/v1"},
+                    "authority": {"const": "adapter-authored"},
+                    "effective_configuration_proven": {"const": False},
+                    "configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "rules_profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "dynamic_environment_values_excluded": {
+                        "const": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]
+                    },
+                },
+            },
+            "diagnostic_health": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "classification", "status",
+                    "codex_issued_effective_configuration_proof",
+                ],
+                "properties": {
+                    "classification": {"const": "diagnostic-only"},
+                    "status": {"enum": ["pass", "warning", "fail", "not-run", "UNCHECKABLE"]},
+                    "codex_issued_effective_configuration_proof": {"const": False},
+                },
+            },
+            "exact_worker_argv": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "status", "rules_bypass_absent", "dynamic_task_data_stdin_only",
+                ],
+                "properties": {
+                    "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "rules_bypass_absent": {"type": "boolean"},
+                    "dynamic_task_data_stdin_only": {"type": "boolean"},
+                },
+                "allOf": [{
+                    "if": {
+                        "properties": {"status": {"const": "pass"}},
+                        "required": ["status"],
+                    },
+                    "then": {"properties": {
+                        "rules_bypass_absent": {"const": True},
+                        "dynamic_task_data_stdin_only": {"const": True},
+                    }},
+                    "else": {"properties": {
+                        "rules_bypass_absent": {"const": False},
+                        "dynamic_task_data_stdin_only": {"const": False},
+                    }},
+                }],
+            },
+            "network_sandbox_behavior": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["status"],
+                "properties": {
+                    "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}
+                },
+            },
+        },
+    }
+
+
+def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[str]) -> None:
+    if not isinstance(value, dict) or set(value) != {
+        "configuration_intent", "diagnostic_health", "exact_worker_argv",
+        "network_sandbox_behavior",
+    }:
+        errors.append(label + ": separated runtime evidence lanes drifted")
+        return
+    if value.get("configuration_intent") != expected_runtime_configuration_intent():
+        errors.append(label + ": adapter-authored configuration intent/digest drifted")
+    diagnostic = value.get("diagnostic_health")
+    if (
+        not isinstance(diagnostic, dict)
+        or set(diagnostic) != {
+            "classification", "status", "codex_issued_effective_configuration_proof"
+        }
+        or diagnostic.get("classification") != "diagnostic-only"
+        or diagnostic.get("status") not in {"pass", "warning", "fail", "not-run", "UNCHECKABLE"}
+        or diagnostic.get("codex_issued_effective_configuration_proof") is not False
+    ):
+        errors.append(label + ": doctor evidence must remain diagnostic-only, never effective-config proof")
+    worker_argv = value.get("exact_worker_argv")
+    if (
+        not isinstance(worker_argv, dict)
+        or set(worker_argv) != {
+            "status", "rules_bypass_absent", "dynamic_task_data_stdin_only"
+        }
+        or worker_argv.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+        or type(worker_argv.get("rules_bypass_absent")) is not bool
+        or type(worker_argv.get("dynamic_task_data_stdin_only")) is not bool
+        or ((worker_argv.get("status") == "pass") is not (
+            worker_argv.get("rules_bypass_absent") is True
+            and worker_argv.get("dynamic_task_data_stdin_only") is True
+        ))
+    ):
+        errors.append(label + ": exact worker argv evidence is invalid")
+    network = value.get("network_sandbox_behavior")
+    if (
+        not isinstance(network, dict)
+        or set(network) != {"status"}
+        or network.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+    ):
+        errors.append(label + ": network/sandbox behavior evidence is invalid")
+    if status == "match" and (
+        not isinstance(diagnostic, dict) or diagnostic.get("status") != "pass"
+        or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
+        or not isinstance(network, dict) or network.get("status") != "pass"
+    ):
+        errors.append(label + ": match requires passing diagnostic, argv, and network evidence lanes")
+
+
+def validate_runtime_script_bypass_literals(
+    text: str, label: str, errors: List[str], guard_function: str = ""
+) -> None:
+    """Reject reviewed-script argv bypass literals outside the rejecting guard."""
+    try:
+        tree = ast.parse(text, filename=label)
+    except (SyntaxError, ValueError):
+        errors.append(label + ": cannot inspect runtime argv literals")
+        return
+    for statement in tree.body:
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if statement.name == guard_function:
+                continue
+            nodes: Iterable[ast.AST] = ast.walk(statement)
+        else:
+            nodes = ast.walk(statement)
+        for node in nodes:
+            if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+                continue
+            if (
+                node.value == "--ignore-rules"
+                or node.value.startswith("--ignore-rules=")
+                or node.value.startswith("--dangerously-bypass-")
+            ):
+                errors.append(label + ": runtime/config argv contains forbidden policy bypass " + node.value)
 
 
 def runtime_fs_capability_error() -> str:
@@ -252,6 +528,11 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
     if not isinstance(schema, dict) or not isinstance(schema.get("allOf"), list):
         errors.append(label + ": fail-closed conditional constraints are missing")
         return
+    if schema.get("properties", {}).get("evidence") != expected_profile_evidence_schema():
+        errors.append(label + ": separated runtime evidence schema drifted")
+    required = schema.get("required")
+    if not isinstance(required, list) or required.count("evidence") != 1:
+        errors.append(label + ": separated runtime evidence is not required exactly once")
     conditions = schema["allOf"]
     nonmatch = {
         "if": {"properties": {"status": {"enum": ["profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]}}, "required": ["status"]},
@@ -273,11 +554,15 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
     then_properties = match_conditions[0].get("then", {}).get("properties", {})
     cap_properties = then_properties.get("capabilities", {}).get("properties", {})
     for key in (
-        "config_recognition_probe", "shell_environment_probe",
+        "documented_config_keys_probe", "shell_environment_probe",
         "process_containment_probe",
     ):
         if cap_properties.get(key) != {"const": "pass"}:
             errors.append(label + ": match does not require passing " + key)
+    evidence_properties = then_properties.get("evidence", {}).get("properties", {})
+    for key in ("diagnostic_health", "exact_worker_argv", "network_sandbox_behavior"):
+        if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
+            errors.append(label + ": match does not require passing evidence lane " + key)
     if then_properties.get("live_run_allowed") != {"const": True}:
         errors.append(label + ": match does not require live_run_allowed=true")
 
@@ -328,8 +613,11 @@ def validate_profile(profile: Any, errors: List[str]) -> None:
     if client != exact_client:
         errors.append(PROFILE_PATH + ": observed client evidence drifted")
     caps = profile.get("capabilities")
-    if not isinstance(caps, dict) or caps.get("config_recognition_probe") != "not-proven" or caps.get("shell_environment_probe") != "not-run" or caps.get("process_containment_probe") != "not-run":
+    if not isinstance(caps, dict) or caps.get("documented_config_keys_probe") != "not-proven" or caps.get("shell_environment_probe") != "not-run" or caps.get("process_containment_probe") != "not-run":
         errors.append(PROFILE_PATH + ": help output was overclaimed as a capability probe")
+    validate_profile_evidence(
+        profile.get("evidence"), profile.get("status"), PROFILE_PATH, errors
+    )
     if "unapproved-prerelease" not in str(profile.get("reason")):
         errors.append(PROFILE_PATH + ": prerelease blocking reason is missing")
 
@@ -384,6 +672,10 @@ def validate_repository(root: Path) -> List[str]:
         schemas.get("docs/agreements/runtime/runtime-profile.v1.schema.json"),
         errors,
     )
+    validate_runtime_override_schema(
+        schemas.get("docs/agreements/runtime/task-execution-envelope.v1.schema.json"),
+        errors,
+    )
     validate_runtime_receipt_schema(
         schemas.get("docs/agreements/runtime/runtime-receipt.v1.schema.json"),
         errors,
@@ -402,6 +694,26 @@ def validate_repository(root: Path) -> List[str]:
         try:
             envelope = fixtures["tests/runtime/fixtures/envelope-valid.v1.json"]
             fixture_profile = fixtures["tests/runtime/fixtures/runtime-profile-valid.v1.json"]
+            validate_runtime_override_mapping(
+                envelope.get("worker", {}).get("overrides") if isinstance(envelope, dict) else None,
+                "tests/runtime/fixtures/envelope-valid.v1.json",
+                errors,
+            )
+            validate_profile_evidence(
+                fixture_profile.get("evidence") if isinstance(fixture_profile, dict) else None,
+                fixture_profile.get("status") if isinstance(fixture_profile, dict) else None,
+                "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+                errors,
+            )
+            validate_runtime_override_mapping(
+                adapter.REQUIRED_OVERRIDES,
+                ".github/scripts/codex-exec-adapter.py",
+                errors,
+            )
+            if adapter.runtime_configuration_intent() != expected_runtime_configuration_intent():
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: adapter-authored configuration intent/digest drifted"
+                )
             adapter.validate_envelope(envelope)
             adapter.validate_runtime_profile(fixture_profile, allow_fixture=True)
             adapter.validate_runtime_profile(profile)
@@ -429,6 +741,18 @@ def validate_repository(root: Path) -> List[str]:
                 receipt_envelope = artifacts["envelope"]
                 receipt_result = artifacts["execution_result"]
                 receipt_verifier = artifacts["verifier"]
+                validate_runtime_override_mapping(
+                    receipt_envelope.get("worker", {}).get("overrides")
+                    if isinstance(receipt_envelope, dict) else None,
+                    "tests/runtime/fixtures/runtime-receipt-valid.v1.json envelope",
+                    errors,
+                )
+                validate_profile_evidence(
+                    receipt_profile.get("evidence") if isinstance(receipt_profile, dict) else None,
+                    receipt_profile.get("status") if isinstance(receipt_profile, dict) else None,
+                    "tests/runtime/fixtures/runtime-receipt-valid.v1.json profile",
+                    errors,
+                )
                 adapter.validate_runtime_profile(receipt_profile)
                 adapter.validate_envelope(receipt_envelope)
                 adapter.validate_verifier_record(receipt_verifier, receipt_envelope["attempt_id"])
@@ -438,10 +762,50 @@ def validate_repository(root: Path) -> List[str]:
             for marker in (envelope["attempt_id"], "Issue #23"):
                 if marker in joined:
                     errors.append(".github/scripts/codex-exec-adapter.py: dynamic Task data appears in live argv")
-            for override_key, override_value in sorted(adapter.REQUIRED_OVERRIDES.items()):
+            for argument in live_argv:
+                if (
+                    argument == "--ignore-rules"
+                    or argument.startswith("--ignore-rules=")
+                    or argument.startswith("--dangerously-bypass-")
+                ):
+                    errors.append(
+                        ".github/scripts/codex-exec-adapter.py: live argv contains forbidden policy bypass "
+                        + argument
+                    )
+            adapter.validate_runtime_argv_policy(live_argv, require_memory_overrides=True)
+            for override_key, override_value in sorted(EXPECTED_RUNTIME_OVERRIDES.items()):
                 rendered = "{}={}".format(override_key, adapter.toml_literal(override_value))
                 if rendered not in live_argv:
                     errors.append(".github/scripts/codex-exec-adapter.py: live argv omits " + override_key)
+            doctor_report = {
+                "schemaVersion": 1,
+                "generatedAt": "2026-08-28T00:00:00Z",
+                "codexVersion": "0.150.0",
+                "overallStatus": "ok",
+                "checks": {
+                    "config.load": {
+                        "id": "config.load",
+                        "category": "configuration",
+                        "status": "ok",
+                        "summary": "Configuration loaded",
+                        "details": {"sources": ["user"]},
+                        "durationMs": 1,
+                        "remediation": None,
+                    }
+                },
+            }
+            doctor_result = adapter.ProcessResult(
+                0, None, False, False, False, canonical_bytes(doctor_report), 0, True
+            )
+            doctor_evidence = adapter.doctor_diagnostic_health(doctor_result)
+            if doctor_evidence != {
+                "classification": "diagnostic-only",
+                "status": "pass",
+                "codex_issued_effective_configuration_proof": False,
+            }:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: real doctor report shape was misclassified as effective-config proof"
+                )
         except Exception as error:
             errors.append("runtime adapter/fixture validation failed: {}".format(str(error)[:300]))
     representative = fixtures.get("tests/runtime/fixtures/representative-task.v1.json")
@@ -450,6 +814,17 @@ def validate_repository(root: Path) -> List[str]:
 
     adapter_text = read_regular(root, ".github/scripts/codex-exec-adapter.py", errors).decode("utf-8", errors="replace")
     receipt_text = read_regular(root, ".github/scripts/post-runtime-receipt.py", errors).decode("utf-8", errors="replace")
+    validate_runtime_script_bypass_literals(
+        adapter_text,
+        ".github/scripts/codex-exec-adapter.py",
+        errors,
+        guard_function="validate_runtime_argv_policy",
+    )
+    validate_runtime_script_bypass_literals(
+        receipt_text,
+        ".github/scripts/post-runtime-receipt.py",
+        errors,
+    )
     for forbidden in ("shell=True", "os.system(", "subprocess.call(", "os.killpg("):
         if forbidden in adapter_text or forbidden in receipt_text:
             errors.append("runtime scripts contain forbidden shell or unbounded process construction: " + forbidden)

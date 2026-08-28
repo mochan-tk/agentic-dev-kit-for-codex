@@ -23,7 +23,7 @@
     "ignore_user_config": true,
     "workspace_write": true,
     "approval_never": false,
-    "config_recognition_probe": "not-proven",
+    "documented_config_keys_probe": "not-proven",
     "shell_environment_probe": "not-run",
     "process_containment_probe": "not-run",
     "model": true,
@@ -31,6 +31,27 @@
     "sandbox": true,
     "approval": false,
     "overrides": false
+  },
+  "evidence": {
+    "configuration_intent": {
+      "schema": "t11-runtime-configuration-intent/v1",
+      "authority": "adapter-authored",
+      "effective_configuration_proven": false,
+      "configuration_sha256": "dfea7207aa1326de479dba57c0d8c68a308e245d0c2def5c4ce5ca5bd040247e",
+      "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
+      "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]
+    },
+    "diagnostic_health": {
+      "classification": "diagnostic-only",
+      "status": "not-run",
+      "codex_issued_effective_configuration_proof": false
+    },
+    "exact_worker_argv": {
+      "status": "not-run",
+      "rules_bypass_absent": false,
+      "dynamic_task_data_stdin_only": false
+    },
+    "network_sandbox_behavior": {"status": "not-run"}
   },
   "auth": {
     "class": "signed-in-client",
@@ -48,6 +69,7 @@
     "required_names": [
       "PATH",
       "HOME",
+      "CODEX_HOME",
       "TMPDIR",
       "LANG",
       "LC_ALL",

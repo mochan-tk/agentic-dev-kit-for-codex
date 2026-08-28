@@ -40,12 +40,12 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "d65fa933c784341bac6a77a6ff77f646fb8a5e0170d2e25ba33349de4409a5f5"
+    "8a9b9cd36956eda0bbfe25d9a5d2ace537cfd87b91d74e9bbafea8ac3080dc6f"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "1dc876f5f2ef605be0e88618f525b19a9cfb20cbb0f851e789273f1be53d8aaa"
+    "75a4085020c8e6e3e8fb75d06b2397cb5288ae0e2fffea4a495c398700ea3238"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
@@ -1633,6 +1633,7 @@ def validate_offline_runtime_checker_boundary(
     validate_python_imports(
         checker_tree,
         direct={
+            "ast",
             "datetime",
             "hashlib",
             "importlib.util",
@@ -1652,11 +1653,15 @@ def validate_offline_runtime_checker_boundary(
         errors=errors,
     )
     allowed_runtime_attributes = {
+        "adapter.ProcessResult",
         "adapter.REQUIRED_OVERRIDES",
         "adapter.REQUIRED_OVERRIDES.items",
         "adapter.build_live_argv",
+        "adapter.doctor_diagnostic_health",
         "adapter.parse_jsonl",
+        "adapter.runtime_configuration_intent",
         "adapter.toml_literal",
+        "adapter.validate_runtime_argv_policy",
         "adapter.validate_envelope",
         "adapter.validate_execution_result",
         "adapter.validate_final_response",
@@ -1711,7 +1716,10 @@ def validate_offline_runtime_checker_boundary(
                 "validate_final_response",
                 "parse_jsonl",
                 "build_live_argv",
+                "doctor_diagnostic_health",
+                "runtime_configuration_intent",
                 "toml_literal",
+                "validate_runtime_argv_policy",
             },
             {
                 "descriptor_xattr_inventory",
@@ -1728,6 +1736,12 @@ def validate_offline_runtime_checker_boundary(
                 "observe_runtime_profile",
                 "process_table_snapshot",
                 "probe_config_and_shell_environment",
+                "probe_runtime_configuration",
+                "probe_runtime_evidence",
+                "materialize_reviewed_rules_profile",
+                "network_sandbox_behavior_probe",
+                "runtime_configuration_argv",
+                "shell_environment_probe",
                 "validate_execution_root_transition",
                 "cli_run",
                 "cli_verify",
@@ -1745,6 +1759,7 @@ def validate_offline_runtime_checker_boundary(
         "os",
         "re",
         "signal",
+        "socket",
         "stat",
         "subprocess",
         "sys",
