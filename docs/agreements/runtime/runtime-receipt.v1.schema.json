@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/agreements/runtime/runtime-receipt.v1.schema.json",
+  "title": "runtime-receipt-request/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repository", "task", "pull_request", "artifacts", "checks", "limitations", "privacy"],
+  "properties": {
+    "schema": {"const": "runtime-receipt-request/v1"},
+    "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
+    "task": {"type": "object", "additionalProperties": false, "required": ["issue", "url"], "properties": {"issue": {"const": 23}, "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"}}},
+    "pull_request": {"type": "object", "additionalProperties": false, "required": ["number", "url", "head", "tree"], "properties": {"number": {"type": "integer", "minimum": 1}, "url": {"type": "string", "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/pull/[0-9]+$"}, "head": {"$ref": "#/$defs/oid"}, "tree": {"$ref": "#/$defs/oid"}}},
+    "artifacts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runtime_profile", "envelope", "execution_result", "verifier"],
+      "properties": {
+        "runtime_profile": {"$ref": "runtime-profile.v1.schema.json"},
+        "envelope": {"$ref": "task-execution-envelope.v1.schema.json"},
+        "execution_result": {"$ref": "execution-result.v1.schema.json"},
+        "verifier": {"$ref": "#/$defs/verifierArtifact"}
+      }
+    },
+    "checks": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "object", "additionalProperties": false, "required": ["context", "url", "head", "result"], "properties": {"context": {"enum": ["quality", "conformance"]}, "url": {"type": "string", "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/[0-9]+/job/[0-9]+$"}, "head": {"$ref": "#/$defs/oid"}, "result": {"const": "success"}}}},
+    "limitations": {"const": {"named_custom_agent_runtime_selection": "unverified", "authenticated_role_identity": "unverified", "artifact_provenance": "unsigned-unverified", "phase2_complete": false, "repository_complete": false, "release_ready": false}},
+    "privacy": {"const": {"allowlisted_projection": true, "raw_jsonl": false, "raw_reasoning": false, "raw_stderr": false, "transcript": false, "private_paths": false, "credential_values": false}}
+  },
+  "$defs": {
+    "oid": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "verifierArtifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "attempt_id", "status", "fresh_process", "read_only", "checks"],
+      "properties": {
+        "schema": {"const": "t11-verifier-result/v1"},
+        "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},
+        "status": {"const": "pass"}, "fresh_process": {"const": true}, "read_only": {"const": true},
+        "checks": {"const": ["root-binding", "file-binding", "branch", "head", "tree", "status", "diff", "ownership", "mode", "exact-bytes", "git-config", "hooks", "git-inventory", "refs", "index", "unreachable-objects"]}
+      }
+    }
+  }
+}

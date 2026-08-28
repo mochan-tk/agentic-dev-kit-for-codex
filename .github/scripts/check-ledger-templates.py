@@ -48,6 +48,14 @@ ACTIONS_URL = re.compile(
 TASK_RELATIONSHIP = re.compile(
     rf"(Closes|Refs) (https://github\.com/{re.escape(REPOSITORY)}/issues/[1-9][0-9]*)\Z"
 )
+OPAQUE_RUNTIME_REFERENCE_PATTERNS = {
+    "task_execution_envelope_ref": re.compile(
+        r"opaque-ref/v1:task-execution-envelope:sha256:[0-9a-f]{64}\Z"
+    ),
+    "loop_event_ref": re.compile(
+        r"opaque-ref/v1:loop-event:sha256:[0-9a-f]{64}\Z"
+    ),
+}
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 IDENTIFIER = re.compile(r"[a-z][a-z0-9_]*\Z")
 CRITERION_ID = re.compile(r"[A-Z][A-Z0-9]*-[0-9]{2,}\Z")
@@ -546,6 +554,23 @@ def validate_task_relationship(
         errors.append(f"{label} Task URL must match task_url")
 
 
+def validate_opaque_runtime_reference(
+    value: Any,
+    field: str,
+    label: str,
+    errors: list[str],
+) -> None:
+    """Validate only a bounded opaque locator shape; never resolve its target."""
+    if not valid_string(value, label, errors):
+        return
+    pattern = OPAQUE_RUNTIME_REFERENCE_PATTERNS[field]
+    if not pattern.fullmatch(value):
+        errors.append(
+            f"{label} must use the field-specific bounded opaque linkage grammar; "
+            "shape validation does not prove target validity or freshness"
+        )
+
+
 def recursive_strings(value: Any, *, skip_keys: frozenset[str] = frozenset()) -> Iterable[str]:
     """Yield nested strings iteratively so adversarial JSON depth cannot recurse."""
     pending = [value]
@@ -653,11 +678,6 @@ def reject_authority_and_implementation_claims(value: Any, label: str, errors: l
         r"epic issue\s*->\s*task issue\s*->\s*(?:pull request|pr)\s+"
         r"(?:is\s+)?canonical\b"
     )
-    implementation_status = re.compile(
-        r"\b(?:implemented|complete|completed|done|available|validated|enforced|"
-        r"supported|active|operational|working|works?|present|built|created|deployed|"
-        r"delivered|ready|shipped|live|exists?)\b"
-    )
     safe_negative_status = re.compile(
         r"\b(?:planned[- /]unimplemented|unimplemented|incomplete|unsupported|inactive|"
         r"unavailable|absent|(?:not|never) (?:been )?(?:fully )?(?:implemented|complete|completed|done|"
@@ -674,6 +694,20 @@ def reject_authority_and_implementation_claims(value: Any, label: str, errors: l
     )
     k_reference = r"\bk1[01](?:(?:\s+(?:and|or)\s+|/)k1[01])?\b"
     approved_k_patterns = [
+        re.compile(
+            rf"\b(?:it\s+is\s+not\s+parsed\s+or\s+dereferenced\s+and\s+)?"
+            rf"(?:does|do)\s+not\s+prove\s+{k_reference}\s+validity,\s+"
+            r"freshness,\s+execution,\s+or\s+acceptance\b"
+        ),
+        re.compile(
+            rf"{k_reference}\s+(?:(?:status\s+)?(?:is|are)|has|have)\s+"
+            r"(?:a\s+)?minimal[- /]partial[- /]offline(?:[- /]implemented|\s+"
+            r"implementation)?\s+only\b"
+        ),
+        re.compile(
+            rf"{k_reference}\s+(?:(?:is|are|was|were)\s+)?implemented\s+only\s+for\s+"
+            r"(?:the\s+)?bounded\s+offline\s+t11\s+slice\b"
+        ),
         re.compile(
             rf"{k_reference}\s+(?:(?:is|are|remain|remains)\s+)?(?:planned[- /]"
             r"unimplemented|unimplemented|incomplete|unsupported|inactive|unavailable|absent)\b"
@@ -703,18 +737,41 @@ def reject_authority_and_implementation_claims(value: Any, label: str, errors: l
             r"not\b.{{0,32}}\b(?:acceptance\s+)?evidence\b"
         ),
     ]
-    runtime_reference = r"(?:task execution envelope|loop[- ]event(?: contract| support)?)"
+    runtime_name = r"(?:task[- ]execution[- ]envelope(?:/v1)?|loop[- ]event(?:/v1)?)"
+    runtime_reference = rf"(?:{runtime_name}(?: contract| support)?)"
     approved_runtime_patterns = [
         re.compile(
-            rf"\b{runtime_reference}\s+reference\s+optional and opaque\b"
+            rf"\b{runtime_name}\s+reference\s+"
+            r"optional and opaque\b"
         ),
         re.compile(
-            rf"\b{runtime_reference}\b\s+(?:(?:is|are|was|were|has|have|remain|remains)\s+)?"
+            r"\bleave blank unless a durable record supplies an opaque "
+            r"loop[- ]event reference\b"
+        ),
+        re.compile(
+            rf"\b(?:the\s+)?{runtime_reference}\b\s+"
+            r"(?:(?:status\s+)?(?:is|are)|has|have)\s+"
+            r"(?:a\s+)?minimal[- /]partial[- /]offline(?:\s+t11)?"
+            r"(?:[- /](?:slice|contract|support|implementation|implemented))?"
+            r"\s+only\b"
+        ),
+        re.compile(
+            rf"\b(?:the\s+)?{runtime_reference}\b\s+"
+            r"(?:(?:is|are|was|were)\s+)?implemented\s+"
+            r"only\s+for\s+(?:the\s+)?bounded\s+offline\s+t11\s+slice\b"
+        ),
+        re.compile(
+            rf"\b(?:the\s+)?{runtime_reference}\s+reference\s+optional and opaque\b"
+        ),
+        re.compile(
+            rf"\b(?:the\s+)?{runtime_reference}\b\s+"
+            r"(?:(?:is|are|was|were|has|have|remain|remains)\s+)?"
             r"(?:not|never)\s+(?:been\s+)?(?:implemented|complete|available|active|"
             r"operational|working|present|ready|live|built|created|deployed|delivered)\b"
         ),
         re.compile(
-            rf"\b{runtime_reference}\b\s+(?:(?:is|are|remain|remains)\s+)?"
+            rf"\b(?:the\s+)?{runtime_reference}\b\s+"
+            r"(?:(?:is|are|remain|remains)\s+)?"
             r"(?:planned[- /]unimplemented|unimplemented|incomplete|unsupported|inactive|"
             r"unavailable|absent)\b"
         ),
@@ -790,25 +847,26 @@ def reject_authority_and_implementation_claims(value: Any, label: str, errors: l
             k_residual = clause
             for pattern in approved_k_patterns:
                 k_residual = pattern.sub("", k_residual)
-            if re.search(r"\bk1[01]\b", k_residual) or (
-                re.search(r"\bk1[01]\b", clause)
-                and implementation_status.search(status_text)
+            if re.search(r"\bk1[01]\b", clause) and re.search(
+                r"[a-z0-9]", k_residual
             ):
-                errors.append(f"{label} must not claim K10 or K11 is implemented")
+                errors.append(
+                    f"{label} must limit K10 or K11 claims to the minimal/partial "
+                    "offline T11 slice"
+                )
                 rejected = True
                 break
 
             runtime_residual = clause
             for pattern in approved_runtime_patterns:
                 runtime_residual = pattern.sub("", runtime_residual)
-            if re.search(rf"\b{runtime_reference}\b", runtime_residual) or (
-                re.search(rf"\b{runtime_reference}\b", clause)
-                and implementation_status.search(status_text)
+            if re.search(rf"\b{runtime_reference}\b", clause) and re.search(
+                r"[a-z0-9]", runtime_residual
             ):
                 message = (
-                    "must not claim the Task execution envelope is implemented"
-                    if "task execution envelope" in clause
-                    else "must not claim the loop-event contract is implemented"
+                    "must limit the Task execution envelope claim to the minimal/partial offline T11 slice"
+                    if re.search(r"task[- ]execution[- ]envelope(?:/v1)?", clause)
+                    else "must limit the loop-event claim to the minimal/partial offline T11 slice"
                 )
                 errors.append(f"{label} {message}")
                 rejected = True
@@ -876,14 +934,18 @@ def validate_contract(contract: Any, errors: list[str]) -> None:
         "K04": "static-contract-advanced",
         "K05": "static-contract-advanced",
         "K07": "static-contract-implemented",
-        "K10": "planned-unimplemented",
-        "K11": "planned-unimplemented",
+        "K10": "minimal-partial-offline-implemented",
+        "K11": "minimal-partial-offline-implemented",
         "K14": "static-validation-only",
     }
     if contract["implementation"] != expected_implementation:
-        errors.append("contract implementation states must keep K10/K11 unimplemented")
+        errors.append(
+            "contract implementation states must keep K10/K11 at "
+            "minimal/partial offline status"
+        )
     expected_progress = {
         "contracts_advanced_static": ["K01", "K02", "K03", "K04", "K05", "K07", "K14"],
+        "contracts_advanced_minimal_partial_offline": ["K10", "K11"],
         "scenario_families": {
             "C": "not-run",
             "E": "not-run",
@@ -893,7 +955,10 @@ def validate_contract(contract: Any, errors: list[str]) -> None:
         },
     }
     if contract["progress"] != expected_progress:
-        errors.append("contract progress must remain static-only with scenarios not-run")
+        errors.append(
+            "contract progress must preserve minimal/partial offline K10/K11 "
+            "and scenarios not-run"
+        )
     expected_boundary = {
         "validated_offline": [
             "canonical same-repository URL shape",
@@ -901,6 +966,8 @@ def validate_contract(contract: Any, errors: list[str]) -> None:
             "non-placeholder field values",
             "record shape and internal cross-reference integrity",
             "template and rendered-fixture synchronization",
+            "K10 and K11 minimal-partial-offline status vocabulary",
+            "opaque runtime-reference non-evidence boundary",
         ],
         "not_validated_offline": [
             "GitHub API object existence or native type",
@@ -909,6 +976,9 @@ def validate_contract(contract: Any, errors: list[str]) -> None:
             "plan-comment authorship, edit history, or chronology",
             "Actions run or job URL association with the declared head SHA",
             "live labels or current-attempt ritual enforcement",
+            "real Codex execution or runtime-profile match",
+            "live runtime receipt existence, freshness, or acceptance",
+            "full K10, K11, runtime, or cross-surface parity",
         ],
     }
     if contract["validation_boundary"] != expected_boundary:
@@ -948,6 +1018,13 @@ def validate_contract(contract: Any, errors: list[str]) -> None:
         "none_token": "None",
         "ownership_modes": ["100644", "100755"],
         "optional_opaque_fields": ["task_execution_envelope_ref", "loop_event_ref"],
+        "runtime_contract_statuses": ["minimal-partial-offline-implemented"],
+        "opaque_runtime_reference_format": (
+            "opaque-ref/v1:<field-kind>:sha256:<64-lowercase-hex>"
+        ),
+        "opaque_runtime_reference_evidence": (
+            "linkage-only-never-validity-freshness-execution-or-acceptance"
+        ),
     }
     if contract["semantics"] != expected_semantics:
         errors.append("contract ledger semantics drifted")
@@ -1044,7 +1121,9 @@ def validate_contract(contract: Any, errors: list[str]) -> None:
             errors.append(f"contract.records.{kind} ordered field layout drifted")
         if headings != EXPECTED_HEADINGS[kind]:
             errors.append(f"contract.records.{kind} ordered headings drifted")
-    reject_authority_and_implementation_claims(contract, "contract prose", errors)
+    reject_authority_and_implementation_claims(
+        contract["records"], "contract prose", errors
+    )
 
 
 def yaml_scalar(value: str) -> str:
@@ -1101,7 +1180,13 @@ def render_pr_template(record: dict[str, Any]) -> str:
         "Offline validation checks shape and internal consistency only; it does not prove",
         "GitHub object existence, authorship, edit history, chronology, labels, or live ritual state.",
         "Do not grant authority to a GitHub Projects board, fabricate historical ritual records,",
-        "or claim that K10 or K11 is implemented.",
+        "or claim full/runtime parity for K10 or K11. Their current repository status is limited",
+        "to the minimal/partial offline T11 slice; opaque references do not prove validity,",
+        "freshness, live execution, or acceptance.",
+        "Opaque runtime references are bounded linkage only. Only the locator grammar is parsed.",
+        "The referenced target is neither resolved nor dereferenced, and the value proves neither",
+        "target validity nor target freshness; it provides no evidence of implementation, execution,",
+        "or acceptance.",
         "-->",
     ]
     for section in record["sections"]:
@@ -1745,7 +1830,9 @@ def validate_records(contract: dict[str, Any], payload: Any, errors: list[str]) 
                         primary_pr_claims[primary_pr] = task_url
         for opaque in contract["semantics"]["optional_opaque_fields"]:
             if opaque in task:
-                valid_string(task[opaque], f"{label}.{opaque}", errors)
+                validate_opaque_runtime_reference(
+                    task[opaque], opaque, f"{label}.{opaque}", errors
+                )
     validate_ownership(tasks, contract["semantics"]["ownership_modes"], errors)
     if graph and set(graph) != task_urls:
         missing = sorted(set(graph) - task_urls)

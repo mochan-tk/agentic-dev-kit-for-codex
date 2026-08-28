@@ -1,0 +1,166 @@
+{
+  "schema": "task-execution-envelope/v1",
+  "task": {
+    "repository": "mochan-tk/agentic-dev-kit-for-codex",
+    "issue": 23,
+    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+  },
+  "attempt_id": "ATTEMPT-0123456789abcdef",
+  "harness": {
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "target": {
+    "kind": "private-synthetic-git-repository",
+    "base_commit": "7ee649272da3355a06a4b3a11271a3f0cbe8ed56",
+    "base_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
+    "branch": "t11-representative",
+    "owned_paths": ["work-item.txt"]
+  },
+  "representative_task": {
+    "path": "work-item.txt",
+    "mode": "100644",
+    "initial_utf8": "status=pending\n",
+    "initial_hex": "7374617475733d70656e64696e670a",
+    "initial_sha256": "456efa9c6789a1d5cf2dee215a87013d69a829567b27e6dd77fe8e1a92865683",
+    "expected_utf8": "status=complete\n",
+    "expected_hex": "7374617475733d636f6d706c6574650a",
+    "expected_sha256": "49033f4b6c0e14ca6f91d1fd9780029a37b6301ae393700855f61d235474c0c5"
+  },
+  "worker": {
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "high",
+    "sandbox": "workspace-write",
+    "approval_policy": "never",
+    "invocation_count": 1,
+    "prompt_transport": "stdin-only",
+    "static_role": {
+      "path": ".codex/agents/task_worker.toml",
+      "developer_instructions_sha256": "813baae383e35eea7195ffc0ad8695c7f562eac57c37ef1bb61ede6914661d23"
+    },
+    "overrides": {
+      "sandbox_workspace_write.network_access": false,
+      "hide_agent_reasoning": true,
+      "show_raw_agent_reasoning": false,
+      "history.persistence": "none",
+      "features.hooks": false,
+      "features.apps": false,
+      "agents.enabled": false,
+      "tools.web_search": false,
+      "feedback.enabled": false,
+      "features.memory_tool": false,
+      "features.memory_tool_use": false
+    }
+  },
+  "verification_commands": [
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-phase0-contracts.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-phase1-accepted-snapshot.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-repository-policy.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-portable-contracts.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-ledger-templates.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-skills.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/check-runtime-contracts.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", ".github/scripts/conformance-catalog.py", "check"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["python3", "-I", "-m", "unittest", "discover", "-s", "tests/conformance", "-p", "test_*.py"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    },
+    {
+      "schema": "shell-free-command/v1",
+      "argv": ["git", "diff", "--check"],
+      "cwd": {"kind": "exact-bound-repository-root", "repository": "mochan-tk/agentic-dev-kit-for-codex", "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "device_inode_verified": true},
+      "environment_profile": {"id": "t11-offline-v1", "required_values": {"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC", "PYTHONHASHSEED": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0"}, "private_home_and_tmp": true, "secret_named_variables_excluded": true},
+      "timeout_seconds": 180, "expected_exit_codes": [0], "stdout_max_bytes": 1048576, "stderr_max_bytes": 1048576, "shell": false,
+      "process_group_termination": {"start_new_session": true, "term_then_kill": true, "grace_seconds": 5, "wait_and_reap": true},
+      "git_state": {"verify_before": ["branch", "head", "tree", "status", "worktree-binding"], "verify_after": ["branch", "head", "tree", "status", "worktree-binding"]}
+    }
+  ],
+  "limits": {
+    "prompt_bytes": 16384,
+    "stdout_bytes": 4194304,
+    "stderr_bytes": 262144,
+    "line_bytes": 262144,
+    "event_count": 4096,
+    "json_depth": 32,
+    "json_nodes": 8192,
+    "json_string_bytes": 65536,
+    "final_response_bytes": 65536,
+    "worker_timeout_seconds": 600
+  },
+  "privacy": {
+    "durable_allowlist_only": true,
+    "raw_jsonl_retained": false,
+    "raw_reasoning_retained": false,
+    "raw_stderr_retained": false,
+    "private_paths_retained": false
+  }
+}

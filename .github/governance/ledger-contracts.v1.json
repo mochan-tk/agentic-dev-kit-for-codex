@@ -13,12 +13,13 @@
     "K04": "static-contract-advanced",
     "K05": "static-contract-advanced",
     "K07": "static-contract-implemented",
-    "K10": "planned-unimplemented",
-    "K11": "planned-unimplemented",
+    "K10": "minimal-partial-offline-implemented",
+    "K11": "minimal-partial-offline-implemented",
     "K14": "static-validation-only"
   },
   "progress": {
     "contracts_advanced_static": ["K01", "K02", "K03", "K04", "K05", "K07", "K14"],
+    "contracts_advanced_minimal_partial_offline": ["K10", "K11"],
     "scenario_families": {
       "C": "not-run",
       "E": "not-run",
@@ -33,7 +34,9 @@
       "frozen bootstrap Issue body hashes and heading-to-section mappings",
       "non-placeholder field values",
       "record shape and internal cross-reference integrity",
-      "template and rendered-fixture synchronization"
+      "template and rendered-fixture synchronization",
+      "K10 and K11 minimal-partial-offline status vocabulary",
+      "opaque runtime-reference non-evidence boundary"
     ],
     "not_validated_offline": [
       "GitHub API object existence or native type",
@@ -41,7 +44,10 @@
       "issue parent or dependency state",
       "plan-comment authorship, edit history, or chronology",
       "Actions run or job URL association with the declared head SHA",
-      "live labels or current-attempt ritual enforcement"
+      "live labels or current-attempt ritual enforcement",
+      "real Codex execution or runtime-profile match",
+      "live runtime receipt existence, freshness, or acceptance",
+      "full K10, K11, runtime, or cross-surface parity"
     ]
   },
   "bootstrap_compatibility": {
@@ -74,7 +80,10 @@
     "optional_opaque_fields": [
       "task_execution_envelope_ref",
       "loop_event_ref"
-    ]
+    ],
+    "runtime_contract_statuses": ["minimal-partial-offline-implemented"],
+    "opaque_runtime_reference_format": "opaque-ref/v1:<field-kind>:sha256:<64-lowercase-hex>",
+    "opaque_runtime_reference_evidence": "linkage-only-never-validity-freshness-execution-or-acceptance"
   },
   "records": {
     "epic": {
@@ -381,16 +390,16 @@
               "id": "task_execution_envelope_ref",
               "type": "input",
               "label": "Task execution envelope reference (optional and opaque)",
-              "description": "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K10 evidence.",
-              "placeholder": "Leave blank unless a later contract supplies an opaque reference.",
+              "description": "Optional linkage only. Supply the field-specific opaque-ref/v1 value required by the machine contract. Only the locator grammar is parsed. The referenced target is neither resolved nor dereferenced, and the value proves neither target validity nor target freshness; it provides no evidence of implementation, execution, or acceptance.",
+              "placeholder": "Use opaque-ref/v1 with this field's required kind, sha256, and 64 lowercase hex characters, or leave blank.",
               "required": false
             },
             {
               "id": "loop_event_ref",
               "type": "input",
               "label": "Loop event reference (optional and opaque)",
-              "description": "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K11 evidence.",
-              "placeholder": "Leave blank unless a later contract supplies an opaque reference.",
+              "description": "Optional linkage only. Supply the field-specific opaque-ref/v1 value required by the machine contract. Only the locator grammar is parsed. The referenced target is neither resolved nor dereferenced, and the value proves neither target validity nor target freshness; it provides no evidence of implementation, execution, or acceptance.",
+              "placeholder": "Use opaque-ref/v1 with this field's required kind, sha256, and 64 lowercase hex characters, or leave blank.",
               "required": false
             }
           ]

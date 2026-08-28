@@ -1,0 +1,23 @@
+{
+  "schema": "representative-task/v1",
+  "path": "work-item.txt",
+  "mode": "100644",
+  "initial_utf8": "status=pending\n",
+  "initial_hex": "7374617475733d70656e64696e670a",
+  "initial_sha256": "456efa9c6789a1d5cf2dee215a87013d69a829567b27e6dd77fe8e1a92865683",
+  "expected_utf8": "status=complete\n",
+  "expected_hex": "7374617475733d636f6d706c6574650a",
+  "expected_sha256": "49033f4b6c0e14ca6f91d1fd9780029a37b6301ae393700855f61d235474c0c5",
+  "owned_paths": ["work-item.txt"],
+  "allowed_worktree_entries": ["work-item.txt"],
+  "expected_change": {
+    "modified": ["work-item.txt"],
+    "added": [],
+    "deleted": [],
+    "renamed": [],
+    "untracked": [],
+    "staged": [],
+    "mode_changes": [],
+    "other_filesystem_changes": []
+  }
+}

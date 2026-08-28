@@ -3,6 +3,7 @@
 > [!WARNING]
 > **Current status:** Phase 0 is complete. This tree satisfies the **Phase 1 portable-core implementation gate**.
 > The current durable owner-acceptance outcome is external GitHub state, authoritative in [Issue #12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12) and [Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2); this immutable tree records only its creation-time snapshot and does not embed a later post-merge outcome.
+> Phase 2 [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) adds a minimal/partial execution slice with deterministic offline evidence. It does not embed or claim a successful live Codex run or runtime receipt. The Task-start observation found `codex-cli 0.150.0-alpha.8`, an unsupported prerelease for the approved live gate, so live execution remains blocked unless a later exact-head observation matches an approved supported profile.
 > The overall repository implementation remains incomplete, not installable, and not a parity release.
 > `release_blocked` remains `true`.
 
@@ -11,7 +12,9 @@ harness in
 [`mochan-tk/agentic-dev-kit-for-copilot`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot).
 It preserves product-independent behavior and governance while building
 toward later verified Codex-native replacements for Copilot-specific execution
-surfaces. Those runtime adapters are not implemented in this tree.
+surfaces. This tree contains only the first bounded, offline-tested adapter
+slice; the broader runtime, cross-surface parity, and distribution system are
+not implemented.
 
 The frozen behavioral source is commit
 [`fd265ddef150fab86cd54d0e383c2c25fe297ffb`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot/commit/fd265ddef150fab86cd54d0e383c2c25fe297ffb).
@@ -65,12 +68,29 @@ The Phase 1 portable core adds:
 - all eight repository Skills with source-to-target parity records; and
 - a machine-readable acceptance package and human scorecard.
 
+The current Phase 2 T11 tree adds, at a deliberately narrow evidence level:
+
+- three static role-definition files that are configuration layers, not
+  authenticated identities or proof of native named-agent selection;
+- minimal `task-execution-envelope/v1`, `loop-event/v1`, final-response,
+  execution-result, runtime-profile, and runtime-receipt contracts;
+- a deterministic Python controller, bounded JSONL/process/Git validation,
+  a fresh deterministic verifier, and an append-only Task-receipt actuator;
+- a frozen verifier for the exact accepted Phase 1 snapshot, separate from
+  the Phase 2 live repository policy; and
+- fake-process and synthetic-repository coverage reachable from required CI.
+
+These are minimal/partial offline capabilities. A real `codex exec` run and
+receipt are explicit owner-run, exact-head evidence gates and are not produced
+by required CI. No successful live run or receipt is claimed in this tree.
+
 ## What remains outside the portable core
 
 - an installer or upgrade path;
-- Codex custom-agent definitions;
-- hooks, execution envelopes, or normalized loop events;
-- a `codex exec` task wrapper;
+- a final custom-agent topology or verified native named-agent selection;
+- hooks, recovery orchestration, or a general runtime control plane;
+- a production-complete execution envelope, loop-event protocol, or `codex
+  exec` adapter beyond the bounded T11 slice;
 - the live Task ritual, consent feedback transport, and general adopter
   governance activation;
 - local/worktree/cloud parity claims;
@@ -87,8 +107,9 @@ any capability.
    vocabulary, and bootstrap CI.
 2. **Portable core:** GitHub ledger/contracts and all eight Codex repository
    Skills.
-3. **Codex adapter:** custom agents, Task envelope, hooks/events, and the
-   machine-readable CLI adapter.
+3. **Codex adapter:** first establish the minimal offline-tested Task envelope,
+   event, controller/worker/verifier, and receipt slice; then harden roles,
+   recovery, hooks, and runtime parity from live evidence.
 4. **Enforcement and distribution:** installer/upgrade, Task ritual,
    ownership, and governance.
 5. **Parity release:** static and runtime probes, all 136 conformance
@@ -101,6 +122,12 @@ durable acceptance outcome, including any later post-merge receipt. Later Tasks
 remain subject to their own scoped evidence and owner merge gates. An
 unavailable runtime probe is `unverified`, `not-run`, `UNKNOWN`, or
 `UNCHECKABLE`, never passed.
+
+For T11 specifically, observable client drift is `profile-drift`, an
+unsupported feature or unapproved prerelease is `unsupported-client`, and only
+unobservable evidence is `UNKNOWN` or `UNCHECKABLE`. The currently observed
+alpha client is `unsupported-client`; this is a non-success state, not a live
+runtime result.
 
 ## Repository completion boundary
 
@@ -115,12 +142,24 @@ incomplete implementation, not a release claim.
 ```sh
 python3 -I .github/scripts/check-phase0-contracts.py
 python3 -I .github/scripts/check-repository-policy.py
-python3 -I .github/scripts/check-phase1-acceptance.py
+python3 -I .github/scripts/check-phase1-accepted-snapshot.py
+python3 -I .github/scripts/check-runtime-contracts.py
+python3 -I .github/scripts/check-portable-contracts.py
+python3 -I .github/scripts/check-ledger-templates.py
+python3 -I .github/scripts/check-skills.py
 python3 -I .github/scripts/conformance-catalog.py check
 python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'
 bash .github/scripts/tests/test-action-pins.sh
 bash .github/scripts/tests/test-workflow-permissions.sh
+git diff --check
 ```
+
+These are repository validation entry points, not a transport guarantee.
+The static GitHub Actions workflow invokes its versioned CI subset. It is not claimed to be shell-free or network-free.
+`git diff --check` is local evidence, not a GitHub Actions step. T11's
+shell-free and network-bounded requirements
+apply to its reviewed execution contract; [Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23)
+remains authoritative if broader shell or network terminology is ambiguous.
 
 The frozen source's 23-suite result is baseline evidence, not target parity.
 The Phase 1 scorecard inventories all 136 scenarios and records zero exact

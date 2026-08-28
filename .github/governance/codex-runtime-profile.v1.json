@@ -1,0 +1,76 @@
+{
+  "schema": "runtime-profile/v1",
+  "repository": "mochan-tk/agentic-dev-kit-for-codex",
+  "observed_at": "2026-08-28T02:13:25Z",
+  "scope": "task-start-sensor",
+  "status": "unsupported-client",
+  "reason": "unapproved-prerelease: alpha client; configuration and shell-environment capabilities are not proven",
+  "platform": {
+    "os": "Darwin",
+    "architecture": "arm64"
+  },
+  "client": {
+    "version_output": "codex-cli 0.150.0-alpha.8",
+    "release_class": "prerelease-alpha",
+    "binary_sha256": "4ff5e75f028e913cfeb53bd7319f87573cdce6538c1b1ccc44ce62d5ce51ca1d",
+    "exec_help_sha256": "e504bac5a6364566fbe408132dec7993639def9258ece34e8352f51f8d43687c",
+    "resolved_path_recorded": false
+  },
+  "capabilities": {
+    "exec_json": true,
+    "ephemeral": true,
+    "strict_config": true,
+    "ignore_user_config": true,
+    "workspace_write": true,
+    "approval_never": false,
+    "config_recognition_probe": "not-proven",
+    "shell_environment_probe": "not-run",
+    "process_containment_probe": "not-run",
+    "model": true,
+    "reasoning": false,
+    "sandbox": true,
+    "approval": false,
+    "overrides": false
+  },
+  "auth": {
+    "class": "signed-in-client",
+    "credential_values_recorded": false
+  },
+  "request": {
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "high",
+    "sandbox": "workspace-write",
+    "approval_policy": "never",
+    "config_profile": "t11-live-v1"
+  },
+  "shell_environment": {
+    "inherit": "none",
+    "required_names": [
+      "PATH",
+      "HOME",
+      "TMPDIR",
+      "LANG",
+      "LC_ALL",
+      "TZ",
+      "PYTHONHASHSEED",
+      "GIT_CONFIG_NOSYSTEM",
+      "GIT_TERMINAL_PROMPT",
+      "GIT_OPTIONAL_LOCKS"
+    ],
+    "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated",
+    "fixed_values": {
+      "LANG": "C.UTF-8",
+      "LC_ALL": "C.UTF-8",
+      "TZ": "UTC",
+      "PYTHONHASHSEED": "0",
+      "GIT_CONFIG_NOSYSTEM": "1",
+      "GIT_TERMINAL_PROMPT": "0",
+      "GIT_OPTIONAL_LOCKS": "0"
+    },
+    "private_home": true,
+    "private_tmpdir": true,
+    "secret_named_variables_excluded": true,
+    "probe_required": true
+  },
+  "live_run_allowed": false
+}

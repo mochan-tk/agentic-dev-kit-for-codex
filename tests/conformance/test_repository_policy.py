@@ -21,8 +21,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T10"
-CURRENT_TASK_BRANCH = "codex/phase-1-acceptance"
+CURRENT_TASK_ID = "T11"
+CURRENT_TASK_BRANCH = "codex/phase-2-minimal-execution-slice"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -494,16 +494,92 @@ class RepositoryPolicyTest(unittest.TestCase):
     def test_live_repository_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
 
-    def test_active_task_helper_selects_t10_among_disjoint_active_tasks(self):
+    def test_phase2_frontier_is_exact(self):
+        payload = self.ownership_payload()
+        self.assertEqual("phase-2", payload["phase"]["id"])
+        self.assertEqual(
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22",
+            payload["phase"]["epic"],
+        )
+        self.assertEqual(
+            self.checker.ACCEPTED_PHASE1_COMMIT, payload["phase"]["base_commit"]
+        )
+        self.assertEqual(
+            self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
+        )
+        active = [task for task in payload["tasks"] if task["state"] == "active"]
+        self.assertEqual(["T11"], [task["id"] for task in active])
+        self.assertEqual(
+            self.checker.EXPECTED_T11_PATHS,
+            tuple(entry["path"] for entry in active[0]["owned_paths"]),
+        )
+        self.assertEqual(42, len(active[0]["owned_paths"]))
+        t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
+        self.assertEqual("accepted", t10["state"])
+
+    def test_phase2_frontier_rejects_t10_or_t11_drift(self):
+        cases = (
+            (
+                "t10-state",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T10"
+                ).__setitem__("state", "active"),
+                "T10 must remain accepted",
+            ),
+            (
+                "t11-record",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T11"
+                ).__setitem__("record", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/24"),
+                "reference Issue 23",
+            ),
+            (
+                "t11-branch",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T11"
+                ).__setitem__("branch", "codex/unreviewed"),
+                "branch drifted",
+            ),
+            (
+                "t11-base",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T11"
+                ).__setitem__("base_tree", "0" * 40),
+                "base_tree drifted",
+            ),
+            (
+                "t11-transition",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T11"
+                ).__setitem__("path_transitions", [{"operation": "delete"}]),
+                "path_transitions must remain empty",
+            ),
+            (
+                "t11-mode",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T11"
+                )["owned_paths"][0].__setitem__("mode", "100755"),
+                "paths must all use mode 100644",
+            ),
+        )
+        for label, mutate, fragment in cases:
+            with self.subTest(label=label):
+                payload = copy.deepcopy(self.ownership_payload())
+                mutate(payload)
+                errors = []
+                self.checker.validate_phase2_frontier(payload, errors)
+                self.assert_rejected(errors, fragment)
+
+    def test_manifest_rejects_a_second_active_task(self):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T10", self.active_task(payload)["id"])
+        self.assertEqual("T11", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
-        self.assertEqual([], errors)
+        self.assert_rejected(errors, "exactly one active Task")
 
-    def test_safe_declared_expansion_passes(self):
+    def test_unreviewed_t11_declared_expansion_is_rejected(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         added = fixture / "docs/reviewed-expansion.md"
@@ -516,7 +592,9 @@ class RepositoryPolicyTest(unittest.TestCase):
         )
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
-        self.assertEqual([], self.errors_for(fixture))
+        self.assert_rejected(
+            self.errors_for(fixture), "exactly the reviewed 42 paths"
+        )
 
     def test_undeclared_live_path_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -837,6 +915,9 @@ class RepositoryPolicyTest(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         adr = (ROOT / HIERARCHY_ADR).read_text(encoding="utf-8")
         completion = (ROOT / REPOSITORY_COMPLETION).read_text(encoding="utf-8")
+        limitations = (ROOT / "docs/known-limitations.md").read_text(
+            encoding="utf-8"
+        )
 
         for text in (agents, readme, adr):
             self.assertIn(CANONICAL_HIERARCHY, text)
@@ -855,11 +936,28 @@ class RepositoryPolicyTest(unittest.TestCase):
             "Issue #12",
             "Epic #2",
             "post-merge receipt",
+            "Issue #23",
+            "minimal/partial execution slice",
+            "codex-cli 0.150.0-alpha.8",
+            "unsupported-client",
+            "does not embed or claim a successful live Codex run or runtime receipt",
+            "No successful live run or receipt is claimed in this tree.",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
         ):
             self.assertIn(marker, readme)
+        for marker in (
+            "minimal/partial offline slice",
+            "codex-cli 0.150.0-alpha.8",
+            "unsupported-client",
+            "required CI cannot run real Codex",
+            "does not claim a completed live representative Task",
+            "posted runtime receipt",
+            "release-level conformance result set is empty",
+            "`release_blocked` remains `true`",
+        ):
+            self.assertIn(marker, limitations)
         for marker in (
             "Phase 0 is complete.",
             "This tree satisfies the Phase 1 portable-core implementation gate.",
@@ -1298,14 +1396,244 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertIn("  quality:\n", workflow)
         self.assertIn("  conformance:\n", workflow)
 
-    def test_t10_acceptance_checker_is_registered_once_and_reachable_from_quality(self):
-        command = "python3 -I .github/scripts/check-phase1-acceptance.py"
+    def test_t11_frozen_and_runtime_checkers_are_registered_once(self):
         policy = self.ownership_payload()["policy"]
-        self.assertEqual(1, policy["required_quality_commands"].count(command))
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        self.assertEqual(1, workflow.count(f"run: {command}"))
+        for command in (
+            "python3 -I .github/scripts/check-phase1-accepted-snapshot.py",
+            "python3 -I .github/scripts/check-runtime-contracts.py",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(1, policy["required_quality_commands"].count(command))
+                self.assertEqual(1, workflow.count(f"run: {command}"))
+        historical = "python3 -I .github/scripts/check-phase1-acceptance.py"
+        self.assertNotIn(historical, policy["required_quality_commands"])
+        self.assertNotIn(f"run: {historical}", workflow)
         self.assertIn("  quality:\n", workflow)
         self.assertIn("  conformance:\n", workflow)
+
+    def test_historical_phase1_checker_is_exact_and_wrapper_only(self):
+        historical = ROOT / ".github/scripts/check-phase1-acceptance.py"
+        payload = historical.read_bytes()
+        self.assertEqual(
+            self.checker.HISTORICAL_PHASE1_CHECKER_SHA256,
+            hashlib.sha256(payload).hexdigest(),
+        )
+        self.assertEqual(
+            self.checker.HISTORICAL_PHASE1_CHECKER_BLOB,
+            self.checker.git_blob_object_id(payload),
+        )
+        wrapper_path = ROOT / self.checker.FROZEN_PHASE1_WRAPPER
+        wrapper_bytes = wrapper_path.read_bytes()
+        self.assertEqual(
+            self.checker.FROZEN_PHASE1_WRAPPER_SHA256,
+            hashlib.sha256(wrapper_bytes).hexdigest(),
+        )
+        wrapper = wrapper_bytes.decode("utf-8")
+        for marker in (
+            self.checker.ACCEPTED_PHASE1_COMMIT,
+            self.checker.ACCEPTED_PHASE1_TREE,
+            self.checker.HISTORICAL_PHASE1_CHECKER,
+            self.checker.HISTORICAL_PHASE1_CHECKER_BLOB,
+            self.checker.HISTORICAL_PHASE1_CHECKER_SHA256,
+        ):
+            self.assertIn(marker, wrapper)
+
+    def test_historical_phase1_checker_drift_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.HISTORICAL_PHASE1_CHECKER
+        path.write_bytes(path.read_bytes() + b"\n")
+        self.assert_rejected(
+            self.errors_for(fixture), "historical Phase 1 checker digest drifted"
+        )
+
+    def test_noop_frozen_wrapper_with_markers_is_rejected(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        markers = (
+            self.checker.ACCEPTED_PHASE1_COMMIT,
+            self.checker.ACCEPTED_PHASE1_TREE,
+            self.checker.HISTORICAL_PHASE1_CHECKER,
+            self.checker.HISTORICAL_PHASE1_CHECKER_BLOB,
+            self.checker.HISTORICAL_PHASE1_CHECKER_SHA256,
+        )
+        path = fixture / self.checker.FROZEN_PHASE1_WRAPPER
+        path.write_text(
+            "#!/usr/bin/env python3\n"
+            + "\n".join(f"# {marker}" for marker in markers)
+            + "\nraise SystemExit(0)\n",
+            encoding="utf-8",
+        )
+        self.assert_rejected(
+            self.errors_for(fixture), "frozen Phase 1 wrapper digest drifted"
+        )
+
+    def test_offline_runtime_checker_cannot_invoke_codex(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_CONTRACT_CHECKER
+        text = path.read_text(encoding="utf-8").replace(
+            "from __future__ import annotations\n",
+            "from __future__ import annotations\n\n"
+            "import subprocess\n"
+            'subprocess.run(["codex", "exec", "--json"])\n',
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "offline runtime checker digest drifted")
+        self.assert_rejected(errors, "offline runtime checker invokes a process")
+
+    def test_offline_runtime_checker_cannot_call_live_adapter_mode(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_CONTRACT_CHECKER
+        text = path.read_text(encoding="utf-8").replace(
+            '    adapter = import_script(root, ".github/scripts/codex-exec-adapter.py", "t11_runtime_adapter", errors)\n',
+            '    adapter = import_script(root, ".github/scripts/codex-exec-adapter.py", "t11_runtime_adapter", errors)\n'
+            "    adapter.execute_slice()\n",
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "offline runtime checker digest drifted")
+        self.assert_rejected(
+            errors,
+            "offline runtime checker references unreviewed runtime callable "
+            "adapter.execute_slice",
+        )
+
+    def test_offline_runtime_checker_cannot_import_or_apply_receipt_actuator(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_CONTRACT_CHECKER
+        text = path.read_text(encoding="utf-8").replace(
+            '    adapter = import_script(root, ".github/scripts/codex-exec-adapter.py", "t11_runtime_adapter", errors)\n',
+            '    adapter = import_script(root, ".github/scripts/codex-exec-adapter.py", "t11_runtime_adapter", errors)\n'
+            '    receipt = import_script(root, ".github/scripts/post-runtime-receipt.py", "t11_runtime_receipt", errors)\n'
+            '    receipt.main(["--apply"])\n',
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "offline runtime checker digest drifted")
+        self.assert_rejected(errors, "offline runtime checker dynamic imports drifted")
+        self.assert_rejected(
+            errors,
+            "offline runtime checker references unreviewed runtime callable receipt.main",
+        )
+
+    def test_native_adapter_validator_cannot_reach_live_runtime_helpers(self):
+        for helper in (
+            "execute_slice",
+            "execution_root_inventory",
+            "descriptor_xattr_inventory",
+            "process_table_snapshot",
+        ):
+            with self.subTest(helper=helper):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / self.checker.RUNTIME_ADAPTER
+                text = path.read_text(encoding="utf-8").replace(
+                    "def validate_envelope(envelope: Any) -> Dict[str, Any]:\n",
+                    "def validate_envelope(envelope: Any) -> Dict[str, Any]:\n"
+                    f"    {helper}()\n",
+                    1,
+                )
+                path.write_text(text, encoding="utf-8")
+                errors = self.errors_for(fixture)
+                self.assert_rejected(errors, "runtime import digest drifted")
+                self.assert_rejected(
+                    errors,
+                    f"{self.checker.RUNTIME_ADAPTER} reachable code invokes actuator "
+                    f"{helper}",
+                )
+
+    def test_runtime_adapter_rejects_unreviewed_native_library(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_ADAPTER
+        text = path.read_text(encoding="utf-8").replace(
+            'ctypes.CDLL("/usr/lib/libSystem.B.dylib", use_errno=True)',
+            'ctypes.CDLL("/unreviewed/runtime.dylib", use_errno=True)',
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "runtime import digest drifted")
+        self.assert_rejected(errors, "native capability-probe libraries drifted")
+
+    def test_runtime_adapter_rejects_unreviewed_ctypes_structure(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_ADAPTER
+        text = path.read_text(encoding="utf-8").replace(
+            "class _DarwinProcBSDInfo(ctypes.Structure):\n",
+            "class _DarwinProcBSDInfo(ctypes.Union):\n",
+            1,
+        )
+        path.write_text(text, encoding="utf-8")
+        errors = self.errors_for(fixture)
+        self.assert_rejected(errors, "runtime import digest drifted")
+        self.assert_rejected(errors, "import-time class execution")
+
+    def test_runtime_checker_and_imports_are_exact(self):
+        for relative, expected in (
+            (
+                self.checker.RUNTIME_CONTRACT_CHECKER,
+                self.checker.RUNTIME_CONTRACT_CHECKER_SHA256,
+            ),
+            (self.checker.RUNTIME_ADAPTER, self.checker.RUNTIME_ADAPTER_SHA256),
+            (
+                self.checker.RUNTIME_RECEIPT_ACTUATOR,
+                self.checker.RUNTIME_RECEIPT_ACTUATOR_SHA256,
+            ),
+        ):
+            with self.subTest(relative=relative):
+                self.assertEqual(
+                    expected, hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
+                )
+
+    def test_runtime_imports_cannot_execute_processes_at_import_time(self):
+        for relative in (
+            self.checker.RUNTIME_ADAPTER,
+            self.checker.RUNTIME_RECEIPT_ACTUATOR,
+        ):
+            with self.subTest(relative=relative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / relative
+                text = path.read_text(encoding="utf-8").replace(
+                    "import subprocess\n",
+                    "import subprocess\n"
+                    'subprocess.run(["codex", "exec", "--json"])\n',
+                    1,
+                )
+                path.write_text(text, encoding="utf-8")
+                errors = self.errors_for(fixture)
+                self.assert_rejected(errors, "runtime import digest drifted")
+                self.assert_rejected(errors, "import-time executable syntax")
+
+    def test_ci_cannot_invoke_live_runtime_or_receipt_actuator(self):
+        for marker in (
+            ".github/scripts/codex-exec-adapter.py",
+            ".github/scripts/post-runtime-receipt.py",
+            "run-live",
+            "--apply",
+            "codex exec",
+        ):
+            with self.subTest(marker=marker):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / ".github/workflows/ci.yml"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n# {marker}\n",
+                    encoding="utf-8",
+                )
+                self.assert_rejected(
+                    self.errors_for(fixture), "required CI must not invoke real Codex"
+                )
 
     def test_duplicate_required_job_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -1362,7 +1690,7 @@ jobs:
             self.errors_for(fixture), "reuses reserved Ruleset job ID(s): quality"
         )
 
-    def test_extra_workflow_without_reserved_context_passes(self):
+    def test_extra_workflow_without_reserved_context_still_needs_reviewed_scope(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
         self.add_declared_workflow(
@@ -1385,7 +1713,9 @@ jobs:
 """,
             "secondary.yml",
         )
-        self.assertEqual([], self.errors_for(fixture))
+        self.assert_rejected(
+            self.errors_for(fixture), "exactly the reviewed 42 paths"
+        )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
         for label, job_name in (
@@ -1440,9 +1770,9 @@ jobs:
         path = fixture / ".github/workflows/ci.yml"
         path.write_text(
             path.read_text(encoding="utf-8").replace(
-                "      - name: Validate live repository policy\n"
+                "      - name: Validate Phase 2 live repository policy\n"
                 "        run: python3 -I .github/scripts/check-repository-policy.py",
-                "      - name: Validate live repository policy\n"
+                "      - name: Validate Phase 2 live repository policy\n"
                 "        if: false\n"
                 "        run: python3 -I .github/scripts/check-repository-policy.py",
                 1,
@@ -1530,7 +1860,7 @@ jobs:
         self.addCleanup(temporary.cleanup)
         path = fixture / ".github/workflows/ci.yml"
         text = path.read_text(encoding="utf-8").replace(
-            "      - name: Validate live repository policy\n"
+            "      - name: Validate Phase 2 live repository policy\n"
             "        run: python3 -I .github/scripts/check-repository-policy.py\n",
             "",
             1,
@@ -1659,7 +1989,7 @@ jobs:
                     self.errors_for(fixture), "unsupported job metadata"
                 )
 
-    def test_new_governed_checkers_and_tests_pass_when_reachable(self):
+    def test_t11_rejects_unreviewed_checkers_even_when_reachable(self):
         cases = (
             (
                 ".github/scripts/check-future.py",
@@ -1692,7 +2022,9 @@ jobs:
                 ]
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
-                self.assertEqual([], self.errors_for(fixture))
+                self.assert_rejected(
+                    self.errors_for(fixture), "exactly the reviewed 42 paths"
+                )
 
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)
@@ -1702,7 +2034,9 @@ jobs:
             "import unittest\n\nclass FutureTest(unittest.TestCase):\n"
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
-        self.assertEqual([], self.errors_for(fixture))
+        self.assert_rejected(
+            self.errors_for(fixture), "exactly the reviewed 42 paths"
+        )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
         reviewed = "python3 -I .github/scripts/check-repository-policy.py"
@@ -1991,10 +2325,10 @@ jobs:
         active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T11",
-                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/13",
+                "id": "T12",
+                "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/24",
                 "state": "active",
-                "branch": "codex/phase-1-next-task",
+                "branch": "codex/phase-2-next-task",
                 "base_commit": subprocess.check_output(
                     ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
                 ).strip(),
@@ -2007,7 +2341,7 @@ jobs:
         errors = []
         self.checker.validate_manifest(transferred, errors)
         task = self.checker.active_task_for_branch(
-            transferred, "codex/phase-1-next-task", errors
+            transferred, "codex/phase-2-next-task", errors
         )
         self.assertIsNotNone(task)
         self.checker.authorize_changed_paths(task, [OWNERSHIP], errors)
@@ -2263,8 +2597,8 @@ jobs:
         )
         historical["owned_paths"].remove(manifest_entry)
         active = {
-            "id": "T11",
-            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/13",
+            "id": "T12",
+            "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/24",
             "state": "active",
             "branch": historical["branch"],
             "base_commit": historical["base_commit"],
@@ -2328,8 +2662,9 @@ jobs:
                     fixture, payload, {}, errors
                 )
                 self.assertEqual([], errors)
-                self.assertEqual(
-                    [], self.checker.validate_repository(fixture, environment={})
+                self.assert_rejected(
+                    self.checker.validate_repository(fixture, environment={}),
+                    "ownership T11",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):
@@ -2631,7 +2966,7 @@ jobs:
     def test_local_branch_allows_checking_active_owned_dirty_change(self):
         fixture = self.local_branch_fixture()
         active = self.active_task(self.ownership_payload(fixture))
-        relative = ".github/scripts/check-phase1-acceptance.py"
+        relative = ".github/scripts/check-repository-policy.py"
         self.assertIn(relative, {entry["path"] for entry in active["owned_paths"]})
         path = fixture / relative
         path.write_text(
@@ -2644,7 +2979,7 @@ jobs:
 
     def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
         fixture = self.local_branch_fixture()
-        relative = "docs/planning/phase-1-acceptance.md"
+        relative = "docs/agreements/runtime/minimal-codex-execution-loop.md"
         self.assertEqual(
             "A",
             subprocess.check_output(

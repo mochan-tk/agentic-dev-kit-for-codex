@@ -1,7 +1,7 @@
 # Known limitations
 
 Observed and documentation-derived statements are current through
-`2026-08-26`. Phase 0 is complete. This tree satisfies the **Phase 1
+`2026-08-28`. Phase 0 is complete. This tree satisfies the **Phase 1
 portable-core implementation gate**. Its committed status is a creation-time
 snapshot. The current durable owner-acceptance outcome is external GitHub state
 authoritative in Issue #12 and Epic #2; a later post-merge outcome is not
@@ -9,19 +9,34 @@ embedded in this tree.
 The overall repository implementation remains incomplete, the repository is
 not installable, and it is not a parity release. `release_blocked` remains `true`.
 
-## The portable core is not the operating harness
+## The minimal execution slice is not the operating harness
 
-Phase 1 now contains the Option B agreement, frozen/live policy split,
+Phase 1 contains the Option B agreement, frozen/live policy split,
 conformance catalog, pinned CI/toolchain policy, Epic/Task/PR ledger templates,
 connector-neutral context contracts, and all eight repository Skills. These
 are static repository contracts and accepted external-state receipts, not a
 universal runtime control plane.
 
-The six custom agents, hooks, execution envelope, loop-event schema, CLI
-adapter, installer/upgrade, live Task ritual, consent feedback transport,
-runtime probes, and adopter migration are not implemented. A constitution,
-Skill, schema, manifest, or green generic CI run does not make those controls
-active and does not prove an individual conformance scenario.
+Phase 2 T11 adds three static role definitions, minimal envelope/event/final-
+response/result/profile/receipt contracts, a deterministic Python controller,
+bounded process and Git verification, an offline fake process, and an
+append-only Task-receipt actuator. This is a minimal/partial offline slice. The
+static TOML files do not prove native named-agent selection or identity, and
+required CI cannot run real Codex, enter live mode, or apply a receipt.
+
+The Task-start observation found `codex-cli 0.150.0-alpha.8`. That prerelease
+is `unsupported-client` under the approved live gate. Consequently this tree
+does not claim a completed live representative Task, a successful live runtime
+profile, or a posted runtime receipt. A later exact-head owner-run observation
+must be `match` on an approved supported non-prerelease before those actions
+are permitted.
+
+The final six-role topology, native runtime routing, hooks, recovery,
+installer/upgrade, live generalized Task ritual, consent feedback transport,
+cross-surface runtime probes, and adopter migration remain incomplete. A
+constitution, Skill, schema, manifest, static role file, or green offline CI
+run does not make those controls active and does not prove an individual
+conformance scenario.
 
 The release-level conformance result set is empty and `release_blocked` is
 true. The Phase 1 scorecard inventories 136 scenarios, all `not-run`, with zero
@@ -102,17 +117,19 @@ stricter target policy, not native behavior.
 References: [Build Skills](https://learn.chatgpt.com/docs/build-skills) and
 [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-## Machine-readable execution is not deterministic execution
+## The bounded adapter does not make model execution deterministic
 
 `codex exec --json` emits JSONL events, but model behavior is not deterministic.
 `--output-schema` constrains the final model response; it does not define or
-validate the full JSONL event stream. No exhaustive versioned event schema was
-found in official documentation.
+validate the full JSONL event stream. No exhaustive versioned upstream event
+schema was found in official documentation.
 
-The later adapter must pin the Codex CLI version, preserve safe raw unknown
-events, normalize only recognized fields, and treat interrupted streams as
-incomplete. Resume IDs are opaque until a named-client probe verifies Task
-binding and compatibility.
+The T11 adapter therefore normalizes only bounded recognized semantics and
+treats unknown, malformed, conflicting, interrupted, excessive, or
+inconsistent streams as non-success. Its offline tests use a fake process and
+synthetic repositories. They do not prove that the currently installed alpha
+client can safely execute the live profile. Resume behavior remains outside
+the T11 slice and unverified.
 
 Reference: [Official non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode).
 

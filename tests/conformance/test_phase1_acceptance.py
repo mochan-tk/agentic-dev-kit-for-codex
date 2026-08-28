@@ -10,8 +10,10 @@ from pathlib import Path
 from unittest import mock
 
 
-ROOT = Path(__file__).resolve().parents[2]
-CHECKER = ROOT / ".github/scripts/check-phase1-acceptance.py"
+LIVE_ROOT = Path(__file__).resolve().parents[2]
+ROOT = LIVE_ROOT
+CHECKER = LIVE_ROOT / ".github/scripts/check-phase1-acceptance.py"
+SNAPSHOT_CHECKER = LIVE_ROOT / ".github/scripts/check-phase1-accepted-snapshot.py"
 PHASE1 = "tests/conformance/results/phase-1.json"
 RELEASE_RESULTS = "tests/conformance/results.json"
 ACCEPTANCE_DOC = "docs/planning/phase-1-acceptance.md"
@@ -22,11 +24,36 @@ MANIFEST = "tests/conformance/manifest.json"
 class Phase1AcceptanceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        global CHECKER, ROOT
+        snapshot_spec = importlib.util.spec_from_file_location(
+            "phase1_accepted_snapshot_for_historical_tests", SNAPSHOT_CHECKER
+        )
+        if snapshot_spec is None or snapshot_spec.loader is None:
+            raise AssertionError(
+                f"cannot load Phase 1 accepted-snapshot checker: {SNAPSHOT_CHECKER}"
+            )
+        snapshot_checker = importlib.util.module_from_spec(snapshot_spec)
+        snapshot_spec.loader.exec_module(snapshot_checker)
+        payload, contents, errors = snapshot_checker.verified_snapshot_contents(
+            LIVE_ROOT
+        )
+        if errors or payload is None:
+            raise AssertionError(f"cannot verify accepted Phase 1 snapshot: {errors}")
+        cls.accepted_temporary = tempfile.TemporaryDirectory()
+        ROOT = Path(cls.accepted_temporary.name) / "repository"
+        ROOT.mkdir(mode=0o700)
+        ROOT.chmod(0o700)
+        snapshot_checker.materialize_snapshot(ROOT, payload, contents)
+        CHECKER = ROOT / ".github/scripts/check-phase1-acceptance.py"
         spec = importlib.util.spec_from_file_location("phase1_acceptance", CHECKER)
         if spec is None or spec.loader is None:
             raise AssertionError(f"cannot load Phase 1 acceptance checker: {CHECKER}")
         cls.checker = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.checker)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.accepted_temporary.cleanup()
 
     def copy_fixture(self):
         temporary = tempfile.TemporaryDirectory()
@@ -387,7 +414,7 @@ class Phase1AcceptanceTest(unittest.TestCase):
         errors = self.errors_for(fixture)
         self.assert_rejected(errors, "scorecard exact contract row is not synchronized: K10")
 
-    def test_standalone_package_is_deterministically_discoverable(self):
+    def test_accepted_package_is_reached_only_through_the_live_frozen_wrapper(self):
         phase1 = self.read_json(ROOT, PHASE1)
         compatibility = phase1["compatibility_layer"]
         self.assertEqual(
@@ -411,12 +438,26 @@ class Phase1AcceptanceTest(unittest.TestCase):
         self.assertIn("docs/planning/phase-1-acceptance.md", readme)
         self.assertIn("docs/conformance/phase-1-scorecard.md", readme)
         ownership = self.read_json(
-            ROOT, ".github/governance/phase-task-ownership.v1.json"
+            LIVE_ROOT, ".github/governance/phase-task-ownership.v1.json"
         )
-        command = "python3 -I .github/scripts/check-phase1-acceptance.py"
-        self.assertEqual(1, ownership["policy"]["required_quality_commands"].count(command))
-        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        self.assertEqual(1, workflow.count(f"run: {command}"))
+        frozen_command = (
+            "python3 -I .github/scripts/check-phase1-accepted-snapshot.py"
+        )
+        historical_command = "python3 -I .github/scripts/check-phase1-acceptance.py"
+        commands = ownership["policy"]["required_quality_commands"]
+        self.assertEqual(1, commands.count(frozen_command))
+        self.assertEqual(0, commands.count(historical_command))
+        workflow = (LIVE_ROOT / ".github/workflows/ci.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(1, workflow.count(f"run: {frozen_command}"))
+        self.assertEqual(0, workflow.count(f"run: {historical_command}"))
+        self.assertEqual(
+            "fd0bee66f857601b352cee62eb0f71f2a7f33b507bdb31c5f84e80cbfd64a9de",
+            hashlib.sha256(
+                (LIVE_ROOT / ".github/scripts/check-phase1-acceptance.py").read_bytes()
+            ).hexdigest(),
+        )
 
     def test_fixed_input_symlink_is_rejected(self):
         temporary, fixture = self.copy_fixture()
