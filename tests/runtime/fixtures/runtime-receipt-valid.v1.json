@@ -20,11 +20,11 @@
       "status": "match",
       "reason": "stable client and all reviewed semantic capability probes match",
       "platform": {
-        "os": "fixture-os",
-        "architecture": "fixture-arch"
+        "os": "Linux",
+        "architecture": "aarch64"
       },
       "client": {
-        "version_output": "codex-cli 1.0.0",
+        "version_output": "codex-cli 0.150.1",
         "release_class": "stable",
         "binary_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "exec_help_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -65,7 +65,81 @@
           "rules_bypass_absent": true,
           "dynamic_task_data_stdin_only": true
         },
-        "network_sandbox_behavior": {"status": "pass"}
+        "network_sandbox_behavior": {"status": "pass"},
+        "containment_provider": {
+          "schema": "t11-containment-provider-evidence/v1",
+          "authority": "adapter/owner-authored",
+          "codex_authenticated_attestation": false,
+          "status": "pass",
+          "provider_kind": "colima-vm",
+          "profile_name": "t11-e2e-aaaaaaaaaaaa-01",
+          "vm_backend": "vz",
+          "architecture": "aarch64",
+          "native_architecture": true,
+          "guest_os": "Linux",
+          "guest_kernel": "6.8.0-fixture",
+          "created_at": "2026-08-28T00:00:00Z",
+          "provider_configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "effective_mount_inventory_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "provider_cache_mount_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "provider_cache_guest_mountpoint_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+          "host_mount_count": 1,
+          "host_mount_classifications": ["provider-internal-cache"],
+          "all_host_mounts_read_only": true,
+          "provider_cache_only": true,
+          "host_sensitive_mounts_absent": true,
+          "unapproved_mounts_absent": true,
+          "ssh_agent_forwarding": false,
+          "dot_ssh_public_key_loading": false,
+          "user_ssh_config_modified": false,
+          "vm_instance_identity_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "public_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "public_tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "repository_clean": true,
+          "codex_version_output": "codex-cli 0.150.1",
+          "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
+          "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
+          "extracted_binary_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "runtime_root_binding_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+          "dedicated_codex_home_binding_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+          "sandbox_configuration_probe": "pass",
+          "network_boundary_probe": "pass",
+          "process_containment_probe": "pass",
+          "control_plane": {
+            "schema": "t11-colima-control-plane-evidence/v1",
+            "authority": "owner-authored",
+            "codex_authenticated_attestation": false,
+            "status": "pass",
+            "pre_create_observed_at": "2026-08-27T23:59:58Z",
+            "post_create_observed_at": "2026-08-28T00:00:00Z",
+            "profile_name": "t11-e2e-aaaaaaaaaaaa-01",
+            "colima_version": "0.10.1",
+            "vm_backend": "vz",
+            "architecture": "aarch64",
+            "pre_create_profile_absent": true,
+            "pre_create_runtime_data_absent": true,
+            "fresh_instance": true,
+            "existing_instance_reused": false,
+            "existing_container_reused": false,
+            "existing_volume_reused": false,
+            "default_profile_reused": false,
+            "activation_context_unchanged": true,
+            "private_vm_disk": true,
+            "repository_on_private_vm_disk": true,
+            "runtime_root_on_private_vm_disk": true,
+            "additional_disks": 0,
+            "instance_identity_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+            "provider_configuration_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "normalized_control_plane_sha256": "583d41fc25bd8e89ab852cad950f12881a05edde4ceccdb33fa9b40e763c7f70",
+            "raw_paths_recorded": false
+          },
+          "lifecycle": {
+            "destroy_required": true,
+            "destroy_requested": false,
+            "destroy_completed": false,
+            "profile_absence_readback": "not-run"
+          }
+        }
       },
       "auth": {
         "class": "signed-in-client",
@@ -811,7 +885,7 @@
       },
       "digests": {
         "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
-        "runtime_profile_sha256": "4c26c3fdac9acf58da381eace9f0583ee3540cd7779c5c800da8864bdf2e3500"
+          "runtime_profile_sha256": "019ceb93766be906ede6c636f4d05ab1b1416fa6e73fb1a43c0bc9234ce99b00"
       },
       "privacy": {
         "raw_jsonl_retained": false,

@@ -70,7 +70,7 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior"],
+      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider"],
       "properties": {
         "configuration_intent": {
           "type": "object",
@@ -115,6 +115,186 @@
           "additionalProperties": false,
           "required": ["status"],
           "properties": {"status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}}
+        },
+        "containment_provider": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema", "authority", "codex_authenticated_attestation", "status",
+            "provider_kind", "profile_name", "vm_backend", "architecture",
+            "native_architecture", "guest_os", "guest_kernel", "created_at",
+            "provider_configuration_sha256", "effective_mount_inventory_sha256",
+            "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+            "host_mount_count", "host_mount_classifications", "all_host_mounts_read_only",
+            "provider_cache_only", "host_sensitive_mounts_absent", "unapproved_mounts_absent",
+            "ssh_agent_forwarding", "dot_ssh_public_key_loading", "user_ssh_config_modified",
+            "vm_instance_identity_sha256", "public_head", "public_tree", "repository_clean",
+            "codex_version_output", "approved_archive_sha256", "observed_archive_sha256",
+            "extracted_binary_sha256", "runtime_root_binding_sha256",
+            "dedicated_codex_home_binding_sha256", "sandbox_configuration_probe",
+            "network_boundary_probe", "process_containment_probe", "control_plane", "lifecycle"
+          ],
+          "properties": {
+            "schema": {"const": "t11-containment-provider-evidence/v1"},
+            "authority": {"const": "adapter/owner-authored"},
+            "codex_authenticated_attestation": {"const": false},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "provider_kind": {"enum": ["not-run", "colima-vm"]},
+            "profile_name": {"anyOf": [{"const": "not-run"}, {"type": "string", "pattern": "^t11-e2e-[0-9a-f]{12}-01$"}]},
+            "vm_backend": {"enum": ["not-run", "vz"]},
+            "architecture": {"enum": ["not-run", "aarch64"]},
+            "native_architecture": {"type": "boolean"},
+            "guest_os": {"type": "string", "minLength": 1, "maxLength": 128},
+            "guest_kernel": {"type": "string", "minLength": 1, "maxLength": 256},
+            "created_at": {"type": ["string", "null"], "format": "date-time"},
+            "provider_configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "effective_mount_inventory_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "provider_cache_mount_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "provider_cache_guest_mountpoint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "host_mount_count": {"type": "integer", "minimum": 0, "maximum": 32},
+            "host_mount_classifications": {
+              "type": "array", "maxItems": 1, "uniqueItems": true,
+              "items": {"const": "provider-internal-cache"}
+            },
+            "all_host_mounts_read_only": {"type": "boolean"},
+            "provider_cache_only": {"type": "boolean"},
+            "host_sensitive_mounts_absent": {"type": "boolean"},
+            "unapproved_mounts_absent": {"type": "boolean"},
+            "ssh_agent_forwarding": {"type": "boolean"},
+            "dot_ssh_public_key_loading": {"type": "boolean"},
+            "user_ssh_config_modified": {"type": "boolean"},
+            "vm_instance_identity_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "public_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "public_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "repository_clean": {"type": "boolean"},
+            "codex_version_output": {"type": "string", "minLength": 1, "maxLength": 128},
+            "approved_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "observed_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "extracted_binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "runtime_root_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "dedicated_codex_home_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "sandbox_configuration_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "network_boundary_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "process_containment_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "control_plane": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "schema", "authority", "codex_authenticated_attestation", "status",
+                "pre_create_observed_at", "post_create_observed_at", "profile_name",
+                "colima_version", "vm_backend", "architecture",
+                "pre_create_profile_absent", "pre_create_runtime_data_absent",
+                "fresh_instance", "existing_instance_reused", "existing_container_reused",
+                "existing_volume_reused", "default_profile_reused",
+                "activation_context_unchanged", "private_vm_disk",
+                "repository_on_private_vm_disk", "runtime_root_on_private_vm_disk",
+                "additional_disks", "instance_identity_sha256",
+                "provider_configuration_sha256", "normalized_control_plane_sha256",
+                "raw_paths_recorded"
+              ],
+              "properties": {
+                "schema": {"const": "t11-colima-control-plane-evidence/v1"},
+                "authority": {"const": "owner-authored"},
+                "codex_authenticated_attestation": {"const": false},
+                "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                "pre_create_observed_at": {"type": ["string", "null"], "format": "date-time"},
+                "post_create_observed_at": {"type": ["string", "null"], "format": "date-time"},
+                "profile_name": {"anyOf": [{"const": "not-run"}, {"type": "string", "pattern": "^t11-e2e-[0-9a-f]{12}-01$"}]},
+                "colima_version": {"enum": ["not-run", "0.10.1"]},
+                "vm_backend": {"enum": ["not-run", "vz"]},
+                "architecture": {"enum": ["not-run", "aarch64"]},
+                "pre_create_profile_absent": {"type": "boolean"},
+                "pre_create_runtime_data_absent": {"type": "boolean"},
+                "fresh_instance": {"type": "boolean"},
+                "existing_instance_reused": {"type": "boolean"},
+                "existing_container_reused": {"type": "boolean"},
+                "existing_volume_reused": {"type": "boolean"},
+                "default_profile_reused": {"type": "boolean"},
+                "activation_context_unchanged": {"type": "boolean"},
+                "private_vm_disk": {"type": "boolean"},
+                "repository_on_private_vm_disk": {"type": "boolean"},
+                "runtime_root_on_private_vm_disk": {"type": "boolean"},
+                "additional_disks": {"type": "integer", "minimum": 0, "maximum": 32},
+                "instance_identity_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "provider_configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "normalized_control_plane_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "raw_paths_recorded": {"const": false}
+              },
+              "allOf": [{
+                "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+                "then": {"properties": {
+                  "colima_version": {"const": "0.10.1"},
+                  "vm_backend": {"const": "vz"},
+                  "architecture": {"const": "aarch64"},
+                  "pre_create_profile_absent": {"const": true},
+                  "pre_create_runtime_data_absent": {"const": true},
+                  "fresh_instance": {"const": true},
+                  "existing_instance_reused": {"const": false},
+                  "existing_container_reused": {"const": false},
+                  "existing_volume_reused": {"const": false},
+                  "default_profile_reused": {"const": false},
+                  "activation_context_unchanged": {"const": true},
+                  "private_vm_disk": {"const": true},
+                  "repository_on_private_vm_disk": {"const": true},
+                  "runtime_root_on_private_vm_disk": {"const": true},
+                  "additional_disks": {"const": 0}
+                }}
+              }]
+            },
+            "lifecycle": {
+              "type": "object", "additionalProperties": false,
+              "required": ["destroy_required", "destroy_requested", "destroy_completed", "profile_absence_readback"],
+              "properties": {
+                "destroy_required": {"type": "boolean"},
+                "destroy_requested": {"const": false},
+                "destroy_completed": {"const": false},
+                "profile_absence_readback": {"const": "not-run"}
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+              "then": {
+                "properties": {
+                  "native_architecture": {"const": true},
+                  "provider_kind": {"const": "colima-vm"},
+                  "vm_backend": {"const": "vz"},
+                  "architecture": {"const": "aarch64"},
+                  "host_mount_count": {"const": 1},
+                  "host_mount_classifications": {"const": ["provider-internal-cache"]},
+                  "all_host_mounts_read_only": {"const": true},
+                  "provider_cache_only": {"const": true},
+                  "host_sensitive_mounts_absent": {"const": true},
+                  "unapproved_mounts_absent": {"const": true},
+                  "ssh_agent_forwarding": {"const": false},
+                  "dot_ssh_public_key_loading": {"const": false},
+                  "user_ssh_config_modified": {"const": false},
+                  "repository_clean": {"const": true},
+                  "codex_version_output": {"const": "codex-cli 0.150.1"},
+                  "approved_archive_sha256": {"const": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"},
+                  "observed_archive_sha256": {"const": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"},
+                  "sandbox_configuration_probe": {"const": "pass"},
+                  "network_boundary_probe": {"const": "pass"},
+                  "process_containment_probe": {"const": "pass"},
+                  "control_plane": {"properties": {"status": {"const": "pass"}}},
+                  "lifecycle": {
+                    "properties": {
+                      "destroy_required": {"const": true},
+                      "destroy_requested": {"const": false},
+                      "destroy_completed": {"const": false},
+                      "profile_absence_readback": {"const": "not-run"}
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
+              "then": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": false}}}}},
+              "else": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": true}}}}}
+            }
+          ]
         }
       }
     },
@@ -125,14 +305,16 @@
       "if": {"properties": {"status": {"const": "match"}}, "required": ["status"]},
       "then": {
         "properties": {
-          "client": {"properties": {"version_output": {"pattern": "^codex-cli [0-9]+\\.[0-9]+\\.[0-9]+$"}, "release_class": {"const": "stable"}}},
+          "client": {"properties": {"version_output": {"const": "codex-cli 0.150.1"}, "release_class": {"const": "stable"}}},
+          "platform": {"properties": {"os": {"const": "Linux"}, "architecture": {"const": "aarch64"}}},
           "capabilities": {"properties": {"exec_json": {"const": true}, "ephemeral": {"const": true}, "strict_config": {"const": true}, "ignore_user_config": {"const": true}, "workspace_write": {"const": true}, "approval_never": {"const": true}, "documented_config_keys_probe": {"const": "pass"}, "shell_environment_probe": {"const": "pass"}, "process_containment_probe": {"const": "pass"}, "model": {"const": true}, "reasoning": {"const": true}, "sandbox": {"const": true}, "approval": {"const": true}, "overrides": {"const": true}}, "required": ["exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_containment_probe", "model", "reasoning", "sandbox", "approval", "overrides"]},
-          "auth": {"properties": {"class": {"enum": ["signed-in-client", "api-key"]}}},
+          "auth": {"properties": {"class": {"const": "signed-in-client"}}},
           "evidence": {
             "properties": {
               "diagnostic_health": {"properties": {"status": {"const": "pass"}}},
               "exact_worker_argv": {"properties": {"status": {"const": "pass"}}},
-              "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}}
+              "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}},
+              "containment_provider": {"properties": {"status": {"const": "pass"}}}
             }
           },
           "live_run_allowed": {"const": true}

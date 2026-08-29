@@ -82,6 +82,44 @@ The private runtime home supplies the reviewed execpolicy surface. Live and
 probe argv must not contain `--ignore-rules` or any
 `--dangerously-bypass-*` argument.
 
+The approved T11 containment provider is one fresh, attempt-only Colima Linux
+VM using the VZ backend and native `aarch64`. Its profile name is
+`t11-e2e-<exact-public-head-first-12>-01`. The host Mac, default Colima
+profile, any existing VM/container/volume, and PID tracking alone are not the
+approved boundary. The repository is cloned from GitHub onto the VM private
+disk and checked against the exact public PR head/tree; the host repository,
+HOME, Codex/GitHub credentials, SSH agent, Docker socket, private TMPDIR, and
+unrelated paths are not shared.
+
+Before creation, owner-authored control-plane evidence must observe both the
+named profile and its runtime-data root as absent. The created instance is
+fresh: it reuses no VM, container, volume, default profile, or additional
+disk; activation context remains unchanged; the repository and runtime root
+reside on the VM private disk. A closed
+`t11-colima-control-plane-evidence/v1` record binds the observations, Colima
+`0.10.1`, profile/backend/architecture, instance and configuration digests,
+and chronology. Its normalized digest is independently recomputed from safe
+canonical fields, with raw paths excluded. This is owner-authored evidence,
+not a Codex-authenticated attestation.
+
+Colima 0.10.1 adds one provider-internal cache mount even when configured with
+`--mount none`. T11 redirects that cache to a fresh attempt-only provider root
+outside host HOME/private TMPDIR and requires the effective Lima mount
+inventory to contain exactly that one read-only entry and no other shared
+mount. Durable evidence records only the canonical inventory and entry
+digests, classification `provider-internal-cache`, count, read-only/absence
+booleans, and SSH-isolation booleans; it never records the raw source or guest
+path. SSH-agent forwarding and host `.ssh` public-key loading are disabled,
+and the user's SSH configuration is not modified.
+
+The VM installs official stable `codex-cli 0.150.1` from
+`codex-aarch64-unknown-linux-musl.tar.gz`. Both the approved archive SHA-256
+`5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264`
+and a separately calculated extracted-binary digest are required. Authentication
+uses a dedicated private VM `CODEX_HOME` and device authorization; credential
+values, device codes, and authentication files never enter artifacts or
+durable output.
+
 Before worker invocation, descriptor-aware checks require the worktree root and
 `work-item.txt` to keep their directory/file bindings. The only permitted
 worktree entry is a non-symlink regular file named `work-item.txt`, mode
@@ -155,6 +193,14 @@ documented config-key intent, exact worker argv, diagnostic-health,
 shell-environment, network/sandbox-behavior, and process-containment lanes have
 their independently required success evidence. An adapter-authored intent
 digest or doctor health result alone never proves effective configuration.
+`match` additionally requires a closed `containment_provider` lane with
+adapter/owner-authored authority, `codex_authenticated_attestation=false`, the
+exact approved Colima/VZ/aarch64/profile/client/archive boundary, passing
+configuration/network/process probes, exact public head/tree binding, a clean
+guest checkout, and the closed mount/SSH isolation claims above. This lane is
+not a Codex-issued or authenticated attestation. The historical task-start
+profile uses an exact `not-run` sentinel with zero digests and no fabricated
+provider, VM, or creation-time observation.
 Immediately before a
 live worker, the full sensor runs again and must equal the supplied semantic
 profile except for its observation timestamp.
@@ -177,9 +223,37 @@ is explicitly `unsigned-unverified`; this slice does not claim authentication
 or attestation. The actuator rejects private/raw material including raw JSONL
 and requires a fresh matching runtime observation. Limitations
 are a closed structured object, not arbitrary prose. Dry-run is canonical.
+The receipt projects only safe provider classifications, booleans, public Git
+bindings, timestamps, and digests. It excludes raw mount inventories and
+paths, doctor reports, environment values, credentials, JSONL, stderr,
+transcripts, and reasoning. At receipt time the pre-live provider record must
+say `destroy_required=true`, `destroy_requested=false`,
+`destroy_completed=false`, and `profile_absence_readback=not-run`. Receipt
+application precedes VM destruction, so destroy completion and the final
+profile-absence read-back are recorded only afterward as separate append-only
+owner/adapter evidence; the receipt must not claim them early.
 `--apply` preflights a bounded comment set using a stable attempt/digest marker:
-the same receipt is idempotent without POST, a conflicting same-attempt marker
-fails, and an uncertain POST is reconciled by read-back before any retry. POST
+the same receipt is idempotent without POST, any marker for a different attempt
+fails because T11 permits exactly one durable runtime receipt, a conflicting
+same-attempt marker fails, and an uncertain POST is reconciled by read-back before any retry. POST
 body bytes travel only on stdin; comments are never edited or deleted. Exact
 read-back and a second post-write head/tree/check read are required. The receipt does not change `release_blocked`, scenario
 states, a Ruleset, a tag, or a release.
+
+After that runtime receipt is posted, destruction uses a separate closed
+`t11-colima-lifecycle-receipt-request/v1` actuator. `--lifecycle-dry-run`
+renders canonical Issue #23 and PR #24 copies; `--lifecycle-apply` appends each
+copy with a target-specific stable marker and idempotent read-back. Its input
+includes the original validated native runtime-receipt request. The lifecycle
+validator regenerates the safe canonical `runtime-receipt/v1` projection and
+its exact rendered comment rather than trusting caller-authored marker/body
+bytes, then retains only that safe projection and request digest. It binds the
+exact runtime-receipt URL, body/record digests and GitHub `created_at`, the
+same attempt/profile/instance/control-plane digest, PR head/tree/checks,
+destroy request/completion timestamps, and both profile/runtime-data absence
+read-backs. Validation requires runtime-receipt posting before destroy request,
+then destroy completion before both absence observations. Every timestamp is
+bounded to at most 300 seconds in the future and the latest absence read-back
+must be at most 3600 seconds old when the actuator validates it. Raw provider state,
+paths, credentials, auth files, device codes, environment, JSONL, stderr,
+transcripts, and reasoning are rejected.

@@ -72,6 +72,460 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             },
         }
 
+    def colima_provider_input(self, head="a" * 40, tree="b" * 40):
+        control_plane = {
+            "schema": "t11-colima-control-plane-evidence/v1",
+            "authority": "owner-authored",
+            "codex_authenticated_attestation": False,
+            "status": "pass",
+            "pre_create_observed_at": "2026-08-28T23:59:59Z",
+            "post_create_observed_at": "2026-08-29T00:00:00Z",
+            "profile_name": "t11-e2e-{}-01".format(head[:12]),
+            "colima_version": "0.10.1",
+            "vm_backend": "vz",
+            "architecture": "aarch64",
+            "pre_create_profile_absent": True,
+            "pre_create_runtime_data_absent": True,
+            "fresh_instance": True,
+            "existing_instance_reused": False,
+            "existing_container_reused": False,
+            "existing_volume_reused": False,
+            "default_profile_reused": False,
+            "activation_context_unchanged": True,
+            "private_vm_disk": True,
+            "repository_on_private_vm_disk": True,
+            "runtime_root_on_private_vm_disk": True,
+            "additional_disks": 0,
+            "instance_identity_sha256": "5" * 64,
+            "provider_configuration_sha256": "1" * 64,
+            "normalized_control_plane_sha256": "0" * 64,
+            "raw_paths_recorded": False,
+        }
+        control_plane["normalized_control_plane_sha256"] = self.adapter.normalized_control_plane_sha256(control_plane)
+        return {
+            "schema": "t11-colima-provider-input/v1",
+            "authority": "owner-authored",
+            "provider": {
+                "kind": "colima-vm",
+                "profile_name": "t11-e2e-{}-01".format(head[:12]),
+                "vm_backend": "vz",
+                "architecture": "aarch64",
+                "created_at": "2026-08-29T00:00:00Z",
+                "provider_configuration_sha256": "1" * 64,
+                "effective_mount_inventory_sha256": "2" * 64,
+                "provider_cache_mount_sha256": "3" * 64,
+                "provider_cache_guest_mountpoint_sha256": "4" * 64,
+                "host_mount_count": 1,
+                "host_mount_classifications": ["provider-internal-cache"],
+                "all_host_mounts_read_only": True,
+                "ssh_agent_forwarding": False,
+                "dot_ssh_public_key_loading": False,
+                "user_ssh_config_modified": False,
+            },
+            "control_plane": control_plane,
+            "repository": {"head": head, "tree": tree},
+            "client": {
+                "version_output": "codex-cli 0.150.1",
+                "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
+                "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
+                "extracted_binary_sha256": "a" * 64,
+            },
+            "lifecycle": {
+                "destroy_required": True,
+                "destroy_requested": False,
+                "destroy_completed": False,
+                "profile_absence_readback": "not-run",
+            },
+        }
+
+    def passing_containment_evidence(self, head="a" * 40, tree="b" * 40):
+        control_plane = self.colima_provider_input(head, tree)["control_plane"]
+        return {
+            "schema": "t11-containment-provider-evidence/v1",
+            "authority": "adapter/owner-authored",
+            "codex_authenticated_attestation": False,
+            "status": "pass",
+            "provider_kind": "colima-vm",
+            "profile_name": "t11-e2e-{}-01".format(head[:12]),
+            "vm_backend": "vz",
+            "architecture": "aarch64",
+            "native_architecture": True,
+            "guest_os": "Linux",
+            "guest_kernel": "6.12.0-t11",
+            "created_at": "2026-08-29T00:00:00Z",
+            "provider_configuration_sha256": "1" * 64,
+            "effective_mount_inventory_sha256": "2" * 64,
+            "provider_cache_mount_sha256": "3" * 64,
+            "provider_cache_guest_mountpoint_sha256": "4" * 64,
+            "host_mount_count": 1,
+            "host_mount_classifications": ["provider-internal-cache"],
+            "all_host_mounts_read_only": True,
+            "provider_cache_only": True,
+            "host_sensitive_mounts_absent": True,
+            "unapproved_mounts_absent": True,
+            "ssh_agent_forwarding": False,
+            "dot_ssh_public_key_loading": False,
+            "user_ssh_config_modified": False,
+            "vm_instance_identity_sha256": "5" * 64,
+            "public_head": head,
+            "public_tree": tree,
+            "repository_clean": True,
+            "codex_version_output": "codex-cli 0.150.1",
+            "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
+            "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
+            "extracted_binary_sha256": "a" * 64,
+            "runtime_root_binding_sha256": "6" * 64,
+            "dedicated_codex_home_binding_sha256": "7" * 64,
+            "sandbox_configuration_probe": "pass",
+            "network_boundary_probe": "pass",
+            "process_containment_probe": "pass",
+            "control_plane": control_plane,
+            "lifecycle": {
+                "destroy_required": True,
+                "destroy_requested": False,
+                "destroy_completed": False,
+                "profile_absence_readback": "not-run",
+            },
+        }
+
+    def test_colima_provider_input_is_closed_exact_and_stdin_only(self):
+        value = self.colima_provider_input()
+        self.assertEqual(value, self.adapter.validate_colima_provider_input(copy.deepcopy(value)))
+        mutations = (
+            lambda item: item.pop("provider"),
+            lambda item: item.__setitem__("extra", "forbidden"),
+            lambda item: item["provider"].__setitem__("kind", "docker"),
+            lambda item: item["provider"].__setitem__("vm_backend", "qemu"),
+            lambda item: item["provider"].__setitem__("architecture", "x86_64"),
+            lambda item: item["provider"].__setitem__("profile_name", "default"),
+            lambda item: item["repository"].__setitem__("head", "c" * 40),
+            lambda item: item["repository"].__setitem__("tree", "short"),
+            lambda item: item["client"].__setitem__("version_output", "codex-cli 0.150.0"),
+            lambda item: item["client"].__setitem__("observed_archive_sha256", "0" * 64),
+            lambda item: item["client"].__setitem__("extracted_binary_sha256", "0" * 64),
+            lambda item: item["provider"].__setitem__("host_mount_count", 2),
+            lambda item: item["provider"].__setitem__("all_host_mounts_read_only", False),
+            lambda item: item["control_plane"].__setitem__("existing_instance_reused", True),
+            lambda item: item["control_plane"].__setitem__("existing_container_reused", True),
+            lambda item: item["control_plane"].__setitem__("existing_volume_reused", True),
+            lambda item: item["control_plane"].__setitem__("default_profile_reused", True),
+            lambda item: item["control_plane"].__setitem__("raw_paths_recorded", True),
+            lambda item: item["control_plane"].__setitem__("normalized_control_plane_sha256", "0" * 64),
+            lambda item: item["lifecycle"].__setitem__("destroy_requested", True),
+        )
+        for mutation in mutations:
+            candidate = copy.deepcopy(value)
+            mutation(candidate)
+            with self.subTest(candidate=candidate):
+                self.assert_contract_error(lambda c=candidate: self.adapter.validate_colima_provider_input(c))
+        parser = self.adapter.build_parser()
+        parsed = parser.parse_args(["profile"])
+        self.assertFalse(any("provider" in token for token in vars(parsed).values() if isinstance(token, str)))
+
+    def test_profile_cli_requires_bounded_provider_input_on_stdin(self):
+        result = subprocess.run(
+            [sys.executable, "-I", str(ADAPTER_PATH), "profile"], cwd=ROOT,
+            input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15,
+        )
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual("fail", json.loads(result.stdout)["status"])
+
+    def test_colima_mount_inventory_allows_only_one_read_only_bound_cache_share(self):
+        line = (
+            b"42 1 0:99 / /Users/Shared/t11-colima-t11-e2e-aaaaaaaaaaaa-01.A1b2C3d4/xdg-cache/colima ro,relatime - "
+            b"virtiofs mount0 ro\n"
+        )
+        provider = self.colima_provider_input()["provider"]
+        provider["effective_mount_inventory_sha256"] = self.adapter.sha256_bytes(line)
+        provider["provider_cache_mount_sha256"] = self.adapter.sha256_bytes(line)
+        provider["provider_cache_guest_mountpoint_sha256"] = self.adapter.sha256_bytes(
+            b"/Users/Shared/t11-colima-t11-e2e-aaaaaaaaaaaa-01.A1b2C3d4/xdg-cache/colima\n"
+        )
+        facts = self.adapter.inspect_colima_mount_inventory(line, provider)
+        self.assertEqual("pass", facts["status"])
+        self.assertTrue(facts["provider_cache_only"])
+        self.assertNotIn("/Users/", json.dumps(facts))
+        for bad in (
+            line.replace(b" ro,relatime", b" rw,relatime"),
+            line + b"43 1 0:100 / /Users/alice ro - 9p host ro\n",
+            line.replace(b"/Users/Shared/t11-colima-t11-e2e-aaaaaaaaaaaa-01.A1b2C3d4/xdg-cache/colima", b"/Users/alice/repository"),
+            line + b"43 1 0:100 / /mnt/nfs rw,relatime - nfs4 server:/share rw\n",
+            line + b"43 1 0:100 / /mnt/cifs rw,relatime - cifs //server/share rw\n",
+            line + b"43 1 0:100 / /mnt/opaque rw,relatime - fuse.unreviewed opaque rw\n",
+            line + b"43 1 0:100 / /mnt/vbox rw,relatime - vboxsf shared rw\n",
+            line + b"43 1 0:100 / /mnt/unknown ro,relatime - madeupfs opaque ro\n",
+        ):
+            with self.subTest(bad=bad):
+                drift = self.adapter.inspect_colima_mount_inventory(bad, provider)
+                self.assertEqual("fail", drift["status"])
+                self.assertFalse(drift["host_sensitive_mounts_absent"] if b"alice" in bad else drift["unapproved_mounts_absent"])
+
+    def test_colima_provider_reobserves_instance_repo_and_extracted_binary(self):
+        line = (
+            b"42 1 0:99 / /Users/Shared/t11-colima-t11-e2e-aaaaaaaaaaaa-01.A1b2C3d4/xdg-cache/colima ro,relatime - "
+            b"virtiofs mount0 ro\n"
+        )
+        machine = b"0123456789abcdef0123456789abcdef\n"
+        boot = b"12345678-1234-1234-1234-123456789abc\n"
+        value = self.colima_provider_input()
+        value["provider"]["effective_mount_inventory_sha256"] = self.adapter.sha256_bytes(line)
+        value["provider"]["provider_cache_mount_sha256"] = self.adapter.sha256_bytes(line)
+        value["provider"]["provider_cache_guest_mountpoint_sha256"] = self.adapter.sha256_bytes(
+            b"/Users/Shared/t11-colima-t11-e2e-aaaaaaaaaaaa-01.A1b2C3d4/xdg-cache/colima\n"
+        )
+        value["control_plane"]["provider_configuration_sha256"] = value["provider"]["provider_configuration_sha256"]
+        value["control_plane"]["instance_identity_sha256"] = self.adapter.sha256_bytes(
+            machine.strip().lower() + b"\0" + boot.strip().lower()
+        )
+        value["control_plane"]["normalized_control_plane_sha256"] = self.adapter.normalized_control_plane_sha256(
+            value["control_plane"]
+        )
+        layout = self.adapter.ColimaRuntimeLayout(
+            Path("/private"), Path("/private/home"), Path("/private/tmp"),
+            Path("/private/work"), Path("/private/bin/codex"), "6" * 64, "7" * 64,
+        )
+
+        def read(path, _limit):
+            if str(path) == "/proc/self/mountinfo":
+                return line
+            if str(path) == "/etc/machine-id":
+                return machine
+            if str(path) == "/proc/sys/kernel/random/boot_id":
+                return boot
+            raise AssertionError(str(path))
+
+        def git(_root, arguments, _environment, **_kwargs):
+            if arguments[0] == "status":
+                return b""
+            return (value["repository"]["head"] if arguments[-1] == "HEAD" else value["repository"]["tree"]).encode() + b"\n"
+
+        uname = SimpleNamespace(sysname="Linux", machine="aarch64", release="6.12.0-t11")
+        with mock.patch.object(self.adapter, "read_bounded_regular", side_effect=read), \
+             mock.patch.object(self.adapter, "run_git", side_effect=git), \
+             mock.patch.object(self.adapter.os, "uname", return_value=uname), \
+             mock.patch.dict(os.environ, {}, clear=True):
+            passed = self.adapter.observe_colima_provider_evidence(
+                ROOT, value, layout, "a" * 64, "codex-cli 0.150.1", {},
+            )
+            drifted = self.adapter.observe_colima_provider_evidence(
+                ROOT, value, layout, "f" * 64, "codex-cli 0.150.1", {},
+            )
+        self.assertEqual("pass", passed["status"])
+        self.assertEqual("fail", drifted["status"])
+        self.assertEqual("f" * 64, drifted["extracted_binary_sha256"])
+        self.assertFalse(drifted["codex_authenticated_attestation"])
+
+    def test_colima_runtime_root_and_codex_home_are_nofollow_private_and_bound(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            parent = Path(temporary)
+            root = parent / "runtime"
+            root.mkdir(mode=0o700)
+            (root / "bin").mkdir(mode=0o700)
+            with mock.patch.dict(os.environ, {"T11_VM_RUNTIME_ROOT": str(root)}):
+                layout = self.adapter.prepare_colima_runtime_layout()
+            self.assertEqual(0o700, stat.S_IMODE(os.stat(root, follow_symlinks=False).st_mode))
+            self.assertRegex(layout.runtime_root_binding_sha256, r"^[0-9a-f]{64}$")
+            self.assertRegex(layout.dedicated_codex_home_binding_sha256, r"^[0-9a-f]{64}$")
+            public_projection = {
+                "runtime_root_binding_sha256": layout.runtime_root_binding_sha256,
+                "dedicated_codex_home_binding_sha256": layout.dedicated_codex_home_binding_sha256,
+            }
+            self.assertNotIn(str(root), json.dumps(public_projection))
+            os.chmod(root, 0o755)
+            with mock.patch.dict(os.environ, {"T11_VM_RUNTIME_ROOT": str(root)}):
+                self.assert_contract_error(self.adapter.prepare_colima_runtime_layout, "mode")
+            os.chmod(root, 0o700)
+            unsafe = parent / "unsafe"
+            unsafe.symlink_to(root, target_is_directory=True)
+            with mock.patch.dict(os.environ, {"T11_VM_RUNTIME_ROOT": str(unsafe)}):
+                self.assert_contract_error(self.adapter.prepare_colima_runtime_layout, "link")
+            (root / "home/.codex").rmdir()
+            (root / "home/.codex").symlink_to(root / "bin", target_is_directory=True)
+            with mock.patch.dict(os.environ, {"T11_VM_RUNTIME_ROOT": str(root)}):
+                self.assert_contract_error(self.adapter.prepare_colima_runtime_layout, "link")
+
+    def test_containment_evidence_is_not_codex_attestation_and_lifecycle_is_honest(self):
+        evidence = self.adapter.not_run_containment_provider_evidence()
+        self.assertFalse(evidence["codex_authenticated_attestation"])
+        self.assertEqual({
+            "destroy_required": False,
+            "destroy_requested": False,
+            "destroy_completed": False,
+            "profile_absence_readback": "not-run",
+        }, evidence["lifecycle"])
+        self.assertNotIn("/Users/", json.dumps(evidence))
+        self.assertEqual("not-run", evidence["control_plane"]["status"])
+        self.assertFalse(evidence["control_plane"]["fresh_instance"])
+
+    def test_live_profile_cross_binds_provider_platform_client_and_chronology(self):
+        valid = copy.deepcopy(self.profile)
+        valid["scope"] = "exact-head-live-sensor"
+        valid["platform"] = {"os": "Linux", "architecture": "aarch64"}
+        self.adapter.validate_runtime_profile(valid)
+        mutations = (
+            lambda item: item["platform"].__setitem__("os", "Darwin"),
+            lambda item: item["client"].__setitem__("binary_sha256", "f" * 64),
+            lambda item: item["auth"].__setitem__("class", "api-key"),
+            lambda item: item["evidence"]["containment_provider"].__setitem__("codex_authenticated_attestation", True),
+            lambda item: item["evidence"]["containment_provider"]["control_plane"].__setitem__("codex_authenticated_attestation", True),
+            lambda item: item["evidence"]["containment_provider"].__setitem__("created_at", "2099-01-01T00:00:00Z"),
+        )
+        for mutation in mutations:
+            profile = copy.deepcopy(valid)
+            mutation(profile)
+            with self.subTest(profile=profile):
+                self.assert_contract_error(lambda p=profile: self.adapter.validate_runtime_profile(p))
+
+    def live_claim_layout(self, root):
+        return self.adapter.ColimaRuntimeLayout(
+            root=root,
+            home=root / "home",
+            tmp=root / "tmp",
+            work=root / "work",
+            binary=root / "bin/codex",
+            runtime_root_binding_sha256=self.adapter._directory_binding_sha256(
+                os.stat(root, follow_symlinks=False), "runtime-root",
+            ),
+            dedicated_codex_home_binding_sha256="7" * 64,
+        )
+
+    def live_claim_argv(self):
+        return [
+            "/reviewed/codex",
+            "-c", "memories.generate_memories=false",
+            "-c", "memories.use_memories=false",
+        ]
+
+    def test_live_attempt_claim_is_durable_exact_and_blocks_same_or_different_retry(self):
+        failed_worker = self.adapter.ProcessResult(1, None, False, False, False, b"", 0, True)
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            os.chmod(root, 0o700)
+            layout = self.live_claim_layout(root)
+            with mock.patch.object(self.adapter, "run_bounded_process", return_value=failed_worker) as worker:
+                first = self.adapter.run_claimed_live_worker(
+                    layout, copy.deepcopy(self.envelope), copy.deepcopy(self.profile),
+                    self.live_claim_argv(), root, {}, b"stdin-only prompt",
+                )
+                self.assertEqual(1, first.exit_code)
+                self.assert_contract_error(
+                    lambda: self.adapter.run_claimed_live_worker(
+                        layout, copy.deepcopy(self.envelope), copy.deepcopy(self.profile),
+                        self.live_claim_argv(), root, {}, b"stdin-only prompt",
+                    ),
+                    "already consumed",
+                )
+                different = copy.deepcopy(self.envelope)
+                different["attempt_id"] = "ATTEMPT-fedcba9876543210"
+                self.assert_contract_error(
+                    lambda: self.adapter.run_claimed_live_worker(
+                        layout, different, copy.deepcopy(self.profile),
+                        self.live_claim_argv(), root, {}, b"different stdin-only prompt",
+                    ),
+                    "already consumed",
+                )
+            worker.assert_called_once()
+            claim_path = root / self.adapter.LIVE_ATTEMPT_CLAIM_NAME
+            info = os.stat(claim_path, follow_symlinks=False)
+            self.assertTrue(stat.S_ISREG(info.st_mode))
+            self.assertEqual(0o600, stat.S_IMODE(info.st_mode))
+            self.assertEqual(1, info.st_nlink)
+            record = json.loads(claim_path.read_text(encoding="utf-8"))
+            payload = {
+                "schema": record["schema"],
+                "attempt_id": record["attempt_id"],
+                "public_head": record["public_head"],
+                "public_tree": record["public_tree"],
+                "provider_profile_name": record["provider_profile_name"],
+                "vm_instance_identity_sha256": record["vm_instance_identity_sha256"],
+                "control_plane_sha256": record["control_plane_sha256"],
+            }
+            self.assertEqual(
+                self.adapter.sha256_bytes(self.adapter.canonical_bytes(payload)),
+                record["canonical_sha256"],
+            )
+            self.assertNotIn(str(root), json.dumps(record))
+            self.assertNotIn("stdin-only prompt", json.dumps(record))
+            self.assertEqual(
+                self.profile["evidence"]["containment_provider"]["profile_name"],
+                record["provider_profile_name"],
+            )
+            self.assertEqual(
+                self.profile["evidence"]["containment_provider"]["vm_instance_identity_sha256"],
+                record["vm_instance_identity_sha256"],
+            )
+
+    def test_live_attempt_claim_mode_namespace_binding_and_durability_fail_closed(self):
+        failed_worker = self.adapter.ProcessResult(1, None, False, False, False, b"", 0, True)
+
+        def exercise(patch_context, expect_claim=True):
+            with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+                root = Path(temporary)
+                os.chmod(root, 0o700)
+                layout = self.live_claim_layout(root)
+                with patch_context, mock.patch.object(
+                    self.adapter, "run_bounded_process", return_value=failed_worker,
+                ) as worker:
+                    self.assert_contract_error(lambda: self.adapter.run_claimed_live_worker(
+                        layout, copy.deepcopy(self.envelope), copy.deepcopy(self.profile),
+                        self.live_claim_argv(), root, {}, b"stdin-only prompt",
+                    ))
+                worker.assert_not_called()
+                self.assertEqual(expect_claim, (root / self.adapter.LIVE_ATTEMPT_CLAIM_NAME).exists())
+
+        real_fchmod = self.adapter.os.fchmod
+        exercise(mock.patch.object(
+            self.adapter.os, "fchmod",
+            side_effect=lambda descriptor, _mode: real_fchmod(descriptor, 0o644),
+        ))
+
+        real_write = self.adapter.os.write
+
+        def corrupt_write(descriptor, data):
+            corrupted = (b"X" + data[1:]) if data else data
+            return real_write(descriptor, corrupted)
+
+        exercise(mock.patch.object(self.adapter.os, "write", side_effect=corrupt_write))
+
+        real_stat = self.adapter.os.stat
+        swapped = {"done": False}
+
+        def namespace_swap(path, *args, **kwargs):
+            info = real_stat(path, *args, **kwargs)
+            if path == self.adapter.LIVE_ATTEMPT_CLAIM_NAME and kwargs.get("dir_fd") is not None and not swapped["done"]:
+                swapped["done"] = True
+                values = list(info)
+                values[1] += 1
+                return os.stat_result(values)
+            return info
+
+        exercise(mock.patch.object(self.adapter.os, "stat", side_effect=namespace_swap), expect_claim=False)
+        exercise(mock.patch.object(self.adapter.os, "fsync", side_effect=OSError("durability unavailable")))
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            os.chmod(root, 0o700)
+            profile = copy.deepcopy(self.profile)
+            profile["evidence"]["containment_provider"]["public_head"] = "f" * 40
+            with mock.patch.object(self.adapter, "run_bounded_process", return_value=failed_worker) as worker:
+                self.assert_contract_error(lambda: self.adapter.run_claimed_live_worker(
+                    self.live_claim_layout(root), copy.deepcopy(self.envelope), profile,
+                    self.live_claim_argv(), root, {}, b"stdin-only prompt",
+                ), "binding")
+            worker.assert_not_called()
+            self.assertFalse((root / self.adapter.LIVE_ATTEMPT_CLAIM_NAME).exists())
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            os.chmod(root, 0o700)
+            with mock.patch.object(self.adapter, "run_bounded_process", return_value=failed_worker) as worker:
+                self.assert_contract_error(lambda: self.adapter.run_claimed_live_worker(
+                    self.live_claim_layout(root), copy.deepcopy(self.envelope), copy.deepcopy(self.profile),
+                    ["/reviewed/codex"], root, {}, b"stdin-only prompt",
+                ), "memory")
+            worker.assert_not_called()
+            self.assertFalse((root / self.adapter.LIVE_ATTEMPT_CLAIM_NAME).exists())
+
     def test_repository_runtime_contract_checker_passes(self):
         self.assertEqual([], self.checker.validate_repository(ROOT))
         result = subprocess.run(
@@ -151,20 +605,33 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
 
     def test_stable_semantic_sensor_has_reachable_match_and_live_reprobes(self):
         stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
-        stable_version = b"codex-cli 1.2.3\n"
+        stable_version = b"codex-cli 0.150.1\n"
 
         def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
             del stdin_bytes, timeout
             payload = stable_version if argv[-1] == "--version" else stable_help
             return self.adapter.ProcessResult(0, None, False, False, False, payload, 0, True)
 
-        with mock.patch.object(self.adapter, "resolve_executable_from_path", return_value=Path(sys.executable)), \
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            for child in ("home", "tmp", "work", "bin"):
+                (root / child).mkdir(mode=0o700)
+            (root / "home/.codex").mkdir(mode=0o700)
+            layout = self.adapter.ColimaRuntimeLayout(
+                root, root / "home", root / "tmp", root / "work", Path(sys.executable),
+                "6" * 64, "7" * 64,
+            )
+            provider_input = self.colima_provider_input()
+            containment = self.passing_containment_evidence()
+            uname = SimpleNamespace(sysname="Linux", machine="aarch64", release="6.12.0-t11")
+            with mock.patch.object(self.adapter, "prepare_colima_runtime_layout", return_value=layout), \
              mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
              mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=self.passing_runtime_probe()), \
-             mock.patch.object(self.adapter, "live_containment_proven", return_value=True), \
+             mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=containment), \
              mock.patch.object(self.adapter, "auth_class", return_value="signed-in-client"), \
-             mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64):
-            observed = self.adapter.observe_runtime_profile(ROOT, "gpt-5.6-sol", "high")
+             mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64), \
+             mock.patch.object(self.adapter.os, "uname", return_value=uname):
+                observed = self.adapter.observe_runtime_profile(ROOT, "gpt-5.6-sol", "high", provider_input)
         self.assertEqual("match", observed["status"])
         self.assertTrue(observed["live_run_allowed"])
 
@@ -181,11 +648,20 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 "fresh",
             )
         sensor.assert_called_once()
+        fresh_provider_input = sensor.call_args.args[3]
+        self.assertEqual("t11-colima-provider-input/v1", fresh_provider_input["schema"])
+        self.assertEqual(self.envelope["harness"]["commit"], fresh_provider_input["repository"]["head"])
+        self.assertEqual(self.envelope["harness"]["tree"], fresh_provider_input["repository"]["tree"])
+        live_argv_text = "\n".join(self.adapter.build_live_argv(
+            Path("/reviewed/codex"), Path("/isolated-target"), ROOT, self.envelope,
+        ))
+        self.assertNotIn(fresh_provider_input["provider"]["profile_name"], live_argv_text)
+        self.assertNotIn(fresh_provider_input["repository"]["head"], live_argv_text)
         create.assert_not_called()
 
     def test_stable_sensor_blocks_live_when_descendant_containment_is_unproven(self):
         stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
-        stable_version = b"codex-cli 1.2.3\n"
+        stable_version = b"codex-cli 0.150.1\n"
 
         def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
             del stdin_bytes, timeout
@@ -195,12 +671,11 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         with mock.patch.object(self.adapter, "resolve_executable_from_path", return_value=Path(sys.executable)), \
              mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
              mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=self.passing_runtime_probe()), \
-             mock.patch.object(self.adapter, "live_containment_proven", return_value=False), \
              mock.patch.object(self.adapter, "auth_class", return_value="signed-in-client"), \
              mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64):
             observed = self.adapter.observe_runtime_profile(ROOT, "gpt-5.6-sol", "high")
         self.assertEqual("UNCHECKABLE", observed["status"])
-        self.assertEqual("UNCHECKABLE", observed["capabilities"]["process_containment_probe"])
+        self.assertEqual("not-run", observed["capabilities"]["process_containment_probe"])
         self.assertFalse(observed["live_run_allowed"])
 
     def test_runtime_entrypoints_gate_capabilities_before_side_effects(self):

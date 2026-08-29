@@ -40,16 +40,16 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "8a9b9cd36956eda0bbfe25d9a5d2ace537cfd87b91d74e9bbafea8ac3080dc6f"
+    "a685f62fbd91bd5bf7dd4dc3d83cd47e83ce080a91969039d7eab72f72e20a78"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "75a4085020c8e6e3e8fb75d06b2397cb5288ae0e2fffea4a495c398700ea3238"
+    "633dec3be2d7011a75a14f1702c0034451d01d6de1d208291dfb5f464553f8f4"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
-    "35beeeee04b48a13c03ca581fb23788ad63929d62b355d9c51c89374ef154d0b"
+    "123f0991eec502c9acbc5fe52accad72033596e759d956d069fc417f5da1fb6c"
 )
 TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 REVIEWED_INVARIANT_DIGEST = (
@@ -1725,15 +1725,23 @@ def validate_offline_runtime_checker_boundary(
                 "descriptor_xattr_inventory",
                 "execution_root_inventory",
                 "execute_slice",
+                "_ensure_private_child",
+                "_open_absolute_directory_nofollow",
+                "_read_identity_value",
                 "_darwin_process_info",
                 "_darwin_process_table_snapshot",
                 "_linux_process_table_snapshot",
                 "_xattr_name_blob",
                 "_xattr_value",
+                "auth_class",
+                "bounded_capture",
+                "cli_profile",
                 "run_bounded_process",
                 "run_git",
                 "run_fresh_verifier",
+                "observe_colima_provider_evidence",
                 "observe_runtime_profile",
+                "prepare_colima_runtime_layout",
                 "process_table_snapshot",
                 "probe_config_and_shell_environment",
                 "probe_runtime_configuration",
@@ -1751,6 +1759,7 @@ def validate_offline_runtime_checker_boundary(
     )
     adapter_direct_imports = {
         "argparse",
+        "contextlib",
         "ctypes",
         "datetime",
         "hashlib",

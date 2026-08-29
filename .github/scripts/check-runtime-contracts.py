@@ -95,6 +95,36 @@ REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
 REVIEWED_RULES_BYTES = (
     b"# T11 reviewed empty execpolicy profile. Platform policy remains authoritative.\n"
 )
+APPROVED_CODEX_VERSION = "codex-cli 0.150.1"
+APPROVED_ARCHIVE_SHA256 = "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"
+ZERO_OID = "0" * 40
+ZERO_SHA256 = "0" * 64
+CONTAINMENT_PROVIDER_KEYS = (
+    "schema", "authority", "codex_authenticated_attestation", "status",
+    "provider_kind", "profile_name", "vm_backend", "architecture",
+    "native_architecture", "guest_os", "guest_kernel", "created_at",
+    "provider_configuration_sha256", "effective_mount_inventory_sha256",
+    "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+    "host_mount_count", "host_mount_classifications", "all_host_mounts_read_only",
+    "provider_cache_only", "host_sensitive_mounts_absent", "unapproved_mounts_absent",
+    "ssh_agent_forwarding", "dot_ssh_public_key_loading", "user_ssh_config_modified",
+    "vm_instance_identity_sha256", "public_head", "public_tree", "repository_clean",
+    "codex_version_output", "approved_archive_sha256", "observed_archive_sha256",
+    "extracted_binary_sha256", "runtime_root_binding_sha256",
+    "dedicated_codex_home_binding_sha256", "sandbox_configuration_probe",
+    "network_boundary_probe", "process_containment_probe", "control_plane", "lifecycle",
+)
+CONTROL_PLANE_KEYS = (
+    "schema", "authority", "codex_authenticated_attestation", "status",
+    "pre_create_observed_at", "post_create_observed_at", "profile_name",
+    "colima_version", "vm_backend", "architecture", "pre_create_profile_absent",
+    "pre_create_runtime_data_absent", "fresh_instance", "existing_instance_reused",
+    "existing_container_reused", "existing_volume_reused", "default_profile_reused",
+    "activation_context_unchanged", "private_vm_disk",
+    "repository_on_private_vm_disk", "runtime_root_on_private_vm_disk",
+    "additional_disks", "instance_identity_sha256", "provider_configuration_sha256",
+    "normalized_control_plane_sha256", "raw_paths_recorded",
+)
 
 
 def sha256(data: bytes) -> str:
@@ -186,13 +216,167 @@ def validate_runtime_override_schema(schema: Any, errors: List[str]) -> None:
     )
 
 
+def expected_control_plane_schema() -> Dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(CONTROL_PLANE_KEYS),
+        "properties": {
+            "schema": {"const": "t11-colima-control-plane-evidence/v1"},
+            "authority": {"const": "owner-authored"},
+            "codex_authenticated_attestation": {"const": False},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "pre_create_observed_at": {"type": ["string", "null"], "format": "date-time"},
+            "post_create_observed_at": {"type": ["string", "null"], "format": "date-time"},
+            "profile_name": {"anyOf": [{"const": "not-run"}, {"type": "string", "pattern": "^t11-e2e-[0-9a-f]{12}-01$"}]},
+            "colima_version": {"enum": ["not-run", "0.10.1"]},
+            "vm_backend": {"enum": ["not-run", "vz"]},
+            "architecture": {"enum": ["not-run", "aarch64"]},
+            "pre_create_profile_absent": {"type": "boolean"},
+            "pre_create_runtime_data_absent": {"type": "boolean"},
+            "fresh_instance": {"type": "boolean"},
+            "existing_instance_reused": {"type": "boolean"},
+            "existing_container_reused": {"type": "boolean"},
+            "existing_volume_reused": {"type": "boolean"},
+            "default_profile_reused": {"type": "boolean"},
+            "activation_context_unchanged": {"type": "boolean"},
+            "private_vm_disk": {"type": "boolean"},
+            "repository_on_private_vm_disk": {"type": "boolean"},
+            "runtime_root_on_private_vm_disk": {"type": "boolean"},
+            "additional_disks": {"type": "integer", "minimum": 0, "maximum": 32},
+            "instance_identity_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "provider_configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "normalized_control_plane_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "raw_paths_recorded": {"const": False},
+        },
+        "allOf": [{
+            "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+            "then": {"properties": {
+                "colima_version": {"const": "0.10.1"},
+                "vm_backend": {"const": "vz"},
+                "architecture": {"const": "aarch64"},
+                "pre_create_profile_absent": {"const": True},
+                "pre_create_runtime_data_absent": {"const": True},
+                "fresh_instance": {"const": True},
+                "existing_instance_reused": {"const": False},
+                "existing_container_reused": {"const": False},
+                "existing_volume_reused": {"const": False},
+                "default_profile_reused": {"const": False},
+                "activation_context_unchanged": {"const": True},
+                "private_vm_disk": {"const": True},
+                "repository_on_private_vm_disk": {"const": True},
+                "runtime_root_on_private_vm_disk": {"const": True},
+                "additional_disks": {"const": 0},
+            }},
+        }],
+    }
+
+
+def expected_containment_provider_schema() -> Dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(CONTAINMENT_PROVIDER_KEYS),
+        "properties": {
+            "schema": {"const": "t11-containment-provider-evidence/v1"},
+            "authority": {"const": "adapter/owner-authored"},
+            "codex_authenticated_attestation": {"const": False},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "provider_kind": {"enum": ["not-run", "colima-vm"]},
+            "profile_name": {"anyOf": [{"const": "not-run"}, {"type": "string", "pattern": "^t11-e2e-[0-9a-f]{12}-01$"}]},
+            "vm_backend": {"enum": ["not-run", "vz"]},
+            "architecture": {"enum": ["not-run", "aarch64"]},
+            "native_architecture": {"type": "boolean"},
+            "guest_os": {"type": "string", "minLength": 1, "maxLength": 128},
+            "guest_kernel": {"type": "string", "minLength": 1, "maxLength": 256},
+            "created_at": {"type": ["string", "null"], "format": "date-time"},
+            "provider_configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "effective_mount_inventory_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "provider_cache_mount_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "provider_cache_guest_mountpoint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "host_mount_count": {"type": "integer", "minimum": 0, "maximum": 32},
+            "host_mount_classifications": {
+                "type": "array", "maxItems": 1, "uniqueItems": True,
+                "items": {"const": "provider-internal-cache"},
+            },
+            "all_host_mounts_read_only": {"type": "boolean"},
+            "provider_cache_only": {"type": "boolean"},
+            "host_sensitive_mounts_absent": {"type": "boolean"},
+            "unapproved_mounts_absent": {"type": "boolean"},
+            "ssh_agent_forwarding": {"type": "boolean"},
+            "dot_ssh_public_key_loading": {"type": "boolean"},
+            "user_ssh_config_modified": {"type": "boolean"},
+            "vm_instance_identity_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "public_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "public_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "repository_clean": {"type": "boolean"},
+            "codex_version_output": {"type": "string", "minLength": 1, "maxLength": 128},
+            "approved_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "observed_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "extracted_binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "runtime_root_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "dedicated_codex_home_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "sandbox_configuration_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "network_boundary_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "process_containment_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "control_plane": expected_control_plane_schema(),
+            "lifecycle": {
+                "type": "object", "additionalProperties": False,
+                "required": ["destroy_required", "destroy_requested", "destroy_completed", "profile_absence_readback"],
+                "properties": {
+                    "destroy_required": {"type": "boolean"},
+                    "destroy_requested": {"const": False},
+                    "destroy_completed": {"const": False},
+                    "profile_absence_readback": {"const": "not-run"},
+                },
+            },
+        },
+        "allOf": [{
+            "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+            "then": {"properties": {
+                "native_architecture": {"const": True},
+                "provider_kind": {"const": "colima-vm"},
+                "vm_backend": {"const": "vz"},
+                "architecture": {"const": "aarch64"},
+                "host_mount_count": {"const": 1},
+                "host_mount_classifications": {"const": ["provider-internal-cache"]},
+                "all_host_mounts_read_only": {"const": True},
+                "provider_cache_only": {"const": True},
+                "host_sensitive_mounts_absent": {"const": True},
+                "unapproved_mounts_absent": {"const": True},
+                "ssh_agent_forwarding": {"const": False},
+                "dot_ssh_public_key_loading": {"const": False},
+                "user_ssh_config_modified": {"const": False},
+                "repository_clean": {"const": True},
+                "codex_version_output": {"const": APPROVED_CODEX_VERSION},
+                "approved_archive_sha256": {"const": APPROVED_ARCHIVE_SHA256},
+                "observed_archive_sha256": {"const": APPROVED_ARCHIVE_SHA256},
+                "sandbox_configuration_probe": {"const": "pass"},
+                "network_boundary_probe": {"const": "pass"},
+                "process_containment_probe": {"const": "pass"},
+                "control_plane": {"properties": {"status": {"const": "pass"}}},
+                "lifecycle": {"properties": {
+                    "destroy_required": {"const": True},
+                    "destroy_requested": {"const": False},
+                    "destroy_completed": {"const": False},
+                    "profile_absence_readback": {"const": "not-run"},
+                }},
+            }},
+        }, {
+            "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
+            "then": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": False}}}}},
+            "else": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": True}}}}},
+        }],
+    }
+
+
 def expected_profile_evidence_schema() -> Dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
         "required": [
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
-            "network_sandbox_behavior",
+            "network_sandbox_behavior", "containment_provider",
         ],
         "properties": {
             "configuration_intent": {
@@ -261,14 +445,275 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                     "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}
                 },
             },
+            "containment_provider": expected_containment_provider_schema(),
         },
     }
+
+
+def expected_not_run_control_plane() -> Dict[str, Any]:
+    return {
+        "schema": "t11-colima-control-plane-evidence/v1",
+        "authority": "owner-authored",
+        "codex_authenticated_attestation": False,
+        "status": "not-run",
+        "pre_create_observed_at": None,
+        "post_create_observed_at": None,
+        "profile_name": "not-run",
+        "colima_version": "not-run",
+        "vm_backend": "not-run",
+        "architecture": "not-run",
+        "pre_create_profile_absent": False,
+        "pre_create_runtime_data_absent": False,
+        "fresh_instance": False,
+        "existing_instance_reused": False,
+        "existing_container_reused": False,
+        "existing_volume_reused": False,
+        "default_profile_reused": False,
+        "activation_context_unchanged": False,
+        "private_vm_disk": False,
+        "repository_on_private_vm_disk": False,
+        "runtime_root_on_private_vm_disk": False,
+        "additional_disks": 0,
+        "instance_identity_sha256": ZERO_SHA256,
+        "provider_configuration_sha256": ZERO_SHA256,
+        "normalized_control_plane_sha256": ZERO_SHA256,
+        "raw_paths_recorded": False,
+    }
+
+
+def normalized_control_plane_sha256(value: Mapping[str, Any]) -> str:
+    return sha256(canonical_bytes({
+        key: value[key] for key in CONTROL_PLANE_KEYS
+        if key != "normalized_control_plane_sha256"
+    }))
+
+
+def validate_control_plane(value: Any, provider: Mapping[str, Any], label: str, errors: List[str]) -> None:
+    if not isinstance(value, dict) or set(value) != set(CONTROL_PLANE_KEYS):
+        errors.append(label + ": closed control-plane evidence shape drifted")
+        return
+    if (
+        value.get("schema") != "t11-colima-control-plane-evidence/v1"
+        or value.get("authority") != "owner-authored"
+        or value.get("codex_authenticated_attestation") is not False
+        or value.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+        or value.get("raw_paths_recorded") is not False
+    ):
+        errors.append(label + ": control-plane identity/authority/status is invalid")
+    for key in ("instance_identity_sha256", "provider_configuration_sha256", "normalized_control_plane_sha256"):
+        if not isinstance(value.get(key), str) or SHA.fullmatch(value[key]) is None:
+            errors.append(label + ": invalid control-plane digest field " + key)
+    for key in (
+        "pre_create_profile_absent", "pre_create_runtime_data_absent", "fresh_instance",
+        "existing_instance_reused", "existing_container_reused", "existing_volume_reused",
+        "default_profile_reused", "activation_context_unchanged",
+        "private_vm_disk", "repository_on_private_vm_disk", "runtime_root_on_private_vm_disk",
+    ):
+        if type(value.get(key)) is not bool:
+            errors.append(label + ": invalid control-plane boolean " + key)
+    if type(value.get("additional_disks")) is not int or not 0 <= value["additional_disks"] <= 32:
+        errors.append(label + ": invalid control-plane additional disk count")
+    if value.get("status") == "not-run":
+        if value != expected_not_run_control_plane():
+            errors.append(label + ": not-run control-plane evidence must use the exact non-claiming sentinel")
+        return
+    for key in ("pre_create_observed_at", "post_create_observed_at"):
+        if not isinstance(value.get(key), str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value[key]) is None:
+            errors.append(label + ": invalid control-plane timestamp " + key)
+    if value.get("status") == "pass":
+        claims = {
+            "colima_version": "0.10.1", "vm_backend": "vz", "architecture": "aarch64",
+            "pre_create_profile_absent": True, "pre_create_runtime_data_absent": True,
+            "fresh_instance": True, "existing_instance_reused": False,
+            "existing_container_reused": False, "existing_volume_reused": False,
+            "default_profile_reused": False, "activation_context_unchanged": True,
+            "private_vm_disk": True, "repository_on_private_vm_disk": True,
+            "runtime_root_on_private_vm_disk": True, "additional_disks": 0,
+        }
+        for key, expected in claims.items():
+            if value.get(key) != expected:
+                errors.append(label + ": passing control-plane evidence drifted: " + key)
+        for key in ("instance_identity_sha256", "provider_configuration_sha256"):
+            if value.get(key) == ZERO_SHA256:
+                errors.append(label + ": passing control-plane evidence uses a placeholder digest")
+        if value.get("normalized_control_plane_sha256") != normalized_control_plane_sha256(value):
+            errors.append(label + ": normalized control-plane digest is not independently reproducible")
+        for key in ("profile_name", "vm_backend", "architecture", "instance_identity_sha256", "provider_configuration_sha256"):
+            provider_key = {
+                "instance_identity_sha256": "vm_instance_identity_sha256"
+            }.get(key, key)
+            if value.get(key) != provider.get(provider_key):
+                errors.append(label + ": control-plane/provider cross-binding drifted: " + key)
+        if value.get("pre_create_observed_at", "") > str(provider.get("created_at", "")) or str(provider.get("created_at", "")) > value.get("post_create_observed_at", ""):
+            errors.append(label + ": control-plane create chronology is invalid")
+
+
+def expected_not_run_containment_provider() -> Dict[str, Any]:
+    return {
+        "schema": "t11-containment-provider-evidence/v1",
+        "authority": "adapter/owner-authored",
+        "codex_authenticated_attestation": False,
+        "status": "not-run",
+        "provider_kind": "not-run",
+        "profile_name": "not-run",
+        "vm_backend": "not-run",
+        "architecture": "not-run",
+        "native_architecture": False,
+        "guest_os": "not-run",
+        "guest_kernel": "not-run",
+        "created_at": None,
+        "provider_configuration_sha256": ZERO_SHA256,
+        "effective_mount_inventory_sha256": ZERO_SHA256,
+        "provider_cache_mount_sha256": ZERO_SHA256,
+        "provider_cache_guest_mountpoint_sha256": ZERO_SHA256,
+        "host_mount_count": 0,
+        "host_mount_classifications": [],
+        "all_host_mounts_read_only": False,
+        "provider_cache_only": False,
+        "host_sensitive_mounts_absent": False,
+        "unapproved_mounts_absent": False,
+        "ssh_agent_forwarding": False,
+        "dot_ssh_public_key_loading": False,
+        "user_ssh_config_modified": False,
+        "vm_instance_identity_sha256": ZERO_SHA256,
+        "public_head": ZERO_OID,
+        "public_tree": ZERO_OID,
+        "repository_clean": False,
+        "codex_version_output": "unavailable",
+        "approved_archive_sha256": ZERO_SHA256,
+        "observed_archive_sha256": ZERO_SHA256,
+        "extracted_binary_sha256": ZERO_SHA256,
+        "runtime_root_binding_sha256": ZERO_SHA256,
+        "dedicated_codex_home_binding_sha256": ZERO_SHA256,
+        "sandbox_configuration_probe": "not-run",
+        "network_boundary_probe": "not-run",
+        "process_containment_probe": "not-run",
+        "control_plane": expected_not_run_control_plane(),
+        "lifecycle": {
+            "destroy_required": False,
+            "destroy_requested": False,
+            "destroy_completed": False,
+            "profile_absence_readback": "not-run",
+        },
+    }
+
+
+def validate_containment_provider(value: Any, profile_status: Any, label: str, errors: List[str]) -> None:
+    if not isinstance(value, dict) or set(value) != set(CONTAINMENT_PROVIDER_KEYS):
+        errors.append(label + ": closed containment-provider evidence shape drifted")
+        return
+    if (
+        value.get("schema") != "t11-containment-provider-evidence/v1"
+        or value.get("authority") != "adapter/owner-authored"
+        or value.get("codex_authenticated_attestation") is not False
+    ):
+        errors.append(label + ": provider evidence authority drifted")
+    if value.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}:
+        errors.append(label + ": containment-provider status is invalid")
+    if not isinstance(value.get("profile_name"), str) or (
+        value["profile_name"] != "not-run"
+        and re.fullmatch(r"t11-e2e-[0-9a-f]{12}-01", value["profile_name"]) is None
+    ):
+        errors.append(label + ": containment profile name is invalid")
+    for key in (
+        "provider_configuration_sha256", "effective_mount_inventory_sha256",
+        "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+        "vm_instance_identity_sha256", "observed_archive_sha256",
+        "extracted_binary_sha256", "runtime_root_binding_sha256",
+        "dedicated_codex_home_binding_sha256", "approved_archive_sha256",
+    ):
+        if not isinstance(value.get(key), str) or SHA.fullmatch(value[key]) is None:
+            errors.append(label + ": invalid provider digest field " + key)
+    for key in ("public_head", "public_tree"):
+        if not isinstance(value.get(key), str) or OID.fullmatch(value[key]) is None:
+            errors.append(label + ": invalid provider Git field " + key)
+    for key in (
+        "native_architecture", "all_host_mounts_read_only", "provider_cache_only",
+        "host_sensitive_mounts_absent", "unapproved_mounts_absent",
+        "ssh_agent_forwarding", "dot_ssh_public_key_loading",
+        "user_ssh_config_modified", "repository_clean",
+    ):
+        if type(value.get(key)) is not bool:
+            errors.append(label + ": provider boolean field is invalid: " + key)
+    if type(value.get("host_mount_count")) is not int or not 0 <= value["host_mount_count"] <= 32:
+        errors.append(label + ": provider host mount count is invalid")
+    classifications = value.get("host_mount_classifications")
+    if not isinstance(classifications, list) or classifications not in ([], ["provider-internal-cache"]):
+        errors.append(label + ": provider host mount classification is invalid")
+    for key in ("guest_os", "guest_kernel", "codex_version_output"):
+        if not isinstance(value.get(key), str) or not value[key] or len(value[key]) > 256:
+            errors.append(label + ": provider string field is invalid: " + key)
+    if value.get("created_at") is not None and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", str(value.get("created_at"))) is None:
+        errors.append(label + ": provider creation timestamp is invalid")
+    for key in ("sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe"):
+        if value.get(key) not in {"pass", "fail", "not-run", "UNCHECKABLE"}:
+            errors.append(label + ": provider probe status is invalid: " + key)
+    lifecycle = value.get("lifecycle")
+    expected_lifecycle = {
+        "destroy_required": value.get("status") != "not-run",
+        "destroy_requested": False,
+        "destroy_completed": False,
+        "profile_absence_readback": "not-run",
+    }
+    if lifecycle != expected_lifecycle:
+        errors.append(label + ": pre-live lifecycle must require later destruction without claiming it occurred")
+    validate_control_plane(value.get("control_plane"), value, label, errors)
+
+    provider_status = value.get("status")
+    if provider_status == "not-run" and value != expected_not_run_containment_provider():
+        errors.append(label + ": not-run containment evidence must use the exact non-claiming placeholder")
+    if provider_status == "pass":
+        pass_claims = {
+            "native_architecture": True,
+            "provider_kind": "colima-vm",
+            "vm_backend": "vz",
+            "architecture": "aarch64",
+            "host_mount_count": 1,
+            "host_mount_classifications": ["provider-internal-cache"],
+            "all_host_mounts_read_only": True,
+            "provider_cache_only": True,
+            "host_sensitive_mounts_absent": True,
+            "unapproved_mounts_absent": True,
+            "ssh_agent_forwarding": False,
+            "dot_ssh_public_key_loading": False,
+            "user_ssh_config_modified": False,
+            "repository_clean": True,
+            "codex_version_output": APPROVED_CODEX_VERSION,
+            "approved_archive_sha256": APPROVED_ARCHIVE_SHA256,
+            "observed_archive_sha256": APPROVED_ARCHIVE_SHA256,
+            "sandbox_configuration_probe": "pass",
+            "network_boundary_probe": "pass",
+            "process_containment_probe": "pass",
+        }
+        for key, expected in pass_claims.items():
+            if value.get(key) != expected:
+                errors.append(label + ": passing provider evidence drifted: " + key)
+        for key in (
+            "provider_configuration_sha256", "effective_mount_inventory_sha256",
+            "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+            "vm_instance_identity_sha256", "extracted_binary_sha256",
+            "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
+        ):
+            if value.get(key) == ZERO_SHA256:
+                errors.append(label + ": passing provider evidence uses placeholder digest: " + key)
+        if value.get("public_head") == ZERO_OID or value.get("public_tree") == ZERO_OID:
+            errors.append(label + ": passing provider evidence uses placeholder Git binding")
+        elif value.get("profile_name") != "t11-e2e-{}-01".format(value["public_head"][:12]):
+            errors.append(label + ": provider profile name is not bound to the public head")
+        if value.get("guest_os") == "not-run" or value.get("guest_kernel") == "not-run":
+            errors.append(label + ": passing provider evidence omits guest OS/kernel")
+        if value.get("created_at") is None:
+            errors.append(label + ": passing provider evidence omits creation time")
+        if value.get("control_plane", {}).get("status") != "pass":
+            errors.append(label + ": passing provider evidence lacks passing control-plane evidence")
+    if profile_status == "match" and provider_status != "pass":
+        errors.append(label + ": match requires passing containment-provider evidence")
 
 
 def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[str]) -> None:
     if not isinstance(value, dict) or set(value) != {
         "configuration_intent", "diagnostic_health", "exact_worker_argv",
-        "network_sandbox_behavior",
+        "network_sandbox_behavior", "containment_provider",
     }:
         errors.append(label + ": separated runtime evidence lanes drifted")
         return
@@ -307,10 +752,12 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
         or network.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
     ):
         errors.append(label + ": network/sandbox behavior evidence is invalid")
+    validate_containment_provider(value.get("containment_provider"), status, label, errors)
     if status == "match" and (
         not isinstance(diagnostic, dict) or diagnostic.get("status") != "pass"
         or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
         or not isinstance(network, dict) or network.get("status") != "pass"
+        or value.get("containment_provider", {}).get("status") != "pass"
     ):
         errors.append(label + ": match requires passing diagnostic, argv, and network evidence lanes")
 
@@ -560,9 +1007,17 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
         if cap_properties.get(key) != {"const": "pass"}:
             errors.append(label + ": match does not require passing " + key)
     evidence_properties = then_properties.get("evidence", {}).get("properties", {})
-    for key in ("diagnostic_health", "exact_worker_argv", "network_sandbox_behavior"):
+    for key in ("diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider"):
         if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
             errors.append(label + ": match does not require passing evidence lane " + key)
+    if then_properties.get("client", {}).get("properties", {}).get("version_output") != {"const": APPROVED_CODEX_VERSION}:
+        errors.append(label + ": match does not require the exact approved Codex version")
+    if then_properties.get("auth", {}).get("properties", {}).get("class") != {"const": "signed-in-client"}:
+        errors.append(label + ": match does not require dedicated device-auth client state")
+    if then_properties.get("platform", {}).get("properties", {}) != {
+        "os": {"const": "Linux"}, "architecture": {"const": "aarch64"}
+    }:
+        errors.append(label + ": match does not require the approved Linux aarch64 guest")
     if then_properties.get("live_run_allowed") != {"const": True}:
         errors.append(label + ": match does not require live_run_allowed=true")
 
@@ -754,6 +1209,15 @@ def validate_repository(root: Path) -> List[str]:
                     errors,
                 )
                 adapter.validate_runtime_profile(receipt_profile)
+                provider = receipt_profile.get("evidence", {}).get("containment_provider", {})
+                receipt_pr = receipt_request.get("pull_request", {})
+                if (
+                    provider.get("public_head") != receipt_pr.get("head")
+                    or provider.get("public_tree") != receipt_pr.get("tree")
+                    or provider.get("codex_version_output") != receipt_profile.get("client", {}).get("version_output")
+                    or provider.get("extracted_binary_sha256") != receipt_profile.get("client", {}).get("binary_sha256")
+                ):
+                    errors.append("tests/runtime/fixtures/runtime-receipt-valid.v1.json: provider/profile/PR cross-binding drifted")
                 adapter.validate_envelope(receipt_envelope)
                 adapter.validate_verifier_record(receipt_verifier, receipt_envelope["attempt_id"])
                 adapter.validate_execution_result(receipt_result, receipt_envelope, receipt_profile, receipt_verifier)
@@ -831,7 +1295,16 @@ def validate_repository(root: Path) -> List[str]:
     for required in ("start_new_session=True", "_signal_if_same_birth", "SIGTERM", "SIGKILL", "shell=False", "stdin", "unsupported-client", "profile-drift", "UNCHECKABLE", "strict_json_loads", "git_directory_inventory", "process_table_snapshot", "runtime_process_identity_capability_error", "execution_root_inventory", "descriptor_xattr_inventory", "fresh semantic runtime sensor", "raw terminal occurrence", "release class disagrees"):
         if required not in adapter_text:
             errors.append(".github/scripts/codex-exec-adapter.py: missing deterministic boundary " + required)
-    for required in ("--dry-run", "--apply", "--body-file", "read-back differs", "run_bounded_process", "receipt_marker", "native runtime artifact", "artifact_bundle_sha256", "existing_comments", "uncertain", "--paginate", "duplicate object key", "non-finite"):
+    for required in (
+        "--dry-run", "--apply", "--lifecycle-dry-run", "--lifecycle-apply",
+        "t11-colima-lifecycle-receipt-request/v1", "verify_linked_runtime_receipt",
+        "PULL_REQUEST = 24", "--body-file", "read-back differs",
+        "run_bounded_process", "receipt_marker", "lifecycle_marker",
+        "native runtime artifact", "artifact_bundle_sha256", "existing_comments",
+        "uncertain", "--paginate", "duplicate object key", "non-finite",
+        "canonical_runtime_body", "different attempt",
+        "MAX_LIFECYCLE_ABSENCE_AGE_SECONDS",
+    ):
         if required not in receipt_text:
             errors.append(".github/scripts/post-runtime-receipt.py: missing receipt boundary " + required)
     for forbidden in ("issue edit", "comment --edit", "comment --delete"):

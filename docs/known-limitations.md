@@ -31,6 +31,39 @@ profile, or a posted runtime receipt. A later exact-head owner-run observation
 must be `match` on an approved supported non-prerelease before those actions
 are permitted.
 
+The approved live boundary is a new exact-head T11-only Colima Linux VM using
+VZ and native `aarch64`, not the everyday host Mac. The historical task-start
+profile predates that decision, so its provider lane remains `not-run` with
+non-claiming sentinels rather than fabricated Colima/VM evidence. A live
+`match` requires official stable `codex-cli 0.150.1`, the approved archive and
+extracted-binary digests, exact public head/tree, a clean guest clone, passing
+configuration/network/process probes, and a closed mount inventory. Colima's
+one unavoidable attempt-only provider-cache mount must be read-only; any other
+shared mount blocks the run. Provider evidence is adapter/owner-authored, not
+a Codex-authenticated attestation.
+
+The closed control-plane record also requires pre-create profile/runtime-data
+absence, no reuse of an existing VM, container, volume, default profile, or
+additional disk, unchanged activation context, and private-VM-disk placement
+for the clone and runtime root. Its digest covers normalized safe fields only;
+raw paths and provider configuration remain local transport.
+
+Receipt application happens before the disposable VM is destroyed. The
+receipt therefore records only the destruction obligation and does not claim
+destroy completion or profile absence. Those outcomes require a later
+append-only read-back after the attempt. Until that record exists, destruction
+evidence is incomplete rather than implicitly successful.
+The separate lifecycle actuator binds the already-posted runtime receipt and
+its GitHub creation time, exact PR #24 head/tree/checks, destroy chronology,
+and both profile/runtime-data absence read-backs. It regenerates the exact
+canonical runtime-receipt body from the original validated native request;
+caller-authored marker/body text is not proof. Every lifecycle timestamp is
+bounded to at most 300 seconds of future skew and the latest absence read-back
+must be no more than 3600 seconds old at validation. A runtime receipt by
+itself does not prove teardown. T11 permits one durable runtime receipt: only
+an exact same-attempt receipt is idempotent, while a different attempt is a
+closed conflict rather than a second receipt.
+
 `codex doctor --json` is treated only as a redacted diagnostic support report.
 It does not expose or attest the exact T11 override set. The documented config
 keys and their stable digest are adapter-authored intent evidence with

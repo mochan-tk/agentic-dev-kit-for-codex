@@ -9,6 +9,7 @@ from stdin and are never placed in a process argv.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import ctypes
 import datetime
 import hashlib
@@ -105,6 +106,31 @@ REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
 REVIEWED_RULES_BYTES = (
     b"# T11 reviewed empty execpolicy profile. Platform policy remains authoritative.\n"
 )
+COLIMA_PROVIDER_INPUT_SCHEMA = "t11-colima-provider-input/v1"
+CONTAINMENT_PROVIDER_EVIDENCE_SCHEMA = "t11-containment-provider-evidence/v1"
+COLIMA_PROVIDER_KIND = "colima-vm"
+COLIMA_VM_BACKEND = "vz"
+COLIMA_ARCHITECTURE = "aarch64"
+COLIMA_RUNTIME_ROOT_ENV = "T11_VM_RUNTIME_ROOT"
+LIVE_ATTEMPT_CLAIM_NAME = "t11-live-attempt.claim.v1.json"
+APPROVED_CODEX_VERSION = "codex-cli 0.150.1"
+APPROVED_CODEX_ARCHIVE_SHA256 = "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"
+MAX_MOUNTINFO_BYTES = 1_048_576
+MAX_MOUNTINFO_LINES = 8_192
+REVIEWED_GUEST_LOCAL_FS_TYPES = (
+    "autofs", "binfmt_misc", "bpf", "btrfs", "cgroup", "cgroup2", "configfs",
+    "debugfs", "devpts", "devtmpfs", "efivarfs", "erofs", "ext2", "ext3",
+    "ext4", "f2fs", "fusectl", "hugetlbfs", "iso9660", "mqueue", "nsfs",
+    "overlay", "proc", "pstore", "ramfs", "resctrl", "rootfs", "securityfs",
+    "selinuxfs", "smackfs", "squashfs", "sysfs", "tmpfs", "tracefs", "vfat",
+    "xfs",
+)
+PROVIDER_LIFECYCLE_PRE_LIVE = {
+    "destroy_required": True,
+    "destroy_requested": False,
+    "destroy_completed": False,
+    "profile_absence_readback": "not-run",
+}
 TERMINAL_TYPES = {"turn.completed", "turn.failed"}
 KNOWN_RAW_TYPES = {"thread.started", "turn.started", "item.started", "item.updated", "item.completed", "error"} | TERMINAL_TYPES
 VERIFIER_CHECKS = [
@@ -388,6 +414,636 @@ def require_bool(value: Any, label: str) -> bool:
     return value
 
 
+class ColimaRuntimeLayout(NamedTuple):
+    root: Path
+    home: Path
+    tmp: Path
+    work: Path
+    binary: Path
+    runtime_root_binding_sha256: str
+    dedicated_codex_home_binding_sha256: str
+
+
+def normalized_control_plane_sha256(value: Mapping[str, Any]) -> str:
+    return sha256_bytes(canonical_bytes({
+        key: child for key, child in value.items()
+        if key != "normalized_control_plane_sha256"
+    }))
+
+
+def not_run_control_plane_evidence() -> Dict[str, Any]:
+    return {
+        "schema": "t11-colima-control-plane-evidence/v1",
+        "authority": "owner-authored",
+        "codex_authenticated_attestation": False,
+        "status": "not-run",
+        "pre_create_observed_at": None,
+        "post_create_observed_at": None,
+        "profile_name": "not-run",
+        "colima_version": "not-run",
+        "vm_backend": "not-run",
+        "architecture": "not-run",
+        "pre_create_profile_absent": False,
+        "pre_create_runtime_data_absent": False,
+        "fresh_instance": False,
+        "existing_instance_reused": False,
+        "existing_container_reused": False,
+        "existing_volume_reused": False,
+        "default_profile_reused": False,
+        "activation_context_unchanged": False,
+        "private_vm_disk": False,
+        "repository_on_private_vm_disk": False,
+        "runtime_root_on_private_vm_disk": False,
+        "additional_disks": 0,
+        "instance_identity_sha256": "0" * 64,
+        "provider_configuration_sha256": "0" * 64,
+        "normalized_control_plane_sha256": "0" * 64,
+        "raw_paths_recorded": False,
+    }
+
+
+def validate_control_plane_evidence(value: Any, allow_not_run: bool = True) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ContractError("Colima control-plane evidence must be an object")
+    exact_keys(
+        value,
+        (
+            "schema", "authority", "codex_authenticated_attestation", "status",
+            "pre_create_observed_at", "post_create_observed_at", "profile_name",
+            "colima_version", "vm_backend", "architecture", "pre_create_profile_absent",
+            "pre_create_runtime_data_absent", "fresh_instance", "existing_instance_reused",
+            "existing_container_reused", "existing_volume_reused", "default_profile_reused",
+            "activation_context_unchanged", "private_vm_disk",
+            "repository_on_private_vm_disk", "runtime_root_on_private_vm_disk",
+            "additional_disks", "instance_identity_sha256", "provider_configuration_sha256",
+            "normalized_control_plane_sha256", "raw_paths_recorded",
+        ),
+        "Colima control-plane evidence",
+    )
+    if value["schema"] != "t11-colima-control-plane-evidence/v1" or value["authority"] != "owner-authored" or value["codex_authenticated_attestation"] is not False:
+        raise ContractError("Colima control-plane evidence identity is invalid")
+    if value["status"] == "not-run":
+        if not allow_not_run or value != not_run_control_plane_evidence():
+            raise ContractError("not-run Colima control-plane evidence contains fabricated claims")
+        return value
+    if value["status"] != "pass":
+        raise ContractError("owner-authored Colima control-plane input must be pass or not-run")
+    for field in ("pre_create_observed_at", "post_create_observed_at"):
+        if not isinstance(value[field], str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value[field]) is None:
+            raise ContractError("Colima control-plane chronology is invalid")
+    if value["colima_version"] != "0.10.1" or value["vm_backend"] != COLIMA_VM_BACKEND or value["architecture"] != COLIMA_ARCHITECTURE:
+        raise ContractError("Colima control-plane version/backend/architecture drifted")
+    if re.fullmatch(r"t11-e2e-[0-9a-f]{12}-01", str(value["profile_name"])) is None:
+        raise ContractError("Colima control-plane profile name is invalid")
+    expected_true = (
+        "pre_create_profile_absent", "pre_create_runtime_data_absent", "fresh_instance",
+        "activation_context_unchanged", "private_vm_disk", "repository_on_private_vm_disk",
+        "runtime_root_on_private_vm_disk",
+    )
+    expected_false = (
+        "existing_instance_reused", "existing_container_reused", "existing_volume_reused",
+        "default_profile_reused", "raw_paths_recorded",
+    )
+    if any(value[field] is not True for field in expected_true) or any(value[field] is not False for field in expected_false) or value["additional_disks"] != 0:
+        raise ContractError("Colima control-plane fresh/private/no-reuse boundary drifted")
+    for field in ("instance_identity_sha256", "provider_configuration_sha256", "normalized_control_plane_sha256"):
+        require_string(value[field], "Colima control-plane " + field, SHA256_RE)
+        if value[field] == "0" * 64:
+            raise ContractError("Colima control-plane digest cannot be a sentinel")
+    if value["normalized_control_plane_sha256"] != normalized_control_plane_sha256(value):
+        raise ContractError("Colima control-plane normalized digest drifted")
+    pre = datetime.datetime.strptime(value["pre_create_observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+    post = datetime.datetime.strptime(value["post_create_observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+    if pre > post:
+        raise ContractError("Colima control-plane chronology is reversed")
+    validate_json_limits(value, {"json_depth": 4, "json_nodes": 64, "json_string_bytes": 256}, "Colima control-plane evidence")
+    return value
+
+
+def validate_colima_provider_input(value: Any) -> Dict[str, Any]:
+    """Validate the closed owner-authored Option A input.
+
+    Every dynamic value arrives through stdin.  No path, Task prompt, mount
+    record, credential, or provider identity is accepted through argv.
+    """
+    if not isinstance(value, dict):
+        raise ContractError("Colima provider input must be an object")
+    exact_keys(value, ("schema", "authority", "provider", "control_plane", "repository", "client", "lifecycle"), "Colima provider input")
+    if value["schema"] != COLIMA_PROVIDER_INPUT_SCHEMA or value["authority"] != "owner-authored":
+        raise ContractError("Colima provider input identity is invalid")
+    repository = value["repository"]
+    if not isinstance(repository, dict):
+        raise ContractError("Colima provider repository binding must be an object")
+    exact_keys(repository, ("head", "tree"), "Colima provider repository binding")
+    head = require_string(repository["head"], "Colima public head", OID_RE)
+    tree = require_string(repository["tree"], "Colima public tree", OID_RE)
+    if head == "0" * 40 or tree == "0" * 40:
+        raise ContractError("Colima public repository binding cannot be a sentinel")
+    provider = value["provider"]
+    if not isinstance(provider, dict):
+        raise ContractError("Colima provider record must be an object")
+    exact_keys(
+        provider,
+        (
+            "kind", "profile_name", "vm_backend", "architecture", "created_at",
+            "provider_configuration_sha256", "effective_mount_inventory_sha256",
+            "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+            "host_mount_count", "host_mount_classifications", "all_host_mounts_read_only",
+            "ssh_agent_forwarding", "dot_ssh_public_key_loading", "user_ssh_config_modified",
+        ),
+        "Colima provider record",
+    )
+    if provider["kind"] != COLIMA_PROVIDER_KIND or provider["vm_backend"] != COLIMA_VM_BACKEND or provider["architecture"] != COLIMA_ARCHITECTURE:
+        raise ContractError("Colima provider kind/backend/architecture drifted")
+    expected_profile = "t11-e2e-{}-01".format(head[:12])
+    if provider["profile_name"] != expected_profile:
+        raise ContractError("Colima provider profile does not bind the exact public head")
+    if not isinstance(provider["created_at"], str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", provider["created_at"]) is None:
+        raise ContractError("Colima provider creation timestamp is invalid")
+    for field in (
+        "provider_configuration_sha256", "effective_mount_inventory_sha256",
+        "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+    ):
+        require_string(provider[field], "Colima provider " + field, SHA256_RE)
+        if provider[field] == "0" * 64:
+            raise ContractError("Colima provider digest cannot be a sentinel")
+    if provider["host_mount_count"] != 1 or provider["host_mount_classifications"] != ["provider-internal-cache"] or provider["all_host_mounts_read_only"] is not True:
+        raise ContractError("Colima provider host-mount allowlist is not the exact reviewed cache share")
+    for field in ("ssh_agent_forwarding", "dot_ssh_public_key_loading", "user_ssh_config_modified"):
+        if provider[field] is not False:
+            raise ContractError("Colima provider SSH isolation drifted")
+    client = value["client"]
+    if not isinstance(client, dict):
+        raise ContractError("Colima provider client binding must be an object")
+    exact_keys(client, ("version_output", "approved_archive_sha256", "observed_archive_sha256", "extracted_binary_sha256"), "Colima provider client binding")
+    if client["version_output"] != APPROVED_CODEX_VERSION:
+        raise ContractError("Colima provider requires the exact approved stable Codex client")
+    if client["approved_archive_sha256"] != APPROVED_CODEX_ARCHIVE_SHA256 or client["observed_archive_sha256"] != APPROVED_CODEX_ARCHIVE_SHA256:
+        raise ContractError("Colima provider archive digest is not the approved exact digest")
+    require_string(client["extracted_binary_sha256"], "Colima provider extracted binary digest", SHA256_RE)
+    if client["extracted_binary_sha256"] == "0" * 64:
+        raise ContractError("Colima provider extracted binary digest cannot be a sentinel")
+    if value["lifecycle"] != PROVIDER_LIFECYCLE_PRE_LIVE:
+        raise ContractError("Colima provider lifecycle is not the honest pre-live state")
+    control_plane = validate_control_plane_evidence(value["control_plane"], allow_not_run=False)
+    if (
+        control_plane["profile_name"] != provider["profile_name"]
+        or control_plane["vm_backend"] != provider["vm_backend"]
+        or control_plane["architecture"] != provider["architecture"]
+        or control_plane["provider_configuration_sha256"] != provider["provider_configuration_sha256"]
+    ):
+        raise ContractError("Colima provider and control-plane bindings differ")
+    created = datetime.datetime.strptime(provider["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+    pre = datetime.datetime.strptime(control_plane["pre_create_observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+    post = datetime.datetime.strptime(control_plane["post_create_observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+    if not pre <= created <= post:
+        raise ContractError("Colima provider creation chronology drifted")
+    validate_json_limits(value, {"json_depth": 8, "json_nodes": 128, "json_string_bytes": 256}, "Colima provider input")
+    return value
+
+
+def not_run_containment_provider_evidence() -> Dict[str, Any]:
+    return {
+        "schema": CONTAINMENT_PROVIDER_EVIDENCE_SCHEMA,
+        "authority": "adapter/owner-authored",
+        "codex_authenticated_attestation": False,
+        "status": "not-run",
+        "provider_kind": "not-run",
+        "profile_name": "not-run",
+        "vm_backend": "not-run",
+        "architecture": "not-run",
+        "native_architecture": False,
+        "guest_os": "not-run",
+        "guest_kernel": "not-run",
+        "created_at": None,
+        "provider_configuration_sha256": "0" * 64,
+        "effective_mount_inventory_sha256": "0" * 64,
+        "provider_cache_mount_sha256": "0" * 64,
+        "provider_cache_guest_mountpoint_sha256": "0" * 64,
+        "host_mount_count": 0,
+        "host_mount_classifications": [],
+        "all_host_mounts_read_only": False,
+        "provider_cache_only": False,
+        "host_sensitive_mounts_absent": False,
+        "unapproved_mounts_absent": False,
+        "ssh_agent_forwarding": False,
+        "dot_ssh_public_key_loading": False,
+        "user_ssh_config_modified": False,
+        "vm_instance_identity_sha256": "0" * 64,
+        "public_head": "0" * 40,
+        "public_tree": "0" * 40,
+        "repository_clean": False,
+        "codex_version_output": "unavailable",
+        "approved_archive_sha256": "0" * 64,
+        "observed_archive_sha256": "0" * 64,
+        "extracted_binary_sha256": "0" * 64,
+        "runtime_root_binding_sha256": "0" * 64,
+        "dedicated_codex_home_binding_sha256": "0" * 64,
+        "sandbox_configuration_probe": "not-run",
+        "network_boundary_probe": "not-run",
+        "process_containment_probe": "not-run",
+        "control_plane": not_run_control_plane_evidence(),
+        "lifecycle": {
+            "destroy_required": False,
+            "destroy_requested": False,
+            "destroy_completed": False,
+            "profile_absence_readback": "not-run",
+        },
+    }
+
+
+def _decode_mountinfo_field(value: bytes) -> bytes:
+    replacements = {b"\\040": b" ", b"\\011": b"\t", b"\\012": b"\n", b"\\134": b"\\"}
+    for encoded, decoded in replacements.items():
+        value = value.replace(encoded, decoded)
+    return value
+
+
+def inspect_colima_mount_inventory(data: bytes, provider: Mapping[str, Any]) -> Dict[str, Any]:
+    """Return only allowlisted digests/booleans, never raw mount paths."""
+    if len(data) > MAX_MOUNTINFO_BYTES or b"\0" in data:
+        raise ContractError("mount inventory exceeds its bounded representation")
+    lines = data.splitlines()
+    if not lines or len(lines) > MAX_MOUNTINFO_LINES:
+        raise ContractError("mount inventory line count is invalid")
+    shared: List[Tuple[bytes, bytes, bool, str]] = []
+    malformed = False
+    for line in lines:
+        fields = line.split(b" ")
+        try:
+            separator = fields.index(b"-")
+        except ValueError:
+            malformed = True
+            continue
+        if separator < 6 or len(fields) < separator + 4:
+            malformed = True
+            continue
+        try:
+            fs_type = fields[separator + 1].decode("ascii", errors="strict").lower()
+        except UnicodeDecodeError:
+            malformed = True
+            continue
+        mountpoint = _decode_mountinfo_field(fields[4])
+        source = _decode_mountinfo_field(fields[separator + 2])
+        lowered_mountpoint = mountpoint.lower()
+        lowered_source = source.lower()
+        path_indicator = any(
+            token in lowered_mountpoint or token in lowered_source
+            for token in (
+                b"/users/", b"/volumes/", b"/private/", b"/var/folders/",
+                b"/mnt/host", b"/run/host", b"/.ssh", b"/.codex",
+                b"/auth.json", b"docker.sock", b"agentic-dev-kit",
+            )
+        )
+        # Positive policy: every mount is either a reviewed guest-local/kernel
+        # filesystem or the one exact provider cache virtiofs record. Unknown
+        # types fail closed instead of depending on an incomplete blacklist.
+        provider_or_unapproved = (
+            fs_type == "virtiofs"
+            or fs_type not in REVIEWED_GUEST_LOCAL_FS_TYPES
+            or path_indicator
+            or source.startswith(b"//")
+            or b":/" in source
+        )
+        if provider_or_unapproved:
+            options = set(fields[5].split(b","))
+            shared.append((line, mountpoint, b"ro" in options and b"rw" not in options, fs_type))
+    inventory_sha256 = sha256_bytes(data)
+    one = shared[0] if len(shared) == 1 else None
+    cache_line_sha256 = sha256_bytes(one[0] + b"\n") if one else "0" * 64
+    cache_mountpoint_sha256 = sha256_bytes(one[1] + b"\n") if one else "0" * 64
+    cache_path_ok = False
+    if one is not None:
+        mountpoint = one[1]
+        lowered = mountpoint.lower()
+        expected_prefix = (
+            "/Users/Shared/t11-colima-{}.".format(provider["profile_name"])
+        ).encode("ascii")
+        expected_suffix = b"/xdg-cache/colima"
+        middle = mountpoint[len(expected_prefix):-len(expected_suffix)] if (
+            mountpoint.startswith(expected_prefix) and mountpoint.endswith(expected_suffix)
+        ) else b""
+        cache_path_ok = (
+            len(middle) == 8
+            and re.fullmatch(rb"[0-9A-Za-z]{8}", middle) is not None
+            and one[3] == "virtiofs"
+            and not any(token in lowered for token in (
+                b"agentic-dev-kit", b"/.codex", b"/auth.json", b"/.ssh",
+                b"docker.sock", b"/private/", b"/var/folders/",
+            ))
+        )
+    cache_only = (
+        not malformed
+        and len(shared) == 1
+        and cache_path_ok
+        and cache_line_sha256 == provider["provider_cache_mount_sha256"]
+        and cache_mountpoint_sha256 == provider["provider_cache_guest_mountpoint_sha256"]
+    )
+    read_only = bool(one is not None and one[2])
+    inventory_matches = inventory_sha256 == provider["effective_mount_inventory_sha256"]
+    status = "pass" if cache_only and read_only and inventory_matches else "fail"
+    return {
+        "status": status,
+        "effective_mount_inventory_sha256": inventory_sha256,
+        "provider_cache_mount_sha256": cache_line_sha256,
+        "provider_cache_guest_mountpoint_sha256": cache_mountpoint_sha256,
+        "host_mount_count": len(shared),
+        "host_mount_classifications": ["provider-internal-cache"] if cache_only else [],
+        "all_host_mounts_read_only": read_only and len(shared) == 1,
+        "provider_cache_only": cache_only,
+        "host_sensitive_mounts_absent": cache_path_ok and len(shared) == 1,
+        "unapproved_mounts_absent": cache_only and read_only and len(shared) == 1,
+    }
+
+
+def _directory_binding_sha256(info: os.stat_result, label: str) -> str:
+    return sha256_bytes(canonical_bytes({
+        "label": label,
+        "device": info.st_dev,
+        "inode": info.st_ino,
+        "mode": stat.S_IMODE(info.st_mode),
+        "owner": info.st_uid,
+    }))
+
+
+def _open_absolute_directory_nofollow(path: Path) -> Tuple[int, os.stat_result]:
+    if not path.is_absolute() or "\0" in str(path):
+        raise ContractError("private runtime root must be an absolute directory")
+    descriptor = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for component in path.parts[1:]:
+            if component in ("", ".", ".."):
+                raise ContractError("private runtime root has an unsafe component")
+            named = os.stat(component, dir_fd=descriptor, follow_symlinks=False)
+            if not stat.S_ISDIR(named.st_mode):
+                raise ContractError("private runtime root component is a link or non-directory")
+            child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
+            opened = os.fstat(child)
+            if (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino):
+                os.close(child)
+                raise ContractError("private runtime root namespace changed")
+            os.close(descriptor)
+            descriptor = child
+        return descriptor, os.fstat(descriptor)
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _ensure_private_child(parent_descriptor: int, parent: Path, name: str) -> Tuple[Path, os.stat_result, int]:
+    if os.mkdir not in getattr(os, "supports_dir_fd", set()):
+        raise ContractError("private runtime mkdir(dir_fd) capability is unavailable")
+    path = parent / name
+    try:
+        os.mkdir(name, 0o700, dir_fd=parent_descriptor)
+    except FileExistsError:
+        pass
+    info = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
+    if not stat.S_ISDIR(info.st_mode):
+        raise ContractError("private runtime child is a link or non-directory")
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+        raise ContractError("private runtime child owner or mode drifted")
+    descriptor = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_descriptor)
+    opened = os.fstat(descriptor)
+    if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+        os.close(descriptor)
+        raise ContractError("private runtime child namespace changed")
+    return path, opened, descriptor
+
+
+def prepare_colima_runtime_layout() -> ColimaRuntimeLayout:
+    raw_root = os.environ.get(COLIMA_RUNTIME_ROOT_ENV)
+    if not isinstance(raw_root, str) or not raw_root:
+        raise ContractError("private Colima runtime root environment binding is unavailable")
+    root = Path(raw_root)
+    descriptor, root_info = _open_absolute_directory_nofollow(root)
+    opened_children: List[int] = []
+    try:
+        if root_info.st_uid != os.getuid() or stat.S_IMODE(root_info.st_mode) != 0o700:
+            raise ContractError("private Colima runtime root owner or mode drifted")
+        home, _home_info, home_descriptor = _ensure_private_child(descriptor, root, "home")
+        opened_children.append(home_descriptor)
+        tmp, _tmp_info, tmp_descriptor = _ensure_private_child(descriptor, root, "tmp")
+        opened_children.append(tmp_descriptor)
+        work, _work_info, work_descriptor = _ensure_private_child(descriptor, root, "work")
+        opened_children.append(work_descriptor)
+        bin_dir, _bin_info, bin_descriptor = _ensure_private_child(descriptor, root, "bin")
+        opened_children.append(bin_descriptor)
+        _codex_home, codex_info, codex_descriptor = _ensure_private_child(home_descriptor, home, ".codex")
+        opened_children.append(codex_descriptor)
+        root_after = os.stat(str(root), follow_symlinks=False)
+        opened_root_after = os.fstat(descriptor)
+        if (
+            root_after.st_dev, root_after.st_ino,
+            opened_root_after.st_dev, opened_root_after.st_ino,
+        ) != (
+            root_info.st_dev, root_info.st_ino,
+            root_info.st_dev, root_info.st_ino,
+        ):
+            raise ContractError("private Colima runtime root namespace changed")
+        return ColimaRuntimeLayout(
+            root=root,
+            home=home,
+            tmp=tmp,
+            work=work,
+            binary=bin_dir / "codex",
+            runtime_root_binding_sha256=_directory_binding_sha256(root_info, "runtime-root"),
+            dedicated_codex_home_binding_sha256=_directory_binding_sha256(codex_info, "codex-home"),
+        )
+    finally:
+        for child_descriptor in reversed(opened_children):
+            os.close(child_descriptor)
+        os.close(descriptor)
+
+
+def create_live_attempt_claim(
+    layout: ColimaRuntimeLayout,
+    envelope: Mapping[str, Any],
+    profile: Mapping[str, Any],
+) -> str:
+    """Consume the VM-local T11 live actuation exactly once.
+
+    The claim is never removed or rewritten.  A crash or failed worker still
+    leaves it present, so the disposable VM must be destroyed before another
+    live attempt can be authorized.
+    """
+    attempt_id = require_string(envelope.get("attempt_id"), "live claim attempt", ATTEMPT_RE)
+    harness = envelope.get("harness")
+    if not isinstance(harness, dict):
+        raise ContractError("live claim harness binding is unavailable")
+    exact_keys(harness, ("commit", "tree"), "live claim harness")
+    public_head = require_string(harness["commit"], "live claim public head", OID_RE)
+    public_tree = require_string(harness["tree"], "live claim public tree", OID_RE)
+    try:
+        containment = profile["evidence"]["containment_provider"]
+    except (KeyError, TypeError):
+        raise ContractError("live claim containment binding is unavailable")
+    if (
+        not isinstance(containment, dict)
+        or containment.get("status") != "pass"
+        or containment.get("public_head") != public_head
+        or containment.get("public_tree") != public_tree
+    ):
+        raise ContractError("live claim provider/public binding drifted")
+    provider_profile_name = require_string(
+        containment.get("profile_name"), "live claim provider profile",
+    )
+    if re.fullmatch(r"t11-e2e-[0-9a-f]{12}-01", provider_profile_name) is None:
+        raise ContractError("live claim provider profile is invalid")
+    vm_instance_identity_sha256 = require_string(
+        containment.get("vm_instance_identity_sha256"),
+        "live claim VM identity", SHA256_RE,
+    )
+    control_plane = containment.get("control_plane")
+    if not isinstance(control_plane, dict) or control_plane.get("status") != "pass":
+        raise ContractError("live claim control-plane binding is unavailable")
+    control_plane_sha256 = require_string(
+        control_plane.get("normalized_control_plane_sha256"),
+        "live claim control-plane digest", SHA256_RE,
+    )
+    if (
+        vm_instance_identity_sha256 == "0" * 64
+        or control_plane_sha256 == "0" * 64
+        or control_plane.get("instance_identity_sha256") != vm_instance_identity_sha256
+        or control_plane.get("profile_name") != provider_profile_name
+    ):
+        raise ContractError("live claim provider/control-plane binding drifted")
+    payload = {
+        "schema": "t11-live-attempt-claim/v1",
+        "attempt_id": attempt_id,
+        "public_head": public_head,
+        "public_tree": public_tree,
+        "provider_profile_name": provider_profile_name,
+        "vm_instance_identity_sha256": vm_instance_identity_sha256,
+        "control_plane_sha256": control_plane_sha256,
+    }
+    claim_sha256 = sha256_bytes(canonical_bytes(payload))
+    record = {**payload, "canonical_sha256": claim_sha256}
+    data = canonical_bytes(record)
+    root_descriptor, root_info = _open_absolute_directory_nofollow(layout.root)
+    claim_descriptor: Optional[int] = None
+    claim_created = False
+    try:
+        if (
+            root_info.st_uid != os.getuid()
+            or stat.S_IMODE(root_info.st_mode) != 0o700
+            or _directory_binding_sha256(root_info, "runtime-root") != layout.runtime_root_binding_sha256
+        ):
+            raise ContractError("the VM-local live-attempt root binding drifted")
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        try:
+            claim_descriptor = os.open(
+                LIVE_ATTEMPT_CLAIM_NAME, flags, 0o600, dir_fd=root_descriptor,
+            )
+            claim_created = True
+        except FileExistsError:
+            raise ContractError("the disposable VM live attempt is already consumed")
+        except OSError:
+            raise ContractError("the VM-local live-attempt claim cannot be created safely")
+        os.fchmod(claim_descriptor, 0o600)
+        opened = os.fstat(claim_descriptor)
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or stat.S_IMODE(opened.st_mode) != 0o600
+            or opened.st_uid != os.getuid()
+            or opened.st_nlink != 1
+            or opened.st_size != 0
+        ):
+            raise ContractError("the VM-local live-attempt claim mode/binding is invalid")
+        offset = 0
+        while offset < len(data):
+            written = os.write(claim_descriptor, data[offset:])
+            if written <= 0:
+                raise ContractError("the VM-local live-attempt claim write did not progress")
+            offset += written
+        os.fsync(claim_descriptor)
+        after_write = os.fstat(claim_descriptor)
+        if (
+            after_write.st_dev, after_write.st_ino, after_write.st_size,
+            stat.S_IMODE(after_write.st_mode), after_write.st_uid, after_write.st_nlink,
+        ) != (
+            opened.st_dev, opened.st_ino, len(data), 0o600, os.getuid(), 1,
+        ):
+            raise ContractError("the VM-local live-attempt claim changed while writing")
+        os.lseek(claim_descriptor, 0, os.SEEK_SET)
+        observed = bytearray()
+        while len(observed) <= len(data):
+            chunk = os.read(claim_descriptor, min(4096, len(data) + 1 - len(observed)))
+            if not chunk:
+                break
+            observed.extend(chunk)
+        if bytes(observed) != data:
+            raise ContractError("the VM-local live-attempt claim bytes are not exact")
+        named = os.stat(LIVE_ATTEMPT_CLAIM_NAME, dir_fd=root_descriptor, follow_symlinks=False)
+        if (
+            named.st_dev, named.st_ino, named.st_size, stat.S_IMODE(named.st_mode),
+            named.st_uid, named.st_nlink,
+        ) != (
+            opened.st_dev, opened.st_ino, len(data), 0o600, os.getuid(), 1,
+        ):
+            raise ContractError("the VM-local live-attempt claim namespace changed")
+        os.fsync(root_descriptor)
+        named_after_fsync = os.stat(
+            LIVE_ATTEMPT_CLAIM_NAME, dir_fd=root_descriptor, follow_symlinks=False,
+        )
+        root_named = os.stat(str(layout.root), follow_symlinks=False)
+        if (
+            named_after_fsync.st_dev, named_after_fsync.st_ino,
+            named_after_fsync.st_size, stat.S_IMODE(named_after_fsync.st_mode),
+            root_named.st_dev, root_named.st_ino,
+        ) != (
+            opened.st_dev, opened.st_ino, len(data), 0o600,
+            root_info.st_dev, root_info.st_ino,
+        ):
+            raise ContractError("the VM-local live-attempt claim durability binding drifted")
+        return claim_sha256
+    except ContractError:
+        # Never unlink a claim after O_EXCL succeeds: a failed durability or
+        # binding proof consumes the live actuation and therefore blocks retry.
+        raise
+    except OSError:
+        if claim_created:
+            raise ContractError("the VM-local live-attempt claim durability is uncheckable")
+        raise ContractError("the VM-local live-attempt claim is uncheckable")
+    finally:
+        if claim_descriptor is not None:
+            os.close(claim_descriptor)
+        os.close(root_descriptor)
+
+
+def run_claimed_live_worker(
+    layout: ColimaRuntimeLayout,
+    envelope: Mapping[str, Any],
+    profile: Mapping[str, Any],
+    worker_argv: Sequence[str],
+    target_root: Path,
+    environment: Mapping[str, str],
+    prompt: bytes,
+) -> ProcessResult:
+    if not worker_argv or any(not isinstance(item, str) or "\0" in item for item in worker_argv):
+        raise ContractError("live worker argv is invalid before claim")
+    validate_runtime_argv_policy(worker_argv, require_memory_overrides=True)
+    if len(prompt) > MAX_STDIN_BYTES:
+        raise ContractError("live worker stdin exceeds its limit before claim")
+    if any(SECRET_NAME_RE.search(name) for name in environment):
+        raise ContractError("live worker environment is unsafe before claim")
+    target_descriptor, _target_binding = bound_directory(target_root)
+    os.close(target_descriptor)
+    create_live_attempt_claim(layout, envelope, profile)
+    return run_bounded_process(
+        worker_argv,
+        target_root,
+        environment,
+        prompt,
+        envelope["limits"]["worker_timeout_seconds"],
+        envelope["limits"]["stdout_bytes"],
+        envelope["limits"]["stderr_bytes"],
+        2,
+    )
+
+
 def validate_shell_free_command(command: Any) -> None:
     if not isinstance(command, dict):
         raise ContractError("verification command must be an object")
@@ -542,6 +1198,159 @@ def validate_envelope(envelope: Any) -> Dict[str, Any]:
     return envelope
 
 
+def validate_containment_provider_evidence(value: Any, allow_fixture: bool = False) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ContractError("containment provider evidence must be an object")
+    exact_keys(
+        value,
+        (
+            "schema", "authority", "codex_authenticated_attestation", "status",
+            "provider_kind", "profile_name", "vm_backend", "architecture", "native_architecture",
+            "guest_os", "guest_kernel", "created_at", "provider_configuration_sha256",
+            "effective_mount_inventory_sha256", "provider_cache_mount_sha256",
+            "provider_cache_guest_mountpoint_sha256", "host_mount_count",
+            "host_mount_classifications", "all_host_mounts_read_only", "provider_cache_only",
+            "host_sensitive_mounts_absent", "unapproved_mounts_absent", "ssh_agent_forwarding",
+            "dot_ssh_public_key_loading", "user_ssh_config_modified", "vm_instance_identity_sha256",
+            "public_head", "public_tree", "repository_clean", "codex_version_output",
+            "approved_archive_sha256", "observed_archive_sha256", "extracted_binary_sha256",
+            "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
+            "sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe",
+            "control_plane", "lifecycle",
+        ),
+        "containment provider evidence",
+    )
+    if value["schema"] != CONTAINMENT_PROVIDER_EVIDENCE_SCHEMA or value["authority"] != "adapter/owner-authored" or value["codex_authenticated_attestation"] is not False:
+        raise ContractError("containment evidence authority is invalid")
+    if value["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
+        raise ContractError("containment provider status is invalid")
+    for field in (
+        "provider_configuration_sha256", "effective_mount_inventory_sha256",
+        "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+        "vm_instance_identity_sha256", "approved_archive_sha256", "observed_archive_sha256",
+        "extracted_binary_sha256", "runtime_root_binding_sha256",
+        "dedicated_codex_home_binding_sha256",
+    ):
+        require_string(value[field], "containment provider " + field, SHA256_RE)
+    require_string(value["public_head"], "containment provider public head", OID_RE)
+    require_string(value["public_tree"], "containment provider public tree", OID_RE)
+    if type(value["host_mount_count"]) is not int or not 0 <= value["host_mount_count"] <= 32:
+        raise ContractError("containment provider host mount count is invalid")
+    if not isinstance(value["host_mount_classifications"], list) or any(not isinstance(item, str) for item in value["host_mount_classifications"]):
+        raise ContractError("containment provider host mount classifications are invalid")
+    for field in (
+        "native_architecture", "all_host_mounts_read_only", "provider_cache_only",
+        "host_sensitive_mounts_absent", "unapproved_mounts_absent", "ssh_agent_forwarding",
+        "dot_ssh_public_key_loading", "user_ssh_config_modified", "repository_clean",
+    ):
+        require_bool(value[field], "containment provider " + field)
+    for field in ("sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe"):
+        if value[field] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
+            raise ContractError("containment provider probe state is invalid")
+    lifecycle = value["lifecycle"]
+    if not isinstance(lifecycle, dict):
+        raise ContractError("containment lifecycle must be an object")
+    exact_keys(lifecycle, ("destroy_required", "destroy_requested", "destroy_completed", "profile_absence_readback"), "containment lifecycle")
+    for field in ("destroy_required", "destroy_requested", "destroy_completed"):
+        require_bool(lifecycle[field], "containment lifecycle " + field)
+    if lifecycle["profile_absence_readback"] not in ("not-run", "absent", "present", "UNKNOWN", "UNCHECKABLE"):
+        raise ContractError("containment lifecycle absence state is invalid")
+    if value["status"] == "not-run":
+        expected = not_run_containment_provider_evidence()
+        if value != expected:
+            raise ContractError("not-run containment evidence contains fabricated provider facts")
+        return value
+    control_plane = validate_control_plane_evidence(value["control_plane"], allow_not_run=False)
+    if value["provider_kind"] != COLIMA_PROVIDER_KIND or value["vm_backend"] != COLIMA_VM_BACKEND or value["architecture"] != COLIMA_ARCHITECTURE:
+        raise ContractError("containment provider identity drifted")
+    if not isinstance(value["created_at"], str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value["created_at"]) is None:
+        raise ContractError("containment provider creation timestamp is invalid")
+    if re.fullmatch(r"t11-e2e-[0-9a-f]{12}-01", str(value["profile_name"])) is None:
+        raise ContractError("containment provider profile name is invalid")
+    if value["lifecycle"] != PROVIDER_LIFECYCLE_PRE_LIVE:
+        raise ContractError("containment provider evidence is not a pre-live lifecycle record")
+    if value["ssh_agent_forwarding"] is not False or value["dot_ssh_public_key_loading"] is not False or value["user_ssh_config_modified"] is not False:
+        raise ContractError("containment provider SSH isolation drifted")
+    if value["approved_archive_sha256"] != APPROVED_CODEX_ARCHIVE_SHA256 or value["observed_archive_sha256"] != APPROVED_CODEX_ARCHIVE_SHA256:
+        raise ContractError("containment provider archive digest drifted")
+    if value["codex_version_output"] != APPROVED_CODEX_VERSION:
+        raise ContractError("containment provider client version drifted")
+    if value["status"] == "pass":
+        required_truths = (
+            value["native_architecture"], value["repository_clean"],
+            value["all_host_mounts_read_only"], value["provider_cache_only"],
+            value["host_sensitive_mounts_absent"], value["unapproved_mounts_absent"],
+        )
+        if not all(required_truths) or value["host_mount_count"] != 1 or value["host_mount_classifications"] != ["provider-internal-cache"]:
+            raise ContractError("passing containment provider evidence lacks the closed isolation facts")
+        if value["guest_os"] != "Linux" or not isinstance(value["guest_kernel"], str) or re.fullmatch(r"[0-9A-Za-z._+~-]{1,128}", value["guest_kernel"]) is None:
+            raise ContractError("passing containment provider guest platform is invalid")
+        if value["profile_name"] != "t11-e2e-{}-01".format(value["public_head"][:12]):
+            raise ContractError("containment provider profile/public-head binding drifted")
+        if any(value[field] != "pass" for field in ("sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe")):
+            raise ContractError("passing containment provider evidence has an incomplete probe")
+        if control_plane["status"] != "pass":
+            raise ContractError("passing containment provider evidence lacks passing control-plane evidence")
+        if (
+            control_plane["profile_name"] != value["profile_name"]
+            or control_plane["vm_backend"] != value["vm_backend"]
+            or control_plane["architecture"] != value["architecture"]
+            or control_plane["provider_configuration_sha256"] != value["provider_configuration_sha256"]
+            or control_plane["instance_identity_sha256"] != value["vm_instance_identity_sha256"]
+        ):
+            raise ContractError("containment provider and control-plane evidence differ")
+        if value["public_head"] == "0" * 40 or value["public_tree"] == "0" * 40 or any(
+            value[field] == "0" * 64 for field in (
+                "provider_configuration_sha256", "effective_mount_inventory_sha256",
+                "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
+                "vm_instance_identity_sha256", "extracted_binary_sha256",
+                "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
+            )
+        ):
+            raise ContractError("passing containment provider evidence contains a sentinel binding")
+    validate_json_limits(value, {"json_depth": 8, "json_nodes": 192, "json_string_bytes": 256}, "containment provider evidence")
+    return value
+
+
+def colima_provider_input_from_profile(profile: Mapping[str, Any]) -> Dict[str, Any]:
+    evidence = profile["evidence"]["containment_provider"]
+    validate_containment_provider_evidence(evidence)
+    if evidence["status"] != "pass":
+        raise ContractError("live execution requires passing Colima provider evidence")
+    value = {
+        "schema": COLIMA_PROVIDER_INPUT_SCHEMA,
+        "authority": "owner-authored",
+        "provider": {
+            "kind": evidence["provider_kind"],
+            "profile_name": evidence["profile_name"],
+            "vm_backend": evidence["vm_backend"],
+            "architecture": evidence["architecture"],
+            "created_at": evidence["created_at"],
+            "provider_configuration_sha256": evidence["provider_configuration_sha256"],
+            "effective_mount_inventory_sha256": evidence["effective_mount_inventory_sha256"],
+            "provider_cache_mount_sha256": evidence["provider_cache_mount_sha256"],
+            "provider_cache_guest_mountpoint_sha256": evidence["provider_cache_guest_mountpoint_sha256"],
+            "host_mount_count": evidence["host_mount_count"],
+            "host_mount_classifications": evidence["host_mount_classifications"],
+            "all_host_mounts_read_only": evidence["all_host_mounts_read_only"],
+            "ssh_agent_forwarding": evidence["ssh_agent_forwarding"],
+            "dot_ssh_public_key_loading": evidence["dot_ssh_public_key_loading"],
+            "user_ssh_config_modified": evidence["user_ssh_config_modified"],
+        },
+        "control_plane": dict(evidence["control_plane"]),
+        "repository": {"head": evidence["public_head"], "tree": evidence["public_tree"]},
+        "client": {
+            "version_output": evidence["codex_version_output"],
+            "approved_archive_sha256": evidence["approved_archive_sha256"],
+            "observed_archive_sha256": evidence["observed_archive_sha256"],
+            "extracted_binary_sha256": evidence["extracted_binary_sha256"],
+        },
+        "lifecycle": dict(evidence["lifecycle"]),
+    }
+    validate_colima_provider_input(value)
+    return value
+
+
 def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[str, Any]:
     if not isinstance(profile, dict):
         raise ContractError("runtime profile must be an object")
@@ -587,7 +1396,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         raise ContractError("runtime evidence must be an object")
     exact_keys(
         evidence,
-        ("configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior"),
+        ("configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider"),
         "runtime evidence",
     )
     if evidence["configuration_intent"] != runtime_configuration_intent():
@@ -628,6 +1437,13 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     exact_keys(network_evidence, ("status",), "runtime network/sandbox evidence")
     if network_evidence["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
         raise ContractError("runtime network/sandbox status is invalid")
+    containment_evidence = validate_containment_provider_evidence(
+        evidence["containment_provider"], allow_fixture=allow_fixture,
+    )
+    if containment_evidence["process_containment_probe"] != caps["process_containment_probe"]:
+        raise ContractError("runtime capability and containment-provider probe disagree")
+    if containment_evidence["status"] != "not-run" and containment_evidence["network_boundary_probe"] != network_evidence["status"]:
+        raise ContractError("runtime network and containment-provider evidence disagree")
     platform = profile["platform"]
     if not isinstance(platform, dict):
         raise ContractError("runtime platform must be an object")
@@ -663,14 +1479,34 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         and diagnostic["status"] == "pass"
         and worker_argv_evidence["status"] == "pass"
         and network_evidence["status"] == "pass"
+        and containment_evidence["status"] == "pass"
         and all(caps[field] for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
     )
     if profile["live_run_allowed"] is not match_ready:
         raise ContractError("live_run_allowed disagrees with fail-closed profile evidence")
     if release_class.startswith("prerelease") and status_value != "unsupported-client":
         raise ContractError("unapproved prerelease must be unsupported-client")
-    if status_value == "match" and auth["class"] not in ("signed-in-client", "api-key"):
-        raise ContractError("match profile requires an available auth class")
+    if status_value == "match" and auth["class"] != "signed-in-client":
+        raise ContractError("match profile requires the approved VM device-auth class")
+    if status_value == "match" and profile["scope"] != "fixture" and client["version_output"] != APPROVED_CODEX_VERSION:
+        raise ContractError("live match requires the exact approved Codex client version")
+    if containment_evidence["status"] == "pass" and containment_evidence["extracted_binary_sha256"] != client["binary_sha256"]:
+        raise ContractError("containment provider and runtime client binary digests disagree")
+    if containment_evidence["status"] == "pass" and profile["scope"] != "fixture":
+        if platform != {"os": "Linux", "architecture": COLIMA_ARCHITECTURE}:
+            raise ContractError("live runtime platform is not the approved Linux/aarch64 guest")
+        if containment_evidence["guest_os"] != platform["os"] or containment_evidence["architecture"] != platform["architecture"]:
+            raise ContractError("runtime platform and containment provider disagree")
+        if containment_evidence["codex_version_output"] != client["version_output"]:
+            raise ContractError("runtime client and containment provider version disagree")
+        created = datetime.datetime.strptime(containment_evidence["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        observed = datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+        control_post = datetime.datetime.strptime(
+            containment_evidence["control_plane"]["post_create_observed_at"],
+            "%Y-%m-%dT%H:%M:%SZ",
+        )
+        if created > control_post or control_post > observed:
+            raise ContractError("containment provider/control-plane/runtime chronology drifted")
     return profile
 
 
@@ -1036,9 +1872,15 @@ class DescendantTracker:
         return self._terminate(grace_seconds, include_leader=True)
 
 
-def live_containment_proven() -> bool:
-    """No kernel-enforced escaped-descendant boundary is yet implemented."""
-    return False
+def live_containment_proven(evidence: Optional[Mapping[str, Any]] = None) -> bool:
+    """Require the closed adapter/owner-authored disposable-VM evidence lane."""
+    if evidence is None:
+        return False
+    try:
+        validate_containment_provider_evidence(evidence)
+    except ContractError:
+        return False
+    return evidence["status"] == "pass" and evidence["process_containment_probe"] == "pass"
 
 
 def run_bounded_process(
@@ -2430,6 +3272,14 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
     if mode == "live":
         if profile["scope"] != "exact-head-live-sensor":
             raise ContractError("live execution requires an exact-head-live-sensor profile")
+        containment = profile["evidence"]["containment_provider"]
+        if (
+            containment["status"] != "pass"
+            or containment["public_head"] != envelope["harness"]["commit"]
+            or containment["public_tree"] != envelope["harness"]["tree"]
+        ):
+            raise ContractError("containment provider and envelope harness binding differ")
+        provider_input = colima_provider_input_from_profile(profile)
         observed = datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
         age = (datetime.datetime.now(datetime.timezone.utc) - observed).total_seconds()
         if age < -300 or age > 900:
@@ -2438,6 +3288,7 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             repository_root,
             envelope["worker"]["model"],
             envelope["worker"]["reasoning_effort"],
+            provider_input,
         )
         validate_runtime_profile(fresh_profile)
         supplied_semantics = {key: value for key, value in profile.items() if key != "observed_at"}
@@ -2447,25 +3298,38 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
     if mode not in ("offline", "live"):
         raise ContractError("unsupported execution mode")
 
-    with tempfile.TemporaryDirectory(prefix="t11-runtime-") as temporary:
+    with contextlib.ExitStack() as stack:
+        layout: Optional[ColimaRuntimeLayout] = None
+        if mode == "live":
+            layout = prepare_colima_runtime_layout()
+            names_before = sorted(entry.name for entry in os.scandir(layout.work))
+            if names_before:
+                raise ContractError("private Colima work root is not empty before execution")
+            temporary = stack.enter_context(tempfile.TemporaryDirectory(prefix="execution-", dir=str(layout.work)))
+            private_home = layout.home
+            private_tmp = layout.tmp
+            executable = layout.binary
+        else:
+            temporary = stack.enter_context(tempfile.TemporaryDirectory(prefix="t11-runtime-"))
+            private_home = Path(temporary) / "home"
+            private_tmp = Path(temporary) / "tmp"
+            private_home.mkdir(mode=0o700)
+            private_tmp.mkdir(mode=0o700)
+            executable = Path(sys.executable).resolve()
         container = Path(temporary)
         os.chmod(container, 0o700)
-        private_home = container / "home"
-        private_tmp = container / "tmp"
-        private_home.mkdir(mode=0o700)
-        private_tmp.mkdir(mode=0o700)
-        executable = Path(sys.executable).resolve() if mode == "offline" else resolve_executable_from_path("codex", {"PATH": REVIEWED_SENSOR_PATH})
-        if mode == "live" and executable is None:
-            raise ContractError("approved Codex executable is unavailable")
-        assert executable is not None
         extra = {"T11_FAKE_BEHAVIOR": fake_behavior} if mode == "offline" else None
         environment = minimal_environment(executable, private_home, private_tmp, extra)
         harness_binding = None
+        persistent_home_before = None
+        persistent_tmp_before = None
+        binary_before = None
         if mode == "live":
             if materialize_reviewed_rules_profile(environment) != runtime_configuration_intent()["rules_profile_sha256"]:
                 raise ContractError("reviewed live execpolicy profile digest drifted")
             if hash_regular_file(executable) != profile["client"]["binary_sha256"]:
                 raise ContractError("Codex binary digest drifted after the runtime sensor")
+            binary_before = hash_regular_file(executable)
             version_result = bounded_capture([str(executable), "--version"], container, environment)
             help_result = bounded_capture([str(executable), "exec", "--help"], container, environment)
             if version_result.exit_code != 0 or help_result.exit_code != 0 or version_result.timed_out or help_result.timed_out or version_result.stdout_overflow or help_result.stdout_overflow:
@@ -2473,6 +3337,8 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             if version_result.stdout.decode("utf-8", errors="strict").strip() != profile["client"]["version_output"] or sha256_bytes(help_result.stdout) != profile["client"]["exec_help_sha256"]:
                 raise ContractError("Codex version/help evidence drifted after the runtime sensor")
             harness_binding = verify_harness_state(repository_root, envelope, environment)
+            persistent_home_before = execution_root_inventory(private_home)
+            persistent_tmp_before = execution_root_inventory(private_tmp)
         target_root = create_synthetic_repository(container, environment)
         before = git_snapshot(target_root, environment)
         validate_pre_snapshot(before)
@@ -2483,16 +3349,22 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         else:
             worker_argv = build_live_argv(executable, target_root, repository_root, envelope, environment)
         prompt = static_prompt(envelope)
-        process = run_bounded_process(
-            worker_argv,
-            target_root,
-            environment,
-            prompt,
-            envelope["limits"]["worker_timeout_seconds"],
-            envelope["limits"]["stdout_bytes"],
-            envelope["limits"]["stderr_bytes"],
-            2,
-        )
+        if mode == "live":
+            assert layout is not None
+            process = run_claimed_live_worker(
+                layout, envelope, profile, worker_argv, target_root, environment, prompt,
+            )
+        else:
+            process = run_bounded_process(
+                worker_argv,
+                target_root,
+                environment,
+                prompt,
+                envelope["limits"]["worker_timeout_seconds"],
+                envelope["limits"]["stdout_bytes"],
+                envelope["limits"]["stderr_bytes"],
+                2,
+            )
         execution_root_after = execution_root_inventory(container)
         validate_execution_root_transition(execution_root_before, execution_root_after)
         if process.timed_out:
@@ -2512,6 +3384,17 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         if mode == "live":
             assert harness_binding is not None
             verify_harness_state(repository_root, envelope, environment, harness_binding)
+            assert persistent_home_before is not None and persistent_tmp_before is not None and binary_before is not None
+            if execution_root_inventory(private_home) != persistent_home_before:
+                raise ContractError("dedicated Codex HOME changed during the live worker")
+            if execution_root_inventory(private_tmp) != persistent_tmp_before:
+                raise ContractError("dedicated private TMPDIR changed during the live worker")
+            if hash_regular_file(executable) != binary_before:
+                raise ContractError("Codex binary changed during the live worker")
+            assert layout is not None
+            names_during = sorted(entry.name for entry in os.scandir(layout.work))
+            if names_during != [container.name]:
+                raise ContractError("private Colima work root membership changed")
         verifier_digest = sha256_bytes(canonical_bytes(verifier))
         result = {
             "schema": "execution-result/v1",
@@ -2629,7 +3512,9 @@ def bounded_capture(argv: Sequence[str], cwd: Path, env: Mapping[str, str], stdi
 
 
 def auth_class(binary: Path, cwd: Path, env: Mapping[str, str]) -> str:
-    result = bounded_capture([str(binary), "login", "status"], cwd, env)
+    argv = [str(binary), "-c", 'cli_auth_credentials_store="file"', "login", "status"]
+    validate_runtime_argv_policy(argv, require_memory_overrides=False)
+    result = bounded_capture(argv, cwd, env)
     if result.exit_code != 0 or result.timed_out or result.stdout_overflow or result.stderr_overflow:
         return "unavailable"
     text = result.stdout.decode("utf-8", errors="replace").lower()
@@ -2862,26 +3747,267 @@ def not_run_runtime_evidence() -> Dict[str, Any]:
             "dynamic_task_data_stdin_only": False,
         },
         "network_sandbox_behavior": {"status": "not-run"},
+        "containment_provider": not_run_containment_provider_evidence(),
     }
 
 
-def observe_runtime_profile(repository_root: Path, model: str, reasoning: str) -> Dict[str, Any]:
+def _read_identity_value(path: Path, label: str) -> bytes:
+    data = read_bounded_regular(path, 4096).strip()
+    if re.fullmatch(rb"[0-9A-Fa-f-]{8,128}", data) is None:
+        raise ContractError(label + " identity is malformed")
+    return data.lower()
+
+
+def observe_colima_provider_evidence(
+    repository_root: Path,
+    provider_input: Mapping[str, Any],
+    layout: ColimaRuntimeLayout,
+    binary_sha256: str,
+    version_output: str,
+    environment: Mapping[str, str],
+) -> Dict[str, Any]:
+    validate_colima_provider_input(provider_input)
+    provider = provider_input["provider"]
+    mount_data = read_bounded_regular(Path("/proc/self/mountinfo"), MAX_MOUNTINFO_BYTES)
+    mount_facts = inspect_colima_mount_inventory(mount_data, provider)
+    machine = _read_identity_value(Path("/etc/machine-id"), "machine")
+    boot = _read_identity_value(Path("/proc/sys/kernel/random/boot_id"), "boot")
+    instance_sha256 = sha256_bytes(machine + b"\0" + boot)
+    control_plane = provider_input["control_plane"]
+    uname = os.uname()
+    guest_os = uname.sysname
+    guest_architecture = uname.machine
+    guest_kernel = uname.release
+    platform_ok = (
+        guest_os == "Linux"
+        and guest_architecture == COLIMA_ARCHITECTURE
+        and re.fullmatch(r"[0-9A-Za-z._+~-]{1,128}", guest_kernel) is not None
+    )
+    head_bytes = run_git(repository_root, ("rev-parse", "--verify", "HEAD"), environment, max_bytes=128)
+    tree_bytes = run_git(repository_root, ("rev-parse", "--verify", "HEAD^{tree}"), environment, max_bytes=128)
+    status_bytes = run_git(repository_root, ("status", "--porcelain=v1", "-z", "--untracked-files=all"), environment, max_bytes=262_144)
+    try:
+        public_head = head_bytes.decode("ascii", errors="strict").strip()
+        public_tree = tree_bytes.decode("ascii", errors="strict").strip()
+    except UnicodeDecodeError:
+        raise ContractError("public repository identity is malformed")
+    if OID_RE.fullmatch(public_head) is None or OID_RE.fullmatch(public_tree) is None:
+        raise ContractError("public repository identity is malformed")
+    repository_clean = not status_bytes
+    repository_matches = (
+        public_head == provider_input["repository"]["head"]
+        and public_tree == provider_input["repository"]["tree"]
+        and repository_clean
+    )
+    ssh_agent_absent = "SSH_AUTH_SOCK" not in os.environ and "SSH_AGENT_PID" not in os.environ
+    sensitive_mounts_absent = mount_facts["host_sensitive_mounts_absent"] and ssh_agent_absent
+    provider_pass = (
+        mount_facts["status"] == "pass"
+        and platform_ok
+        and repository_matches
+        and version_output == provider_input["client"]["version_output"]
+        and binary_sha256 == provider_input["client"]["extracted_binary_sha256"]
+        and sensitive_mounts_absent
+        and control_plane["status"] == "pass"
+        and control_plane["instance_identity_sha256"] == instance_sha256
+    )
+    return {
+        "schema": CONTAINMENT_PROVIDER_EVIDENCE_SCHEMA,
+        "authority": "adapter/owner-authored",
+        "codex_authenticated_attestation": False,
+        "status": "pass" if provider_pass else "fail",
+        "provider_kind": provider["kind"],
+        "profile_name": provider["profile_name"],
+        "vm_backend": provider["vm_backend"],
+        "architecture": provider["architecture"],
+        "native_architecture": platform_ok,
+        "guest_os": guest_os,
+        "guest_kernel": guest_kernel if re.fullmatch(r"[0-9A-Za-z._+~-]{1,128}", guest_kernel) else "invalid",
+        "created_at": provider["created_at"],
+        "provider_configuration_sha256": provider["provider_configuration_sha256"],
+        "effective_mount_inventory_sha256": mount_facts["effective_mount_inventory_sha256"],
+        "provider_cache_mount_sha256": mount_facts["provider_cache_mount_sha256"],
+        "provider_cache_guest_mountpoint_sha256": mount_facts["provider_cache_guest_mountpoint_sha256"],
+        "host_mount_count": mount_facts["host_mount_count"],
+        "host_mount_classifications": mount_facts["host_mount_classifications"],
+        "all_host_mounts_read_only": mount_facts["all_host_mounts_read_only"],
+        "provider_cache_only": mount_facts["provider_cache_only"],
+        "host_sensitive_mounts_absent": sensitive_mounts_absent,
+        "unapproved_mounts_absent": mount_facts["unapproved_mounts_absent"],
+        "ssh_agent_forwarding": not ssh_agent_absent,
+        "dot_ssh_public_key_loading": provider["dot_ssh_public_key_loading"],
+        "user_ssh_config_modified": provider["user_ssh_config_modified"],
+        "vm_instance_identity_sha256": instance_sha256,
+        "public_head": public_head,
+        "public_tree": public_tree,
+        "repository_clean": repository_clean,
+        "codex_version_output": version_output,
+        "approved_archive_sha256": provider_input["client"]["approved_archive_sha256"],
+        "observed_archive_sha256": provider_input["client"]["observed_archive_sha256"],
+        "extracted_binary_sha256": binary_sha256,
+        "runtime_root_binding_sha256": layout.runtime_root_binding_sha256,
+        "dedicated_codex_home_binding_sha256": layout.dedicated_codex_home_binding_sha256,
+        "sandbox_configuration_probe": "not-run",
+        "network_boundary_probe": "not-run",
+        "process_containment_probe": "pass" if provider_pass else "fail",
+        "control_plane": dict(control_plane),
+        "lifecycle": dict(provider_input["lifecycle"]),
+    }
+
+
+def _unavailable_runtime_profile(model: str, reasoning: str) -> Dict[str, Any]:
+    return {
+        "schema": "runtime-profile/v1", "repository": REPOSITORY,
+        "observed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "scope": "exact-head-live-sensor", "status": "UNKNOWN", "reason": "Codex executable is unavailable",
+        "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
+        "client": {"version_output": "unavailable", "release_class": "unknown", "binary_sha256": "0" * 64, "exec_help_sha256": "0" * 64, "resolved_path_recorded": False},
+        "capabilities": {"exec_json": False, "ephemeral": False, "strict_config": False, "ignore_user_config": False, "workspace_write": False, "approval_never": False, "documented_config_keys_probe": "UNCHECKABLE", "shell_environment_probe": "UNCHECKABLE", "process_containment_probe": "not-run", "model": False, "reasoning": False, "sandbox": False, "approval": False, "overrides": False},
+        "evidence": not_run_runtime_evidence(),
+        "auth": {"class": "unavailable", "credential_values_recorded": False},
+        "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
+        "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
+        "live_run_allowed": False,
+    }
+
+
+def _observe_runtime_profile_bound(
+    repository_root: Path,
+    model: str,
+    reasoning: str,
+    binary: Path,
+    work: Path,
+    env: Mapping[str, str],
+    provider_input: Optional[Mapping[str, Any]],
+    layout: Optional[ColimaRuntimeLayout],
+) -> Dict[str, Any]:
+    version_result = bounded_capture([str(binary), "--version"], work, env)
+    help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
+    if version_result.exit_code != 0 or help_result.exit_code != 0 or version_result.timed_out or help_result.timed_out or version_result.stdout_overflow or help_result.stdout_overflow:
+        raise ContractError("runtime version/help sensor is UNCHECKABLE")
+    version_output = sanitize_version_output(version_result.stdout)
+    help_bytes = help_result.stdout
+    help_text = help_bytes.decode("utf-8", errors="strict")
+    release_class = classify_release(version_output)
+    binary_sha256 = hash_regular_file(binary)
+    flags = {
+        "exec_json": "--json" in help_text,
+        "ephemeral": "--ephemeral" in help_text,
+        "strict_config": "--strict-config" in help_text,
+        "ignore_user_config": "--ignore-user-config" in help_text,
+        "workspace_write": "workspace-write" in help_text,
+        "model": "--model" in help_text,
+        "sandbox": "--sandbox" in help_text,
+    }
+    if release_class == "stable":
+        probe = probe_runtime_evidence(binary, work, env, repository_root)
+        config_probe = probe["documented_config_keys_probe"]
+        shell_probe = probe["shell_environment_probe"]
+        evidence = probe["evidence"]
+        if provider_input is not None and layout is not None:
+            containment = observe_colima_provider_evidence(
+                repository_root, provider_input, layout, binary_sha256, version_output, env,
+            )
+            configuration_lane = "pass" if (
+                config_probe == "pass"
+                and shell_probe == "pass"
+                and evidence["diagnostic_health"]["status"] == "pass"
+                and evidence["exact_worker_argv"]["status"] == "pass"
+            ) else ("UNCHECKABLE" if "UNCHECKABLE" in (config_probe, shell_probe, evidence["diagnostic_health"]["status"]) else "fail")
+            containment["sandbox_configuration_probe"] = configuration_lane
+            containment["network_boundary_probe"] = evidence["network_sandbox_behavior"]["status"]
+            if containment["status"] == "pass" and configuration_lane == "pass" and containment["network_boundary_probe"] == "pass":
+                containment["status"] = "pass"
+            elif "UNCHECKABLE" in (configuration_lane, containment["network_boundary_probe"]):
+                containment["status"] = "UNCHECKABLE"
+                containment["process_containment_probe"] = "UNCHECKABLE"
+            else:
+                containment["status"] = "fail"
+                containment["process_containment_probe"] = "fail"
+            evidence["containment_provider"] = containment
+            containment_probe = containment["process_containment_probe"]
+        else:
+            containment = not_run_containment_provider_evidence()
+            evidence["containment_provider"] = containment
+            containment_probe = "not-run"
+    else:
+        config_probe, shell_probe = "not-proven", "not-run"
+        evidence = not_run_runtime_evidence()
+        containment_probe = "not-run"
+    config_ok = (
+        config_probe == "pass"
+        and shell_probe == "pass"
+        and containment_probe == "pass"
+        and evidence["diagnostic_health"]["status"] == "pass"
+        and evidence["exact_worker_argv"]["status"] == "pass"
+        and evidence["network_sandbox_behavior"]["status"] == "pass"
+        and evidence["containment_provider"]["status"] == "pass"
+    )
+    caps = {
+        **flags,
+        "approval_never": config_ok,
+        "documented_config_keys_probe": config_probe,
+        "shell_environment_probe": shell_probe,
+        "process_containment_probe": containment_probe,
+        "reasoning": config_ok,
+        "approval": config_ok,
+        "overrides": config_ok,
+    }
+    all_required = all(caps[name] for name in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
+    containment_status = evidence["containment_provider"]["status"]
+    observed_auth_class = auth_class(binary, work, env)
+    if release_class.startswith("prerelease"):
+        profile_status, reason = "unsupported-client", "unapproved-prerelease: {} client".format(release_class.split("-", 1)[1])
+    elif release_class != "stable":
+        profile_status, reason = "UNKNOWN", "client release class is unverifiable"
+    elif version_output != APPROVED_CODEX_VERSION:
+        profile_status, reason = "unsupported-client", "stable client version is outside the approved exact release"
+    elif provider_input is None:
+        profile_status, reason = "UNCHECKABLE", "approved disposable Colima provider input is absent"
+    elif containment_status == "UNCHECKABLE" or config_probe == "UNCHECKABLE" or shell_probe == "UNCHECKABLE":
+        profile_status, reason = "UNCHECKABLE", "required config, shell-environment, network, or containment capability is uncheckable"
+    elif containment_status == "fail":
+        profile_status, reason = "profile-drift", "approved Colima provider or exact repository observation drifted"
+    elif observed_auth_class != "signed-in-client":
+        profile_status, reason = "profile-drift", "approved VM device-auth class is unavailable or drifted"
+    elif config_probe == "fail" or shell_probe == "fail" or not all_required:
+        profile_status, reason = "unsupported-client", "required config, shell-environment, network, or containment capability is unsupported"
+    else:
+        profile_status, reason = "match", "exact approved stable client and disposable Colima provider probes match"
+    profile = {
+        "schema": "runtime-profile/v1", "repository": REPOSITORY,
+        "observed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "scope": "exact-head-live-sensor", "status": profile_status, "reason": reason,
+        "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
+        "client": {"version_output": version_output, "release_class": release_class, "binary_sha256": binary_sha256, "exec_help_sha256": sha256_bytes(help_bytes), "resolved_path_recorded": False},
+        "capabilities": caps,
+        "evidence": evidence,
+        "auth": {"class": observed_auth_class, "credential_values_recorded": False},
+        "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
+        "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
+        "live_run_allowed": profile_status == "match",
+    }
+    validate_runtime_profile(profile)
+    return profile
+
+
+def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, provider_input: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
     require_runtime_fs_capabilities()
+    if provider_input is not None:
+        validate_colima_provider_input(provider_input)
+        layout = prepare_colima_runtime_layout()
+        binary = layout.binary
+        try:
+            hash_regular_file(binary)
+        except (ContractError, OSError):
+            return _unavailable_runtime_profile(model, reasoning)
+        env = minimal_environment(binary, layout.home, layout.tmp)
+        return _observe_runtime_profile_bound(
+            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout,
+        )
     resolved = resolve_executable_from_path("codex", {"PATH": REVIEWED_SENSOR_PATH})
     if resolved is None:
-        return {
-            "schema": "runtime-profile/v1", "repository": REPOSITORY,
-            "observed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-            "scope": "exact-head-live-sensor", "status": "UNKNOWN", "reason": "Codex executable is unavailable",
-            "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
-            "client": {"version_output": "unavailable", "release_class": "unknown", "binary_sha256": "0" * 64, "exec_help_sha256": "0" * 64, "resolved_path_recorded": False},
-            "capabilities": {"exec_json": False, "ephemeral": False, "strict_config": False, "ignore_user_config": False, "workspace_write": False, "approval_never": False, "documented_config_keys_probe": "UNCHECKABLE", "shell_environment_probe": "UNCHECKABLE", "process_containment_probe": "UNCHECKABLE", "model": False, "reasoning": False, "sandbox": False, "approval": False, "overrides": False},
-            "evidence": not_run_runtime_evidence(),
-            "auth": {"class": "unavailable", "credential_values_recorded": False},
-            "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
-            "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
-            "live_run_allowed": False,
-        }
+        return _unavailable_runtime_profile(model, reasoning)
     binary = Path(resolved).resolve()
     with tempfile.TemporaryDirectory(prefix="t11-profile-") as temporary:
         root = Path(temporary)
@@ -2893,77 +4019,9 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str) -
         tmpdir.mkdir(mode=0o700)
         work.mkdir(mode=0o700)
         env = minimal_environment(binary, home, tmpdir)
-        version_result = bounded_capture([str(binary), "--version"], work, env)
-        help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
-        if version_result.exit_code != 0 or help_result.exit_code != 0 or version_result.timed_out or help_result.timed_out or version_result.stdout_overflow or help_result.stdout_overflow:
-            raise ContractError("runtime version/help sensor is UNCHECKABLE")
-        version_output = sanitize_version_output(version_result.stdout)
-        help_bytes = help_result.stdout
-        help_text = help_bytes.decode("utf-8", errors="strict")
-        release_class = classify_release(version_output)
-        flags = {
-            "exec_json": "--json" in help_text,
-            "ephemeral": "--ephemeral" in help_text,
-            "strict_config": "--strict-config" in help_text,
-            "ignore_user_config": "--ignore-user-config" in help_text,
-            "workspace_write": "workspace-write" in help_text,
-            "model": "--model" in help_text,
-            "sandbox": "--sandbox" in help_text,
-        }
-        if release_class == "stable":
-            probe = probe_runtime_evidence(binary, work, env, repository_root)
-            config_probe = probe["documented_config_keys_probe"]
-            shell_probe = probe["shell_environment_probe"]
-            evidence = probe["evidence"]
-            containment_probe = "pass" if live_containment_proven() else "UNCHECKABLE"
-        else:
-            config_probe, shell_probe = "not-proven", "not-run"
-            evidence = not_run_runtime_evidence()
-            containment_probe = "not-run"
-        config_ok = (
-            config_probe == "pass"
-            and shell_probe == "pass"
-            and containment_probe == "pass"
-            and evidence["diagnostic_health"]["status"] == "pass"
-            and evidence["exact_worker_argv"]["status"] == "pass"
-            and evidence["network_sandbox_behavior"]["status"] == "pass"
+        return _observe_runtime_profile_bound(
+            repository_root, model, reasoning, binary, work, env, None, None,
         )
-        caps = {
-            **flags,
-            "approval_never": config_ok,
-            "documented_config_keys_probe": config_probe,
-            "shell_environment_probe": shell_probe,
-            "process_containment_probe": containment_probe,
-            "reasoning": config_ok,
-            "approval": config_ok,
-            "overrides": config_ok,
-        }
-        all_required = all(caps[name] for name in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
-        if release_class.startswith("prerelease"):
-            profile_status, reason = "unsupported-client", "unapproved-prerelease: {} client".format(release_class.split("-", 1)[1])
-        elif release_class != "stable":
-            profile_status, reason = "UNKNOWN", "client release class is unverifiable"
-        elif config_probe == "UNCHECKABLE" or shell_probe == "UNCHECKABLE" or containment_probe == "UNCHECKABLE":
-            profile_status, reason = "UNCHECKABLE", "required config, shell-environment, or process-containment capability is uncheckable"
-        elif config_probe == "fail" or shell_probe == "fail" or containment_probe == "fail" or not all_required:
-            profile_status, reason = "unsupported-client", "required config, shell-environment, or process-containment capability is unsupported"
-        else:
-            profile_status, reason = "match", "stable client and all reviewed semantic capability probes match"
-        profile = {
-            "schema": "runtime-profile/v1", "repository": REPOSITORY,
-            "observed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-            "scope": "exact-head-live-sensor", "status": profile_status, "reason": reason,
-            "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
-            "client": {"version_output": version_output, "release_class": release_class, "binary_sha256": hash_regular_file(binary), "exec_help_sha256": sha256_bytes(help_bytes), "resolved_path_recorded": False},
-            "capabilities": caps,
-            "evidence": evidence,
-            "auth": {"class": auth_class(binary, work, env), "credential_values_recorded": False},
-            "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
-            "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
-            "live_run_allowed": profile_status == "match",
-        }
-        validate_runtime_profile(profile)
-        return profile
 
 
 def load_repository_json(repository_root: Path, relative: str, max_bytes: int = MAX_STDIN_BYTES) -> Dict[str, Any]:
@@ -3003,6 +4061,15 @@ def cli_verify(repository_root: Path) -> Dict[str, Any]:
     return validate_verification_bundle(bundle, env)
 
 
+def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, Any]:
+    require_runtime_fs_capabilities()
+    provider_input = decode_json_object(read_stdin_bounded(), "Colima provider input")
+    validate_colima_provider_input(provider_input)
+    return observe_runtime_profile(
+        repository_root, args.model, args.reasoning_effort, provider_input,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="T11 deterministic Codex execution controller")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -3031,7 +4098,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         elif args.command == "verify":
             result = cli_verify(repository_root)
         elif args.command == "profile":
-            result = observe_runtime_profile(repository_root, args.model, args.reasoning_effort)
+            result = cli_profile(args, repository_root)
         else:
             raise ContractError("unsupported adapter command")
         sys.stdout.buffer.write(canonical_bytes(result))

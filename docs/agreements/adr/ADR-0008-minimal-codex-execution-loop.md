@@ -55,6 +55,30 @@ syntax. A stable client becomes `match` only when every independently required
 lane passes; the full sensor is rerun and reconciled immediately before the
 one live worker.
 
+The separately approved containment lane uses one fresh T11-only Colima Linux
+VM with VZ and native `aarch64`, named from the exact public head. The guest
+clones that head onto its private disk. It neither mounts the host repository
+nor reuses the default profile, existing runtime data, or host credentials.
+The sole permitted host mount is Colima 0.10.1's unavoidable provider-internal
+cache entry, redirected to a fresh attempt-only root and proven read-only; no
+other shared mount is permitted. Raw paths remain local-only. The closed
+provider evidence is adapter/owner-authored and explicitly not a Codex-issued
+authenticated attestation.
+
+Owner-authored control-plane evidence must prove pre-create absence of both
+the exact profile and its runtime data. The attempt reuses no existing VM,
+container, volume, default profile, or additional disk; activation remains
+unchanged and repository/runtime data stays on the private VM disk. A closed
+safe-field canonical digest binds Colima 0.10.1, chronology, profile,
+backend/architecture, configuration, and instance identity without raw paths.
+
+The candidate client is exactly official stable `codex-cli 0.150.1` for Linux
+ARM64. Its archive must match SHA-256
+`5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264`,
+and the extracted binary is digested independently. The runtime uses a private
+guest `CODEX_HOME`; credentials and device-authorization material remain out
+of every artifact and receipt.
+
 ## Security and privacy consequences
 
 - The worker has `workspace-write`, approval `never`, network disabled, no
@@ -84,13 +108,27 @@ one live worker.
 - The append-only receipt validates four native artifacts and derives its
   cross-bound projection. Native JSON provenance remains unsigned/unverified.
   It uses a fresh observation, structured limitations, and an idempotent
-  attempt/digest marker with full same-attempt scanning and read-back
-  reconciliation for uncertain POST outcomes.
+  attempt/digest marker with bounded all-attempt scanning. An exact existing
+  receipt is idempotent, while a different-attempt marker or conflicting
+  same-attempt marker fails closed. Read-back reconciles uncertain POST
+  outcomes without creating a second durable runtime receipt.
 - Linux `/proc` start ticks or Darwin high-resolution `proc_pidinfo` birth
   tokens bind descendant signals across reparenting/setsid and reject PID
   reuse. This process-table tracking closes the deterministic escaped-session
   regression but is not kernel-enforced containment. Live `match` remains
-  `UNCHECKABLE` unless a separate containment probe passes.
+  `UNCHECKABLE` unless the approved disposable-VM containment lane passes.
+- Runtime receipt application occurs before provider destruction. The receipt
+  records the pre-live destruction obligation without claiming completion;
+  destroy request/completion and profile-absence read-back are later,
+  append-only owner/adapter evidence.
+- Final destruction uses a distinct lifecycle actuator after the ordinary
+  runtime receipt. It posts stable idempotent copies to Issue #23 and PR #24,
+  regenerates the canonical receipt projection/comment from the original
+  validated native request, cross-binds the linked receipt's GitHub creation
+  time, and requires the sequence receipt -> destroy request -> destroy
+  completion -> profile and runtime-data absence read-backs. All lifecycle
+  timestamps have a 300-second maximum future skew, and the latest absence
+  observation must be no more than 3600 seconds old at validation.
 
 ## Limitations
 

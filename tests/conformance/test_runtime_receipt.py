@@ -38,6 +38,44 @@ class RuntimeReceiptTest(unittest.TestCase):
     def fixture_now(self):
         return datetime.datetime(2026, 8, 28, 0, 5, tzinfo=datetime.timezone.utc)
 
+    def lifecycle_fixture(self):
+        runtime = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
+        body = self.receipt.render_comment(runtime)
+        provider = runtime["containment_provider"]
+        return {
+            "schema": "t11-colima-lifecycle-receipt-request/v1",
+            "repository": "mochan-tk/agentic-dev-kit-for-codex",
+            "authority": "owner-authored",
+            "codex_authenticated_attestation": False,
+            "task": copy.deepcopy(runtime["task"]),
+            "pull_request": copy.deepcopy(runtime["pull_request"]),
+            "attempt_id": runtime["attempt_id"],
+            "provider": {
+                "profile_name": provider["profile_name"],
+                "vm_instance_identity_sha256": provider["vm_instance_identity_sha256"],
+                "normalized_control_plane_sha256": provider["control_plane"]["normalized_control_plane_sha256"],
+            },
+            "runtime_receipt": {
+                "comment_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-900",
+                "body_sha256": self.receipt.sha256(body.encode("utf-8")),
+                "receipt_sha256": self.receipt.sha256(self.receipt.canonical_bytes(runtime)),
+                "posted_at": "2026-08-28T00:00:30Z",
+                "request": copy.deepcopy(self.fixture),
+            },
+            "checks": copy.deepcopy(runtime["checks"]),
+            "destroy": {
+                "destroy_requested": True,
+                "destroy_requested_at": "2026-08-28T00:01:00Z",
+                "destroy_completed": True,
+                "destroy_completed_at": "2026-08-28T00:02:00Z",
+                "profile_absence_readback": "absent",
+                "profile_absence_observed_at": "2026-08-28T00:03:00Z",
+                "runtime_data_absence_readback": "absent",
+                "runtime_data_absence_observed_at": "2026-08-28T00:04:00Z",
+            },
+            "privacy": copy.deepcopy(self.receipt.LIFECYCLE_PRIVACY),
+        }
+
     def refresh_artifact_chain(self, fixture, observed_at):
         artifacts = fixture["artifacts"]
         profile = artifacts["runtime_profile"]
@@ -45,6 +83,13 @@ class RuntimeReceiptTest(unittest.TestCase):
         result = artifacts["execution_result"]
         verifier = artifacts["verifier"]
         profile["observed_at"] = observed_at
+        provider = profile["evidence"]["containment_provider"]
+        provider["created_at"] = observed_at
+        control = provider["control_plane"]
+        control["pre_create_observed_at"] = observed_at
+        control["post_create_observed_at"] = observed_at
+        normalized = {key: value for key, value in control.items() if key != "normalized_control_plane_sha256"}
+        control["normalized_control_plane_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(normalized))
         result["digests"]["runtime_profile_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(profile))
         result["digests"]["envelope_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(envelope))
         result["verifier"]["record_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(verifier))
@@ -89,9 +134,11 @@ class RuntimeReceiptTest(unittest.TestCase):
     def test_receipt_rejects_identity_digest_and_nonpass_drift(self):
         mutations = (
             lambda value: value["task"].__setitem__("issue", 24),
+            lambda value: value["pull_request"].update({"number": 25, "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/25"}),
             lambda value: value["pull_request"].__setitem__("head", "short"),
             lambda value: value["artifacts"]["envelope"]["harness"].__setitem__("commit", "f" * 40),
             lambda value: value["artifacts"]["runtime_profile"].__setitem__("status", "UNKNOWN"),
+            lambda value: value["artifacts"]["runtime_profile"]["auth"].__setitem__("class", "api-key"),
             lambda value: value["artifacts"]["verifier"].__setitem__("status", "UNKNOWN"),
             lambda value: value["artifacts"]["execution_result"]["git"]["changed_paths"].append("other.txt"),
         )
@@ -100,6 +147,86 @@ class RuntimeReceiptTest(unittest.TestCase):
             mutation(fixture)
             with self.subTest(mutation=mutation):
                 self.assert_receipt_error(lambda f=fixture: self.receipt.validate_receipt(f, now=self.fixture_now()))
+
+    def test_receipt_projects_only_allowlisted_containment_provider_evidence(self):
+        projection = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
+        provider = projection["containment_provider"]
+        self.assertEqual("containment-provider-receipt-evidence/v1", provider["schema"])
+        self.assertEqual("adapter/owner-authored", provider["authority"])
+        self.assertFalse(provider["codex_authenticated_attestation"])
+        self.assertEqual("colima-vm", provider["provider_kind"])
+        self.assertEqual(1, provider["host_mount_count"])
+        self.assertEqual(["provider-internal-cache"], provider["host_mount_classifications"])
+        self.assertTrue(provider["all_host_mounts_read_only"])
+        self.assertTrue(provider["host_sensitive_mounts_absent"])
+        self.assertTrue(provider["unapproved_mounts_absent"])
+        control = provider["control_plane"]
+        self.assertEqual("colima-control-plane-receipt-evidence/v1", control["schema"])
+        self.assertEqual("pass", control["status"])
+        self.assertFalse(control["existing_instance_reused"])
+        self.assertFalse(control["existing_container_reused"])
+        self.assertFalse(control["existing_volume_reused"])
+        self.assertFalse(control["default_profile_reused"])
+        self.assertFalse(control["raw_paths_recorded"])
+        self.assertNotIn("guest_os", provider)
+        self.assertNotIn("guest_kernel", provider)
+        self.assertNotIn("mounts", provider)
+        self.assertNotIn("path", provider)
+        rendered = self.receipt.render_comment(projection)
+        self.assertIn("Provider lifecycle at receipt: destruction required; destruction not yet claimed", rendered)
+        self.assertNotIn("6.8.0-fixture", rendered)
+
+    def test_receipt_rejects_forged_or_cross_unbound_containment_provider(self):
+        mutations = (
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("authority", "codex-authored"),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("codex_authenticated_attestation", True),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("public_head", "f" * 40),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("public_tree", "f" * 40),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("extracted_binary_sha256", "f" * 64),
+            lambda value: value["artifacts"]["runtime_profile"]["platform"].__setitem__("architecture", "x86_64"),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"]["lifecycle"].__setitem__("destroy_completed", True),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("host_mount_count", 0),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"].__setitem__("unapproved_mounts_absent", False),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"]["control_plane"].__setitem__("existing_container_reused", True),
+            lambda value: value["artifacts"]["runtime_profile"]["evidence"]["containment_provider"]["control_plane"].__setitem__("existing_volume_reused", True),
+        )
+        for mutation in mutations:
+            fixture = copy.deepcopy(self.fixture)
+            mutation(fixture)
+            self.refresh_artifact_chain(fixture, fixture["artifacts"]["runtime_profile"]["observed_at"])
+            with self.subTest(mutation=mutation):
+                self.assert_receipt_error(lambda f=fixture: self.receipt.validate_receipt(f, now=self.fixture_now()))
+        fixture = copy.deepcopy(self.fixture)
+        profile = fixture["artifacts"]["runtime_profile"]
+        profile["evidence"]["containment_provider"]["control_plane"]["normalized_control_plane_sha256"] = "f" * 64
+        fixture["artifacts"]["execution_result"]["digests"]["runtime_profile_sha256"] = self.receipt.sha256(
+            self.receipt.canonical_bytes(profile)
+        )
+        self.assert_receipt_error(
+            lambda: self.receipt.validate_receipt(fixture, now=self.fixture_now())
+        )
+
+    def test_receipt_rejects_raw_provider_mount_or_private_path_material(self):
+        fixture = copy.deepcopy(self.fixture)
+        provider = fixture["artifacts"]["runtime_profile"]["evidence"]["containment_provider"]
+        provider["raw_mount_inventory"] = [{"source": "/Users/alice/private"}]
+        self.refresh_artifact_chain(fixture, fixture["artifacts"]["runtime_profile"]["observed_at"])
+        self.assert_receipt_error(
+            lambda: self.receipt.validate_receipt(fixture, now=self.fixture_now()),
+            "private or sensitive",
+        )
+        for key, raw_value in (
+            ("raw_mount_inventory", ["redacted"]),
+            ("doctor_report", {"status": "redacted"}),
+            ("environment", {"LANG": "C.UTF-8"}),
+        ):
+            fixture = copy.deepcopy(self.fixture)
+            fixture["artifacts"]["runtime_profile"]["evidence"]["containment_provider"][key] = raw_value
+            self.refresh_artifact_chain(fixture, fixture["artifacts"]["runtime_profile"]["observed_at"])
+            with self.subTest(key=key):
+                self.assert_receipt_error(
+                    lambda f=fixture: self.receipt.validate_receipt(f, now=self.fixture_now())
+                )
 
     def test_receipt_rejects_private_sensitive_and_raw_fields(self):
         for value in (
@@ -305,7 +432,22 @@ class RuntimeReceiptTest(unittest.TestCase):
         with mock.patch.object(self.receipt, "existing_comments", return_value=comments):
             self.assert_receipt_error(
                 lambda: self.receipt.preflight_existing_receipt(fixture, body),
-                "conflicts",
+                "different attempt",
+            )
+
+    def test_runtime_receipt_preflight_rejects_any_prior_different_attempt(self):
+        fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
+        body = self.receipt.render_comment(fixture)
+        other = {
+            "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-986",
+            "body": "<!-- t11-runtime-receipt attempt=ATTEMPT-fedcba9876543210 receipt_sha256={} -->\nprior".format(
+                "f" * 64
+            ),
+        }
+        with mock.patch.object(self.receipt, "existing_comments", return_value=[other]):
+            self.assert_receipt_error(
+                lambda: self.receipt.preflight_existing_receipt(fixture, body),
+                "different attempt",
             )
 
     def test_idempotent_and_reconciled_success_paths_reread_external_state(self):
@@ -401,6 +543,256 @@ class RuntimeReceiptTest(unittest.TestCase):
         ]
         with mock.patch.object(self.receipt, "run_gh", side_effect=outputs):
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "read-back differs")
+
+    def test_lifecycle_receipt_dry_run_is_closed_canonical_and_dual_target(self):
+        fixture = self.lifecycle_fixture()
+        current = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+        fixture["destroy"].update({
+            "destroy_requested_at": (current - datetime.timedelta(seconds=180)).isoformat().replace("+00:00", "Z"),
+            "destroy_completed_at": (current - datetime.timedelta(seconds=120)).isoformat().replace("+00:00", "Z"),
+            "profile_absence_observed_at": (current - datetime.timedelta(seconds=60)).isoformat().replace("+00:00", "Z"),
+            "runtime_data_absence_observed_at": current.isoformat().replace("+00:00", "Z"),
+        })
+        validated = self.receipt.validate_lifecycle_receipt(
+            copy.deepcopy(fixture), now=current
+        )
+        self.assertNotIn("request", validated["runtime_receipt"])
+        self.assertEqual(
+            "runtime-receipt/v1", validated["runtime_receipt"]["record"]["schema"]
+        )
+        self.assertEqual(
+            self.receipt.sha256(
+                self.receipt.canonical_bytes(fixture["runtime_receipt"]["request"])
+            ),
+            validated["runtime_receipt"]["request_sha256"],
+        )
+        issue_body = self.receipt.render_lifecycle_comment(validated, "issue")
+        pr_body = self.receipt.render_lifecycle_comment(validated, "pr")
+        self.assertIn("target=issue", issue_body)
+        self.assertIn("target=pr", pr_body)
+        self.assertIn("final-destroy evidence", issue_body)
+        self.assertNotRegex(issue_body + pr_body, r"/Users/|/var/folders/|/tmp/")
+        result = subprocess.run(
+            [sys.executable, "-I", str(SCRIPT), "--lifecycle-dry-run"], cwd=ROOT,
+            input=self.receipt.canonical_bytes(fixture), stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, timeout=15,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("t11-colima-lifecycle-receipt-dry-run/v1", payload["schema"])
+        self.assertEqual(issue_body, payload["issue_body"])
+        self.assertEqual(pr_body, payload["pr_body"])
+
+    def test_lifecycle_receipt_rejects_forgery_scope_and_destroy_drift(self):
+        mutations = (
+            lambda value: value.__setitem__("authority", "codex-authored"),
+            lambda value: value.__setitem__("codex_authenticated_attestation", True),
+            lambda value: value["pull_request"].update({"number": 25, "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/25"}),
+            lambda value: value["provider"].__setitem__("profile_name", "t11-e2e-ffffffffffff-01"),
+            lambda value: value["provider"].__setitem__("vm_instance_identity_sha256", "0" * 64),
+            lambda value: value["checks"][0].__setitem__("head", "f" * 40),
+            lambda value: value["destroy"].__setitem__("destroy_completed", False),
+            lambda value: value["destroy"].__setitem__("profile_absence_readback", "present"),
+            lambda value: value["destroy"].__setitem__("destroy_completed_at", "2026-08-28T00:00:00Z"),
+            lambda value: value["runtime_receipt"].__setitem__("posted_at", "2026-08-28T00:01:01Z"),
+            lambda value: value["runtime_receipt"]["request"]["pull_request"].__setitem__("tree", "f" * 40),
+            lambda value: value["privacy"].__setitem__("raw_mount_inventory", True),
+        )
+        for mutation in mutations:
+            fixture = self.lifecycle_fixture()
+            mutation(fixture)
+            with self.subTest(mutation=mutation):
+                self.assert_receipt_error(
+                    lambda f=fixture: self.receipt.validate_lifecycle_receipt(
+                        f, now=self.fixture_now()
+                    )
+                )
+
+    def test_lifecycle_receipt_rejects_future_and_stale_destroy_evidence(self):
+        future_mutations = (
+            lambda value: value["runtime_receipt"].__setitem__("posted_at", "2099-01-01T00:00:00Z"),
+            lambda value: value["destroy"].__setitem__("destroy_requested_at", "2099-01-01T00:00:00Z"),
+            lambda value: value["destroy"].__setitem__("destroy_completed_at", "2099-01-01T00:00:00Z"),
+            lambda value: value["destroy"].__setitem__("profile_absence_observed_at", "2099-01-01T00:00:00Z"),
+            lambda value: value["destroy"].__setitem__("runtime_data_absence_observed_at", "2099-01-01T00:00:00Z"),
+        )
+        for mutation in future_mutations:
+            fixture = self.lifecycle_fixture()
+            mutation(fixture)
+            with self.subTest(mutation=mutation):
+                self.assert_receipt_error(
+                    lambda f=fixture: self.receipt.validate_lifecycle_receipt(
+                        f, now=self.fixture_now()
+                    ),
+                    "future-dated",
+                )
+
+        stale = self.lifecycle_fixture()
+        self.assert_receipt_error(
+            lambda: self.receipt.validate_lifecycle_receipt(
+                stale,
+                now=datetime.datetime(2026, 8, 28, 2, 5, tzinfo=datetime.timezone.utc),
+            ),
+            "stale",
+        )
+
+        at_limit = self.lifecycle_fixture()
+        validated = self.receipt.validate_lifecycle_receipt(
+            at_limit,
+            now=datetime.datetime(2026, 8, 28, 1, 4, tzinfo=datetime.timezone.utc),
+        )
+        self.assertEqual("t11-colima-lifecycle-receipt/v1", validated["schema"])
+
+    def test_lifecycle_receipt_rejects_private_raw_or_secret_material(self):
+        for key, value in (
+            ("raw_mounts", ["/Users/alice/private"]),
+            ("provider_configuration", {"path": "redacted"}),
+            ("credential", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789"),
+        ):
+            fixture = self.lifecycle_fixture()
+            fixture[key] = value
+            with self.subTest(key=key):
+                self.assert_receipt_error(
+                    lambda f=fixture: self.receipt.validate_lifecycle_receipt(
+                        f, now=self.fixture_now()
+                    )
+                )
+
+    def test_linked_runtime_receipt_requires_exact_marker_body_and_provider_bindings(self):
+        lifecycle = self.receipt.validate_lifecycle_receipt(
+            self.lifecycle_fixture(), now=self.fixture_now()
+        )
+        runtime = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
+        body = self.receipt.render_comment(runtime)
+        linked = {
+            "html_url": lifecycle["runtime_receipt"]["comment_url"],
+            "created_at": lifecycle["runtime_receipt"]["posted_at"],
+            "body": body,
+        }
+        with mock.patch.object(self.receipt, "gh_json", return_value=linked):
+            self.receipt.verify_linked_runtime_receipt(lifecycle)
+        wrong_time = dict(linked)
+        wrong_time["created_at"] = "2026-08-28T00:00:31Z"
+        with mock.patch.object(self.receipt, "gh_json", return_value=wrong_time):
+            self.assert_receipt_error(
+                lambda: self.receipt.verify_linked_runtime_receipt(lifecycle)
+            )
+        for mutated in (
+            body + "\ndrift",
+            body.replace(lifecycle["provider"]["vm_instance_identity_sha256"], "f" * 64),
+            body.replace(lifecycle["provider"]["normalized_control_plane_sha256"], "f" * 64),
+        ):
+            with self.subTest(mutated=mutated[-12:]), mock.patch.object(
+                self.receipt, "gh_json", return_value={
+                    "html_url": linked["html_url"],
+                    "created_at": linked["created_at"],
+                    "body": mutated,
+                }
+            ):
+                self.assert_receipt_error(
+                    lambda: self.receipt.verify_linked_runtime_receipt(lifecycle)
+                )
+
+        marker_only_forgery = "\n".join((
+            self.receipt.receipt_marker(runtime),
+            "## forged runtime receipt",
+            "`{}`".format(lifecycle["provider"]["profile_name"]),
+            "`{}`".format(lifecycle["provider"]["vm_instance_identity_sha256"]),
+            "`{}`".format(lifecycle["provider"]["normalized_control_plane_sha256"]),
+        ))
+        with mock.patch.object(self.receipt, "gh_json", return_value={
+            "html_url": linked["html_url"],
+            "created_at": linked["created_at"],
+            "body": marker_only_forgery,
+        }):
+            self.assert_receipt_error(
+                lambda: self.receipt.verify_linked_runtime_receipt(lifecycle),
+                "canonical",
+            )
+
+    def test_lifecycle_markers_are_target_stable_idempotent_and_conflict_closed(self):
+        lifecycle = self.receipt.validate_lifecycle_receipt(
+            self.lifecycle_fixture(), now=self.fixture_now()
+        )
+        for target, url in (
+            ("issue", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-901"),
+            ("pr", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-902"),
+        ):
+            body = self.receipt.render_lifecycle_comment(lifecycle, target)
+            comments = [{"html_url": url, "body": body}]
+            with self.subTest(target=target), mock.patch.object(
+                self.receipt, "lifecycle_existing_comments", return_value=comments
+            ):
+                self.assertEqual(
+                    url,
+                    self.receipt.preflight_existing_lifecycle_receipt(
+                        lifecycle, target, body
+                    ),
+                )
+                conflict = copy.deepcopy(comments)
+                conflict[0]["body"] += "\ndrift"
+                with mock.patch.object(
+                    self.receipt, "lifecycle_existing_comments", return_value=conflict
+                ):
+                    self.assert_receipt_error(
+                        lambda: self.receipt.preflight_existing_lifecycle_receipt(
+                            lifecycle, target, body
+                        ),
+                        "conflicts",
+                    )
+
+    def test_lifecycle_apply_posts_both_targets_and_reverifies(self):
+        lifecycle = self.receipt.validate_lifecycle_receipt(
+            self.lifecycle_fixture(), now=self.fixture_now()
+        )
+        issue_body = self.receipt.render_lifecycle_comment(lifecycle, "issue")
+        pr_body = self.receipt.render_lifecycle_comment(lifecycle, "pr")
+        targets = [
+            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-901", False, False),
+            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-902", True, False),
+        ]
+        with mock.patch.object(self.receipt, "verify_external_head") as verify_head, \
+             mock.patch.object(self.receipt, "verify_linked_runtime_receipt") as verify_linked, \
+             mock.patch.object(self.receipt, "apply_one_lifecycle_comment", side_effect=targets) as apply_one:
+            result = self.receipt.apply_lifecycle_comments(lifecycle, issue_body, pr_body)
+        self.assertEqual("pass", result["status"])
+        self.assertEqual(3, verify_head.call_count)
+        self.assertEqual(3, verify_linked.call_count)
+        self.assertEqual(["issue", "pr"], [call.args[1] for call in apply_one.call_args_list])
+        self.assertEqual({"issue": False, "pr": True}, result["idempotent_targets"])
+
+    def test_lifecycle_target_post_uses_body_file_and_exact_readback(self):
+        lifecycle = self.receipt.validate_lifecycle_receipt(
+            self.lifecycle_fixture(), now=self.fixture_now()
+        )
+        for target, url, command in (
+            ("issue", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-901", "issue"),
+            ("pr", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-902", "pr"),
+        ):
+            body = self.receipt.render_lifecycle_comment(lifecycle, target)
+            with self.subTest(target=target), \
+                 mock.patch.object(self.receipt, "preflight_existing_lifecycle_receipt", return_value=None), \
+                 mock.patch.object(self.receipt, "run_gh", return_value=(url + "\n").encode()) as run_gh, \
+                 mock.patch.object(self.receipt, "gh_json", return_value={"html_url": url, "body": body}):
+                observed = self.receipt.apply_one_lifecycle_comment(
+                    lifecycle, target, body
+                )
+            self.assertEqual((url, False, False), observed)
+            self.assertEqual(command, run_gh.call_args.args[0][0])
+            self.assertIn("--body-file", run_gh.call_args.args[0])
+            self.assertEqual(body.encode("utf-8"), run_gh.call_args.args[1])
+
+    def test_lifecycle_apply_capability_gate_precedes_input_and_github(self):
+        with mock.patch.object(
+            self.receipt, "require_runtime_fs_capabilities",
+            side_effect=self.receipt.ReceiptError("capability gate"),
+        ) as gate, mock.patch.object(self.receipt, "read_stdin_bounded") as read_input, \
+             mock.patch.object(self.receipt, "run_gh") as github:
+            with mock.patch.object(sys, "stdout", mock.Mock(buffer=mock.Mock())):
+                self.assertEqual(1, self.receipt.main(["--lifecycle-apply"]))
+        gate.assert_called_once()
+        read_input.assert_not_called()
+        github.assert_not_called()
 
 
 if __name__ == "__main__":
