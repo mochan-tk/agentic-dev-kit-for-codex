@@ -1,7 +1,7 @@
 # ADR-0008: Minimal Codex execution loop
 
-- Status: accepted for T11 implementation; bounded containment amendment accepted;
-  live evidence pending
+- Status: accepted for T11 implementation; bounded containment and Stage A.1
+  prerequisite amendments accepted; live evidence pending
 - Decision date: 2026-08-28
 - Bounded amendment date: 2026-08-30
 - Task: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23>
@@ -108,6 +108,48 @@ and the extracted binary is digested independently. The runtime uses a private
 guest `CODEX_HOME`; credentials and device-authorization material remain out
 of every artifact and receipt.
 
+The next bounded attempt first qualifies the documented bubblewrap
+prerequisite inside a fresh, unauthenticated disposable Colima VM. The
+controller, never a model, observes only allowlisted guest distribution,
+version, kernel, architecture, and AppArmor fields and then invokes fixed
+shell-free package-manager argv. A passing boundary is Ubuntu 24.04 `noble`
+on Linux `aarch64`, with AppArmor enabled and
+`kernel.apparmor_restrict_unprivileged_userns=1`. The controller pins
+`bubblewrap=0.9.0-1ubuntu0.1`, `apparmor` and `apparmor-profiles` at
+`4.0.1really4.0.1-0ubuntu0.24.04.7`, and verifies `/usr/bin/bwrap` as
+`bubblewrap 0.9.0` with SHA-256
+`ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8`.
+It also records a bounded help-output digest rather than the output.
+
+Because the approved Ubuntu 24.04 AppArmor restriction is active, the
+controller installs the packaged official `bwrap-userns-restrict` profile
+from `/usr/share/apparmor/extra-profiles/bwrap-userns-restrict` to
+`/etc/apparmor.d/bwrap-userns-restrict`, verifies source and installed
+SHA-256
+`11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9`,
+loads it with `apparmor_parser --replace`, and confirms the profile is in
+enforce mode. T11 does not enable `features.use_legacy_landlock` and does not
+globally disable the AppArmor unprivileged-user-namespace restriction.
+
+The prerequisite is successful only when the controller runs this exact
+direct smoke argv without `sudo`, as the guest non-root user, with
+`shell=false` and exit zero:
+
+```text
+/usr/bin/bwrap --unshare-user --unshare-net --ro-bind / / /bin/true
+```
+
+The canonical fixed controller-argv list has SHA-256
+`0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd`;
+the smoke argv alone has SHA-256
+`8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08`.
+
+Raw stderr is discarded and failure is reduced to a fixed reason code. Codex
+shell-environment and sandbox/network probes are not invoked unless this
+direct smoke passes. The prerequisite is distinct gate evidence: it does not
+overwrite provider isolation, mount boundary, process cleanup, Codex
+sandbox/network, shell environment, configuration, or authentication status.
+
 ## Security and privacy consequences
 
 - The worker has `workspace-write`, approval `never`, network disabled, no
@@ -164,20 +206,22 @@ of every artifact and receipt.
   timestamps have a 300-second maximum future skew, and the latest absence
   observation must be no more than 3600 seconds old at validation.
 
-The next attempt is deliberately staged. Stage A provisions a fresh
-unauthenticated Colima VM, performs no device authentication or model
-invocation, observes the provider, mount, cleanup, shell, config, sandbox/
-network, and argv-policy lanes, records a bounded probe-only receipt, destroys
-the VM, verifies profile absence, and stops for code review. Stage B requires
-that later review and a separate fresh VM; only then may device-code
-authentication be enabled temporarily. A Stage B worker remains blocked
-unless exact auth classification and the complete runtime profile are
-`match`. Stage A success is not live-execution evidence.
+The next attempt is deliberately limited to Stage A.1. It provisions a fresh
+unauthenticated Colima VM, performs the bubblewrap qualification above, and
+runs Codex shell-environment and sandbox/network probes only after the direct
+bubblewrap smoke passes. It performs no device authentication, model
+invocation, live worker, or runtime-receipt dry-run/application. Its closed,
+allowlisted probe evidence is appended to Issue #23 and PR #24, after which
+the VM is destroyed and profile, runtime data, and process absence are read
+back. Stage A.1 then stops for owner judgment; it grants no authority to start
+Stage B.
 
-The Stage A record uses a separate closed request, explicit probe dry-run and
-apply modes, and a distinct dual-target marker. It contains no live envelope,
-model result, verifier artifact, raw diagnostic output, or live-receipt claim;
-therefore it cannot consume or impersonate the one later Stage B receipt.
+Stage B requires that later review and a separate fresh VM; only then may
+device-code authentication be enabled temporarily. A Stage B worker remains
+blocked unless exact auth classification and the complete runtime profile are
+`match`. Stage A.1 success is prerequisite evidence, not live-execution or
+runtime-receipt evidence, and cannot consume or impersonate the one later
+Stage B receipt.
 
 ## Limitations
 
@@ -185,7 +229,7 @@ The three `.codex/agents/*.toml` files are K09-partial static role guidance.
 T11 does not prove named-agent runtime selection, authenticated role identity,
 full K09 parity, hooks, a generalized Task ritual, installation, upgrade,
 feedback transport, full escaped-descendant process-lifetime containment, or
-release readiness. Offline fixtures and a Stage A probe-only receipt do not
+release readiness. Offline fixtures and Stage A.1 probe-only evidence do not
 constitute a live Codex run. Only an exact-head supported-profile Stage B run
 and read-back receipt can supply T11 live evidence; owner merge remains the
 acceptance gate.

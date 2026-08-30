@@ -70,7 +70,7 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider", "lane_statuses"],
+      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "bubblewrap_prerequisite", "containment_provider", "lane_statuses"],
       "properties": {
         "configuration_intent": {
           "type": "object",
@@ -128,6 +128,136 @@
           "additionalProperties": false,
           "required": ["status"],
           "properties": {"status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}}
+        },
+        "bubblewrap_prerequisite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "authority", "status", "reason_code", "guest", "apparmor", "bubblewrap", "controller", "smoke"],
+          "properties": {
+            "schema": {"const": "t11-bubblewrap-prerequisite-evidence/v1"},
+            "authority": {"const": "adapter/owner-authored"},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "reason_code": {"enum": ["none", "not-run", "unsupported-platform", "apparmor-not-enforcing", "package-drift", "profile-drift", "binary-drift", "observation-uncheckable", "nonzero-exit", "signal", "timeout", "output-overflow", "unexpected-output", "process-not-reaped"]},
+            "guest": {
+              "type": "object", "additionalProperties": false,
+              "required": ["distribution_id", "distribution_version", "distribution_codename", "kernel", "architecture"],
+              "properties": {
+                "distribution_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                "distribution_version": {"type": "string", "minLength": 1, "maxLength": 128},
+                "distribution_codename": {"type": "string", "minLength": 1, "maxLength": 128},
+                "kernel": {"type": "string", "minLength": 1, "maxLength": 128},
+                "architecture": {"type": "string", "minLength": 1, "maxLength": 128}
+              }
+            },
+            "apparmor": {
+              "type": "object", "additionalProperties": false,
+              "required": ["enabled", "unprivileged_userns_restriction", "profile_required", "profile_source", "source_sha256", "installed_sha256", "load_status"],
+              "properties": {
+                "enabled": {"type": "boolean"},
+                "unprivileged_userns_restriction": {"enum": ["active", "inactive", "not-run", "UNCHECKABLE"]},
+                "profile_required": {"type": "boolean"},
+                "profile_source": {"enum": ["ubuntu-noble-apparmor-profiles", "not-run"]},
+                "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "installed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "load_status": {"enum": ["enforce", "not-loaded", "not-run", "UNCHECKABLE"]}
+              }
+            },
+            "bubblewrap": {
+              "type": "object", "additionalProperties": false,
+              "required": ["package_name", "package_version", "package_architecture", "install_status", "binary_sha256", "version_output", "help_sha256"],
+              "properties": {
+                "package_name": {"type": "string", "minLength": 1, "maxLength": 128},
+                "package_version": {"type": "string", "minLength": 1, "maxLength": 128},
+                "package_architecture": {"type": "string", "minLength": 1, "maxLength": 128},
+                "install_status": {"type": "string", "minLength": 1, "maxLength": 128},
+                "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "version_output": {"type": "string", "minLength": 1, "maxLength": 128},
+                "help_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            },
+            "controller": {
+              "type": "object", "additionalProperties": false,
+              "required": ["argv_sha256", "shell", "model_invoked", "device_auth_performed", "legacy_landlock_enabled", "global_apparmor_userns_disabled"],
+              "properties": {
+                "argv_sha256": {"const": "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd"},
+                "shell": {"const": false},
+                "model_invoked": {"const": false},
+                "device_auth_performed": {"const": false},
+                "legacy_landlock_enabled": {"const": false},
+                "global_apparmor_userns_disabled": {"const": false}
+              }
+            },
+            "smoke": {
+              "type": "object", "additionalProperties": false,
+              "required": ["argv_sha256", "status", "reason_code", "exit_code", "raw_stdout_recorded", "raw_stderr_recorded"],
+              "properties": {
+                "argv_sha256": {"const": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08"},
+                "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                "reason_code": {"enum": ["none", "not-run", "unsupported-platform", "apparmor-not-enforcing", "package-drift", "profile-drift", "binary-drift", "observation-uncheckable", "nonzero-exit", "signal", "timeout", "output-overflow", "unexpected-output", "process-not-reaped"]},
+                "exit_code": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
+                "raw_stdout_recorded": {"const": false},
+                "raw_stderr_recorded": {"const": false}
+              },
+              "allOf": [
+                {"if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]}, "then": {"properties": {"reason_code": {"const": "none"}, "exit_code": {"const": 0}}}},
+                {"if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]}, "then": {"properties": {"reason_code": {"const": "not-run"}, "exit_code": {"type": "null"}}}},
+                {"if": {"properties": {"status": {"const": "fail"}}, "required": ["status"]}, "then": {"properties": {"reason_code": {"enum": ["nonzero-exit", "signal", "unexpected-output"]}}}},
+                {"if": {"properties": {"reason_code": {"const": "nonzero-exit"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "fail"}, "exit_code": {"type": "integer", "minimum": 1, "maximum": 255}}}},
+                {"if": {"properties": {"reason_code": {"const": "signal"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "fail"}, "exit_code": {"type": "null"}}}},
+                {"if": {"properties": {"reason_code": {"const": "unexpected-output"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "fail"}, "exit_code": {"const": 0}}}},
+                {"if": {"properties": {"status": {"const": "UNCHECKABLE"}}, "required": ["status"]}, "then": {"properties": {"reason_code": {"enum": ["observation-uncheckable", "output-overflow", "process-not-reaped", "timeout"]}, "exit_code": {"type": "null"}}}}
+              ]
+            }
+          },
+          "allOf": [{
+            "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+            "then": {"properties": {
+              "reason_code": {"const": "none"},
+              "guest": {"properties": {"distribution_id": {"const": "ubuntu"}, "distribution_version": {"const": "24.04"}, "distribution_codename": {"const": "noble"}, "kernel": {"type": "string", "pattern": "^[0-9][0-9A-Za-z._+~-]{0,127}$"}, "architecture": {"const": "aarch64"}}},
+              "apparmor": {"properties": {"enabled": {"const": true}, "unprivileged_userns_restriction": {"const": "active"}, "profile_required": {"const": true}, "profile_source": {"const": "ubuntu-noble-apparmor-profiles"}, "source_sha256": {"const": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"}, "installed_sha256": {"const": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"}, "load_status": {"const": "enforce"}}},
+              "bubblewrap": {"properties": {"package_name": {"const": "bubblewrap"}, "package_version": {"const": "0.9.0-1ubuntu0.1"}, "package_architecture": {"const": "arm64"}, "install_status": {"const": "installed"}, "binary_sha256": {"const": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"}, "version_output": {"const": "bubblewrap 0.9.0"}, "help_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}}},
+              "smoke": {"properties": {"status": {"const": "pass"}, "reason_code": {"const": "none"}, "exit_code": {"const": 0}}}
+            }}
+          }, {
+            "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
+            "then": {"properties": {
+              "reason_code": {"const": "not-run"},
+              "guest": {"const": {"distribution_id": "not-run", "distribution_version": "not-run", "distribution_codename": "not-run", "kernel": "not-run", "architecture": "not-run"}},
+              "apparmor": {"const": {"enabled": false, "unprivileged_userns_restriction": "not-run", "profile_required": false, "profile_source": "not-run", "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "installed_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "load_status": "not-run"}},
+              "bubblewrap": {"const": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}},
+              "smoke": {"properties": {"status": {"const": "not-run"}}}
+            }}
+          }, {
+            "if": {"properties": {"status": {"const": "fail"}}, "required": ["status"]},
+            "then": {"properties": {"reason_code": {"enum": ["apparmor-not-enforcing", "binary-drift", "nonzero-exit", "package-drift", "profile-drift", "signal", "unexpected-output", "unsupported-platform"]}, "smoke": {"properties": {"status": {"enum": ["fail", "not-run"]}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"enum": ["apparmor-not-enforcing", "binary-drift", "package-drift", "profile-drift", "unsupported-platform"]}}, "required": ["reason_code"]},
+            "then": {"properties": {"status": {"const": "fail"}, "smoke": {"properties": {"status": {"const": "not-run"}, "reason_code": {"const": "not-run"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "nonzero-exit"}}, "required": ["reason_code"]},
+            "then": {"properties": {"status": {"const": "fail"}, "smoke": {"properties": {"status": {"const": "fail"}, "reason_code": {"const": "nonzero-exit"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "signal"}}, "required": ["reason_code"]},
+            "then": {"properties": {"status": {"const": "fail"}, "smoke": {"properties": {"status": {"const": "fail"}, "reason_code": {"const": "signal"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "unexpected-output"}}, "required": ["reason_code"]},
+            "then": {"properties": {"status": {"const": "fail"}, "smoke": {"properties": {"status": {"const": "fail"}, "reason_code": {"const": "unexpected-output"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "observation-uncheckable"}, "status": {"const": "UNCHECKABLE"}}, "required": ["reason_code", "status"]},
+            "then": {"properties": {"smoke": {"properties": {"status": {"const": "UNCHECKABLE"}, "reason_code": {"const": "observation-uncheckable"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "output-overflow"}, "status": {"const": "UNCHECKABLE"}}, "required": ["reason_code", "status"]},
+            "then": {"properties": {"smoke": {"properties": {"status": {"const": "UNCHECKABLE"}, "reason_code": {"const": "output-overflow"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "process-not-reaped"}, "status": {"const": "UNCHECKABLE"}}, "required": ["reason_code", "status"]},
+            "then": {"properties": {"smoke": {"properties": {"status": {"const": "UNCHECKABLE"}, "reason_code": {"const": "process-not-reaped"}}}}}
+          }, {
+            "if": {"properties": {"reason_code": {"const": "timeout"}, "status": {"const": "UNCHECKABLE"}}, "required": ["reason_code", "status"]},
+            "then": {"properties": {"smoke": {"properties": {"status": {"const": "UNCHECKABLE"}, "reason_code": {"const": "timeout"}}}}}
+          }, {
+            "if": {"properties": {"status": {"const": "UNCHECKABLE"}}, "required": ["status"]},
+            "then": {"properties": {"reason_code": {"enum": ["observation-uncheckable", "output-overflow", "process-not-reaped", "timeout"]}, "smoke": {"properties": {"status": {"const": "UNCHECKABLE"}}}}}
+          }]
         },
         "containment_provider": {
           "type": "object",
@@ -324,6 +454,7 @@
               "diagnostic_health": {"properties": {"status": {"enum": ["pass", "pass-with-advisory-warning"]}}},
               "exact_worker_argv": {"properties": {"status": {"const": "pass"}}},
               "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}},
+              "bubblewrap_prerequisite": {"properties": {"status": {"const": "pass"}}},
               "containment_provider": {"properties": {"status": {"const": "pass"}}},
               "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "signed-in-client"}}}
             }
@@ -341,7 +472,7 @@
           "platform": {"properties": {"os": {"const": "Linux"}, "architecture": {"const": "aarch64"}}},
           "capabilities": {"properties": {"exec_json": {"const": true}, "ephemeral": {"const": true}, "strict_config": {"const": true}, "ignore_user_config": {"const": true}, "workspace_write": {"const": true}, "approval_never": {"const": true}, "documented_config_keys_probe": {"const": "pass"}, "shell_environment_probe": {"const": "pass"}, "process_cleanup_probe": {"const": "pass"}, "model": {"const": true}, "reasoning": {"const": true}, "sandbox": {"const": true}, "approval": {"const": true}, "overrides": {"const": true}}},
           "auth": {"properties": {"class": {"const": "unavailable"}}},
-          "evidence": {"properties": {"exact_worker_argv": {"properties": {"status": {"const": "pass"}}}, "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}}, "containment_provider": {"properties": {"status": {"const": "pass"}}}, "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "unavailable"}}}}},
+          "evidence": {"properties": {"diagnostic_health": {"properties": {"status": {"enum": ["pass", "pass-with-advisory-warning"]}}}, "exact_worker_argv": {"properties": {"status": {"const": "pass"}}}, "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}}, "bubblewrap_prerequisite": {"properties": {"status": {"const": "pass"}}}, "containment_provider": {"properties": {"status": {"const": "pass"}}}, "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "unavailable"}}}}},
           "live_run_allowed": {"const": false}
         }
       }

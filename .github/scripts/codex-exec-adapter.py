@@ -130,6 +130,74 @@ COLIMA_RUNTIME_ROOT_ENV = "T11_VM_RUNTIME_ROOT"
 LIVE_ATTEMPT_CLAIM_NAME = "t11-live-attempt.claim.v1.json"
 APPROVED_CODEX_VERSION = "codex-cli 0.150.1"
 APPROVED_CODEX_ARCHIVE_SHA256 = "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"
+APPROVED_BWRAP_PACKAGE_VERSION = "0.9.0-1ubuntu0.1"
+APPROVED_BWRAP_VERSION_OUTPUT = "bubblewrap 0.9.0"
+APPROVED_BWRAP_BINARY_SHA256 = "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
+APPROVED_APPARMOR_PACKAGE_VERSION = "4.0.1really4.0.1-0ubuntu0.24.04.7"
+APPROVED_BWRAP_PROFILE_SHA256 = "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
+STAGE_A1_BWRAP_BINARY = "/usr/bin/bwrap"
+STAGE_A1_OS_RELEASE = "/usr/lib/os-release"
+STAGE_A1_APPARMOR_ENABLED = "/sys/module/apparmor/parameters/enabled"
+STAGE_A1_APPARMOR_USERNS_RESTRICTION = (
+    "/proc/sys/kernel/apparmor_restrict_unprivileged_userns"
+)
+STAGE_A1_PROFILE_SOURCE = (
+    "/usr/share/apparmor/extra-profiles/bwrap-userns-restrict"
+)
+STAGE_A1_PROFILE_INSTALLED = "/etc/apparmor.d/bwrap-userns-restrict"
+STAGE_A1_BWRAP_SMOKE_ARGV = (
+    "/usr/bin/bwrap", "--unshare-user", "--unshare-net",
+    "--ro-bind", "/", "/", "/bin/true",
+)
+STAGE_A1_PACKAGE_QUERY_ARGV = (
+    "/usr/bin/dpkg-query", "--show",
+    "--showformat=${db:Status-Status}\\t${Version}\\t${Architecture}\\n",
+    "bubblewrap",
+)
+STAGE_A1_LOADED_PROFILES_ARGV = (
+    "/usr/bin/sudo", "-n", "/usr/bin/cat",
+    "/sys/kernel/security/apparmor/profiles",
+)
+STAGE_A1_CONTROLLER_ARGV = (
+    ("/usr/bin/sudo", "-n", "/usr/bin/apt-get", "update"),
+    (
+        "/usr/bin/sudo", "-n", "/usr/bin/apt-get", "install",
+        "--yes", "--no-install-recommends",
+        "apparmor=" + APPROVED_APPARMOR_PACKAGE_VERSION,
+        "apparmor-profiles=" + APPROVED_APPARMOR_PACKAGE_VERSION,
+        "bubblewrap=" + APPROVED_BWRAP_PACKAGE_VERSION,
+    ),
+    (
+        "/usr/bin/sudo", "-n", "/usr/bin/install",
+        "--owner=root", "--group=root", "--mode=0644",
+        STAGE_A1_PROFILE_SOURCE, STAGE_A1_PROFILE_INSTALLED,
+    ),
+    (
+        "/usr/bin/sudo", "-n", "/usr/sbin/apparmor_parser", "--replace",
+        STAGE_A1_PROFILE_INSTALLED,
+    ),
+    STAGE_A1_BWRAP_SMOKE_ARGV,
+)
+STAGE_A1_CONTROLLER_ARGV_SHA256 = (
+    "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd"
+)
+STAGE_A1_REASON_CODES = (
+    "none", "not-run", "unsupported-platform", "apparmor-not-enforcing",
+    "package-drift", "profile-drift", "binary-drift",
+    "observation-uncheckable", "nonzero-exit", "signal", "timeout",
+    "output-overflow", "unexpected-output", "process-not-reaped",
+)
+STAGE_A1_PRECONDITION_FAILURE_CODES = (
+    "unsupported-platform", "apparmor-not-enforcing", "package-drift",
+    "profile-drift", "binary-drift",
+)
+STAGE_A1_SMOKE_FAILURE_CODES = (
+    "nonzero-exit", "signal", "unexpected-output",
+)
+STAGE_A1_UNCHECKABLE_CODES = (
+    "observation-uncheckable", "timeout", "output-overflow",
+    "process-not-reaped",
+)
 MAX_MOUNTINFO_BYTES = 1_048_576
 MAX_MOUNTINFO_LINES = 8_192
 REVIEWED_GUEST_LOCAL_FS_TYPES = (
@@ -704,6 +772,509 @@ def not_run_containment_provider_evidence() -> Dict[str, Any]:
             "profile_absence_readback": "not-run",
         },
     }
+
+
+def _stage_a1_smoke_argv_sha256() -> str:
+    return sha256_bytes(canonical_bytes(list(STAGE_A1_BWRAP_SMOKE_ARGV)))
+
+
+def not_run_stage_a1_prerequisite_evidence() -> Dict[str, Any]:
+    """Return the exact historical/non-observation sentinel for Stage A.1."""
+    return {
+        "schema": "t11-bubblewrap-prerequisite-evidence/v1",
+        "authority": "adapter/owner-authored",
+        "status": "not-run",
+        "reason_code": "not-run",
+        "guest": {
+            "distribution_id": "not-run",
+            "distribution_version": "not-run",
+            "distribution_codename": "not-run",
+            "kernel": "not-run",
+            "architecture": "not-run",
+        },
+        "apparmor": {
+            "enabled": False,
+            "unprivileged_userns_restriction": "not-run",
+            "profile_required": False,
+            "profile_source": "not-run",
+            "source_sha256": "0" * 64,
+            "installed_sha256": "0" * 64,
+            "load_status": "not-run",
+        },
+        "bubblewrap": {
+            "package_name": "not-run",
+            "package_version": "not-run",
+            "package_architecture": "not-run",
+            "install_status": "not-run",
+            "binary_sha256": "0" * 64,
+            "version_output": "not-run",
+            "help_sha256": "0" * 64,
+        },
+        "controller": {
+            "argv_sha256": STAGE_A1_CONTROLLER_ARGV_SHA256,
+            "shell": False,
+            "model_invoked": False,
+            "device_auth_performed": False,
+            "legacy_landlock_enabled": False,
+            "global_apparmor_userns_disabled": False,
+        },
+        "smoke": {
+            "argv_sha256": _stage_a1_smoke_argv_sha256(),
+            "status": "not-run",
+            "reason_code": "not-run",
+            "exit_code": None,
+            "raw_stdout_recorded": False,
+            "raw_stderr_recorded": False,
+        },
+    }
+
+
+def validate_stage_a1_prerequisite_evidence(value: Any) -> Dict[str, Any]:
+    """Validate only the closed, allowlisted Stage A.1 projection."""
+    if not isinstance(value, dict):
+        raise ContractError("Stage A.1 prerequisite evidence must be an object")
+    exact_keys(
+        value,
+        (
+            "schema", "authority", "status", "reason_code", "guest",
+            "apparmor", "bubblewrap", "controller", "smoke",
+        ),
+        "Stage A.1 prerequisite evidence",
+    )
+    if (
+        value["schema"] != "t11-bubblewrap-prerequisite-evidence/v1"
+        or value["authority"] != "adapter/owner-authored"
+        or value["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE")
+        or value["reason_code"] not in STAGE_A1_REASON_CODES
+    ):
+        raise ContractError("Stage A.1 prerequisite identity/status is invalid")
+    guest = value["guest"]
+    if not isinstance(guest, dict):
+        raise ContractError("Stage A.1 guest evidence must be an object")
+    exact_keys(
+        guest,
+        (
+            "distribution_id", "distribution_version",
+            "distribution_codename", "kernel", "architecture",
+        ),
+        "Stage A.1 guest evidence",
+    )
+    for field in guest:
+        if (
+            not isinstance(guest[field], str)
+            or not 1 <= len(guest[field]) <= 128
+            or re.fullmatch(r"[0-9A-Za-z._+~-]+", guest[field]) is None
+        ):
+            raise ContractError("Stage A.1 guest field is invalid")
+    apparmor = value["apparmor"]
+    if not isinstance(apparmor, dict):
+        raise ContractError("Stage A.1 AppArmor evidence must be an object")
+    exact_keys(
+        apparmor,
+        (
+            "enabled", "unprivileged_userns_restriction", "profile_required",
+            "profile_source", "source_sha256", "installed_sha256",
+            "load_status",
+        ),
+        "Stage A.1 AppArmor evidence",
+    )
+    for field in ("enabled", "profile_required"):
+        require_bool(apparmor[field], "Stage A.1 AppArmor " + field)
+    if apparmor["unprivileged_userns_restriction"] not in (
+        "active", "inactive", "not-run", "UNCHECKABLE",
+    ) or apparmor["load_status"] not in (
+        "enforce", "not-loaded", "not-run", "UNCHECKABLE",
+    ) or apparmor["profile_source"] not in (
+        "ubuntu-noble-apparmor-profiles", "not-run",
+    ):
+        raise ContractError("Stage A.1 AppArmor state is invalid")
+    for field in ("source_sha256", "installed_sha256"):
+        require_string(apparmor[field], "Stage A.1 AppArmor digest", SHA256_RE)
+    bubblewrap = value["bubblewrap"]
+    if not isinstance(bubblewrap, dict):
+        raise ContractError("Stage A.1 bubblewrap evidence must be an object")
+    exact_keys(
+        bubblewrap,
+        (
+            "package_name", "package_version", "package_architecture",
+            "install_status", "binary_sha256", "version_output",
+            "help_sha256",
+        ),
+        "Stage A.1 bubblewrap evidence",
+    )
+    for field in (
+        "package_name", "package_version", "package_architecture",
+        "install_status", "version_output",
+    ):
+        if (
+            not isinstance(bubblewrap[field], str)
+            or not 1 <= len(bubblewrap[field]) <= 128
+            or PRIVATE_PATH_RE.search(bubblewrap[field])
+        ):
+            raise ContractError("Stage A.1 bubblewrap field is invalid")
+    for field in ("binary_sha256", "help_sha256"):
+        require_string(bubblewrap[field], "Stage A.1 bubblewrap digest", SHA256_RE)
+    controller = value["controller"]
+    if not isinstance(controller, dict):
+        raise ContractError("Stage A.1 controller evidence must be an object")
+    expected_controller = {
+        "argv_sha256": STAGE_A1_CONTROLLER_ARGV_SHA256,
+        "shell": False,
+        "model_invoked": False,
+        "device_auth_performed": False,
+        "legacy_landlock_enabled": False,
+        "global_apparmor_userns_disabled": False,
+    }
+    if controller != expected_controller:
+        raise ContractError("Stage A.1 controller boundary drifted")
+    smoke = value["smoke"]
+    if not isinstance(smoke, dict):
+        raise ContractError("Stage A.1 smoke evidence must be an object")
+    exact_keys(
+        smoke,
+        (
+            "argv_sha256", "status", "reason_code", "exit_code",
+            "raw_stdout_recorded", "raw_stderr_recorded",
+        ),
+        "Stage A.1 smoke evidence",
+    )
+    if (
+        smoke["argv_sha256"] != _stage_a1_smoke_argv_sha256()
+        or smoke["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE")
+        or smoke["reason_code"] not in STAGE_A1_REASON_CODES
+        or smoke["raw_stdout_recorded"] is not False
+        or smoke["raw_stderr_recorded"] is not False
+        or (
+            smoke["exit_code"] is not None
+            and (
+                type(smoke["exit_code"]) is not int
+                or not 0 <= smoke["exit_code"] <= 255
+            )
+        )
+    ):
+        raise ContractError("Stage A.1 smoke evidence is invalid")
+    if smoke["status"] == "pass" and (
+        smoke["reason_code"] != "none" or smoke["exit_code"] != 0
+    ):
+        raise ContractError("passing Stage A.1 smoke evidence is inconsistent")
+    if smoke["status"] == "not-run" and (
+        smoke["reason_code"] != "not-run" or smoke["exit_code"] is not None
+    ):
+        raise ContractError("not-run Stage A.1 smoke evidence is inconsistent")
+    if smoke["status"] == "fail":
+        if smoke["reason_code"] not in STAGE_A1_SMOKE_FAILURE_CODES:
+            raise ContractError("failed Stage A.1 smoke reason is invalid")
+        if (
+            smoke["reason_code"] == "nonzero-exit"
+            and (
+                type(smoke["exit_code"]) is not int
+                or not 1 <= smoke["exit_code"] <= 255
+            )
+        ) or (
+            smoke["reason_code"] == "signal" and smoke["exit_code"] is not None
+        ) or (
+            smoke["reason_code"] == "unexpected-output"
+            and smoke["exit_code"] != 0
+        ):
+            raise ContractError("failed Stage A.1 smoke exit classification is invalid")
+    if smoke["status"] == "UNCHECKABLE" and (
+        smoke["reason_code"] not in STAGE_A1_UNCHECKABLE_CODES
+        or smoke["exit_code"] is not None
+    ):
+        raise ContractError("uncheckable Stage A.1 smoke evidence is inconsistent")
+    if value["status"] == "not-run":
+        if value != not_run_stage_a1_prerequisite_evidence():
+            raise ContractError("Stage A.1 not-run sentinel drifted")
+        return value
+    if value["status"] == "pass":
+        expected_guest = {
+            "distribution_id": "ubuntu", "distribution_version": "24.04",
+            "distribution_codename": "noble", "architecture": "aarch64",
+        }
+        for field, expected in expected_guest.items():
+            if guest[field] != expected:
+                raise ContractError("passing Stage A.1 guest boundary drifted")
+        if re.fullmatch(r"[0-9][0-9A-Za-z._+~-]{0,127}", guest["kernel"]) is None:
+            raise ContractError("passing Stage A.1 kernel evidence is missing or invalid")
+        expected_apparmor = {
+            "enabled": True,
+            "unprivileged_userns_restriction": "active",
+            "profile_required": True,
+            "profile_source": "ubuntu-noble-apparmor-profiles",
+            "source_sha256": APPROVED_BWRAP_PROFILE_SHA256,
+            "installed_sha256": APPROVED_BWRAP_PROFILE_SHA256,
+            "load_status": "enforce",
+        }
+        if apparmor != expected_apparmor:
+            raise ContractError("passing Stage A.1 AppArmor boundary drifted")
+        if bubblewrap != {
+            "package_name": "bubblewrap",
+            "package_version": APPROVED_BWRAP_PACKAGE_VERSION,
+            "package_architecture": "arm64",
+            "install_status": "installed",
+            "binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+            "version_output": APPROVED_BWRAP_VERSION_OUTPUT,
+            "help_sha256": bubblewrap["help_sha256"],
+        } or bubblewrap["help_sha256"] == "0" * 64:
+            raise ContractError("passing Stage A.1 bubblewrap boundary drifted")
+        if value["reason_code"] != "none" or smoke["status"] != "pass":
+            raise ContractError("passing Stage A.1 evidence has a failure reason")
+    elif value["status"] == "fail":
+        if value["reason_code"] in STAGE_A1_PRECONDITION_FAILURE_CODES:
+            if smoke["status"] != "not-run":
+                raise ContractError("failed Stage A.1 precondition contains a smoke claim")
+        elif value["reason_code"] in STAGE_A1_SMOKE_FAILURE_CODES:
+            if (
+                smoke["status"] != "fail"
+                or smoke["reason_code"] != value["reason_code"]
+            ):
+                raise ContractError("failed Stage A.1 outcome disagrees with smoke evidence")
+        else:
+            raise ContractError("failed Stage A.1 reason is invalid")
+    elif value["status"] == "UNCHECKABLE":
+        if (
+            value["reason_code"] not in STAGE_A1_UNCHECKABLE_CODES
+            or smoke["status"] != "UNCHECKABLE"
+            or smoke["reason_code"] != value["reason_code"]
+        ):
+            raise ContractError("uncheckable Stage A.1 outcome is inconsistent")
+    validate_json_limits(
+        value,
+        {"json_depth": 8, "json_nodes": 96, "json_string_bytes": 256},
+        "Stage A.1 prerequisite evidence",
+    )
+    return value
+
+
+def classify_stage_a1_bwrap_smoke(result: "ProcessResult") -> Dict[str, Any]:
+    """Map a direct non-root smoke result to safe fixed codes only."""
+    if result.timed_out:
+        status, reason = "UNCHECKABLE", "timeout"
+    elif result.stdout_overflow or result.stderr_overflow:
+        status, reason = "UNCHECKABLE", "output-overflow"
+    elif not result.reaped:
+        status, reason = "UNCHECKABLE", "process-not-reaped"
+    elif result.signal_number is not None:
+        status, reason = "fail", "signal"
+    elif result.exit_code != 0:
+        status, reason = "fail", "nonzero-exit"
+    elif result.stdout or result.stderr_size:
+        status, reason = "fail", "unexpected-output"
+    else:
+        status, reason = "pass", "none"
+    return {
+        "argv_sha256": _stage_a1_smoke_argv_sha256(),
+        "status": status,
+        "reason_code": reason,
+        "exit_code": result.exit_code if status in ("pass", "fail") else None,
+        "raw_stdout_recorded": False,
+        "raw_stderr_recorded": False,
+    }
+
+
+def _parse_stage_a1_os_release(data: bytes) -> Dict[str, str]:
+    try:
+        text = data.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        raise ContractError("Stage A.1 distribution data is invalid")
+    values: Dict[str, str] = {}
+    for line in text.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ContractError("Stage A.1 distribution data is malformed")
+        key, raw = line.split("=", 1)
+        if key not in ("ID", "VERSION_ID", "VERSION_CODENAME"):
+            continue
+        if raw.startswith('"') and raw.endswith('"'):
+            raw = raw[1:-1]
+        if re.fullmatch(r"[0-9A-Za-z._+~-]+", raw) is None:
+            raise ContractError("Stage A.1 distribution value is malformed")
+        if key in values:
+            raise ContractError("Stage A.1 distribution key is duplicated")
+        values[key] = raw
+    if set(values) != {"ID", "VERSION_ID", "VERSION_CODENAME"}:
+        raise ContractError("Stage A.1 distribution fields are incomplete")
+    return values
+
+
+def _stage_a1_profile_load_status(result: "ProcessResult") -> str:
+    if (
+        result.exit_code != 0 or result.timed_out or result.stdout_overflow
+        or result.stderr_overflow or not result.reaped
+    ):
+        return "UNCHECKABLE"
+    try:
+        lines = set(result.stdout.decode("utf-8", errors="strict").splitlines())
+    except UnicodeDecodeError:
+        return "UNCHECKABLE"
+    required = {"bwrap (enforce)", "bwrap//&unpriv_bwrap (enforce)"}
+    return "enforce" if required.issubset(lines) else "not-loaded"
+
+
+def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
+    """Re-observe the installed Noble prerequisite and run one direct smoke."""
+    fallback = not_run_stage_a1_prerequisite_evidence()
+    fallback["status"] = "UNCHECKABLE"
+    fallback["reason_code"] = "observation-uncheckable"
+    fallback["smoke"]["status"] = "UNCHECKABLE"
+    fallback["smoke"]["reason_code"] = "observation-uncheckable"
+    try:
+        release = _parse_stage_a1_os_release(
+            read_bounded_regular(STAGE_A1_OS_RELEASE, 16_384)
+        )
+        uname = os.uname()
+        apparmor_enabled = read_bounded_regular(
+            STAGE_A1_APPARMOR_ENABLED, 16
+        ).strip() == b"Y"
+        restriction = read_bounded_regular(
+            STAGE_A1_APPARMOR_USERNS_RESTRICTION, 16
+        ).strip()
+        restriction_status = (
+            "active" if restriction == b"1"
+            else "inactive" if restriction == b"0"
+            else "UNCHECKABLE"
+        )
+        source_sha = hash_regular_file(STAGE_A1_PROFILE_SOURCE, 1_048_576)
+        installed_sha = hash_regular_file(STAGE_A1_PROFILE_INSTALLED, 1_048_576)
+        package_result = bounded_capture(
+            STAGE_A1_PACKAGE_QUERY_ARGV, root, env,
+            timeout=15, stdout_limit=1024, stderr_limit=1024,
+        )
+        if (
+            package_result.exit_code != 0 or package_result.timed_out
+            or package_result.stdout_overflow or package_result.stderr_overflow
+            or not package_result.reaped
+        ):
+            return fallback
+        package_match = re.fullmatch(
+            rb"install ok installed\t([^\t\n]{1,128})\t([^\t\n]{1,32})\n",
+            package_result.stdout,
+        )
+        if package_match is None:
+            return fallback
+        package_version = package_match.group(1).decode("ascii", errors="strict")
+        package_architecture = package_match.group(2).decode("ascii", errors="strict")
+        binary_sha = hash_regular_file(STAGE_A1_BWRAP_BINARY)
+        version_result = bounded_capture(
+            (str(STAGE_A1_BWRAP_BINARY), "--version"), root, env,
+            timeout=15, stdout_limit=256, stderr_limit=1024,
+        )
+        help_result = bounded_capture(
+            (str(STAGE_A1_BWRAP_BINARY), "--help"), root, env,
+            timeout=15, stdout_limit=262_144, stderr_limit=1024,
+        )
+        if any(
+            result.exit_code != 0 or result.timed_out
+            or result.stdout_overflow or result.stderr_overflow or not result.reaped
+            for result in (version_result, help_result)
+        ):
+            return fallback
+        try:
+            version_output = version_result.stdout.decode(
+                "utf-8", errors="strict"
+            ).strip()
+        except UnicodeDecodeError:
+            return fallback
+        load_status = _stage_a1_profile_load_status(
+            bounded_capture(
+                STAGE_A1_LOADED_PROFILES_ARGV, root, env,
+                timeout=15, stdout_limit=262_144, stderr_limit=1024,
+            )
+        )
+    except (ContractError, OSError, subprocess.SubprocessError, UnicodeError):
+        return fallback
+    guest = {
+        "distribution_id": release["ID"],
+        "distribution_version": release["VERSION_ID"],
+        "distribution_codename": release["VERSION_CODENAME"],
+        "kernel": uname.release if re.fullmatch(
+            r"[0-9A-Za-z._+~-]{1,128}", uname.release
+        ) else "invalid",
+        "architecture": uname.machine,
+    }
+    apparmor = {
+        "enabled": apparmor_enabled,
+        "unprivileged_userns_restriction": restriction_status,
+        "profile_required": True,
+        "profile_source": "ubuntu-noble-apparmor-profiles",
+        "source_sha256": source_sha,
+        "installed_sha256": installed_sha,
+        "load_status": load_status,
+    }
+    bubblewrap = {
+        "package_name": "bubblewrap",
+        "package_version": package_version,
+        "package_architecture": package_architecture,
+        "install_status": "installed",
+        "binary_sha256": binary_sha,
+        "version_output": version_output,
+        "help_sha256": sha256_bytes(help_result.stdout),
+    }
+    preconditions = (
+        guest["distribution_id"] == "ubuntu"
+        and guest["distribution_version"] == "24.04"
+        and guest["distribution_codename"] == "noble"
+        and uname.sysname == "Linux" and guest["architecture"] == "aarch64"
+        and apparmor["enabled"]
+        and apparmor["unprivileged_userns_restriction"] == "active"
+        and source_sha == APPROVED_BWRAP_PROFILE_SHA256
+        and installed_sha == APPROVED_BWRAP_PROFILE_SHA256
+        and load_status == "enforce"
+        and package_version == APPROVED_BWRAP_PACKAGE_VERSION
+        and package_architecture == "arm64"
+        and binary_sha == APPROVED_BWRAP_BINARY_SHA256
+        and version_output == APPROVED_BWRAP_VERSION_OUTPUT
+    )
+    smoke = not_run_stage_a1_prerequisite_evidence()["smoke"]
+    if preconditions:
+        try:
+            smoke = classify_stage_a1_bwrap_smoke(
+                bounded_capture(
+                    STAGE_A1_BWRAP_SMOKE_ARGV, root, env,
+                    timeout=15, stdout_limit=1024, stderr_limit=1024,
+                )
+            )
+        except (ContractError, OSError, subprocess.SubprocessError):
+            smoke = dict(smoke)
+            smoke["status"] = "UNCHECKABLE"
+            smoke["reason_code"] = "observation-uncheckable"
+    if not (
+        guest["distribution_id"] == "ubuntu"
+        and guest["distribution_version"] == "24.04"
+        and guest["distribution_codename"] == "noble"
+        and uname.sysname == "Linux" and guest["architecture"] == "aarch64"
+    ):
+        status, reason = "fail", "unsupported-platform"
+    elif not (
+        apparmor["enabled"]
+        and apparmor["unprivileged_userns_restriction"] == "active"
+    ):
+        status, reason = "fail", "apparmor-not-enforcing"
+    elif package_version != APPROVED_BWRAP_PACKAGE_VERSION or package_architecture != "arm64":
+        status, reason = "fail", "package-drift"
+    elif (
+        source_sha != APPROVED_BWRAP_PROFILE_SHA256
+        or installed_sha != APPROVED_BWRAP_PROFILE_SHA256
+        or load_status != "enforce"
+    ):
+        status, reason = "fail", "profile-drift"
+    elif binary_sha != APPROVED_BWRAP_BINARY_SHA256 or version_output != APPROVED_BWRAP_VERSION_OUTPUT:
+        status, reason = "fail", "binary-drift"
+    else:
+        status, reason = smoke["status"], smoke["reason_code"]
+    evidence = {
+        "schema": "t11-bubblewrap-prerequisite-evidence/v1",
+        "authority": "adapter/owner-authored",
+        "status": status,
+        "reason_code": reason,
+        "guest": guest,
+        "apparmor": apparmor,
+        "bubblewrap": bubblewrap,
+        "controller": not_run_stage_a1_prerequisite_evidence()["controller"],
+        "smoke": smoke,
+    }
+    return validate_stage_a1_prerequisite_evidence(evidence)
 
 
 def _decode_mountinfo_field(value: bytes) -> bytes:
@@ -1470,7 +2041,11 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         raise ContractError("runtime evidence must be an object")
     exact_keys(
         evidence,
-        ("configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "lane_statuses", "containment_provider"),
+        (
+            "configuration_intent", "diagnostic_health", "exact_worker_argv",
+            "network_sandbox_behavior", "bubblewrap_prerequisite",
+            "lane_statuses", "containment_provider",
+        ),
         "runtime evidence",
     )
     if evidence["configuration_intent"] != runtime_configuration_intent():
@@ -1555,6 +2130,9 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     exact_keys(network_evidence, ("status",), "runtime network/sandbox evidence")
     if network_evidence["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
         raise ContractError("runtime network/sandbox status is invalid")
+    prerequisite_evidence = validate_stage_a1_prerequisite_evidence(
+        evidence["bubblewrap_prerequisite"]
+    )
     containment_evidence = validate_containment_provider_evidence(
         evidence["containment_provider"], allow_fixture=allow_fixture,
     )
@@ -1636,6 +2214,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         and diagnostic["status"] in ("pass", "pass-with-advisory-warning")
         and worker_argv_evidence["status"] == "pass"
         and network_evidence["status"] == "pass"
+        and prerequisite_evidence["status"] == "pass"
         and containment_evidence["status"] == "pass"
         and all(caps[field] for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
     )
@@ -3156,6 +3735,8 @@ def validate_runtime_argv_policy(argv: Sequence[str], require_memory_overrides: 
     legacy = ("features.memory_tool", "features.memory_tool_use")
     if any(key in configuration for key in legacy):
         raise ContractError("runtime argv contains a legacy undocumented memory key")
+    if "features.use_legacy_landlock" in configuration:
+        raise ContractError("runtime argv contains the unapproved legacy Landlock fallback")
     if require_memory_overrides:
         for key in ("memories.generate_memories", "memories.use_memories"):
             if configuration.get(key) != "false":
@@ -4119,8 +4700,14 @@ def probe_runtime_evidence(
     env: Mapping[str, str],
     repository_root: Path,
     auth_required: bool = True,
+    prerequisite_evidence: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Collect bounded independent lanes; no lane claims effective config."""
+    prerequisite = validate_stage_a1_prerequisite_evidence(
+        dict(prerequisite_evidence)
+        if prerequisite_evidence is not None
+        else not_run_stage_a1_prerequisite_evidence()
+    )
     intent = runtime_configuration_intent()
     required: Optional[Dict[str, Any]] = None
     config_key_status = "UNCHECKABLE"
@@ -4151,17 +4738,23 @@ def probe_runtime_evidence(
             pass
 
     worker_evidence = exact_worker_argv_evidence(binary, root, repository_root, env)
-    if required is None:
+    prerequisite_pass = prerequisite["status"] == "pass"
+    if not prerequisite_pass:
+        shell_status = "not-run"
+    elif required is None:
         shell_status = "UNCHECKABLE"
     else:
         try:
             shell_status = shell_environment_probe(binary, root, env, required)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             shell_status = "UNCHECKABLE"
-    try:
-        network_status = network_sandbox_behavior_probe(binary, root, env)
-    except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-        network_status = "UNCHECKABLE"
+    if not prerequisite_pass:
+        network_status = "not-run"
+    else:
+        try:
+            network_status = network_sandbox_behavior_probe(binary, root, env)
+        except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+            network_status = "UNCHECKABLE"
     cleanup_status = process_cleanup_probe(root, env)
     config_status = "pass" if (
         config_key_status == "pass"
@@ -4180,6 +4773,7 @@ def probe_runtime_evidence(
             "diagnostic_health": diagnostic,
             "exact_worker_argv": worker_evidence,
             "network_sandbox_behavior": {"status": network_status},
+            "bubblewrap_prerequisite": prerequisite,
             "lane_statuses": {
                 "provider_isolation_status": "not-run",
                 "mount_boundary_status": "not-run",
@@ -4218,6 +4812,7 @@ def not_run_runtime_evidence() -> Dict[str, Any]:
             "dynamic_task_data_stdin_only": False,
         },
         "network_sandbox_behavior": {"status": "not-run"},
+        "bubblewrap_prerequisite": not_run_stage_a1_prerequisite_evidence(),
         "lane_statuses": {
             "provider_isolation_status": "not-run",
             "mount_boundary_status": "not-run",
@@ -4411,8 +5006,10 @@ def _observe_runtime_profile_bound_inner(
         ) from None
     if release_class == "stable":
         try:
+            prerequisite = observe_stage_a1_prerequisite(work, env)
             probe = probe_runtime_evidence(
                 binary, work, env, repository_root, auth_required=not probe_only,
+                prerequisite_evidence=prerequisite,
             )
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             uncheckable = not_run_runtime_evidence()
@@ -4459,7 +5056,11 @@ def _observe_runtime_profile_bound_inner(
         observed_auth_class = "unavailable"
     evidence["lane_statuses"]["auth_status"] = observed_auth_class
     non_auth_lanes = [evidence["lane_statuses"][name] for name in RUNTIME_LANE_KEYS[:-1]]
-    config_ok = all(value == "pass" for value in non_auth_lanes)
+    prerequisite_status = evidence["bubblewrap_prerequisite"]["status"]
+    config_ok = (
+        prerequisite_status == "pass"
+        and all(value == "pass" for value in non_auth_lanes)
+    )
     caps = {
         **flags,
         "approval_never": config_ok,
@@ -4479,6 +5080,10 @@ def _observe_runtime_profile_bound_inner(
         profile_status, reason = "unsupported-client", "stable client version is outside the approved exact release"
     elif provider_input is None:
         profile_status, reason = "UNCHECKABLE", "approved disposable Colima provider input is absent"
+    elif prerequisite_status in ("not-run", "UNCHECKABLE"):
+        profile_status, reason = "UNCHECKABLE", "bubblewrap prerequisite qualification is uncheckable"
+    elif prerequisite_status == "fail":
+        profile_status, reason = "profile-drift", "bubblewrap prerequisite qualification failed"
     elif any(value in ("not-run", "UNCHECKABLE") for value in non_auth_lanes):
         profile_status, reason = "UNCHECKABLE", "one or more independent Stage A runtime lanes are uncheckable"
     elif any(value == "fail" for value in non_auth_lanes):

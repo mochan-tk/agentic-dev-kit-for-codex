@@ -74,6 +74,17 @@
           "dynamic_task_data_stdin_only": true
         },
         "network_sandbox_behavior": {"status": "pass"},
+        "bubblewrap_prerequisite": {
+          "schema": "t11-bubblewrap-prerequisite-evidence/v1",
+          "authority": "adapter/owner-authored",
+          "status": "pass",
+          "reason_code": "none",
+          "guest": {"distribution_id": "ubuntu", "distribution_version": "24.04", "distribution_codename": "noble", "kernel": "6.8.0-fixture", "architecture": "aarch64"},
+          "apparmor": {"enabled": true, "unprivileged_userns_restriction": "active", "profile_required": true, "profile_source": "ubuntu-noble-apparmor-profiles", "source_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9", "installed_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9", "load_status": "enforce"},
+          "bubblewrap": {"package_name": "bubblewrap", "package_version": "0.9.0-1ubuntu0.1", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8", "version_output": "bubblewrap 0.9.0", "help_sha256": "8888888888888888888888888888888888888888888888888888888888888888"},
+          "controller": {"argv_sha256": "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd", "shell": false, "model_invoked": false, "device_auth_performed": false, "legacy_landlock_enabled": false, "global_apparmor_userns_disabled": false},
+          "smoke": {"argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08", "status": "pass", "reason_code": "none", "exit_code": 0, "raw_stdout_recorded": false, "raw_stderr_recorded": false}
+        },
         "containment_provider": {
           "schema": "t11-containment-provider-evidence/v1",
           "authority": "adapter/owner-authored",
@@ -899,7 +910,7 @@
       },
       "digests": {
         "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
-          "runtime_profile_sha256": "38c0201c633f64838e42d3a7dbb066f480fd02357cd198aafa3112b2cf2fcee8"
+          "runtime_profile_sha256": "f69d0cc85eaaaf862504df4ba91d2196c366829f2fed29625c8bf5eda299c421"
       },
       "privacy": {
         "raw_jsonl_retained": false,

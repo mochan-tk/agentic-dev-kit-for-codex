@@ -78,6 +78,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     "dynamic_task_data_stdin_only": True,
                 },
                 "network_sandbox_behavior": {"status": "pass"},
+                "bubblewrap_prerequisite": self.passing_stage_a1_prerequisite(),
                 "lane_statuses": {
                     "provider_isolation_status": "not-run",
                     "mount_boundary_status": "not-run",
@@ -87,6 +88,61 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     "config_status": "pass",
                     "auth_status": "unavailable",
                 },
+            },
+        }
+
+    def passing_stage_a1_prerequisite(self):
+        controller_argv = [list(argv) for argv in self.adapter.STAGE_A1_CONTROLLER_ARGV]
+        smoke_argv = list(self.adapter.STAGE_A1_BWRAP_SMOKE_ARGV)
+        return {
+            "schema": "t11-bubblewrap-prerequisite-evidence/v1",
+            "authority": "adapter/owner-authored",
+            "status": "pass",
+            "reason_code": "none",
+            "guest": {
+                "distribution_id": "ubuntu",
+                "distribution_version": "24.04",
+                "distribution_codename": "noble",
+                "kernel": "6.8.0-79-generic",
+                "architecture": "aarch64",
+            },
+            "apparmor": {
+                "enabled": True,
+                "unprivileged_userns_restriction": "active",
+                "profile_required": True,
+                "profile_source": "ubuntu-noble-apparmor-profiles",
+                "source_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9",
+                "installed_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9",
+                "load_status": "enforce",
+            },
+            "bubblewrap": {
+                "package_name": "bubblewrap",
+                "package_version": "0.9.0-1ubuntu0.1",
+                "package_architecture": "arm64",
+                "install_status": "installed",
+                "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8",
+                "version_output": "bubblewrap 0.9.0",
+                "help_sha256": "a" * 64,
+            },
+            "controller": {
+                "argv_sha256": self.adapter.sha256_bytes(
+                    self.adapter.canonical_bytes(controller_argv)
+                ),
+                "shell": False,
+                "model_invoked": False,
+                "device_auth_performed": False,
+                "legacy_landlock_enabled": False,
+                "global_apparmor_userns_disabled": False,
+            },
+            "smoke": {
+                "argv_sha256": self.adapter.sha256_bytes(
+                    self.adapter.canonical_bytes(smoke_argv)
+                ),
+                "status": "pass",
+                "reason_code": "none",
+                "exit_code": 0,
+                "raw_stdout_recorded": False,
+                "raw_stderr_recorded": False,
             },
         }
 
@@ -238,6 +294,331 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertFalse(any("provider" in token for token in vars(parsed).values() if isinstance(token, str)))
         self.assertFalse(parsed.probe_only)
         self.assertTrue(parser.parse_args(["profile", "--probe-only"]).probe_only)
+
+    def test_stage_a1_controller_and_non_root_smoke_argv_are_exact_and_safe(self):
+        self.assertEqual((
+            "/usr/bin/bwrap", "--unshare-user", "--unshare-net",
+            "--ro-bind", "/", "/", "/bin/true",
+        ), self.adapter.STAGE_A1_BWRAP_SMOKE_ARGV)
+        commands = self.adapter.STAGE_A1_CONTROLLER_ARGV
+        self.assertIsInstance(commands, tuple)
+        self.assertGreaterEqual(len(commands), 4)
+        self.assertEqual(
+            ("/usr/bin/sudo", "-n", "/usr/bin/apt-get", "update"),
+            commands[0],
+        )
+        self.assertEqual(
+            ("/usr/bin/sudo", "-n", "/usr/bin/apt-get", "install",
+             "--yes", "--no-install-recommends",
+             "apparmor=4.0.1really4.0.1-0ubuntu0.24.04.7",
+             "apparmor-profiles=4.0.1really4.0.1-0ubuntu0.24.04.7",
+             "bubblewrap=0.9.0-1ubuntu0.1"),
+            commands[1],
+        )
+        self.assertEqual("/usr/bin/install", commands[2][2])
+        self.assertEqual("/usr/sbin/apparmor_parser", commands[3][2])
+        self.assertEqual(self.adapter.STAGE_A1_BWRAP_SMOKE_ARGV, commands[-1])
+        rendered = "\n".join("\0".join(argv) for argv in commands)
+        for forbidden in (
+            "/bin/sh", "/bin/bash", "-c", "--ignore-rules",
+            "features.use_legacy_landlock", "apparmor_restrict_unprivileged_userns=0",
+            "login", "device-auth", "exec", "--model",
+        ):
+            self.assertNotIn(forbidden, rendered)
+        for argv in commands:
+            self.assertIsInstance(argv, tuple)
+            self.assertTrue(argv)
+            self.assertTrue(argv[0].startswith("/"))
+        self.assertRegex(
+            self.adapter.STAGE_A1_CONTROLLER_ARGV_SHA256, r"^[0-9a-f]{64}$",
+        )
+        self.assertEqual(
+            self.adapter.sha256_bytes(self.adapter.canonical_bytes(
+                [list(argv) for argv in commands]
+            )),
+            self.adapter.STAGE_A1_CONTROLLER_ARGV_SHA256,
+        )
+
+    def test_stage_a1_prerequisite_evidence_is_closed_and_fail_closed(self):
+        valid = self.passing_stage_a1_prerequisite()
+        self.assertEqual(
+            valid,
+            self.adapter.validate_stage_a1_prerequisite_evidence(copy.deepcopy(valid)),
+        )
+        not_run = self.adapter.not_run_stage_a1_prerequisite_evidence()
+        self.assertEqual(
+            not_run,
+            self.adapter.validate_stage_a1_prerequisite_evidence(copy.deepcopy(not_run)),
+        )
+        self.assertEqual("not-run", not_run["status"])
+        self.assertFalse(not_run["controller"]["model_invoked"])
+        self.assertFalse(not_run["controller"]["device_auth_performed"])
+        self.assertFalse(not_run["smoke"]["raw_stdout_recorded"])
+        self.assertFalse(not_run["smoke"]["raw_stderr_recorded"])
+        mutations = (
+            lambda item: item.__setitem__("extra", "forbidden"),
+            lambda item: item["guest"].__setitem__("distribution_version", "24.10"),
+            lambda item: item["guest"].__setitem__("distribution_codename", "oracular"),
+            lambda item: item["guest"].__setitem__("kernel", "not-run"),
+            lambda item: item["guest"].__setitem__("architecture", "x86_64"),
+            lambda item: item["apparmor"].__setitem__("enabled", False),
+            lambda item: item["apparmor"].__setitem__("unprivileged_userns_restriction", "inactive"),
+            lambda item: item["apparmor"].__setitem__("installed_sha256", "7" * 64),
+            lambda item: item["apparmor"].__setitem__("load_status", "complain"),
+            lambda item: item["bubblewrap"].__setitem__("package_name", "unreviewed"),
+            lambda item: item["bubblewrap"].__setitem__("install_status", "unknown"),
+            lambda item: item["controller"].__setitem__("argv_sha256", "0" * 64),
+            lambda item: item["controller"].__setitem__("shell", True),
+            lambda item: item["controller"].__setitem__("model_invoked", True),
+            lambda item: item["controller"].__setitem__("device_auth_performed", True),
+            lambda item: item["controller"].__setitem__("legacy_landlock_enabled", True),
+            lambda item: item["controller"].__setitem__("global_apparmor_userns_disabled", True),
+            lambda item: item["smoke"].__setitem__("argv_sha256", "0" * 64),
+            lambda item: item["smoke"].__setitem__("raw_stdout_recorded", True),
+            lambda item: item["smoke"].__setitem__("raw_stderr_recorded", True),
+        )
+        for mutation in mutations:
+            candidate = copy.deepcopy(valid)
+            mutation(candidate)
+            with self.subTest(candidate=candidate):
+                self.assert_contract_error(
+                    lambda value=candidate:
+                    self.adapter.validate_stage_a1_prerequisite_evidence(value),
+                )
+
+        inconsistent_outcomes = []
+        failed_none = copy.deepcopy(valid)
+        failed_none["status"] = "fail"
+        inconsistent_outcomes.append(failed_none)
+        precondition_with_smoke = copy.deepcopy(valid)
+        precondition_with_smoke["status"] = "fail"
+        precondition_with_smoke["reason_code"] = "package-drift"
+        inconsistent_outcomes.append(precondition_with_smoke)
+        uncheckable_with_pass = copy.deepcopy(valid)
+        uncheckable_with_pass["status"] = "UNCHECKABLE"
+        uncheckable_with_pass["reason_code"] = "timeout"
+        inconsistent_outcomes.append(uncheckable_with_pass)
+        for reason_code, exit_code in (
+            ("nonzero-exit", 0), ("signal", 1), ("unexpected-output", 1),
+        ):
+            invalid_exit = copy.deepcopy(valid)
+            invalid_exit["status"] = "fail"
+            invalid_exit["reason_code"] = reason_code
+            invalid_exit["smoke"].update({
+                "status": "fail", "reason_code": reason_code,
+                "exit_code": exit_code,
+            })
+            inconsistent_outcomes.append(invalid_exit)
+        for candidate in inconsistent_outcomes:
+            with self.subTest(inconsistent_outcome=candidate):
+                self.assert_contract_error(
+                    lambda value=candidate:
+                    self.adapter.validate_stage_a1_prerequisite_evidence(value),
+                )
+
+        missing = copy.deepcopy(self.profile)
+        missing["evidence"].pop("bubblewrap_prerequisite")
+        self.assert_contract_error(
+            lambda: self.adapter.validate_runtime_profile(missing, allow_fixture=True),
+            "runtime evidence",
+        )
+        failed = copy.deepcopy(self.profile)
+        failed_prerequisite = failed["evidence"]["bubblewrap_prerequisite"]
+        failed_prerequisite["status"] = "fail"
+        failed_prerequisite["reason_code"] = "nonzero-exit"
+        failed_prerequisite["smoke"].update({
+            "status": "fail", "reason_code": "nonzero-exit", "exit_code": 1,
+        })
+        self.assert_contract_error(
+            lambda: self.adapter.validate_runtime_profile(failed, allow_fixture=True),
+            "live_run_allowed",
+        )
+
+    def test_stage_a1_observation_maps_allowlisted_system_and_smoke_evidence(self):
+        os_release = (
+            b'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n'
+        )
+        profile = b"abi <abi/4.0>,\nprofile bwrap /usr/bin/bwrap flags=(unconfined) {\n}\n"
+        reads = {
+            "/usr/lib/os-release": os_release,
+            "/sys/module/apparmor/parameters/enabled": b"Y\n",
+            "/proc/sys/kernel/apparmor_restrict_unprivileged_userns": b"1\n",
+            str(self.adapter.STAGE_A1_PROFILE_SOURCE): profile,
+            str(self.adapter.STAGE_A1_PROFILE_INSTALLED): profile,
+        }
+
+        def read(path, _limit, expected_mode=None):
+            del expected_mode
+            return reads[str(path)]
+
+        def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15, **_kwargs):
+            del stdin_bytes, timeout
+            if list(argv) == list(self.adapter.STAGE_A1_BWRAP_SMOKE_ARGV):
+                return self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)
+            if tuple(argv) == self.adapter.STAGE_A1_PACKAGE_QUERY_ARGV:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    b"install ok installed\t0.9.0-1ubuntu0.1\tarm64\n", 0, True,
+                )
+            if list(argv)[-1:] == ["--version"]:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False, b"bubblewrap 0.9.0\n", 0, True,
+                )
+            if list(argv)[-1:] == ["--help"]:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False, b"Usage: bwrap [OPTIONS...]\n", 0, True,
+                )
+            if tuple(argv) == self.adapter.STAGE_A1_LOADED_PROFILES_ARGV:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    b"bwrap (enforce)\nbwrap//&unpriv_bwrap (enforce)\n", 0, True,
+                )
+            raise AssertionError(list(argv))
+
+        uname = SimpleNamespace(
+            sysname="Linux", machine="aarch64", release="6.8.0-79-generic",
+        )
+        def hashed(path, *_args, **_kwargs):
+            if str(path) == "/usr/bin/bwrap":
+                return "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
+            return "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
+
+        with mock.patch.object(self.adapter, "read_bounded_regular", side_effect=read), \
+             mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+             mock.patch.object(self.adapter, "hash_regular_file", side_effect=hashed), \
+             mock.patch.object(self.adapter.os, "uname", return_value=uname):
+            observed = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+        self.assertEqual("pass", observed["status"])
+        self.assertEqual("ubuntu", observed["guest"]["distribution_id"])
+        self.assertEqual("24.04", observed["guest"]["distribution_version"])
+        self.assertEqual("noble", observed["guest"]["distribution_codename"])
+        self.assertEqual("aarch64", observed["guest"]["architecture"])
+        self.assertTrue(observed["apparmor"]["enabled"])
+        self.assertEqual("active", observed["apparmor"]["unprivileged_userns_restriction"])
+        self.assertEqual(observed["apparmor"]["source_sha256"], observed["apparmor"]["installed_sha256"])
+        self.assertEqual("enforce", observed["apparmor"]["load_status"])
+        self.assertEqual("0.9.0-1ubuntu0.1", observed["bubblewrap"]["package_version"])
+        self.assertEqual("arm64", observed["bubblewrap"]["package_architecture"])
+        self.assertEqual("pass", observed["smoke"]["status"])
+        self.assertEqual("none", observed["smoke"]["reason_code"])
+        self.assertFalse(observed["smoke"]["raw_stdout_recorded"])
+        self.assertFalse(observed["smoke"]["raw_stderr_recorded"])
+        for result, expected in (
+            (self.adapter.ProcessResult(1, None, False, False, False, b"", 0, True), ("fail", "nonzero-exit")),
+            (self.adapter.ProcessResult(None, 9, False, False, False, b"", 0, True), ("fail", "signal")),
+            (self.adapter.ProcessResult(0, None, False, False, False, b"unexpected", 0, True), ("fail", "unexpected-output")),
+            (self.adapter.ProcessResult(0, None, False, False, False, b"", 7, True), ("fail", "unexpected-output")),
+            (self.adapter.ProcessResult(None, None, True, False, False, b"", 0, True), ("UNCHECKABLE", "timeout")),
+            (self.adapter.ProcessResult(0, None, False, True, False, b"", 0, True), ("UNCHECKABLE", "output-overflow")),
+            (self.adapter.ProcessResult(0, None, False, False, False, b"", 0, False), ("UNCHECKABLE", "process-not-reaped")),
+        ):
+            with self.subTest(expected=expected):
+                classified = self.adapter.classify_stage_a1_bwrap_smoke(result)
+                self.assertEqual(expected, (classified["status"], classified["reason_code"]))
+                self.assertNotIn("stdout", classified)
+                self.assertNotIn("stderr", classified)
+
+    def test_stage_a1_prerequisite_gates_codex_shell_and_network_probes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            work = root / "work"
+            for path in (home, tmp, work):
+                path.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(
+                Path(sys.executable).resolve(), home, tmp,
+            )
+            passing = self.passing_stage_a1_prerequisite()
+            for prerequisite_status in ("not-run", "fail", "UNCHECKABLE"):
+                if prerequisite_status == "not-run":
+                    prerequisite = self.adapter.not_run_stage_a1_prerequisite_evidence()
+                else:
+                    prerequisite = copy.deepcopy(passing)
+                    prerequisite["status"] = prerequisite_status
+                    prerequisite["reason_code"] = (
+                        "nonzero-exit" if prerequisite_status == "fail"
+                        else "observation-uncheckable"
+                    )
+                    prerequisite["smoke"]["status"] = prerequisite_status
+                    prerequisite["smoke"]["reason_code"] = prerequisite["reason_code"]
+                    prerequisite["smoke"]["exit_code"] = (
+                        1 if prerequisite_status == "fail" else None
+                    )
+                with self.subTest(prerequisite_status=prerequisite_status), \
+                     mock.patch.object(
+                         self.adapter, "materialize_reviewed_rules_profile",
+                         return_value=self.adapter.runtime_configuration_intent()["rules_profile_sha256"],
+                     ), mock.patch.object(
+                         self.adapter, "doctor_diagnostic_health",
+                         return_value=self.passing_runtime_probe()["evidence"]["diagnostic_health"],
+                     ), mock.patch.object(
+                         self.adapter, "exact_worker_argv_evidence",
+                         return_value=self.passing_runtime_probe()["evidence"]["exact_worker_argv"],
+                     ), mock.patch.object(
+                         self.adapter, "bounded_capture",
+                         return_value=self.adapter.ProcessResult(
+                             0, None, False, False, False, b"{}\n", 0, True,
+                         ),
+                     ), mock.patch.object(
+                         self.adapter, "shell_environment_probe",
+                     ) as shell_probe, mock.patch.object(
+                         self.adapter, "network_sandbox_behavior_probe",
+                     ) as network_probe, mock.patch.object(
+                         self.adapter, "process_cleanup_probe", return_value="pass",
+                     ):
+                    evidence = self.adapter.probe_runtime_evidence(
+                        Path(sys.executable).resolve(), work, environment, ROOT,
+                        auth_required=False,
+                        prerequisite_evidence=prerequisite,
+                    )
+                shell_probe.assert_not_called()
+                network_probe.assert_not_called()
+                self.assertEqual(
+                    prerequisite_status,
+                    evidence["evidence"]["bubblewrap_prerequisite"]["status"],
+                )
+                self.assertEqual(
+                    "not-run",
+                    evidence["evidence"]["lane_statuses"]["shell_environment_status"],
+                )
+                self.assertEqual(
+                    "not-run",
+                    evidence["evidence"]["lane_statuses"]["codex_sandbox_network_status"],
+                )
+
+            with mock.patch.object(
+                self.adapter, "materialize_reviewed_rules_profile",
+                return_value=self.adapter.runtime_configuration_intent()["rules_profile_sha256"],
+            ), mock.patch.object(
+                self.adapter, "doctor_diagnostic_health",
+                return_value=self.passing_runtime_probe()["evidence"]["diagnostic_health"],
+            ), mock.patch.object(
+                self.adapter, "exact_worker_argv_evidence",
+                return_value=self.passing_runtime_probe()["evidence"]["exact_worker_argv"],
+            ), mock.patch.object(
+                self.adapter, "bounded_capture",
+                return_value=self.adapter.ProcessResult(
+                    0, None, False, False, False, b"{}\n", 0, True,
+                ),
+            ), mock.patch.object(
+                self.adapter, "shell_environment_probe", return_value="pass",
+            ) as shell_probe, mock.patch.object(
+                self.adapter, "network_sandbox_behavior_probe", return_value="pass",
+            ) as network_probe, mock.patch.object(
+                self.adapter, "process_cleanup_probe", return_value="pass",
+            ):
+                evidence = self.adapter.probe_runtime_evidence(
+                    Path(sys.executable).resolve(), work, environment, ROOT,
+                    auth_required=False,
+                    prerequisite_evidence=passing,
+                )
+            shell_probe.assert_called_once()
+            network_probe.assert_called_once()
+            self.assertEqual(
+                "pass",
+                evidence["evidence"]["bubblewrap_prerequisite"]["status"],
+            )
 
     def test_profile_cli_requires_bounded_provider_input_on_stdin(self):
         result = subprocess.run(
@@ -645,6 +1026,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             uname = SimpleNamespace(sysname="Linux", machine="aarch64", release="6.12.0-t11")
             with mock.patch.object(self.adapter, "prepare_colima_runtime_layout", return_value=layout), \
              mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+             mock.patch.object(self.adapter, "observe_stage_a1_prerequisite", return_value=self.passing_stage_a1_prerequisite()), \
              mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=self.passing_runtime_probe()), \
              mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=containment), \
              mock.patch.object(self.adapter, "auth_class", return_value="signed-in-client"), \
@@ -689,6 +1071,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
 
         with mock.patch.object(self.adapter, "resolve_executable_from_path", return_value=Path(sys.executable)), \
              mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+             mock.patch.object(self.adapter, "observe_stage_a1_prerequisite", return_value=self.passing_stage_a1_prerequisite()), \
              mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=self.passing_runtime_probe()), \
              mock.patch.object(self.adapter, "auth_class", return_value="signed-in-client"), \
              mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64):
@@ -734,6 +1117,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 with self.subTest(network_status=network_status), \
                      mock.patch.object(self.adapter, "prepare_colima_runtime_layout", return_value=layout), \
                      mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+                     mock.patch.object(self.adapter, "observe_stage_a1_prerequisite", return_value=self.passing_stage_a1_prerequisite()), \
                      mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=probe), \
                      mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=containment), \
                      mock.patch.object(self.adapter, "auth_class", return_value="unavailable"), \
@@ -1017,6 +1401,12 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 lambda value=invalid: self.adapter.validate_runtime_argv_policy(value, True),
                 "memory",
             )
+        self.assert_contract_error(
+            lambda: self.adapter.validate_runtime_argv_policy(
+                valid + ["-c", "features.use_legacy_landlock=true"], True,
+            ),
+            "legacy Landlock",
+        )
 
     def test_configuration_intent_is_adapter_authored_stable_and_rules_are_no_follow(self):
         intent = self.adapter.runtime_configuration_intent()
@@ -1565,6 +1955,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             ):
                 evidence = self.adapter.probe_runtime_evidence(
                     Path(sys.executable).resolve(), work, environment, ROOT,
+                    prerequisite_evidence=self.passing_stage_a1_prerequisite(),
                 )
         lanes = evidence["evidence"]["lane_statuses"]
         self.assertEqual("UNCHECKABLE", lanes["shell_environment_status"])
@@ -1655,7 +2046,10 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 return self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)
 
             with mock.patch.object(self.adapter, "bounded_capture", side_effect=capture):
-                probe = self.adapter.probe_runtime_evidence(Path(sys.executable).resolve(), work, environment, ROOT)
+                probe = self.adapter.probe_runtime_evidence(
+                    Path(sys.executable).resolve(), work, environment, ROOT,
+                    prerequisite_evidence=self.passing_stage_a1_prerequisite(),
+                )
         self.assertEqual("pass", probe["documented_config_keys_probe"])
         self.assertEqual("pass", probe["shell_environment_probe"])
         self.assertEqual("fail", probe["evidence"]["diagnostic_health"]["status"])
@@ -2075,6 +2469,46 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         errors = []
         self.checker.validate_runtime_profile_schema(schema, errors)
         self.assertTrue(errors)
+
+    def test_runtime_profile_schema_pins_stage_a1_fail_closed_semantics(self):
+        original = json.loads((
+            ROOT / "docs/agreements/runtime/runtime-profile.v1.schema.json"
+        ).read_text(encoding="utf-8"))
+
+        def prerequisite(schema):
+            return schema["properties"]["evidence"]["properties"][
+                "bubblewrap_prerequisite"
+            ]
+
+        def pass_then(schema):
+            return prerequisite(schema)["allOf"][0]["then"]["properties"]
+
+        mutations = (
+            lambda schema: prerequisite(schema)["properties"]["controller"][
+                "properties"
+            ]["argv_sha256"].__setitem__("const", "0" * 64),
+            lambda schema: prerequisite(schema)["properties"]["smoke"][
+                "properties"
+            ]["argv_sha256"].__setitem__("const", "0" * 64),
+            lambda schema: pass_then(schema)["guest"]["properties"].pop("kernel"),
+            lambda schema: pass_then(schema)["bubblewrap"]["properties"][
+                "help_sha256"
+            ].pop("not"),
+            lambda schema: prerequisite(schema)["properties"]["smoke"][
+                "allOf"
+            ].pop(),
+            lambda schema: prerequisite(schema)["allOf"].pop(),
+            lambda schema: schema["allOf"][1]["then"]["properties"][
+                "evidence"
+            ]["properties"].pop("diagnostic_health"),
+        )
+        for mutation in mutations:
+            candidate = copy.deepcopy(original)
+            mutation(candidate)
+            errors = []
+            self.checker.validate_runtime_profile_schema(candidate, errors)
+            with self.subTest(errors=errors):
+                self.assertTrue(errors)
 
     def test_receipt_schema_requires_native_artifacts_and_unsigned_limitation(self):
         schema = json.loads((ROOT / "docs/agreements/runtime/runtime-receipt.v1.schema.json").read_text(encoding="utf-8"))

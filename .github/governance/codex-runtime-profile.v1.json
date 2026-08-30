@@ -55,6 +55,17 @@
       "dynamic_task_data_stdin_only": false
     },
     "network_sandbox_behavior": {"status": "not-run"},
+    "bubblewrap_prerequisite": {
+      "schema": "t11-bubblewrap-prerequisite-evidence/v1",
+      "authority": "adapter/owner-authored",
+      "status": "not-run",
+      "reason_code": "not-run",
+      "guest": {"distribution_id": "not-run", "distribution_version": "not-run", "distribution_codename": "not-run", "kernel": "not-run", "architecture": "not-run"},
+      "apparmor": {"enabled": false, "unprivileged_userns_restriction": "not-run", "profile_required": false, "profile_source": "not-run", "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "installed_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "load_status": "not-run"},
+      "bubblewrap": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+      "controller": {"argv_sha256": "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd", "shell": false, "model_invoked": false, "device_auth_performed": false, "legacy_landlock_enabled": false, "global_apparmor_userns_disabled": false},
+      "smoke": {"argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08", "status": "not-run", "reason_code": "not-run", "exit_code": null, "raw_stdout_recorded": false, "raw_stderr_recorded": false}
+    },
     "containment_provider": {
       "schema": "t11-containment-provider-evidence/v1",
       "authority": "adapter/owner-authored",

@@ -97,6 +97,53 @@ REVIEWED_RULES_BYTES = (
 )
 APPROVED_CODEX_VERSION = "codex-cli 0.150.1"
 APPROVED_ARCHIVE_SHA256 = "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"
+APPROVED_BWRAP_PACKAGE_VERSION = "0.9.0-1ubuntu0.1"
+APPROVED_BWRAP_VERSION_OUTPUT = "bubblewrap 0.9.0"
+APPROVED_BWRAP_BINARY_SHA256 = "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
+APPROVED_APPARMOR_PACKAGE_VERSION = "4.0.1really4.0.1-0ubuntu0.24.04.7"
+APPROVED_BWRAP_PROFILE_SHA256 = "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
+STAGE_A1_REASON_CODES = [
+    "none", "not-run", "unsupported-platform", "apparmor-not-enforcing",
+    "package-drift", "profile-drift", "binary-drift",
+    "observation-uncheckable", "nonzero-exit", "signal", "timeout",
+    "output-overflow", "unexpected-output", "process-not-reaped",
+]
+STAGE_A1_PRECONDITION_FAILURE_CODES = {
+    "unsupported-platform", "apparmor-not-enforcing", "package-drift",
+    "profile-drift", "binary-drift",
+}
+STAGE_A1_SMOKE_FAILURE_CODES = {
+    "nonzero-exit", "signal", "unexpected-output",
+}
+STAGE_A1_UNCHECKABLE_CODES = {
+    "observation-uncheckable", "timeout", "output-overflow",
+    "process-not-reaped",
+}
+EXPECTED_STAGE_A1_SMOKE_ARGV = [
+    "/usr/bin/bwrap", "--unshare-user", "--unshare-net",
+    "--ro-bind", "/", "/", "/bin/true",
+]
+EXPECTED_STAGE_A1_CONTROLLER_ARGV = [
+    ["/usr/bin/sudo", "-n", "/usr/bin/apt-get", "update"],
+    [
+        "/usr/bin/sudo", "-n", "/usr/bin/apt-get", "install",
+        "--yes", "--no-install-recommends",
+        "apparmor=" + APPROVED_APPARMOR_PACKAGE_VERSION,
+        "apparmor-profiles=" + APPROVED_APPARMOR_PACKAGE_VERSION,
+        "bubblewrap=" + APPROVED_BWRAP_PACKAGE_VERSION,
+    ],
+    [
+        "/usr/bin/sudo", "-n", "/usr/bin/install", "--owner=root",
+        "--group=root", "--mode=0644",
+        "/usr/share/apparmor/extra-profiles/bwrap-userns-restrict",
+        "/etc/apparmor.d/bwrap-userns-restrict",
+    ],
+    [
+        "/usr/bin/sudo", "-n", "/usr/sbin/apparmor_parser", "--replace",
+        "/etc/apparmor.d/bwrap-userns-restrict",
+    ],
+    EXPECTED_STAGE_A1_SMOKE_ARGV,
+]
 ZERO_OID = "0" * 40
 ZERO_SHA256 = "0" * 64
 CONTAINMENT_PROVIDER_KEYS = (
@@ -368,13 +415,267 @@ def expected_containment_provider_schema() -> Dict[str, Any]:
     }
 
 
+def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
+    string_field = {"type": "string", "minLength": 1, "maxLength": 128}
+    digest_field = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "schema", "authority", "status", "reason_code", "guest",
+            "apparmor", "bubblewrap", "controller", "smoke",
+        ],
+        "properties": {
+            "schema": {"const": "t11-bubblewrap-prerequisite-evidence/v1"},
+            "authority": {"const": "adapter/owner-authored"},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "reason_code": {"enum": STAGE_A1_REASON_CODES},
+            "guest": {
+                "type": "object", "additionalProperties": False,
+                "required": [
+                    "distribution_id", "distribution_version",
+                    "distribution_codename", "kernel", "architecture",
+                ],
+                "properties": {
+                    "distribution_id": dict(string_field),
+                    "distribution_version": dict(string_field),
+                    "distribution_codename": dict(string_field),
+                    "kernel": dict(string_field),
+                    "architecture": dict(string_field),
+                },
+            },
+            "apparmor": {
+                "type": "object", "additionalProperties": False,
+                "required": [
+                    "enabled", "unprivileged_userns_restriction",
+                    "profile_required", "profile_source", "source_sha256",
+                    "installed_sha256", "load_status",
+                ],
+                "properties": {
+                    "enabled": {"type": "boolean"},
+                    "unprivileged_userns_restriction": {
+                        "enum": ["active", "inactive", "not-run", "UNCHECKABLE"]
+                    },
+                    "profile_required": {"type": "boolean"},
+                    "profile_source": {
+                        "enum": ["ubuntu-noble-apparmor-profiles", "not-run"]
+                    },
+                    "source_sha256": dict(digest_field),
+                    "installed_sha256": dict(digest_field),
+                    "load_status": {
+                        "enum": ["enforce", "not-loaded", "not-run", "UNCHECKABLE"]
+                    },
+                },
+            },
+            "bubblewrap": {
+                "type": "object", "additionalProperties": False,
+                "required": [
+                    "package_name", "package_version", "package_architecture",
+                    "install_status", "binary_sha256", "version_output",
+                    "help_sha256",
+                ],
+                "properties": {
+                    "package_name": dict(string_field),
+                    "package_version": dict(string_field),
+                    "package_architecture": dict(string_field),
+                    "install_status": dict(string_field),
+                    "binary_sha256": dict(digest_field),
+                    "version_output": dict(string_field),
+                    "help_sha256": dict(digest_field),
+                },
+            },
+            "controller": {
+                "type": "object", "additionalProperties": False,
+                "required": [
+                    "argv_sha256", "shell", "model_invoked",
+                    "device_auth_performed", "legacy_landlock_enabled",
+                    "global_apparmor_userns_disabled",
+                ],
+                "properties": {
+                    "argv_sha256": {
+                        "const": sha256(canonical_bytes(EXPECTED_STAGE_A1_CONTROLLER_ARGV))
+                    },
+                    "shell": {"const": False},
+                    "model_invoked": {"const": False},
+                    "device_auth_performed": {"const": False},
+                    "legacy_landlock_enabled": {"const": False},
+                    "global_apparmor_userns_disabled": {"const": False},
+                },
+            },
+            "smoke": {
+                "type": "object", "additionalProperties": False,
+                "required": [
+                    "argv_sha256", "status", "reason_code", "exit_code",
+                    "raw_stdout_recorded", "raw_stderr_recorded",
+                ],
+                "properties": {
+                    "argv_sha256": {
+                        "const": sha256(canonical_bytes(EXPECTED_STAGE_A1_SMOKE_ARGV))
+                    },
+                    "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "reason_code": {"enum": STAGE_A1_REASON_CODES},
+                    "exit_code": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
+                    "raw_stdout_recorded": {"const": False},
+                    "raw_stderr_recorded": {"const": False},
+                },
+                "allOf": [{
+                    "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+                    "then": {"properties": {
+                        "reason_code": {"const": "none"},
+                        "exit_code": {"const": 0},
+                    }},
+                }, {
+                    "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
+                    "then": {"properties": {
+                        "reason_code": {"const": "not-run"},
+                        "exit_code": {"type": "null"},
+                    }},
+                }, {
+                    "if": {"properties": {"status": {"const": "fail"}}, "required": ["status"]},
+                    "then": {"properties": {
+                        "reason_code": {"enum": sorted(STAGE_A1_SMOKE_FAILURE_CODES)},
+                    }},
+                }, {
+                    "if": {"properties": {"reason_code": {"const": "nonzero-exit"}}, "required": ["reason_code"]},
+                    "then": {"properties": {
+                        "status": {"const": "fail"},
+                        "exit_code": {"type": "integer", "minimum": 1, "maximum": 255},
+                    }},
+                }, {
+                    "if": {"properties": {"reason_code": {"const": "signal"}}, "required": ["reason_code"]},
+                    "then": {"properties": {
+                        "status": {"const": "fail"},
+                        "exit_code": {"type": "null"},
+                    }},
+                }, {
+                    "if": {"properties": {"reason_code": {"const": "unexpected-output"}}, "required": ["reason_code"]},
+                    "then": {"properties": {
+                        "status": {"const": "fail"},
+                        "exit_code": {"const": 0},
+                    }},
+                }, {
+                    "if": {"properties": {"status": {"const": "UNCHECKABLE"}}, "required": ["status"]},
+                    "then": {"properties": {
+                        "reason_code": {"enum": sorted(STAGE_A1_UNCHECKABLE_CODES)},
+                        "exit_code": {"type": "null"},
+                    }},
+                }],
+            },
+        },
+        "allOf": [{
+            "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+            "then": {"properties": {
+                "reason_code": {"const": "none"},
+                "guest": {"properties": {
+                    "distribution_id": {"const": "ubuntu"},
+                    "distribution_version": {"const": "24.04"},
+                    "distribution_codename": {"const": "noble"},
+                    "kernel": {
+                        "type": "string",
+                        "pattern": "^[0-9][0-9A-Za-z._+~-]{0,127}$",
+                    },
+                    "architecture": {"const": "aarch64"},
+                }},
+                "apparmor": {"properties": {
+                    "enabled": {"const": True},
+                    "unprivileged_userns_restriction": {"const": "active"},
+                    "profile_required": {"const": True},
+                    "profile_source": {"const": "ubuntu-noble-apparmor-profiles"},
+                    "source_sha256": {"const": APPROVED_BWRAP_PROFILE_SHA256},
+                    "installed_sha256": {"const": APPROVED_BWRAP_PROFILE_SHA256},
+                    "load_status": {"const": "enforce"},
+                }},
+                "bubblewrap": {"properties": {
+                    "package_name": {"const": "bubblewrap"},
+                    "package_version": {"const": APPROVED_BWRAP_PACKAGE_VERSION},
+                    "package_architecture": {"const": "arm64"},
+                    "install_status": {"const": "installed"},
+                    "binary_sha256": {"const": APPROVED_BWRAP_BINARY_SHA256},
+                    "version_output": {"const": APPROVED_BWRAP_VERSION_OUTPUT},
+                    "help_sha256": {
+                        "type": "string", "pattern": "^[0-9a-f]{64}$",
+                        "not": {"const": ZERO_SHA256},
+                    },
+                }},
+                "smoke": {"properties": {
+                    "status": {"const": "pass"},
+                    "reason_code": {"const": "none"},
+                    "exit_code": {"const": 0},
+                }},
+            }},
+        }, {
+            "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
+            "then": {"properties": {
+                "reason_code": {"const": "not-run"},
+                "guest": {"const": expected_not_run_stage_a1_prerequisite()["guest"]},
+                "apparmor": {"const": expected_not_run_stage_a1_prerequisite()["apparmor"]},
+                "bubblewrap": {"const": expected_not_run_stage_a1_prerequisite()["bubblewrap"]},
+                "smoke": {"properties": {"status": {"const": "not-run"}}},
+            }},
+        }, {
+            "if": {"properties": {"status": {"const": "fail"}}, "required": ["status"]},
+            "then": {"properties": {
+                "reason_code": {"enum": sorted(
+                    STAGE_A1_PRECONDITION_FAILURE_CODES
+                    | STAGE_A1_SMOKE_FAILURE_CODES
+                )},
+                "smoke": {"properties": {
+                    "status": {"enum": ["fail", "not-run"]},
+                }},
+            }},
+        }, {
+            "if": {"properties": {
+                "reason_code": {"enum": sorted(STAGE_A1_PRECONDITION_FAILURE_CODES)},
+            }, "required": ["reason_code"]},
+            "then": {"properties": {
+                "status": {"const": "fail"},
+                "smoke": {"properties": {
+                    "status": {"const": "not-run"},
+                    "reason_code": {"const": "not-run"},
+                }},
+            }},
+        }, *[{
+            "if": {"properties": {
+                "reason_code": {"const": reason},
+            }, "required": ["reason_code"]},
+            "then": {"properties": {
+                "status": {"const": "fail"},
+                "smoke": {"properties": {
+                    "status": {"const": "fail"},
+                    "reason_code": {"const": reason},
+                }},
+            }},
+        } for reason in sorted(STAGE_A1_SMOKE_FAILURE_CODES)],
+        *[{
+            "if": {"properties": {
+                "reason_code": {"const": reason},
+                "status": {"const": "UNCHECKABLE"},
+            }, "required": ["reason_code", "status"]},
+            "then": {"properties": {
+                "smoke": {"properties": {
+                    "status": {"const": "UNCHECKABLE"},
+                    "reason_code": {"const": reason},
+                }},
+            }},
+        } for reason in sorted(STAGE_A1_UNCHECKABLE_CODES)],
+        {
+            "if": {"properties": {"status": {"const": "UNCHECKABLE"}}, "required": ["status"]},
+            "then": {"properties": {
+                "reason_code": {"enum": sorted(STAGE_A1_UNCHECKABLE_CODES)},
+                "smoke": {"properties": {"status": {"const": "UNCHECKABLE"}}},
+            }},
+        }],
+    }
+
+
 def expected_profile_evidence_schema() -> Dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
         "required": [
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
-            "network_sandbox_behavior", "containment_provider", "lane_statuses",
+            "network_sandbox_behavior", "bubblewrap_prerequisite",
+            "containment_provider", "lane_statuses",
         ],
         "properties": {
             "configuration_intent": {
@@ -455,6 +756,7 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                     "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}
                 },
             },
+            "bubblewrap_prerequisite": expected_stage_a1_prerequisite_schema(),
             "containment_provider": expected_containment_provider_schema(),
             "lane_statuses": {
                 "type": "object",
@@ -715,10 +1017,167 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
         errors.append(label + ": matching profile requires passing containment-provider evidence")
 
 
+def expected_not_run_stage_a1_prerequisite() -> Dict[str, Any]:
+    return {
+        "schema": "t11-bubblewrap-prerequisite-evidence/v1",
+        "authority": "adapter/owner-authored",
+        "status": "not-run",
+        "reason_code": "not-run",
+        "guest": {
+            "distribution_id": "not-run", "distribution_version": "not-run",
+            "distribution_codename": "not-run", "kernel": "not-run",
+            "architecture": "not-run",
+        },
+        "apparmor": {
+            "enabled": False, "unprivileged_userns_restriction": "not-run",
+            "profile_required": False, "profile_source": "not-run",
+            "source_sha256": ZERO_SHA256, "installed_sha256": ZERO_SHA256,
+            "load_status": "not-run",
+        },
+        "bubblewrap": {
+            "package_name": "not-run", "package_version": "not-run",
+            "package_architecture": "not-run", "install_status": "not-run",
+            "binary_sha256": ZERO_SHA256, "version_output": "not-run",
+            "help_sha256": ZERO_SHA256,
+        },
+        "controller": {
+            "argv_sha256": sha256(canonical_bytes(EXPECTED_STAGE_A1_CONTROLLER_ARGV)),
+            "shell": False, "model_invoked": False,
+            "device_auth_performed": False, "legacy_landlock_enabled": False,
+            "global_apparmor_userns_disabled": False,
+        },
+        "smoke": {
+            "argv_sha256": sha256(canonical_bytes(EXPECTED_STAGE_A1_SMOKE_ARGV)),
+            "status": "not-run", "reason_code": "not-run", "exit_code": None,
+            "raw_stdout_recorded": False, "raw_stderr_recorded": False,
+        },
+    }
+
+
+def validate_stage_a1_prerequisite(value: Any, profile_status: Any, label: str, errors: List[str]) -> None:
+    expected_keys = set(expected_not_run_stage_a1_prerequisite())
+    if not isinstance(value, dict) or set(value) != expected_keys:
+        errors.append(label + ": closed Stage A.1 prerequisite evidence shape drifted")
+        return
+    if (
+        value.get("schema") != "t11-bubblewrap-prerequisite-evidence/v1"
+        or value.get("authority") != "adapter/owner-authored"
+        or value.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+        or value.get("reason_code") not in set(STAGE_A1_REASON_CODES)
+    ):
+        errors.append(label + ": Stage A.1 prerequisite identity/status drifted")
+        return
+    if value.get("status") == "not-run" and value != expected_not_run_stage_a1_prerequisite():
+        errors.append(label + ": Stage A.1 not-run sentinel drifted")
+    controller = value.get("controller")
+    if controller != expected_not_run_stage_a1_prerequisite()["controller"]:
+        errors.append(label + ": Stage A.1 controller shell/model/auth boundary drifted")
+    smoke = value.get("smoke")
+    if not isinstance(smoke, dict) or set(smoke) != {
+        "argv_sha256", "status", "reason_code", "exit_code",
+        "raw_stdout_recorded", "raw_stderr_recorded",
+    }:
+        errors.append(label + ": Stage A.1 smoke shape drifted")
+        return
+    if (
+        smoke.get("argv_sha256") != sha256(canonical_bytes(EXPECTED_STAGE_A1_SMOKE_ARGV))
+        or smoke.get("raw_stdout_recorded") is not False
+        or smoke.get("raw_stderr_recorded") is not False
+        or smoke.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+        or smoke.get("reason_code") not in set(STAGE_A1_REASON_CODES)
+    ):
+        errors.append(label + ": Stage A.1 smoke privacy/status boundary drifted")
+    smoke_status = smoke.get("status")
+    smoke_reason = smoke.get("reason_code")
+    smoke_exit = smoke.get("exit_code")
+    if smoke_status == "pass" and (smoke_reason != "none" or smoke_exit != 0):
+        errors.append(label + ": passing Stage A.1 smoke evidence is inconsistent")
+    elif smoke_status == "not-run" and (
+        smoke_reason != "not-run" or smoke_exit is not None
+    ):
+        errors.append(label + ": not-run Stage A.1 smoke evidence is inconsistent")
+    elif smoke_status == "fail":
+        invalid_exit = (
+            smoke_reason not in STAGE_A1_SMOKE_FAILURE_CODES
+            or (
+                smoke_reason == "nonzero-exit"
+                and (
+                    type(smoke_exit) is not int
+                    or not 1 <= smoke_exit <= 255
+                )
+            )
+            or (smoke_reason == "signal" and smoke_exit is not None)
+            or (smoke_reason == "unexpected-output" and smoke_exit != 0)
+        )
+        if invalid_exit:
+            errors.append(label + ": failed Stage A.1 smoke classification drifted")
+    elif smoke_status == "UNCHECKABLE" and (
+        smoke_reason not in STAGE_A1_UNCHECKABLE_CODES or smoke_exit is not None
+    ):
+        errors.append(label + ": uncheckable Stage A.1 smoke classification drifted")
+    if value.get("status") == "pass":
+        guest = value.get("guest")
+        apparmor = value.get("apparmor")
+        bubblewrap = value.get("bubblewrap")
+        if not isinstance(guest, dict) or any(guest.get(key) != expected for key, expected in {
+            "distribution_id": "ubuntu", "distribution_version": "24.04",
+            "distribution_codename": "noble", "architecture": "aarch64",
+        }.items()):
+            errors.append(label + ": passing Stage A.1 guest boundary drifted")
+        elif re.fullmatch(
+            r"[0-9][0-9A-Za-z._+~-]{0,127}", str(guest.get("kernel", ""))
+        ) is None:
+            errors.append(label + ": passing Stage A.1 kernel evidence is missing or invalid")
+        if apparmor != {
+            "enabled": True, "unprivileged_userns_restriction": "active",
+            "profile_required": True,
+            "profile_source": "ubuntu-noble-apparmor-profiles",
+            "source_sha256": APPROVED_BWRAP_PROFILE_SHA256,
+            "installed_sha256": APPROVED_BWRAP_PROFILE_SHA256,
+            "load_status": "enforce",
+        }:
+            errors.append(label + ": passing Stage A.1 AppArmor/profile boundary drifted")
+        if not isinstance(bubblewrap, dict) or any(
+            bubblewrap.get(key) != expected for key, expected in {
+                "package_name": "bubblewrap",
+                "package_version": APPROVED_BWRAP_PACKAGE_VERSION,
+                "package_architecture": "arm64", "install_status": "installed",
+                "binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+                "version_output": APPROVED_BWRAP_VERSION_OUTPUT,
+            }.items()
+        ) or not isinstance(bubblewrap.get("help_sha256"), str) or SHA.fullmatch(
+            bubblewrap.get("help_sha256", "")
+        ) is None or bubblewrap.get("help_sha256") == ZERO_SHA256:
+            errors.append(label + ": passing Stage A.1 bubblewrap boundary drifted")
+        if (
+            value.get("reason_code") != "none" or smoke.get("status") != "pass"
+            or smoke.get("reason_code") != "none" or smoke.get("exit_code") != 0
+        ):
+            errors.append(label + ": passing Stage A.1 smoke outcome drifted")
+    elif value.get("status") == "fail":
+        if value.get("reason_code") in STAGE_A1_PRECONDITION_FAILURE_CODES:
+            if smoke_status != "not-run":
+                errors.append(label + ": failed Stage A.1 precondition contains a smoke claim")
+        elif value.get("reason_code") in STAGE_A1_SMOKE_FAILURE_CODES:
+            if smoke_status != "fail" or smoke_reason != value.get("reason_code"):
+                errors.append(label + ": failed Stage A.1 outcome disagrees with smoke evidence")
+        else:
+            errors.append(label + ": failed Stage A.1 reason is invalid")
+    elif value.get("status") == "UNCHECKABLE" and (
+        value.get("reason_code") not in STAGE_A1_UNCHECKABLE_CODES
+        or smoke_status != "UNCHECKABLE"
+        or smoke_reason != value.get("reason_code")
+    ):
+        errors.append(label + ": uncheckable Stage A.1 outcome is inconsistent")
+    if profile_status in {"match", "probe-only-match"} and value.get("status") != "pass":
+        errors.append(label + ": matching profile requires passing Stage A.1 prerequisite")
+
+
 def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[str]) -> None:
     if not isinstance(value, dict) or set(value) != {
         "configuration_intent", "diagnostic_health", "exact_worker_argv",
-        "network_sandbox_behavior", "containment_provider", "lane_statuses",
+        "network_sandbox_behavior", "bubblewrap_prerequisite",
+        "containment_provider", "lane_statuses",
     }:
         errors.append(label + ": separated runtime evidence lanes drifted")
         return
@@ -782,6 +1241,9 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
         or network.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
     ):
         errors.append(label + ": network/sandbox behavior evidence is invalid")
+    validate_stage_a1_prerequisite(
+        value.get("bubblewrap_prerequisite"), status, label, errors
+    )
     validate_containment_provider(value.get("containment_provider"), status, label, errors)
     lanes = value.get("lane_statuses")
     if not isinstance(lanes, dict) or set(lanes) != set(LANE_STATUS_KEYS):
@@ -825,14 +1287,18 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
         not isinstance(diagnostic, dict) or diagnostic.get("status") not in {"pass", "pass-with-advisory-warning"}
         or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
         or not isinstance(network, dict) or network.get("status") != "pass"
+        or value.get("bubblewrap_prerequisite", {}).get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
         or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
         or lanes.get("auth_status") != "signed-in-client"
     ):
         errors.append(label + ": match requires passing diagnostic, argv, and network evidence lanes")
     if status == "probe-only-match" and (
-        not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
+        not isinstance(diagnostic, dict)
+        or diagnostic.get("status") not in {"pass", "pass-with-advisory-warning"}
+        or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
         or not isinstance(network, dict) or network.get("status") != "pass"
+        or value.get("bubblewrap_prerequisite", {}).get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
         or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
         or lanes.get("auth_status") != "unavailable"
@@ -1152,7 +1618,10 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
         if cap_properties.get(key) != {"const": "pass"}:
             errors.append(label + ": match does not require passing " + key)
     evidence_properties = then_properties.get("evidence", {}).get("properties", {})
-    for key in ("exact_worker_argv", "network_sandbox_behavior", "containment_provider"):
+    for key in (
+        "exact_worker_argv", "network_sandbox_behavior",
+        "bubblewrap_prerequisite", "containment_provider",
+    ):
         if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
             errors.append(label + ": match does not require passing evidence lane " + key)
     if evidence_properties.get("diagnostic_health", {}).get("properties", {}).get("status") != {
@@ -1186,7 +1655,8 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
         errors.append(label + ": exact probe-only-match conditional is missing or duplicated")
     else:
         probe_then = probe_conditions[0].get("then", {}).get("properties", {})
-        probe_lanes = probe_then.get("evidence", {}).get("properties", {}).get(
+        probe_evidence = probe_then.get("evidence", {}).get("properties", {})
+        probe_lanes = probe_evidence.get(
             "lane_statuses", {}
         ).get("properties", {})
         probe_caps = probe_then.get("capabilities", {}).get("properties", {})
@@ -1208,6 +1678,14 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
             ))
             or probe_then.get("auth", {}).get("properties", {}).get("class") != {"const": "unavailable"}
             or probe_then.get("live_run_allowed") != {"const": False}
+            or probe_evidence.get("diagnostic_health", {}).get(
+                "properties", {}
+            ).get("status") != {
+                "enum": ["pass", "pass-with-advisory-warning"]
+            }
+            or probe_evidence.get("bubblewrap_prerequisite", {}).get(
+                "properties", {}
+            ).get("status") != {"const": "pass"}
             or any(probe_lanes.get(key) != {"const": "pass"} for key in LANE_STATUS_KEYS[:-1])
             or probe_lanes.get("auth_status") != {"const": "unavailable"}
         ):
@@ -1367,6 +1845,42 @@ def validate_repository(root: Path) -> List[str]:
                 errors.append(
                     ".github/scripts/codex-exec-adapter.py: adapter-authored configuration intent/digest drifted"
                 )
+            observed_stage_a1_controller = [
+                list(argv) for argv in adapter.STAGE_A1_CONTROLLER_ARGV
+            ]
+            if observed_stage_a1_controller != EXPECTED_STAGE_A1_CONTROLLER_ARGV:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: Stage A.1 controller argv drifted"
+                )
+            if list(adapter.STAGE_A1_BWRAP_SMOKE_ARGV) != EXPECTED_STAGE_A1_SMOKE_ARGV:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: Stage A.1 direct smoke argv drifted"
+                )
+            expected_controller_digest = sha256(
+                canonical_bytes(EXPECTED_STAGE_A1_CONTROLLER_ARGV)
+            )
+            if adapter.STAGE_A1_CONTROLLER_ARGV_SHA256 != expected_controller_digest:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: Stage A.1 controller argv digest drifted"
+                )
+            approved_stage_a1_values = (
+                ("bubblewrap package", adapter.APPROVED_BWRAP_PACKAGE_VERSION,
+                 APPROVED_BWRAP_PACKAGE_VERSION),
+                ("bubblewrap version", adapter.APPROVED_BWRAP_VERSION_OUTPUT,
+                 APPROVED_BWRAP_VERSION_OUTPUT),
+                ("bubblewrap binary", adapter.APPROVED_BWRAP_BINARY_SHA256,
+                 APPROVED_BWRAP_BINARY_SHA256),
+                ("AppArmor package", adapter.APPROVED_APPARMOR_PACKAGE_VERSION,
+                 APPROVED_APPARMOR_PACKAGE_VERSION),
+                ("AppArmor profile", adapter.APPROVED_BWRAP_PROFILE_SHA256,
+                 APPROVED_BWRAP_PROFILE_SHA256),
+            )
+            for name, observed, expected in approved_stage_a1_values:
+                if observed != expected:
+                    errors.append(
+                        ".github/scripts/codex-exec-adapter.py: Stage A.1 approved value drifted: "
+                        + name
+                    )
             adapter.validate_envelope(envelope)
             adapter.validate_runtime_profile(fixture_profile, allow_fixture=True)
             adapter.validate_runtime_profile(profile)

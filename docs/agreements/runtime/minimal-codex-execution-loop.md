@@ -142,12 +142,69 @@ and the user's SSH configuration is not modified.
 The VM installs official stable `codex-cli 0.150.1` from
 `codex-aarch64-unknown-linux-musl.tar.gz`. Both the approved archive SHA-256
 `5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264`
-and a separately calculated extracted-binary digest are required. Stage A
+and a separately calculated extracted-binary digest are required. Stage A.1
 keeps the dedicated private VM `CODEX_HOME` unauthenticated. Stage B, if later
-approved after Stage A review, uses a separate fresh VM and device
+approved after Stage A.1 review, uses a separate fresh VM and device
 authorization in its own dedicated private `CODEX_HOME`; credential values,
 device codes, and authentication files never enter artifacts or durable
 output.
+
+### Stage A.1 bubblewrap prerequisite
+
+The current bounded attempt qualifies the documented bubblewrap prerequisite
+inside a fresh disposable Colima VM before any Codex shell-environment or
+sandbox/network probe. The provider controller uses fixed argv arrays with
+`shell=false`; package installation is never delegated to a model. It first
+records only these allowlisted guest facts: distribution ID/version/codename,
+kernel, architecture, AppArmor enabled state, and the
+`kernel.apparmor_restrict_unprivileged_userns` state. A passing platform is
+Ubuntu 24.04 `noble`, Linux `aarch64`, AppArmor enabled, with that restriction
+set to `1`.
+
+The controller pins the Ubuntu packages and expected installed facts below:
+
+| Artifact | Exact accepted value |
+|---|---|
+| `bubblewrap` package | `0.9.0-1ubuntu0.1` / `arm64` |
+| `/usr/bin/bwrap` version | `bubblewrap 0.9.0` |
+| `/usr/bin/bwrap` SHA-256 | `ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8` |
+| `apparmor` and `apparmor-profiles` packages | `4.0.1really4.0.1-0ubuntu0.24.04.7` |
+| `bwrap-userns-restrict` profile SHA-256 | `11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9` |
+
+It records the bubblewrap help digest, not raw help. When the Ubuntu 24.04
+AppArmor unprivileged-user-namespace restriction is active, it installs the
+packaged official profile from
+`/usr/share/apparmor/extra-profiles/bwrap-userns-restrict` at
+`/etc/apparmor.d/bwrap-userns-restrict`, verifies both profile digests, loads
+it with `/usr/sbin/apparmor_parser --replace`, and confirms enforce status.
+The fixed package/setup argv and their canonical digest are part of
+`t11-bubblewrap-prerequisite-evidence/v1`.
+
+The same controller then invokes this exact smoke test directly as the guest
+non-root user:
+
+```text
+/usr/bin/bwrap --unshare-user --unshare-net --ro-bind / / /bin/true
+```
+
+The canonical fixed controller-argv list has SHA-256
+`0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd`;
+the smoke argv alone has SHA-256
+`8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08`.
+
+Success requires exit zero, no signal, timeout, output overflow, unexpected
+output, or unreaped process. Raw stdout/stderr is not durable; non-success is
+classified with a fixed reason code. Missing or drifting platform, package,
+profile, binary, or observation evidence fails closed. T11 neither sets
+`features.use_legacy_landlock=true` nor globally disables the AppArmor userns
+restriction.
+
+Only a passing `bubblewrap_prerequisite` permits the adapter to invoke the
+Codex shell-environment and sandbox/network probes. This additional gate does
+not merge evidence lanes: `provider_isolation_status`,
+`mount_boundary_status`, `process_cleanup_status`,
+`codex_sandbox_network_status`, `shell_environment_status`, `config_status`,
+and `auth_status` remain independent observations.
 
 Before worker invocation, descriptor-aware checks require the worktree root and
 `work-item.txt` to keep their directory/file bindings. The only permitted
@@ -222,11 +279,12 @@ trusted as caller metadata. Runtime evidence has independent
 `process_cleanup_status`, `codex_sandbox_network_status`,
 `shell_environment_status`, `config_status`, and `auth_status` lanes. A
 failure or unknown in one lane never overwrites observations in another. A
-stable client can reach `match` only after every independently required lane,
-the exact-worker-argv policy, and the bounded diagnostic-health policy have
-their required success evidence. An adapter-authored intent digest or doctor
-health result alone never proves effective configuration. `match` additionally
-requires a closed `containment_provider` record with
+stable client can reach `match` only after the bubblewrap prerequisite, every
+independently required lane, the exact-worker-argv policy, and the bounded
+diagnostic-health policy have their required success evidence. An
+adapter-authored intent digest or doctor health result alone never proves
+effective configuration. `match` additionally requires a closed
+`containment_provider` record with
 adapter/owner-authored authority, `codex_authenticated_attestation=false`, the
 exact approved Colima/VZ/aarch64/profile/client/archive boundary, passing
 provider and mount isolation, exact public head/tree binding, a clean
@@ -253,21 +311,21 @@ repositories, schemas, and deterministic tests. It has no Codex authentication,
 network, model spend, live mode, or GitHub write. Live execution and receipt
 `--apply` require separate explicit modes and all T11 gates.
 
-The next live-path attempt is split into two non-overlapping stages. Stage A
-uses a fresh unauthenticated Colima VM, performs no device authentication and
-no model invocation, and runs only the provider, mount, process-cleanup,
-shell, config, sandbox/network, and argv-policy probes. It emits a bounded
-probe-only receipt, destroys the VM, proves profile absence, and stops for a
-new code review. A successful Stage A receipt is not a runtime `match`, live
-Task evidence, or authority to start Stage B.
+The next live-path attempt is Stage A.1 only. It uses a fresh unauthenticated
+Colima VM, performs no device authentication or model invocation, and first
+qualifies the bubblewrap prerequisite above. Only after the direct smoke
+passes may it run the Codex shell-environment and sandbox/network probes. It
+does not start a live worker or run a runtime-receipt dry-run/application.
 
-Stage A uses the separate `t11-stage-a-probe-receipt-request/v1` contract and
-the explicit `post-runtime-receipt.py --probe-dry-run` then `--probe-apply`
-actuator modes. Its Issue and pull-request comments carry a distinct
-`t11-stage-a-probe-receipt` marker. The request binds only the safe probe-only
-profile, exact head/tree/checks, no-model facts, destruction chronology, and
-profile/runtime-data absence; it accepts no native live-result bundle and
-does not consume the exactly-once live-receipt marker.
+Device-code authentication remains disabled throughout Stage A.1. Stage A.1
+appends only closed, allowlisted probe evidence to Issue #23 and PR
+#24. That evidence binds the exact head/tree/checks, no-auth/no-model facts,
+prerequisite outcome, separate lane statuses, and destruction/absence
+read-back without a live result bundle or runtime-receipt claim. The VM is
+destroyed, profile/runtime-data/process absence is read back, and the attempt
+stops for owner judgment. A successful Stage A.1 record is not a runtime
+`match`, live Task evidence, a live runtime receipt, or authority to start
+Stage B; it cannot consume the exactly-once Stage B receipt marker.
 
 Stage B requires that later review and uses a different fresh Colima VM. Only
 for that attempt may device-code authentication be enabled temporarily. The

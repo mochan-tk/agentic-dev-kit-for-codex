@@ -40,12 +40,12 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "616ea658a41749f8dd72816f81be082531b23a6fe48d5947a6824a2295a598f1"
+    "8db72b158933caab40a82a30cea31c93175fc6f2810fe28c82b83a9c5ac6dd3a"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "3af1e620fd1f9499544e514c619215ed3e3d47602ed85b54be02e6680bafbac7"
+    "bc55ccc3c841d4d8a76b22ea25c6ac055a13462a6f9437c00b830bb859209b9d"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
@@ -1653,9 +1653,17 @@ def validate_offline_runtime_checker_boundary(
         errors=errors,
     )
     allowed_runtime_attributes = {
+        "adapter.APPROVED_APPARMOR_PACKAGE_VERSION",
+        "adapter.APPROVED_BWRAP_BINARY_SHA256",
+        "adapter.APPROVED_BWRAP_PACKAGE_VERSION",
+        "adapter.APPROVED_BWRAP_PROFILE_SHA256",
+        "adapter.APPROVED_BWRAP_VERSION_OUTPUT",
         "adapter.ProcessResult",
         "adapter.REQUIRED_OVERRIDES",
         "adapter.REQUIRED_OVERRIDES.items",
+        "adapter.STAGE_A1_BWRAP_SMOKE_ARGV",
+        "adapter.STAGE_A1_CONTROLLER_ARGV",
+        "adapter.STAGE_A1_CONTROLLER_ARGV_SHA256",
         "adapter.build_live_argv",
         "adapter.doctor_diagnostic_health",
         "adapter.parse_jsonl",

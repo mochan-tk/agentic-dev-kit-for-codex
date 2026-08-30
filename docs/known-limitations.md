@@ -51,6 +51,20 @@ read-back. PID/start-token tracking provides best-effort cleanup evidence; it
 does not prove kernel-enforced containment. Full escaped-descendant process-
 lifetime containment is deferred to T12.
 
+The current Stage A.1 attempt adds a narrow bubblewrap prerequisite; it does
+not widen that containment claim. The adapter/owner-authored evidence is
+successful only on Ubuntu 24.04 `noble`, Linux `aarch64`, with AppArmor and
+its unprivileged-user-namespace restriction active. A fixed shell-free
+controller installs exact Ubuntu package versions for `bubblewrap`, `apparmor`,
+and `apparmor-profiles`, verifies the system bwrap binary/version/help digest,
+installs and loads the packaged official `bwrap-userns-restrict` profile, and
+runs the exact non-root smoke test
+`/usr/bin/bwrap --unshare-user --unshare-net --ro-bind / / /bin/true`.
+Raw stderr is discarded and non-success is reduced to a fixed reason code.
+Codex shell-environment and sandbox/network probes remain blocked until that
+smoke passes. T11 does not use legacy Landlock as a fallback and does not
+globally disable the AppArmor restriction.
+
 Provider isolation, mount boundary, process cleanup, Codex sandbox/network,
 shell environment, configuration, and authentication are independent evidence
 lanes. A shell, configuration, authentication, or sandbox/network failure does
@@ -109,12 +123,17 @@ Allowed stages are `load-envelope`, `load-static-role`,
 `filesystem-binding`; raw argv, exception text, and private paths are not
 recorded.
 
-The next attempt must stop after Stage A: a fresh unauthenticated Colima VM,
-no device authentication, no model invocation, probe-only lane evidence,
-destruction, and absence read-back. Stage B requires a new review and a
-different fresh VM before device authentication can be enabled temporarily.
-Only a complete Stage B profile `match` can permit exactly one live worker.
-Stage A success is not a live run or a live runtime receipt.
+The next attempt must stop after Stage A.1: a fresh unauthenticated Colima VM,
+no device authentication, no model invocation, the bubblewrap qualification,
+and, only after its smoke passes, Codex shell-environment and sandbox/network
+probe evidence. Device-code authentication remains disabled, no live worker
+starts, and no runtime-receipt dry-run/application is performed. After
+append-only allowlisted probe evidence, the VM is destroyed and
+profile/runtime-data/process absence is read back. Stage B
+requires a new review and a different fresh VM before device authentication
+can be enabled temporarily. Only a complete Stage B profile `match` can
+permit exactly one live worker. Stage A.1 success is prerequisite evidence,
+not a live run or a live runtime receipt.
 
 The final six-role topology, native runtime routing, hooks, recovery,
 installer/upgrade, live generalized Task ritual, consent feedback transport,
