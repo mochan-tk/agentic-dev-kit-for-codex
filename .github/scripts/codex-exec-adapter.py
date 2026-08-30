@@ -383,13 +383,35 @@ def require_runtime_fs_capabilities() -> None:
         raise ContractError("required immutable process-identity capability is unavailable: " + process_error)
 
 
-def read_bounded_regular(path: Path, max_bytes: int, expected_mode: Optional[int] = None) -> bytes:
+def read_bounded_regular(
+    path: Path,
+    max_bytes: int,
+    expected_mode: Optional[int] = None,
+    max_advertised_bytes: Optional[int] = None,
+) -> bytes:
     require_runtime_fs_capabilities()
+    if (
+        type(max_bytes) is not int or max_bytes < 0
+        or (
+            max_advertised_bytes is not None
+            and (
+                type(max_advertised_bytes) is not int
+                or max_advertised_bytes < max_bytes
+            )
+        )
+    ):
+        raise ContractError("bounded input size policy is invalid")
+    advertised_limit = (
+        max_bytes if max_advertised_bytes is None else max_advertised_bytes
+    )
     try:
         named_before = os.stat(str(path), follow_symlinks=False)
     except OSError:
         raise ContractError("bounded regular input is unavailable")
-    if not stat.S_ISREG(named_before.st_mode) or named_before.st_size > max_bytes:
+    if (
+        not stat.S_ISREG(named_before.st_mode)
+        or named_before.st_size > advertised_limit
+    ):
         raise ContractError("bounded input is not a regular file or exceeds its limit")
     if expected_mode is not None and stat.S_IMODE(named_before.st_mode) != expected_mode:
         raise ContractError("bounded input mode drifted")
@@ -902,15 +924,19 @@ def validate_stage_a1_prerequisite_evidence(value: Any) -> Dict[str, Any]:
         ),
         "Stage A.1 bubblewrap evidence",
     )
-    for field in (
-        "package_name", "package_version", "package_architecture",
-        "install_status", "version_output",
-    ):
-        if (
-            not isinstance(bubblewrap[field], str)
-            or not 1 <= len(bubblewrap[field]) <= 128
-            or PRIVATE_PATH_RE.search(bubblewrap[field])
-        ):
+    allowed_bubblewrap_values = {
+        "package_name": ("bubblewrap", "not-run"),
+        "package_version": (
+            APPROVED_BWRAP_PACKAGE_VERSION, "not-run", "unrecognized",
+        ),
+        "package_architecture": ("arm64", "not-run", "unrecognized"),
+        "install_status": ("installed", "not-run"),
+        "version_output": (
+            APPROVED_BWRAP_VERSION_OUTPUT, "not-run", "unrecognized",
+        ),
+    }
+    for field, allowed in allowed_bubblewrap_values.items():
+        if bubblewrap[field] not in allowed:
             raise ContractError("Stage A.1 bubblewrap field is invalid")
     for field in ("binary_sha256", "help_sha256"):
         require_string(bubblewrap[field], "Stage A.1 bubblewrap digest", SHA256_RE)
@@ -1124,17 +1150,19 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
             read_bounded_regular(STAGE_A1_OS_RELEASE, 16_384)
         )
         uname = os.uname()
-        apparmor_enabled = read_bounded_regular(
-            STAGE_A1_APPARMOR_ENABLED, 16
-        ).strip() == b"Y"
-        restriction = read_bounded_regular(
-            STAGE_A1_APPARMOR_USERNS_RESTRICTION, 16
+        apparmor_enabled_bytes = read_bounded_regular(
+            STAGE_A1_APPARMOR_ENABLED, 16, max_advertised_bytes=65_536
         ).strip()
-        restriction_status = (
-            "active" if restriction == b"1"
-            else "inactive" if restriction == b"0"
-            else "UNCHECKABLE"
-        )
+        if apparmor_enabled_bytes not in (b"Y", b"N"):
+            return fallback
+        apparmor_enabled = apparmor_enabled_bytes == b"Y"
+        restriction_bytes = read_bounded_regular(
+            STAGE_A1_APPARMOR_USERNS_RESTRICTION, 16,
+            max_advertised_bytes=65_536,
+        ).strip()
+        if restriction_bytes not in (b"0", b"1"):
+            return fallback
+        restriction_status = "active" if restriction_bytes == b"1" else "inactive"
         source_sha = hash_regular_file(STAGE_A1_PROFILE_SOURCE, 1_048_576)
         installed_sha = hash_regular_file(STAGE_A1_PROFILE_INSTALLED, 1_048_576)
         package_result = bounded_capture(
@@ -1153,8 +1181,21 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
         )
         if package_match is None:
             return fallback
-        package_version = package_match.group(1).decode("ascii", errors="strict")
-        package_architecture = package_match.group(2).decode("ascii", errors="strict")
+        observed_package_version = package_match.group(1).decode(
+            "ascii", errors="strict"
+        )
+        observed_package_architecture = package_match.group(2).decode(
+            "ascii", errors="strict"
+        )
+        package_version = (
+            APPROVED_BWRAP_PACKAGE_VERSION
+            if observed_package_version == APPROVED_BWRAP_PACKAGE_VERSION
+            else "unrecognized"
+        )
+        package_architecture = (
+            "arm64" if observed_package_architecture == "arm64"
+            else "unrecognized"
+        )
         binary_sha = hash_regular_file(STAGE_A1_BWRAP_BINARY)
         version_result = bounded_capture(
             (str(STAGE_A1_BWRAP_BINARY), "--version"), root, env,
@@ -1171,26 +1212,33 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
         ):
             return fallback
         try:
-            version_output = version_result.stdout.decode(
+            observed_version_output = version_result.stdout.decode(
                 "utf-8", errors="strict"
             ).strip()
         except UnicodeDecodeError:
             return fallback
+        version_output = (
+            APPROVED_BWRAP_VERSION_OUTPUT
+            if observed_version_output == APPROVED_BWRAP_VERSION_OUTPUT
+            else "unrecognized"
+        )
         load_status = _stage_a1_profile_load_status(
             bounded_capture(
                 STAGE_A1_LOADED_PROFILES_ARGV, root, env,
                 timeout=15, stdout_limit=262_144, stderr_limit=1024,
             )
         )
+        if load_status == "UNCHECKABLE":
+            return fallback
     except (ContractError, OSError, subprocess.SubprocessError, UnicodeError):
+        return fallback
+    if re.fullmatch(r"[0-9][0-9A-Za-z._+~-]{0,127}", uname.release) is None:
         return fallback
     guest = {
         "distribution_id": release["ID"],
         "distribution_version": release["VERSION_ID"],
         "distribution_codename": release["VERSION_CODENAME"],
-        "kernel": uname.release if re.fullmatch(
-            r"[0-9A-Za-z._+~-]{1,128}", uname.release
-        ) else "invalid",
+        "kernel": uname.release,
         "architecture": uname.machine,
     }
     apparmor = {

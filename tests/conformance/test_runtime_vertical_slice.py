@@ -366,7 +366,13 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda item: item["apparmor"].__setitem__("installed_sha256", "7" * 64),
             lambda item: item["apparmor"].__setitem__("load_status", "complain"),
             lambda item: item["bubblewrap"].__setitem__("package_name", "unreviewed"),
+            lambda item: item["bubblewrap"].__setitem__(
+                "package_version", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
+            ),
             lambda item: item["bubblewrap"].__setitem__("install_status", "unknown"),
+            lambda item: item["bubblewrap"].__setitem__(
+                "version_output", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
+            ),
             lambda item: item["controller"].__setitem__("argv_sha256", "0" * 64),
             lambda item: item["controller"].__setitem__("shell", True),
             lambda item: item["controller"].__setitem__("model_invoked", True),
@@ -434,6 +440,48 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             "live_run_allowed",
         )
 
+    def test_stage_a1_pseudo_file_read_bounds_actual_bytes_not_page_size(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "apparmor-enabled"
+            target.write_bytes(b"Y\n")
+            actual = os.stat(target, follow_symlinks=False)
+            advertised = SimpleNamespace(
+                st_mode=actual.st_mode,
+                st_size=4096,
+                st_dev=actual.st_dev,
+                st_ino=actual.st_ino,
+                st_mtime_ns=actual.st_mtime_ns,
+            )
+            original_stat = self.adapter.os.stat
+
+            def stat_with_page_size(path, *, follow_symlinks=True):
+                if str(path) == str(target):
+                    self.assertFalse(follow_symlinks)
+                    return advertised
+                return original_stat(path, follow_symlinks=follow_symlinks)
+
+            with mock.patch.object(
+                self.adapter, "require_runtime_fs_capabilities",
+            ), mock.patch.object(
+                self.adapter.os, "stat", side_effect=stat_with_page_size,
+            ):
+                self.assertEqual(
+                    b"Y\n",
+                    self.adapter.read_bounded_regular(
+                        target, 16, max_advertised_bytes=65_536,
+                    ),
+                )
+                self.assert_contract_error(
+                    lambda: self.adapter.read_bounded_regular(target, 16),
+                    "exceeds",
+                )
+                self.assert_contract_error(
+                    lambda: self.adapter.read_bounded_regular(
+                        target, 16, max_advertised_bytes=8,
+                    ),
+                    "policy",
+                )
+
     def test_stage_a1_observation_maps_allowlisted_system_and_smoke_evidence(self):
         os_release = (
             b'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n'
@@ -447,8 +495,10 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             str(self.adapter.STAGE_A1_PROFILE_INSTALLED): profile,
         }
 
-        def read(path, _limit, expected_mode=None):
-            del expected_mode
+        def read(
+            path, _limit, expected_mode=None, max_advertised_bytes=None,
+        ):
+            del expected_mode, max_advertised_bytes
             return reads[str(path)]
 
         def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15, **_kwargs):
@@ -517,6 +567,67 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 self.assertEqual(expected, (classified["status"], classified["reason_code"]))
                 self.assertNotIn("stdout", classified)
                 self.assertNotIn("stderr", classified)
+
+        for field_path, unknown_bytes in (
+            ("/sys/module/apparmor/parameters/enabled", b"?\n"),
+            ("/proc/sys/kernel/apparmor_restrict_unprivileged_userns", b"2\n"),
+        ):
+            unknown_reads = dict(reads)
+            unknown_reads[field_path] = unknown_bytes
+            with self.subTest(field_path=field_path), mock.patch.object(
+                self.adapter, "read_bounded_regular",
+                side_effect=lambda path, _limit, expected_mode=None,
+                max_advertised_bytes=None, values=unknown_reads: values[str(path)],
+            ), mock.patch.object(
+                self.adapter, "bounded_capture", side_effect=capture,
+            ), mock.patch.object(
+                self.adapter, "hash_regular_file", side_effect=hashed,
+            ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+                uncheckable = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+            self.assertEqual("UNCHECKABLE", uncheckable["status"])
+            self.assertEqual("observation-uncheckable", uncheckable["reason_code"])
+            self.assertEqual("UNCHECKABLE", uncheckable["smoke"]["status"])
+
+        def uncheckable_load_capture(argv, *args, **kwargs):
+            if tuple(argv) == self.adapter.STAGE_A1_LOADED_PROFILES_ARGV:
+                return self.adapter.ProcessResult(
+                    1, None, False, False, False, b"", 0, True,
+                )
+            return capture(argv, *args, **kwargs)
+
+        with mock.patch.object(
+            self.adapter, "read_bounded_regular", side_effect=read,
+        ), mock.patch.object(
+            self.adapter, "bounded_capture", side_effect=uncheckable_load_capture,
+        ), mock.patch.object(
+            self.adapter, "hash_regular_file", side_effect=hashed,
+        ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+            uncheckable_load = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+        self.assertEqual("UNCHECKABLE", uncheckable_load["status"])
+        self.assertEqual("observation-uncheckable", uncheckable_load["reason_code"])
+
+        token = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789"
+
+        def token_version_capture(argv, *args, **kwargs):
+            if list(argv)[-1:] == ["--version"]:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    (token + "\n").encode("ascii"), 0, True,
+                )
+            return capture(argv, *args, **kwargs)
+
+        with mock.patch.object(
+            self.adapter, "read_bounded_regular", side_effect=read,
+        ), mock.patch.object(
+            self.adapter, "bounded_capture", side_effect=token_version_capture,
+        ), mock.patch.object(
+            self.adapter, "hash_regular_file", side_effect=hashed,
+        ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+            sanitized = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+        self.assertEqual("fail", sanitized["status"])
+        self.assertEqual("binary-drift", sanitized["reason_code"])
+        self.assertEqual("unrecognized", sanitized["bubblewrap"]["version_output"])
+        self.assertNotIn(token, json.dumps(sanitized, sort_keys=True))
 
     def test_stage_a1_prerequisite_gates_codex_shell_and_network_probes(self):
         with tempfile.TemporaryDirectory() as temporary:

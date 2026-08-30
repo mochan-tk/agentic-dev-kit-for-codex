@@ -475,12 +475,20 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
                     "help_sha256",
                 ],
                 "properties": {
-                    "package_name": dict(string_field),
-                    "package_version": dict(string_field),
-                    "package_architecture": dict(string_field),
-                    "install_status": dict(string_field),
+                    "package_name": {"enum": ["bubblewrap", "not-run"]},
+                    "package_version": {"enum": [
+                        APPROVED_BWRAP_PACKAGE_VERSION,
+                        "not-run", "unrecognized",
+                    ]},
+                    "package_architecture": {
+                        "enum": ["arm64", "not-run", "unrecognized"]
+                    },
+                    "install_status": {"enum": ["installed", "not-run"]},
                     "binary_sha256": dict(digest_field),
-                    "version_output": dict(string_field),
+                    "version_output": {"enum": [
+                        APPROVED_BWRAP_VERSION_OUTPUT,
+                        "not-run", "unrecognized",
+                    ]},
                     "help_sha256": dict(digest_field),
                 },
             },
