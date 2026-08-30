@@ -1763,7 +1763,12 @@ def parse_linux_process_stat(data: bytes) -> Optional[Tuple[int, int, int, str]]
     # A process group outside the reader's PID namespace is represented as
     # zero by procfs. It remains valid discovery topology; the immutable
     # start-time token, not PGID, gates every signal operation.
-    if pid <= 0 or ppid < 0 or pgid < 0 or start_ticks <= 0:
+    # ``starttime`` is an unsigned count of clock ticks since boot.  A
+    # process created during the first tick (notably early boot processes in
+    # a fresh Colima VM) can therefore have the legitimate value zero.  The
+    # PID plus this kernel value remains the signal-time birth binding; only
+    # values outside the documented non-negative domain are invalid.
+    if pid <= 0 or ppid < 0 or pgid < 0 or start_ticks < 0:
         raise ContractError("Linux process birth-identity sensor returned invalid data")
     if state == "Z":
         return None

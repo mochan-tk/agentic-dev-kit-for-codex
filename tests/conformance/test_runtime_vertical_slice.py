@@ -1567,15 +1567,25 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             self.assertTrue(tracker.terminate_descendants(0.01))
         signal_call.assert_not_called()
 
-    def test_linux_stat_parser_accepts_unrepresented_process_group_only(self):
+    def test_linux_stat_parser_accepts_zero_start_tick_and_unrepresented_group(self):
         valid = b"4321 (worker) S 0 0 4321 0 -1 4194304 0 0 0 0 0 0 0 0 20 0 1 0 98765\n"
         self.assertEqual(
             (4321, 0, 0, "linux:98765"),
             self.adapter.parse_linux_process_stat(valid),
         )
+        zero_start_tick = valid.replace(b" 98765\n", b" 0\n")
+        self.assertEqual(
+            (4321, 0, 0, "linux:0"),
+            self.adapter.parse_linux_process_stat(zero_start_tick),
+        )
         negative_group = valid.replace(b") S 0 0 4321", b") S 0 -1 4321")
         self.assert_contract_error(
             lambda: self.adapter.parse_linux_process_stat(negative_group),
+            "invalid data",
+        )
+        negative_start_tick = valid.replace(b" 98765\n", b" -1\n")
+        self.assert_contract_error(
+            lambda: self.adapter.parse_linux_process_stat(negative_start_tick),
             "invalid data",
         )
         self.assert_contract_error(
