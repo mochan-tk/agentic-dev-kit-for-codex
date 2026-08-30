@@ -1350,11 +1350,12 @@ def observe_stage_a1_git(root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
     if (
         package_result.exit_code != 0 or package_result.timed_out
         or package_result.stdout_overflow or package_result.stderr_overflow
-        or not package_result.reaped
+        or package_result.stderr_size or not package_result.reaped
     ):
         raise ContractError("Stage A.1 Git package observation is uncheckable")
     package_match = re.fullmatch(
-        rb"install ok installed\t([^\t\n]{1,128})\t([^\t\n]{1,32})\n",
+        rb"installed\t([0-9A-Za-z.:+~_-]{1,128})\t"
+        rb"([0-9A-Za-z][0-9A-Za-z-]{0,31})\n",
         package_result.stdout,
     )
     if package_match is None:
@@ -1444,11 +1445,12 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
         if (
             package_result.exit_code != 0 or package_result.timed_out
             or package_result.stdout_overflow or package_result.stderr_overflow
-            or not package_result.reaped
+            or package_result.stderr_size or not package_result.reaped
         ):
             return fallback
         package_match = re.fullmatch(
-            rb"install ok installed\t([^\t\n]{1,128})\t([^\t\n]{1,32})\n",
+            rb"installed\t([0-9A-Za-z.:+~_-]{1,128})\t"
+            rb"([0-9A-Za-z][0-9A-Za-z-]{0,31})\n",
             package_result.stdout,
         )
         if package_match is None:

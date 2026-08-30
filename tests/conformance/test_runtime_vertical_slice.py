@@ -694,12 +694,12 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             if tuple(argv) == self.adapter.STAGE_A1_PACKAGE_QUERY_ARGV:
                 return self.adapter.ProcessResult(
                     0, None, False, False, False,
-                    b"install ok installed\t0.9.0-1ubuntu0.1\tarm64\n", 0, True,
+                    b"installed\t0.9.0-1ubuntu0.1\tarm64\n", 0, True,
                 )
             if tuple(argv) == self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV:
                 return self.adapter.ProcessResult(
                     0, None, False, False, False,
-                    b"install ok installed\t1:2.43.0-1ubuntu7.3\tarm64\n", 0, True,
+                    b"installed\t1:2.43.0-1ubuntu7.3\tarm64\n", 0, True,
                 )
             if tuple(argv) == (str(self.adapter.STAGE_A1_BWRAP_BINARY), "--version"):
                 return self.adapter.ProcessResult(
@@ -757,6 +757,72 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("none", observed["smoke"]["reason_code"])
         self.assertFalse(observed["smoke"]["raw_stdout_recorded"])
         self.assertFalse(observed["smoke"]["raw_stderr_recorded"])
+
+        for query, valid_payload in (
+            (
+                self.adapter.STAGE_A1_PACKAGE_QUERY_ARGV,
+                b"installed\t0.9.0-1ubuntu0.1\tarm64\n",
+            ),
+            (
+                self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV,
+                b"installed\t1:2.43.0-1ubuntu7.3\tarm64\n",
+            ),
+        ):
+            invalid_cases = (
+                ("full-status-field", b"install ok " + valid_payload, 0),
+                (
+                    "non-installed",
+                    valid_payload.replace(b"installed\t", b"config-files\t"),
+                    0,
+                ),
+                (
+                    "unknown-status",
+                    valid_payload.replace(b"installed\t", b"mystery-status\t"),
+                    0,
+                ),
+                ("missing-lf", valid_payload.rstrip(b"\n"), 0),
+                ("crlf", valid_payload.rstrip(b"\n") + b"\r\n", 0),
+                ("extra-field", valid_payload.rstrip(b"\n") + b"\textra\n", 0),
+                ("duplicate-row", valid_payload + valid_payload, 0),
+                ("invalid-utf8", b"installed\t\xff\tarm64\n", 0),
+                ("nonempty-stderr", valid_payload, 1),
+            )
+            for label, rejected_payload, stderr_size in invalid_cases:
+                seen = []
+
+                def rejected_status_capture(
+                    argv, *args, selected=query, payload=rejected_payload,
+                    observed_stderr_size=stderr_size, **kwargs,
+                ):
+                    seen.append(tuple(argv))
+                    if tuple(argv) == selected:
+                        return self.adapter.ProcessResult(
+                            0, None, False, False, False, payload,
+                            observed_stderr_size, True,
+                        )
+                    return capture(argv, *args, **kwargs)
+
+                with self.subTest(query=query, case=label), mock.patch.object(
+                    self.adapter, "read_bounded_regular", side_effect=read,
+                ), mock.patch.object(
+                    self.adapter, "bounded_capture",
+                    side_effect=rejected_status_capture,
+                ), mock.patch.object(
+                    self.adapter, "hash_regular_file", side_effect=hashed,
+                ), mock.patch.object(
+                    self.adapter.os, "uname", return_value=uname,
+                ):
+                    rejected = self.adapter.observe_stage_a1_prerequisite(
+                        ROOT, {},
+                    )
+                self.assertEqual("UNCHECKABLE", rejected["status"])
+                self.assertEqual(
+                    "observation-uncheckable", rejected["reason_code"],
+                )
+                self.assertEqual("UNCHECKABLE", rejected["smoke"]["status"])
+                self.assertNotIn(
+                    self.adapter.STAGE_A1_BWRAP_SMOKE_ARGV, seen,
+                )
         for result, expected in (
             (self.adapter.ProcessResult(1, None, False, False, False, b"", 0, True), ("fail", "nonzero-exit")),
             (self.adapter.ProcessResult(None, 9, False, False, False, b"", 0, True), ("fail", "signal")),
@@ -837,7 +903,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             if tuple(argv) == self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV:
                 return self.adapter.ProcessResult(
                     0, None, False, False, False,
-                    ("install ok installed\t" + token + "\tarm64\n").encode("ascii"),
+                    ("installed\t" + token + "\tarm64\n").encode("ascii"),
                     0, True,
                 )
             return capture(argv, *args, **kwargs)
