@@ -61,14 +61,31 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 "diagnostic_health": {
                     "classification": "diagnostic-only",
                     "status": "pass",
+                    "checks": [
+                        {"id": "auth.credentials", "category": "auth", "status": "ok"},
+                        {"id": "config.load", "category": "config", "status": "ok"},
+                        {"id": "runtime.provenance", "category": "runtime", "status": "ok"},
+                        {"id": "sandbox.helpers", "category": "sandbox", "status": "ok"},
+                    ],
                     "codex_issued_effective_configuration_proof": False,
                 },
                 "exact_worker_argv": {
                     "status": "pass",
+                    "stage": "argv-policy",
+                    "reason_code": "none",
                     "rules_bypass_absent": True,
                     "dynamic_task_data_stdin_only": True,
                 },
                 "network_sandbox_behavior": {"status": "pass"},
+                "lane_statuses": {
+                    "provider_isolation_status": "not-run",
+                    "mount_boundary_status": "not-run",
+                    "process_cleanup_status": "pass",
+                    "codex_sandbox_network_status": "pass",
+                    "shell_environment_status": "pass",
+                    "config_status": "pass",
+                    "auth_status": "unavailable",
+                },
             },
         }
 
@@ -176,9 +193,6 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             "extracted_binary_sha256": "a" * 64,
             "runtime_root_binding_sha256": "6" * 64,
             "dedicated_codex_home_binding_sha256": "7" * 64,
-            "sandbox_configuration_probe": "pass",
-            "network_boundary_probe": "pass",
-            "process_containment_probe": "pass",
             "control_plane": control_plane,
             "lifecycle": {
                 "destroy_required": True,
@@ -221,6 +235,8 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         parser = self.adapter.build_parser()
         parsed = parser.parse_args(["profile"])
         self.assertFalse(any("provider" in token for token in vars(parsed).values() if isinstance(token, str)))
+        self.assertFalse(parsed.probe_only)
+        self.assertTrue(parser.parse_args(["profile", "--probe-only"]).probe_only)
 
     def test_profile_cli_requires_bounded_provider_input_on_stdin(self):
         result = subprocess.run(
@@ -579,6 +595,8 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 profile["client"]["release_class"] = "stable"
             profile["capabilities"]["documented_config_keys_probe"] = "UNCHECKABLE"
             profile["capabilities"]["shell_environment_probe"] = "UNCHECKABLE"
+            profile["evidence"]["lane_statuses"]["config_status"] = "UNCHECKABLE"
+            profile["evidence"]["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
             self.adapter.validate_runtime_profile(profile)
             with self.subTest(state=state):
                 self.assert_contract_error(
@@ -659,7 +677,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertNotIn(fresh_provider_input["repository"]["head"], live_argv_text)
         create.assert_not_called()
 
-    def test_stable_sensor_blocks_live_when_descendant_containment_is_unproven(self):
+    def test_stable_sensor_blocks_live_without_approved_provider(self):
         stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
         stable_version = b"codex-cli 0.150.1\n"
 
@@ -675,8 +693,66 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
              mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64):
             observed = self.adapter.observe_runtime_profile(ROOT, "gpt-5.6-sol", "high")
         self.assertEqual("UNCHECKABLE", observed["status"])
-        self.assertEqual("not-run", observed["capabilities"]["process_containment_probe"])
+        self.assertEqual("pass", observed["capabilities"]["process_cleanup_probe"])
+        self.assertEqual(
+            "not-run", observed["evidence"]["lane_statuses"]["provider_isolation_status"],
+        )
         self.assertFalse(observed["live_run_allowed"])
+
+    def test_stage_a_probe_only_matches_without_auth_and_keeps_lanes_independent(self):
+        stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
+        stable_version = b"codex-cli 0.150.1\n"
+
+        def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
+            del stdin_bytes, timeout
+            payload = stable_version if argv[-1] == "--version" else stable_help
+            return self.adapter.ProcessResult(
+                0, None, False, False, False, payload, 0, True,
+            )
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            for child in ("home", "tmp", "work", "bin"):
+                (root / child).mkdir(mode=0o700)
+            (root / "home/.codex").mkdir(mode=0o700)
+            layout = self.adapter.ColimaRuntimeLayout(
+                root, root / "home", root / "tmp", root / "work",
+                Path(sys.executable), "6" * 64, "7" * 64,
+            )
+            provider_input = self.colima_provider_input()
+            containment = self.passing_containment_evidence()
+            uname = SimpleNamespace(
+                sysname="Linux", machine="aarch64", release="6.12.0-t11",
+            )
+            for network_status, expected_status in (
+                ("pass", "probe-only-match"), ("fail", "profile-drift"),
+            ):
+                probe = self.passing_runtime_probe()
+                probe["evidence"]["network_sandbox_behavior"]["status"] = network_status
+                probe["evidence"]["lane_statuses"]["codex_sandbox_network_status"] = network_status
+                with self.subTest(network_status=network_status), \
+                     mock.patch.object(self.adapter, "prepare_colima_runtime_layout", return_value=layout), \
+                     mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+                     mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=probe), \
+                     mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=containment), \
+                     mock.patch.object(self.adapter, "auth_class", return_value="unavailable"), \
+                     mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64), \
+                     mock.patch.object(self.adapter.os, "uname", return_value=uname):
+                    observed = self.adapter.observe_runtime_profile(
+                        ROOT, "gpt-5.6-sol", "high", provider_input,
+                        probe_only=True,
+                    )
+                self.assertEqual(expected_status, observed["status"])
+                self.assertEqual(
+                    "pass",
+                    observed["evidence"]["lane_statuses"]["provider_isolation_status"],
+                )
+                self.assertEqual(
+                    network_status,
+                    observed["evidence"]["lane_statuses"]["codex_sandbox_network_status"],
+                )
+                self.assertEqual("unavailable", observed["auth"]["class"])
+                self.assertFalse(observed["live_run_allowed"])
 
     def test_runtime_entrypoints_gate_capabilities_before_side_effects(self):
         with mock.patch.object(self.adapter, "require_runtime_fs_capabilities", side_effect=self.adapter.ContractError("capability gate")) as gate, \
@@ -711,22 +787,29 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         stdin_read.assert_not_called()
 
     def real_doctor_report_fixture(self, overall="ok"):
+        checks = {}
+        for check_id, category in (
+            ("auth.credentials", "auth"),
+            ("config.load", "config"),
+            ("runtime.provenance", "runtime"),
+            ("sandbox.helpers", "sandbox"),
+        ):
+            status = overall if category == "config" else "ok"
+            checks[check_id] = {
+                "id": check_id,
+                "category": category,
+                "status": status,
+                "summary": "redacted diagnostic row",
+                "details": {"state": "redacted"},
+                "durationMs": 1,
+                "remediation": None,
+            }
         return {
             "schemaVersion": 1,
             "generatedAt": "2026-08-28T00:00:00Z",
-            "codexVersion": "1.2.3",
+            "codexVersion": "0.150.1",
             "overallStatus": overall,
-            "checks": {
-                "config.load": {
-                    "id": "config.load",
-                    "category": "config",
-                    "status": overall,
-                    "summary": "redacted diagnostic row",
-                    "details": {"config.toml": "redacted"},
-                    "durationMs": 1,
-                    "remediation": None,
-                }
-            },
+            "checks": checks,
         }
 
     def test_documented_memory_keys_and_runtime_argv_policy_fail_closed(self):
@@ -831,6 +914,406 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         ))
         self.assertEqual("UNCHECKABLE", not_doctor["status"])
         self.assertFalse(not_doctor["codex_issued_effective_configuration_proof"])
+
+        for field, invalid in (("schemaVersion", 2), ("codexVersion", "0.150.0")):
+            drifted = self.real_doctor_report_fixture()
+            drifted[field] = invalid
+            evidence = self.adapter.doctor_diagnostic_health(
+                self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    self.adapter.canonical_bytes(drifted), 0, True,
+                )
+            )
+            with self.subTest(field=field):
+                self.assertEqual("UNCHECKABLE", evidence["status"])
+
+    def test_auth_probe_classifies_only_exact_bounded_stderr(self):
+        cases = (
+            (0, b"", b"Logged in using ChatGPT\n", "signed-in-client"),
+            (0, b"", b"Logged in using an API key - sk-abcde***vwxyz\n", "api-key"),
+            (0, b"", b"abcdefgh***vwxyz\n", "unknown"),
+            (0, b"", b"Logged in using an API key - abcdefgh***vwxyz\n", "api-key"),
+            (0, b"", b"Logged in using an API key - ***\n", "api-key"),
+            (1, b"", b"not logged in\n", "unavailable"),
+            (0, b"Logged in using ChatGPT\n", b"", "unknown"),
+            (0, b"", b"Logged in using ChatGPT\nextra\n", "unknown"),
+            (0, b"", b"unexpected success\n", "unknown"),
+        )
+        for exit_code, stdout, stderr, expected in cases:
+            result = self.adapter.ProcessResult(
+                exit_code, None, False, False, False, stdout, len(stderr), True,
+                stderr,
+            )
+            with self.subTest(expected=expected), mock.patch.object(
+                self.adapter, "bounded_capture", return_value=result,
+            ) as capture:
+                observed = self.adapter.auth_class(Path("/reviewed/codex"), ROOT, {})
+                self.assertEqual(expected, observed)
+                if stderr:
+                    self.assertNotIn(stderr.decode("utf-8", errors="ignore"), observed)
+                self.assertTrue(capture.call_args.kwargs["capture_stderr"])
+        with mock.patch.object(
+            self.adapter, "bounded_capture",
+            side_effect=self.adapter.ContractError("private process failure"),
+        ):
+            self.assertEqual(
+                "unknown", self.adapter.auth_class(Path("/reviewed/codex"), ROOT, {}),
+            )
+
+    def test_official_0150_sandbox_probe_argv_uses_read_only_profile_and_root(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(
+                Path(sys.executable).resolve(), home, tmp,
+            )
+            argv = self.adapter.sandbox_probe_argv(
+                Path("/reviewed/codex"), environment, ["/usr/bin/env", "-0"],
+            )
+        sandbox_index = argv.index("sandbox")
+        self.assertEqual([
+            "sandbox", "--permission-profile", ":read-only",
+            "-C", str(root), "--", "/usr/bin/env", "-0",
+        ], argv[sandbox_index:])
+        self.assertNotIn("--sandbox-state-json", argv)
+        self.assertNotIn("--sandbox-state-disable-network", argv)
+        self.adapter.validate_sandbox_probe_argv(argv)
+        for mutation in (
+            [item for item in argv if item != "--"],
+            [item for item in argv if item != "--permission-profile"],
+            [item for item in argv if item != ":read-only"],
+            argv + ["--sandbox-state-json", "{}"],
+            argv + ["--sandbox-state-disable-network"],
+            argv[:sandbox_index + 1] + ["-C", str(root)] + argv[sandbox_index + 1:],
+        ):
+            with self.subTest(mutation=mutation):
+                self.assert_contract_error(
+                    lambda value=mutation: self.adapter.validate_sandbox_probe_argv(value),
+                    "sandbox probe argv",
+                )
+
+    def test_worker_argv_failure_is_fixed_stage_and_reason_only(self):
+        with mock.patch.object(
+            self.adapter, "load_repository_json",
+            side_effect=self.adapter.ContractError("file:/Users/alice/private/envelope"),
+        ):
+            evidence = self.adapter.exact_worker_argv_evidence(
+                Path("/reviewed/codex"), ROOT, ROOT, {},
+            )
+        self.assertEqual({
+            "status": "fail",
+            "stage": "load-envelope",
+            "reason_code": "envelope-invalid",
+            "rules_bypass_absent": False,
+            "dynamic_task_data_stdin_only": False,
+        }, evidence)
+        rendered = json.dumps(evidence, sort_keys=True)
+        self.assertNotIn("alice", rendered)
+        self.assertNotIn("argv", evidence)
+        self.assertNotIn("exception", evidence)
+
+    def test_doctor_retains_only_safe_checks_and_limits_blocking_warnings(self):
+        report = self.real_doctor_report_fixture("warning")
+        report["checks"]["config.load"]["category"] = "config"
+        report["checks"]["config.load"]["notes"] = ["file:/Users/alice/private"]
+        report["checks"]["config.load"]["issues"] = []
+        report["checks"]["ui.theme"] = {
+            "id": "ui.theme", "category": "ui", "status": "warning",
+            "summary": "file:/Users/alice/private", "details": {"token": "secret"},
+            "durationMs": 1, "remediation": "private detail",
+        }
+        required_warning = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            )
+        )
+        self.assertEqual("fail", required_warning["status"])
+        self.assertEqual(5, len(required_warning["checks"]))
+        projected = {check["id"]: check for check in required_warning["checks"]}
+        self.assertEqual(
+            {"id": "config.load", "category": "config", "status": "warning"},
+            projected["config.load"],
+        )
+        self.assertEqual(
+            {"id": "ui.theme", "category": "ui", "status": "warning"},
+            projected["ui.theme"],
+        )
+        self.assertNotIn("alice", json.dumps(required_warning))
+
+        report["checks"]["config.load"]["status"] = "ok"
+        advisory = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            )
+        )
+        self.assertEqual("pass-with-advisory-warning", advisory["status"])
+
+        report["checks"]["auth.session"] = {
+            "id": "auth.session", "category": "auth", "status": "warning",
+            "summary": "unauthenticated", "details": {}, "durationMs": 1,
+            "remediation": None,
+        }
+        report["checks"].pop("ui.theme")
+        live_auth_required = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            )
+        )
+        self.assertEqual("fail", live_auth_required["status"])
+        stage_a = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            ),
+            ("config", "runtime", "sandbox"),
+        )
+        self.assertEqual("pass-with-advisory-warning", stage_a["status"])
+
+    def test_stage_a_doctor_accepts_only_expected_auth_failure_and_requires_categories(self):
+        report = self.real_doctor_report_fixture()
+        report["checks"]["auth.credentials"]["status"] = "fail"
+        report["overallStatus"] = "fail"
+        stage_a = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                1, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            ),
+            ("config", "runtime", "sandbox"),
+        )
+        self.assertEqual("pass-with-advisory-warning", stage_a["status"])
+        self.assertEqual("fail", next(
+            check["status"] for check in stage_a["checks"]
+            if check["id"] == "auth.credentials"
+        ))
+
+        missing = self.real_doctor_report_fixture()
+        missing["checks"].pop("sandbox.helpers")
+        missing_evidence = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(missing), 0, True,
+            )
+        )
+        self.assertEqual("UNCHECKABLE", missing_evidence["status"])
+
+        inconsistent_exit = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            ),
+            ("config", "runtime", "sandbox"),
+        )
+        self.assertEqual("UNCHECKABLE", inconsistent_exit["status"])
+
+    def test_runtime_lanes_are_independent_and_probe_only_never_authorizes_live(self):
+        profile = copy.deepcopy(self.profile)
+        profile["scope"] = "exact-head-probe-only-sensor"
+        profile["status"] = "probe-only-match"
+        profile["live_run_allowed"] = False
+        profile["auth"]["class"] = "unavailable"
+        profile["evidence"]["lane_statuses"]["auth_status"] = "unavailable"
+        report = self.real_doctor_report_fixture()
+        report["checks"]["auth.credentials"]["status"] = "fail"
+        report["overallStatus"] = "fail"
+        profile["evidence"]["diagnostic_health"] = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                1, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            ),
+            ("config", "runtime", "sandbox"),
+        )
+        self.adapter.validate_runtime_profile(profile, allow_fixture=True)
+        self.assertEqual(
+            "pass", profile["evidence"]["lane_statuses"]["provider_isolation_status"],
+        )
+        self.assertFalse(profile["live_run_allowed"])
+        self.assert_contract_error(
+            lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), profile, "live"),
+            "blocked",
+        )
+
+        mount_drift = copy.deepcopy(self.profile)
+        mount_drift["status"] = "profile-drift"
+        mount_drift["reason"] = "mount boundary drifted"
+        mount_drift["live_run_allowed"] = False
+        mount_drift["evidence"]["containment_provider"]["ssh_agent_forwarding"] = True
+        mount_drift["evidence"]["containment_provider"]["host_sensitive_mounts_absent"] = False
+        mount_drift["evidence"]["lane_statuses"]["mount_boundary_status"] = "fail"
+        self.adapter.validate_runtime_profile(mount_drift, allow_fixture=True)
+        self.assertEqual(
+            "pass", mount_drift["evidence"]["lane_statuses"]["provider_isolation_status"],
+        )
+        self.assertEqual(
+            "fail", mount_drift["evidence"]["lane_statuses"]["mount_boundary_status"],
+        )
+
+    def test_persisted_doctor_projection_cannot_forge_required_lane_success(self):
+        profile = copy.deepcopy(self.profile)
+        profile["scope"] = "exact-head-probe-only-sensor"
+        profile["status"] = "probe-only-match"
+        profile["live_run_allowed"] = False
+        profile["auth"]["class"] = "unavailable"
+        profile["evidence"]["lane_statuses"]["auth_status"] = "unavailable"
+        report = self.real_doctor_report_fixture()
+        report["checks"]["auth.credentials"]["status"] = "fail"
+        report["overallStatus"] = "fail"
+        diagnostic = self.adapter.doctor_diagnostic_health(
+            self.adapter.ProcessResult(
+                1, None, False, False, False,
+                self.adapter.canonical_bytes(report), 0, True,
+            ),
+            ("config", "runtime", "sandbox"),
+        )
+        profile["evidence"]["diagnostic_health"] = diagnostic
+        self.adapter.validate_runtime_profile(profile, allow_fixture=True)
+
+        forged = copy.deepcopy(profile)
+        for check in forged["evidence"]["diagnostic_health"]["checks"]:
+            if check["category"] == "config":
+                check["status"] = "fail"
+        with self.assertRaisesRegex(self.adapter.ContractError, "diagnostic status"):
+            self.adapter.validate_runtime_profile(forged, allow_fixture=True)
+
+        missing = copy.deepcopy(profile)
+        missing["evidence"]["diagnostic_health"]["checks"] = [
+            check for check in missing["evidence"]["diagnostic_health"]["checks"]
+            if check["category"] != "sandbox"
+        ]
+        with self.assertRaisesRegex(self.adapter.ContractError, "required category"):
+            self.adapter.validate_runtime_profile(missing, allow_fixture=True)
+
+        too_many = copy.deepcopy(profile)
+        too_many["evidence"]["diagnostic_health"]["checks"] = [
+            {"id": "ui.check-{:02d}".format(index), "category": "ui", "status": "ok"}
+            for index in range(61)
+        ] + diagnostic["checks"]
+        too_many["evidence"]["diagnostic_health"]["checks"].sort(
+            key=lambda item: (item["id"], item["category"], item["status"])
+        )
+        with self.assertRaisesRegex(self.adapter.ContractError, "safe checks"):
+            self.adapter.validate_runtime_profile(too_many, allow_fixture=True)
+
+        uppercase = copy.deepcopy(profile)
+        uppercase["evidence"]["diagnostic_health"]["checks"][0]["id"] = "Auth.credentials"
+        uppercase["evidence"]["diagnostic_health"]["checks"].sort(
+            key=lambda item: (item["id"], item["category"], item["status"])
+        )
+        with self.assertRaisesRegex(self.adapter.ContractError, "safe check"):
+            self.adapter.validate_runtime_profile(uppercase, allow_fixture=True)
+
+    def test_lane_local_probe_exceptions_preserve_independent_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            work = root / "work"
+            for path in (home, tmp, work):
+                path.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(
+                Path(sys.executable).resolve(), home, tmp,
+            )
+            diagnostic = {
+                "classification": "diagnostic-only", "status": "pass",
+                "checks": [
+                    {"id": "auth.credentials", "category": "auth", "status": "ok"},
+                    {"id": "config.load", "category": "config", "status": "ok"},
+                    {"id": "runtime.provenance", "category": "runtime", "status": "ok"},
+                    {"id": "sandbox.helpers", "category": "sandbox", "status": "ok"},
+                ],
+                "codex_issued_effective_configuration_proof": False,
+            }
+            worker = {
+                "status": "pass", "stage": "argv-policy", "reason_code": "none",
+                "rules_bypass_absent": True, "dynamic_task_data_stdin_only": True,
+            }
+            with mock.patch.object(
+                self.adapter, "materialize_reviewed_rules_profile",
+                return_value=self.adapter.runtime_configuration_intent()["rules_profile_sha256"],
+            ), mock.patch.object(
+                self.adapter, "bounded_capture",
+                return_value=self.adapter.ProcessResult(
+                    0, None, False, False, False, b"{}\n", 0, True,
+                ),
+            ), mock.patch.object(
+                self.adapter, "doctor_diagnostic_health", return_value=diagnostic,
+            ), mock.patch.object(
+                self.adapter, "exact_worker_argv_evidence", return_value=worker,
+            ), mock.patch.object(
+                self.adapter, "shell_environment_probe",
+                side_effect=self.adapter.ContractError("private shell failure"),
+            ), mock.patch.object(
+                self.adapter, "network_sandbox_behavior_probe",
+                side_effect=OSError("private network failure"),
+            ), mock.patch.object(
+                self.adapter, "process_cleanup_probe", return_value="pass",
+            ):
+                evidence = self.adapter.probe_runtime_evidence(
+                    Path(sys.executable).resolve(), work, environment, ROOT,
+                )
+        lanes = evidence["evidence"]["lane_statuses"]
+        self.assertEqual("UNCHECKABLE", lanes["shell_environment_status"])
+        self.assertEqual("UNCHECKABLE", lanes["codex_sandbox_network_status"])
+        self.assertEqual("pass", lanes["process_cleanup_status"])
+        self.assertEqual("pass", lanes["config_status"])
+
+    def test_probe_orchestrator_failure_still_records_provider_and_mount_lanes(self):
+        stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
+        stable_version = b"codex-cli 0.150.1\n"
+
+        def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
+            del stdin_bytes, timeout
+            payload = stable_version if argv[-1] == "--version" else stable_help
+            return self.adapter.ProcessResult(
+                0, None, False, False, False, payload, 0, True,
+            )
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            for child in ("home", "tmp", "work", "bin"):
+                (root / child).mkdir(mode=0o700)
+            (root / "home/.codex").mkdir(mode=0o700)
+            layout = self.adapter.ColimaRuntimeLayout(
+                root, root / "home", root / "tmp", root / "work",
+                Path(sys.executable), "6" * 64, "7" * 64,
+            )
+            provider_input = self.colima_provider_input()
+            containment = self.passing_containment_evidence()
+            uname = SimpleNamespace(
+                sysname="Linux", machine="aarch64", release="6.12.0-t11",
+            )
+            with mock.patch.object(
+                self.adapter, "prepare_colima_runtime_layout", return_value=layout,
+            ), mock.patch.object(
+                self.adapter, "bounded_capture", side_effect=capture,
+            ), mock.patch.object(
+                self.adapter, "probe_runtime_evidence",
+                side_effect=self.adapter.ContractError("private probe failure"),
+            ), mock.patch.object(
+                self.adapter, "observe_colima_provider_evidence", return_value=containment,
+            ), mock.patch.object(
+                self.adapter, "auth_class", return_value="unavailable",
+            ), mock.patch.object(
+                self.adapter, "hash_regular_file", return_value="a" * 64,
+            ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+                observed = self.adapter.observe_runtime_profile(
+                    ROOT, "gpt-5.6-sol", "high", provider_input, probe_only=True,
+                )
+        self.assertEqual("UNCHECKABLE", observed["status"])
+        self.assertEqual(
+            "pass", observed["evidence"]["lane_statuses"]["provider_isolation_status"],
+        )
+        self.assertEqual(
+            "pass", observed["evidence"]["lane_statuses"]["mount_boundary_status"],
+        )
+        self.assertEqual(
+            "UNCHECKABLE", observed["evidence"]["lane_statuses"]["config_status"],
+        )
 
     def test_separated_runtime_probe_never_promotes_doctor_to_effective_config(self):
         calls = []

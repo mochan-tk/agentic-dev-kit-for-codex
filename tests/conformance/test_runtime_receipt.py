@@ -1,6 +1,7 @@
 import copy
 import datetime
 import importlib.util
+import io
 import json
 import subprocess
 import sys
@@ -75,6 +76,69 @@ class RuntimeReceiptTest(unittest.TestCase):
             },
             "privacy": copy.deepcopy(self.receipt.LIFECYCLE_PRIVACY),
         }
+
+    def probe_fixture(self):
+        profile = copy.deepcopy(self.fixture["artifacts"]["runtime_profile"])
+        profile.update({
+            "scope": "exact-head-probe-only-sensor",
+            "status": "probe-only-match",
+            "reason": "all unauthenticated Stage A probe lanes match",
+            "live_run_allowed": False,
+        })
+        profile["auth"] = {
+            "class": "unavailable",
+            "credential_values_recorded": False,
+        }
+        profile["evidence"]["lane_statuses"] = copy.deepcopy(
+            self.receipt.PROBE_LANES
+        )
+        return {
+            "schema": "t11-stage-a-probe-receipt-request/v1",
+            "repository": "mochan-tk/agentic-dev-kit-for-codex",
+            "authority": "adapter/owner-authored",
+            "codex_authenticated_attestation": False,
+            "task": {
+                "issue": 23,
+                "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+            },
+            "pull_request": copy.deepcopy(self.fixture["pull_request"]),
+            "attempt_id": "ATTEMPT-0123456789abcdef",
+            "runtime_profile": profile,
+            "probe_execution": {
+                "probe_only": True,
+                "device_auth_performed": False,
+                "model_invocation_performed": False,
+                "live_worker_started": False,
+                "native_execution_artifacts_exported": False,
+            },
+            "checks": copy.deepcopy(self.fixture["checks"]),
+            "chronology": {
+                "probe_started_at": "2026-08-28T00:00:00Z",
+                "probe_completed_at": "2026-08-28T00:01:00Z",
+            },
+            "destroy": {
+                "destroy_requested": True,
+                "destroy_requested_at": "2026-08-28T00:02:00Z",
+                "destroy_completed": True,
+                "destroy_completed_at": "2026-08-28T00:03:00Z",
+                "profile_absence_readback": "absent",
+                "profile_absence_observed_at": "2026-08-28T00:04:00Z",
+                "runtime_data_absence_readback": "absent",
+                "runtime_data_absence_observed_at": "2026-08-28T00:04:30Z",
+            },
+            "privacy": copy.deepcopy(self.receipt.PROBE_PRIVACY),
+        }
+
+    def validate_probe(self, fixture=None, now=None):
+        adapter = mock.Mock()
+        adapter.validate_runtime_profile.return_value = None
+        with mock.patch.object(self.receipt, "load_adapter", return_value=adapter):
+            result = self.receipt.validate_probe_receipt(
+                copy.deepcopy(fixture or self.probe_fixture()),
+                now=now or self.fixture_now(),
+            )
+        adapter.validate_runtime_profile.assert_called_once()
+        return result
 
     def refresh_artifact_chain(self, fixture, observed_at):
         artifacts = fixture["artifacts"]
@@ -172,6 +236,16 @@ class RuntimeReceiptTest(unittest.TestCase):
         self.assertNotIn("guest_kernel", provider)
         self.assertNotIn("mounts", provider)
         self.assertNotIn("path", provider)
+        self.assertNotIn("process_containment_probe", provider)
+        self.assertNotIn("sandbox_configuration_probe", provider)
+        self.assertEqual(
+            "signed-in-client",
+            projection["runtime_profile"]["lane_statuses"]["auth_status"],
+        )
+        self.assertEqual(
+            "pass",
+            projection["runtime_profile"]["lane_statuses"]["process_cleanup_status"],
+        )
         rendered = self.receipt.render_comment(projection)
         self.assertIn("Provider lifecycle at receipt: destruction required; destruction not yet claimed", rendered)
         self.assertNotIn("6.8.0-fixture", rendered)
@@ -543,6 +617,312 @@ class RuntimeReceiptTest(unittest.TestCase):
         ]
         with mock.patch.object(self.receipt, "run_gh", side_effect=outputs):
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "read-back differs")
+
+    def test_stage_a_probe_receipt_is_closed_dual_target_and_distinct_from_live(self):
+        validated = self.validate_probe()
+        self.assertEqual("t11-stage-a-probe-receipt/v1", validated["schema"])
+        self.assertEqual("probe-only-match", validated["runtime_profile"]["observed_status"])
+        self.assertFalse(validated["runtime_profile"]["live_run_allowed"])
+        self.assertEqual("unavailable", validated["runtime_profile"]["auth_class"])
+        self.assertEqual(self.receipt.PROBE_LANES, validated["runtime_profile"]["lane_statuses"])
+        self.assertTrue(validated["provider"]["host_sensitive_mounts_absent"])
+        self.assertTrue(validated["provider"]["unapproved_mounts_absent"])
+        self.assertNotIn("guest_os", validated["provider"])
+        self.assertNotIn("guest_kernel", validated["provider"])
+        self.assertEqual(
+            validated["runtime_profile"]["binary_sha256"],
+            validated["provider"]["extracted_binary_sha256"],
+        )
+        issue_body = self.receipt.render_probe_comment(validated, "issue")
+        pr_body = self.receipt.render_probe_comment(validated, "pr")
+        self.assertIn("target=issue", issue_body)
+        self.assertIn("target=pr", pr_body)
+        self.assertIn("model invocation: `not performed`", issue_body)
+        self.assertIn("Provider/profile/backend/architecture:", issue_body)
+        self.assertIn("VM created at:", issue_body)
+        self.assertIn("Profile/runtime-data absence read-back:", issue_body)
+        self.assertIn("2026-08-28T00:04:30Z", issue_body)
+        self.assertIn("does not consume or replace the distinct live runtime receipt", issue_body)
+        self.assertNotRegex(issue_body + pr_body, r"/Users/|/var/folders/|/tmp/")
+        self.assertIsNone(self.receipt.MARKER.search(issue_body))
+        live_marker = self.receipt.receipt_marker({
+            "attempt_id": "ATTEMPT-0123456789abcdef",
+            "schema": "runtime-receipt/v1",
+        })
+        self.assertIsNone(self.receipt.PROBE_MARKER.search(live_marker))
+        with mock.patch.object(
+            self.receipt, "existing_comments",
+            return_value=[{"html_url": "unused", "body": issue_body}],
+        ):
+            self.assertIsNone(self.receipt.preflight_existing_receipt(
+                {"attempt_id": "ATTEMPT-0123456789abcdef"}, "live-body"
+            ))
+        with mock.patch.object(
+            self.receipt, "lifecycle_existing_comments",
+            return_value=[{"html_url": "unused", "body": live_marker}],
+        ):
+            self.assertIsNone(self.receipt.preflight_existing_probe_receipt(
+                validated, "issue", issue_body
+            ))
+
+    def test_stage_a_probe_rejects_auth_live_artifacts_lanes_destroy_and_stale_checks(self):
+        mutations = (
+            lambda value: value["runtime_profile"]["auth"].__setitem__("class", "signed-in-client"),
+            lambda value: value["runtime_profile"].__setitem__("live_run_allowed", True),
+            lambda value: value["probe_execution"].__setitem__("device_auth_performed", True),
+            lambda value: value["probe_execution"].__setitem__("model_invocation_performed", True),
+            lambda value: value["probe_execution"].__setitem__("live_worker_started", True),
+            lambda value: value.__setitem__("execution_result", {"status": "pass"}),
+            lambda value: value["runtime_profile"]["evidence"]["lane_statuses"].__setitem__("config_status", "fail"),
+            lambda value: value["runtime_profile"]["evidence"]["lane_statuses"].__setitem__("auth_status", "pass"),
+            lambda value: value["destroy"].__setitem__("destroy_completed", False),
+            lambda value: value["destroy"].__setitem__("profile_absence_readback", "present"),
+            lambda value: value["destroy"].pop("runtime_data_absence_observed_at"),
+            lambda value: value["checks"][0].__setitem__("head", "f" * 40),
+            lambda value: value["checks"][1].__setitem__("result", "failure"),
+            lambda value: value["task"].__setitem__("issue", 23.0),
+            lambda value: value["pull_request"].__setitem__("number", 24.0),
+            lambda value: value["probe_execution"].__setitem__("probe_only", 1),
+            lambda value: value["privacy"].__setitem__("allowlisted_projection", 1),
+        )
+        for mutation in mutations:
+            fixture = self.probe_fixture()
+            mutation(fixture)
+            with self.subTest(mutation=mutation):
+                self.assert_receipt_error(lambda f=fixture: self.validate_probe(f))
+
+    def test_stage_a_probe_rejects_raw_output_private_data_and_bad_chronology(self):
+        for key, value in (
+            ("raw_argv", ["codex", "exec"]),
+            ("stderr", "Logged in using ChatGPT"),
+            ("transcript", "redacted"),
+            ("local_path", "/Users/alice/private"),
+        ):
+            fixture = self.probe_fixture()
+            fixture[key] = value
+            with self.subTest(key=key):
+                self.assert_receipt_error(lambda f=fixture: self.validate_probe(f))
+        fixture = self.probe_fixture()
+        fixture["destroy"]["destroy_requested_at"] = "2026-08-27T23:59:59Z"
+        self.assert_receipt_error(lambda: self.validate_probe(fixture), "chronology")
+        fixture = self.probe_fixture()
+        self.assert_receipt_error(
+            lambda: self.validate_probe(
+                fixture,
+                now=datetime.datetime(2026, 8, 28, 2, 0, tzinfo=datetime.timezone.utc),
+            ),
+            "stale",
+        )
+
+    def test_stage_a_probe_marker_is_idempotent_and_duplicate_or_conflict_closed(self):
+        receipt = self.validate_probe()
+        for target, url in (
+            ("issue", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-991"),
+            ("pr", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-992"),
+        ):
+            body = self.receipt.render_probe_comment(receipt, target)
+            comment = {"html_url": url, "body": body}
+            with self.subTest(target=target), mock.patch.object(
+                self.receipt, "lifecycle_existing_comments", return_value=[comment]
+            ):
+                self.assertEqual(
+                    url,
+                    self.receipt.preflight_existing_probe_receipt(
+                        receipt, target, body
+                    ),
+                )
+            duplicate = copy.deepcopy(comment)
+            duplicate["body"] = body + "\n" + self.receipt.probe_marker(receipt, target)
+            with mock.patch.object(
+                self.receipt, "lifecycle_existing_comments", return_value=[duplicate]
+            ):
+                self.assert_receipt_error(
+                    lambda t=target, b=body: self.receipt.preflight_existing_probe_receipt(
+                        receipt, t, b
+                    ),
+                    "duplicated",
+                )
+            conflict = copy.deepcopy(comment)
+            conflict["body"] += "\ndrift"
+            with mock.patch.object(
+                self.receipt, "lifecycle_existing_comments", return_value=[conflict]
+            ):
+                self.assert_receipt_error(
+                    lambda t=target, b=body: self.receipt.preflight_existing_probe_receipt(
+                        receipt, t, b
+                    ),
+                    "conflicts",
+                )
+
+    def test_stage_a_probe_apply_reverifies_exact_head_checks_and_posts_both_targets(self):
+        receipt = self.validate_probe()
+        issue_body = self.receipt.render_probe_comment(receipt, "issue")
+        pr_body = self.receipt.render_probe_comment(receipt, "pr")
+        targets = [
+            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-991", False, False),
+            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-992", True, True),
+        ]
+        with mock.patch.object(self.receipt, "verify_external_head") as verify_head, \
+             mock.patch.object(self.receipt, "apply_one_probe_comment", side_effect=targets) as apply_one, \
+             mock.patch.object(self.receipt, "verify_probe_comment_readback") as final_readback:
+            result = self.receipt.apply_probe_comments(receipt, issue_body, pr_body)
+        self.assertEqual("t11-stage-a-probe-receipt-application/v1", result["schema"])
+        self.assertEqual("pass", result["status"])
+        self.assertEqual(4, verify_head.call_count)
+        self.assertEqual(["issue", "pr"], [call.args[1] for call in apply_one.call_args_list])
+        self.assertEqual([
+            mock.call(targets[0][0], "issue", issue_body),
+            mock.call(targets[1][0], "pr", pr_body),
+        ], final_readback.call_args_list)
+        self.assertEqual({"issue": False, "pr": True}, result["idempotent_targets"])
+        self.assertEqual({"issue": False, "pr": True}, result["reconciled_after_uncertain_post"])
+
+        with mock.patch.object(
+            self.receipt, "verify_external_head",
+            side_effect=self.receipt.ReceiptError("required check results are stale"),
+        ) as verify_head, mock.patch.object(self.receipt, "apply_one_probe_comment") as post:
+            self.assert_receipt_error(
+                lambda: self.receipt.apply_probe_comments(receipt, issue_body, pr_body),
+                "stale",
+            )
+        verify_head.assert_called_once()
+        post.assert_not_called()
+
+    def test_stage_a_probe_final_dual_readback_fails_closed_on_late_drift(self):
+        receipt = self.validate_probe()
+        issue_body = self.receipt.render_probe_comment(receipt, "issue")
+        pr_body = self.receipt.render_probe_comment(receipt, "pr")
+        targets = [
+            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-991", False, False),
+            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-992", False, False),
+        ]
+        with mock.patch.object(self.receipt, "verify_external_head"), \
+             mock.patch.object(self.receipt, "apply_one_probe_comment", side_effect=targets), \
+             mock.patch.object(
+                 self.receipt, "verify_probe_comment_readback",
+                 side_effect=self.receipt.ReceiptError("late durable copy drift"),
+             ):
+            self.assert_receipt_error(
+                lambda: self.receipt.apply_probe_comments(receipt, issue_body, pr_body),
+                "late durable copy drift",
+            )
+
+    def test_stage_a_probe_uncertain_post_reconciles_without_duplicate(self):
+        receipt = self.validate_probe()
+        body = self.receipt.render_probe_comment(receipt, "issue")
+        url = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-991"
+        with mock.patch.object(
+            self.receipt, "preflight_existing_probe_receipt",
+            side_effect=[None, url],
+        ), mock.patch.object(
+            self.receipt, "run_gh", side_effect=self.receipt.ReceiptError("uncertain")
+        ):
+            self.assertEqual(
+                (url, True, True),
+                self.receipt.apply_one_probe_comment(receipt, "issue", body),
+            )
+
+    def test_stage_a_probe_apply_capability_gate_precedes_input_and_github(self):
+        with mock.patch.object(
+            self.receipt, "require_runtime_fs_capabilities",
+            side_effect=self.receipt.ReceiptError("capability gate"),
+        ) as gate, mock.patch.object(self.receipt, "read_stdin_bounded") as read_input, \
+             mock.patch.object(self.receipt, "run_gh") as github:
+            with mock.patch.object(sys, "stdout", mock.Mock(buffer=mock.Mock())):
+                self.assertEqual(1, self.receipt.main(["--probe-apply"]))
+        gate.assert_called_once()
+        read_input.assert_not_called()
+        github.assert_not_called()
+
+    def test_stage_a_probe_dry_run_cli_emits_both_canonical_target_copies(self):
+        receipt = self.validate_probe()
+        stdout = mock.Mock(buffer=io.BytesIO())
+        with mock.patch.object(self.receipt, "read_stdin_bounded", return_value=b"{}"), \
+             mock.patch.object(self.receipt, "decode_json_object", return_value={}), \
+             mock.patch.object(self.receipt, "validate_probe_receipt", return_value=receipt), \
+             mock.patch.object(sys, "stdout", stdout):
+            self.assertEqual(0, self.receipt.main(["--probe-dry-run"]))
+        payload = json.loads(stdout.buffer.getvalue())
+        self.assertEqual("t11-stage-a-probe-receipt-dry-run/v1", payload["schema"])
+        self.assertEqual(
+            self.receipt.render_probe_comment(receipt, "issue"), payload["issue_body"]
+        )
+        self.assertEqual(
+            self.receipt.render_probe_comment(receipt, "pr"), payload["pr_body"]
+        )
+
+    def test_stage_a_probe_real_adapter_cli_dry_run_accepts_current_request(self):
+        fixture = self.probe_fixture()
+        now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+        profile = fixture["runtime_profile"]
+        provider = profile["evidence"]["containment_provider"]
+        control = provider["control_plane"]
+
+        def stamp(seconds):
+            return (now - datetime.timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
+
+        provider["created_at"] = stamp(300)
+        control["pre_create_observed_at"] = stamp(330)
+        control["post_create_observed_at"] = stamp(270)
+        normalized = {
+            key: value for key, value in control.items()
+            if key != "normalized_control_plane_sha256"
+        }
+        control["normalized_control_plane_sha256"] = self.receipt.sha256(
+            self.receipt.canonical_bytes(normalized)
+        )
+        profile["observed_at"] = stamp(210)
+        fixture["chronology"] = {
+            "probe_started_at": stamp(240),
+            "probe_completed_at": stamp(180),
+        }
+        fixture["destroy"].update({
+            "destroy_requested_at": stamp(150),
+            "destroy_completed_at": stamp(120),
+            "profile_absence_observed_at": stamp(60),
+            "runtime_data_absence_observed_at": stamp(30),
+        })
+        result = subprocess.run(
+            [sys.executable, "-I", str(SCRIPT), "--probe-dry-run"],
+            cwd=ROOT,
+            input=self.receipt.canonical_bytes(fixture),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual("t11-stage-a-probe-receipt-dry-run/v1", payload["schema"])
+        self.assertEqual("pass", payload["status"])
+        self.assertIn("target=issue", payload["issue_body"])
+        self.assertIn("target=pr", payload["pr_body"])
+
+        for mutation in ("pre-after-create", "probe-before-post-create"):
+            invalid = copy.deepcopy(fixture)
+            invalid_provider = invalid["runtime_profile"]["evidence"]["containment_provider"]
+            invalid_control = invalid_provider["control_plane"]
+            if mutation == "pre-after-create":
+                invalid_control["pre_create_observed_at"] = stamp(290)
+            else:
+                invalid["chronology"]["probe_started_at"] = stamp(280)
+            normalized = {
+                key: value for key, value in invalid_control.items()
+                if key != "normalized_control_plane_sha256"
+            }
+            invalid_control["normalized_control_plane_sha256"] = self.receipt.sha256(
+                self.receipt.canonical_bytes(normalized)
+            )
+            rejected = subprocess.run(
+                [sys.executable, "-I", str(SCRIPT), "--probe-dry-run"],
+                cwd=ROOT,
+                input=self.receipt.canonical_bytes(invalid),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+            )
+            with self.subTest(mutation=mutation):
+                self.assertNotEqual(0, rejected.returncode)
+                self.assertNotIn(b"Traceback", rejected.stdout + rejected.stderr)
 
     def test_lifecycle_receipt_dry_run_is_closed_canonical_and_dual_target(self):
         fixture = self.lifecycle_fixture()

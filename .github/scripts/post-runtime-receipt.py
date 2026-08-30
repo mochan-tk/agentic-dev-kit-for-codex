@@ -35,6 +35,7 @@ COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-cod
 PR_COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-([0-9]+)\Z")
 MARKER = re.compile(r"<!-- t11-runtime-receipt attempt=(ATTEMPT-[0-9a-f]{16}) receipt_sha256=([0-9a-f]{64}) -->")
 LIFECYCLE_MARKER = re.compile(r"<!-- t11-colima-lifecycle-receipt target=(issue|pr) attempt=(ATTEMPT-[0-9a-f]{16}) lifecycle_sha256=([0-9a-f]{64}) -->")
+PROBE_MARKER = re.compile(r"<!-- t11-stage-a-probe-receipt target=(issue|pr) attempt=(ATTEMPT-[0-9a-f]{16}) probe_sha256=([0-9a-f]{64}) -->")
 PRIVATE_PATH = re.compile(r"(?i)(?:^|[\s'\"]|file:(?://)?)(?:/users/|/home/|/root/|/tmp/|/private/|/var/folders/|~/|[a-z]:[\\/]|\\\\)")
 SENSITIVE = (
     re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
@@ -82,6 +83,38 @@ LIFECYCLE_PRIVACY = {
     "raw_stderr": False,
     "transcript": False,
     "environment_values": False,
+}
+PROBE_PRIVACY = {
+    "allowlisted_projection": True,
+    "device_auth": False,
+    "model_invocation": False,
+    "live_worker": False,
+    "native_execution_artifacts": False,
+    "raw_mount_inventory": False,
+    "raw_provider_configuration": False,
+    "raw_paths": False,
+    "credential_values": False,
+    "auth_files": False,
+    "device_codes": False,
+    "raw_jsonl": False,
+    "raw_reasoning": False,
+    "raw_stderr": False,
+    "raw_stdout": False,
+    "transcript": False,
+    "environment_values": False,
+}
+PROBE_LANES = {
+    "provider_isolation_status": "pass",
+    "mount_boundary_status": "pass",
+    "process_cleanup_status": "pass",
+    "codex_sandbox_network_status": "pass",
+    "shell_environment_status": "pass",
+    "config_status": "pass",
+    "auth_status": "unavailable",
+}
+PROBE_FORBIDDEN_FIELDS = {
+    "envelope", "executionresult", "verifier", "events", "rawargv",
+    "stdout", "stderr", "modeloutput", "workeroutput", "transcript",
 }
 
 
@@ -322,6 +355,8 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
             "auth_class": profile["auth"]["class"],
             "model": profile["request"]["model"],
             "reasoning_effort": profile["request"]["reasoning_effort"],
+            "diagnostic_status": profile["evidence"]["diagnostic_health"]["status"],
+            "lane_statuses": dict(profile["evidence"]["lane_statuses"]),
         },
         "containment_provider": {
             "schema": "containment-provider-receipt-evidence/v1",
@@ -361,9 +396,6 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
             "extracted_binary_sha256": provider["extracted_binary_sha256"],
             "runtime_root_binding_sha256": provider["runtime_root_binding_sha256"],
             "dedicated_codex_home_binding_sha256": provider["dedicated_codex_home_binding_sha256"],
-            "sandbox_configuration_probe": provider["sandbox_configuration_probe"],
-            "network_boundary_probe": provider["network_boundary_probe"],
-            "process_containment_probe": provider["process_containment_probe"],
             "control_plane": {
                 "schema": "colima-control-plane-receipt-evidence/v1",
                 **{
@@ -611,6 +643,297 @@ def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = No
     return receipt
 
 
+def _validate_stage_a_no_live_material(value: Any) -> None:
+    """Reject native/live payloads while allowing only safe profile projections."""
+    stack = [value]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            for key, child in current.items():
+                normalized = re.sub(r"[^a-z0-9]", "", key.lower())
+                if normalized in PROBE_FORBIDDEN_FIELDS and child is not False:
+                    raise ReceiptError("Stage A receipt contains live or raw execution material")
+                stack.append(child)
+        elif isinstance(current, list):
+            stack.extend(current)
+
+
+def _validate_exact_checks(checks: Any, pr: Mapping[str, Any], label: str) -> List[Dict[str, Any]]:
+    if not isinstance(checks, list) or len(checks) != 2:
+        raise ReceiptError(label + " must bind exactly quality and conformance")
+    seen = set()
+    validated: List[Dict[str, Any]] = []
+    for check in checks:
+        if not isinstance(check, dict):
+            raise ReceiptError(label + " check must be an object")
+        exact_keys(check, ("context", "url", "head", "result"), label + " check")
+        context = check.get("context")
+        if (
+            context not in ("quality", "conformance") or context in seen
+            or check.get("head") != pr.get("head") or check.get("result") != "success"
+            or CHECK_URL.fullmatch(str(check.get("url"))) is None
+        ):
+            raise ReceiptError(label + " check binding is invalid or stale")
+        seen.add(context)
+        validated.append(dict(check))
+    if seen != {"quality", "conformance"}:
+        raise ReceiptError(label + " required checks are incomplete")
+    return validated
+
+
+def validate_probe_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dict[str, Any]:
+    """Validate the closed, unauthenticated Stage A probe and destroy record."""
+    if not isinstance(value, dict):
+        raise ReceiptError("Stage A probe receipt request must be an object")
+    validate_tree_limits(value)
+    _validate_stage_a_no_live_material(value)
+    exact_keys(
+        value,
+        (
+            "schema", "repository", "authority", "codex_authenticated_attestation",
+            "task", "pull_request", "attempt_id", "runtime_profile",
+            "probe_execution", "checks", "chronology", "destroy", "privacy",
+        ),
+        "Stage A probe receipt request",
+    )
+    if (
+        value.get("schema") != "t11-stage-a-probe-receipt-request/v1"
+        or value.get("repository") != REPOSITORY
+        or value.get("authority") != "adapter/owner-authored"
+        or value.get("codex_authenticated_attestation") is not False
+    ):
+        raise ReceiptError("Stage A probe receipt identity/authority is invalid")
+    task = value.get("task")
+    if (
+        not isinstance(task, dict)
+        or set(task) != {"issue", "url"}
+        or type(task.get("issue")) is not int
+        or task != {"issue": TASK, "url": "https://github.com/{}/issues/{}".format(REPOSITORY, TASK)}
+    ):
+        raise ReceiptError("Stage A probe receipt Task binding is invalid")
+    pr = value.get("pull_request")
+    expected_pr_url = "https://github.com/{}/pull/{}".format(REPOSITORY, PULL_REQUEST)
+    if not isinstance(pr, dict):
+        raise ReceiptError("Stage A pull request must be an object")
+    exact_keys(pr, ("number", "url", "head", "tree"), "Stage A pull request")
+    if (
+        type(pr.get("number")) is not int
+        or pr.get("number") != PULL_REQUEST or pr.get("url") != expected_pr_url
+        or OID.fullmatch(str(pr.get("head"))) is None
+        or OID.fullmatch(str(pr.get("tree"))) is None
+    ):
+        raise ReceiptError("Stage A receipt must bind exact PR #24 head/tree")
+    attempt = value.get("attempt_id")
+    if not isinstance(attempt, str) or ATTEMPT.fullmatch(attempt) is None:
+        raise ReceiptError("Stage A probe attempt ID is invalid")
+
+    profile = value.get("runtime_profile")
+    if not isinstance(profile, dict):
+        raise ReceiptError("Stage A runtime profile must be an object")
+    adapter = load_adapter()
+    try:
+        adapter.validate_runtime_profile(profile)
+    except Exception as error:
+        if error.__class__.__name__ == "ContractError":
+            raise ReceiptError("Stage A runtime profile validation failed")
+        raise
+    if (
+        profile.get("repository") != REPOSITORY
+        or profile.get("scope") != "exact-head-probe-only-sensor"
+        or profile.get("status") != "probe-only-match"
+        or profile.get("live_run_allowed") is not False
+    ):
+        raise ReceiptError("Stage A runtime profile is not a probe-only match")
+    auth = profile.get("auth")
+    if not isinstance(auth, dict) or auth.get("class") != "unavailable" or auth.get("credential_values_recorded") is not False:
+        raise ReceiptError("Stage A must remain unauthenticated")
+    evidence = profile.get("evidence")
+    lanes = evidence.get("lane_statuses") if isinstance(evidence, dict) else None
+    if lanes != PROBE_LANES:
+        raise ReceiptError("Stage A evidence lanes are incomplete or non-pass")
+    diagnostic = evidence.get("diagnostic_health") if isinstance(evidence, dict) else None
+    if not isinstance(diagnostic, dict) or diagnostic.get("status") not in ("pass", "pass-with-advisory-warning"):
+        raise ReceiptError("Stage A diagnostic health is non-success")
+    argv_evidence = evidence.get("exact_worker_argv") if isinstance(evidence, dict) else None
+    if not isinstance(argv_evidence, dict) or argv_evidence.get("status") != "pass":
+        raise ReceiptError("Stage A exact worker argv evidence is non-success")
+    provider = evidence.get("containment_provider") if isinstance(evidence, dict) else None
+    if not isinstance(provider, dict):
+        raise ReceiptError("Stage A containment provider evidence is missing")
+    control = provider.get("control_plane")
+    if not isinstance(control, dict):
+        raise ReceiptError("Stage A control-plane evidence is missing")
+    expected_profile_name = "t11-e2e-{}-01".format(pr["head"][:12])
+    if (
+        provider.get("authority") != "adapter/owner-authored"
+        or provider.get("codex_authenticated_attestation") is not False
+        or provider.get("status") != "pass"
+        or provider.get("provider_kind") != "colima-vm"
+        or provider.get("profile_name") != expected_profile_name
+        or provider.get("public_head") != pr["head"]
+        or provider.get("public_tree") != pr["tree"]
+        or provider.get("repository_clean") is not True
+        or provider.get("codex_version_output") != profile.get("client", {}).get("version_output")
+        or provider.get("extracted_binary_sha256") != profile.get("client", {}).get("binary_sha256")
+        or provider.get("observed_archive_sha256") != provider.get("approved_archive_sha256")
+        or profile.get("platform") != {
+            "os": provider.get("guest_os"), "architecture": provider.get("architecture")
+        }
+        or provider.get("host_sensitive_mounts_absent") is not True
+        or provider.get("unapproved_mounts_absent") is not True
+        or control.get("authority") != "owner-authored"
+        or control.get("codex_authenticated_attestation") is not False
+        or control.get("status") != "pass"
+    ):
+        raise ReceiptError("Stage A provider or exact-head binding is invalid")
+    for field in (
+        "provider_configuration_sha256", "effective_mount_inventory_sha256",
+        "vm_instance_identity_sha256", "runtime_root_binding_sha256",
+        "dedicated_codex_home_binding_sha256",
+    ):
+        if SHA.fullmatch(str(provider.get(field))) is None or provider.get(field) == "0" * 64:
+            raise ReceiptError("Stage A provider digest binding is invalid")
+    normalized_control = control.get("normalized_control_plane_sha256")
+    if SHA.fullmatch(str(normalized_control)) is None or normalized_control == "0" * 64:
+        raise ReceiptError("Stage A control-plane digest binding is invalid")
+
+    probe_execution = value.get("probe_execution")
+    expected_execution = {
+        "probe_only": True,
+        "device_auth_performed": False,
+        "model_invocation_performed": False,
+        "live_worker_started": False,
+        "native_execution_artifacts_exported": False,
+    }
+    if (
+        not isinstance(probe_execution, dict)
+        or set(probe_execution) != set(expected_execution)
+        or any(type(probe_execution.get(field)) is not bool for field in expected_execution)
+        or probe_execution != expected_execution
+    ):
+        raise ReceiptError("Stage A execution boundary is invalid")
+    checks = _validate_exact_checks(value.get("checks"), pr, "Stage A")
+    chronology = value.get("chronology")
+    if not isinstance(chronology, dict):
+        raise ReceiptError("Stage A chronology must be an object")
+    exact_keys(chronology, ("probe_started_at", "probe_completed_at"), "Stage A chronology")
+    destroy = value.get("destroy")
+    if not isinstance(destroy, dict):
+        raise ReceiptError("Stage A destroy evidence must be an object")
+    exact_keys(
+        destroy,
+        (
+            "destroy_requested", "destroy_requested_at", "destroy_completed",
+            "destroy_completed_at", "profile_absence_readback",
+            "profile_absence_observed_at", "runtime_data_absence_readback",
+            "runtime_data_absence_observed_at",
+        ),
+        "Stage A destroy evidence",
+    )
+    if (
+        destroy.get("destroy_requested") is not True
+        or destroy.get("destroy_completed") is not True
+        or destroy.get("profile_absence_readback") != "absent"
+        or destroy.get("runtime_data_absence_readback") != "absent"
+    ):
+        raise ReceiptError("Stage A destroy/absence evidence is incomplete")
+    times = {
+        "control_pre": parse_observed_at(control.get("pre_create_observed_at")),
+        "created_at": parse_observed_at(provider.get("created_at")),
+        "control_post": parse_observed_at(control.get("post_create_observed_at")),
+        "observed_at": parse_observed_at(profile.get("observed_at")),
+        "probe_started_at": parse_observed_at(chronology.get("probe_started_at")),
+        "probe_completed_at": parse_observed_at(chronology.get("probe_completed_at")),
+    }
+    for key in (
+        "destroy_requested_at", "destroy_completed_at",
+        "profile_absence_observed_at", "runtime_data_absence_observed_at",
+    ):
+        times[key] = parse_observed_at(destroy.get(key))
+    current = now or datetime.datetime.now(datetime.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=datetime.timezone.utc)
+    current = current.astimezone(datetime.timezone.utc)
+    if any((timestamp - current).total_seconds() > MAX_FUTURE_SKEW_SECONDS for timestamp in times.values()):
+        raise ReceiptError("Stage A receipt timestamp is future-dated")
+    if not (
+        times["control_pre"] <= times["created_at"]
+        <= times["control_post"] <= times["probe_started_at"]
+        <= times["observed_at"] <= times["probe_completed_at"]
+        <= times["destroy_requested_at"] <= times["destroy_completed_at"]
+        <= times["profile_absence_observed_at"]
+        and times["destroy_completed_at"] <= times["runtime_data_absence_observed_at"]
+    ):
+        raise ReceiptError("Stage A probe/destroy/read-back chronology is invalid")
+    latest_absence = max(times["profile_absence_observed_at"], times["runtime_data_absence_observed_at"])
+    if (current - latest_absence).total_seconds() > MAX_LIFECYCLE_ABSENCE_AGE_SECONDS:
+        raise ReceiptError("Stage A absence read-back is stale")
+    privacy = value.get("privacy")
+    if (
+        not isinstance(privacy, dict)
+        or set(privacy) != set(PROBE_PRIVACY)
+        or any(type(privacy.get(field)) is not bool for field in PROBE_PRIVACY)
+        or privacy != PROBE_PRIVACY
+    ):
+        raise ReceiptError("Stage A privacy boundary is invalid")
+
+    receipt = {
+        "schema": "t11-stage-a-probe-receipt/v1",
+        "repository": REPOSITORY,
+        "authority": value["authority"],
+        "codex_authenticated_attestation": False,
+        "task": dict(task),
+        "pull_request": dict(pr),
+        "attempt_id": attempt,
+        "runtime_profile": {
+            "schema": "runtime-profile-evidence/v1",
+            "sha256": sha256(canonical_bytes(profile)),
+            "scope": profile["scope"],
+            "observed_status": profile["status"],
+            "observed_at": profile["observed_at"],
+            "live_run_allowed": False,
+            "client_version": profile["client"]["version_output"],
+            "release_class": profile["client"]["release_class"],
+            "binary_sha256": profile["client"]["binary_sha256"],
+            "auth_class": profile["auth"]["class"],
+            "diagnostic_status": diagnostic["status"],
+            "lane_statuses": dict(lanes),
+        },
+        "provider": {
+            "provider_kind": provider["provider_kind"],
+            "profile_name": provider["profile_name"],
+            "vm_backend": provider["vm_backend"],
+            "architecture": provider["architecture"],
+            "created_at": provider["created_at"],
+            "guest_os_kernel_sha256": sha256(canonical_bytes({
+                "guest_os": provider["guest_os"],
+                "guest_kernel": provider["guest_kernel"],
+            })),
+            "provider_configuration_sha256": provider["provider_configuration_sha256"],
+            "effective_mount_inventory_sha256": provider["effective_mount_inventory_sha256"],
+            "host_sensitive_mounts_absent": provider["host_sensitive_mounts_absent"],
+            "unapproved_mounts_absent": provider["unapproved_mounts_absent"],
+            "vm_instance_identity_sha256": provider["vm_instance_identity_sha256"],
+            "normalized_control_plane_sha256": normalized_control,
+            "approved_archive_sha256": provider["approved_archive_sha256"],
+            "observed_archive_sha256": provider["observed_archive_sha256"],
+            "extracted_binary_sha256": provider["extracted_binary_sha256"],
+            "runtime_root_binding_sha256": provider["runtime_root_binding_sha256"],
+            "dedicated_codex_home_binding_sha256": provider["dedicated_codex_home_binding_sha256"],
+            "public_head": provider["public_head"],
+            "public_tree": provider["public_tree"],
+        },
+        "probe_execution": dict(probe_execution),
+        "checks": checks,
+        "chronology": dict(chronology),
+        "destroy": dict(destroy),
+        "privacy": dict(value["privacy"]),
+    }
+    validate_tree_limits(receipt)
+    _validate_stage_a_no_live_material(receipt)
+    return receipt
+
+
 def receipt_marker(receipt: Mapping[str, Any]) -> str:
     return "<!-- t11-runtime-receipt attempt={} receipt_sha256={} -->".format(receipt["attempt_id"], sha256(canonical_bytes(receipt)))
 
@@ -628,7 +951,8 @@ def render_comment(receipt: Mapping[str, Any]) -> str:
 - Target post-state tree: `{post_tree}`
 - Changed paths: `work-item.txt` only
 - Runtime profile projection: `pass` / `{profile_digest}`
-- Containment provider: `{provider_kind}` / `{profile_name}` / `{provider_status}`
+- Approved outer containment provider: `{provider_kind}` / `{profile_name}` / `{provider_status}`
+- Process cleanup: best-effort `pass`; no kernel-enforced escaped-descendant lifetime claim
 - Provider mount inventory: `{mount_digest}` (one read-only provider-internal cache mount; no other shared mount)
 - Provider instance/control plane: `{instance_digest}` / `{control_plane_digest}` (fresh exact-head instance; safe normalized fields only)
 - Provider lifecycle at receipt: destruction required; destruction not yet claimed
@@ -711,6 +1035,93 @@ record does not complete Phase 2, the repository, or a release.""".format(
     )
     if len(body.encode("utf-8")) > MAX_COMMENT_BYTES:
         raise ReceiptError("rendered lifecycle receipt exceeds its byte limit")
+    validate_tree_limits(body)
+    return body
+
+
+def probe_marker(receipt: Mapping[str, Any], target: str) -> str:
+    if target not in ("issue", "pr"):
+        raise ReceiptError("Stage A receipt target is invalid")
+    return "<!-- t11-stage-a-probe-receipt target={} attempt={} probe_sha256={} -->".format(
+        target, receipt["attempt_id"], sha256(canonical_bytes(receipt))
+    )
+
+
+def render_probe_comment(receipt: Mapping[str, Any], target: str) -> str:
+    checks = {check["context"]: check for check in receipt["checks"]}
+    lanes = receipt["runtime_profile"]["lane_statuses"]
+    body = """{marker}
+## T11 Stage A unauthenticated probe-only receipt
+
+- Target copy: `{target}`
+- Schema: `t11-stage-a-probe-receipt/v1`
+- Authority: `adapter/owner-authored`; Codex-authenticated attestation: `false`
+- Attempt: `{attempt}`
+- Pull request/head/tree: {pr_url} / `{head}` / `{tree}`
+- Runtime profile: `exact-head-probe-only-sensor` / `probe-only-match` / `{profile_digest}`
+- Live run allowed: `false`; device authentication: `not performed`; model invocation: `not performed`
+- Client/auth: `{client}` / `unavailable`
+- Provider/profile/backend/architecture: `{provider}` / `{profile}` / `{backend}` / `{architecture}`
+- VM created at: `{created_at}`
+- Guest OS/kernel digest: `{guest_digest}`
+- Provider configuration/mount/instance/control-plane digests: `{provider_digest}` / `{mount_digest}` / `{instance_digest}` / `{control_digest}`
+- Client archive/extracted-binary digests: `{archive_digest}` / `{binary_digest}`
+- Runtime-root/dedicated-CODEX_HOME binding digests: `{runtime_root_digest}` / `{codex_home_digest}`
+- Provider isolation: `{provider_lane}`
+- Mount boundary: `{mount_lane}`
+- Best-effort process cleanup: `{cleanup_lane}` (not kernel-enforced escaped-descendant lifetime containment)
+- Codex sandbox/network: `{network_lane}`
+- Shell environment: `{shell_lane}`
+- Configuration: `{config_lane}`
+- Authentication: `{auth_lane}`
+- Probe chronology: `{probe_started}` -> `{probe_completed}`
+- Destroy requested/completed: `{destroy_requested}` / `{destroy_completed}`
+- Profile/runtime-data absence read-back: `absent` at `{profile_absence_at}` / `absent` at `{runtime_absence_at}`
+- quality: [success]({quality_url})
+- conformance: [success]({conformance_url})
+
+This is the closed Stage A sensor result only. No device authentication, model
+invocation, live worker, native execution artifact, transcript, raw JSONL,
+reasoning, stdout/stderr, credential, private path, or environment value is
+stored. It does not consume or replace the distinct live runtime receipt, does
+not authorize Stage B, and does not complete T11, Phase 2, the repository, or a
+release.""".format(
+        marker=probe_marker(receipt, target), target=target,
+        attempt=receipt["attempt_id"], pr_url=receipt["pull_request"]["url"],
+        head=receipt["pull_request"]["head"], tree=receipt["pull_request"]["tree"],
+        profile_digest=receipt["runtime_profile"]["sha256"],
+        client=receipt["runtime_profile"]["client_version"],
+        provider=receipt["provider"]["provider_kind"],
+        profile=receipt["provider"]["profile_name"],
+        backend=receipt["provider"]["vm_backend"],
+        architecture=receipt["provider"]["architecture"],
+        created_at=receipt["provider"]["created_at"],
+        provider_digest=receipt["provider"]["provider_configuration_sha256"],
+        mount_digest=receipt["provider"]["effective_mount_inventory_sha256"],
+        instance_digest=receipt["provider"]["vm_instance_identity_sha256"],
+        control_digest=receipt["provider"]["normalized_control_plane_sha256"],
+        guest_digest=receipt["provider"]["guest_os_kernel_sha256"],
+        archive_digest=receipt["provider"]["observed_archive_sha256"],
+        binary_digest=receipt["provider"]["extracted_binary_sha256"],
+        runtime_root_digest=receipt["provider"]["runtime_root_binding_sha256"],
+        codex_home_digest=receipt["provider"]["dedicated_codex_home_binding_sha256"],
+        provider_lane=lanes["provider_isolation_status"],
+        mount_lane=lanes["mount_boundary_status"],
+        cleanup_lane=lanes["process_cleanup_status"],
+        network_lane=lanes["codex_sandbox_network_status"],
+        shell_lane=lanes["shell_environment_status"],
+        config_lane=lanes["config_status"], auth_lane=lanes["auth_status"],
+        probe_started=receipt["chronology"]["probe_started_at"],
+        probe_completed=receipt["chronology"]["probe_completed_at"],
+        destroy_requested=receipt["destroy"]["destroy_requested_at"],
+        destroy_completed=receipt["destroy"]["destroy_completed_at"],
+        profile_absence_at=receipt["destroy"]["profile_absence_observed_at"],
+        runtime_absence_at=receipt["destroy"]["runtime_data_absence_observed_at"],
+        quality_url=checks["quality"]["url"],
+        conformance_url=checks["conformance"]["url"],
+    )
+    if len(body.encode("utf-8")) > MAX_COMMENT_BYTES:
+        raise ReceiptError("rendered Stage A receipt exceeds its byte limit")
     validate_tree_limits(body)
     return body
 
@@ -1064,6 +1475,122 @@ def apply_lifecycle_comments(
     }
 
 
+def preflight_existing_probe_receipt(
+    receipt: Mapping[str, Any], target: str, body: str
+) -> Optional[str]:
+    expected_marker = probe_marker(receipt, target)
+    exact_url: Optional[str] = None
+    matches_for_attempt = 0
+    number = TASK if target == "issue" else PULL_REQUEST
+    for comment in lifecycle_existing_comments(number):
+        text = comment.get("body")
+        if not isinstance(text, str):
+            continue
+        bounded = text[:MAX_COMMENT_BYTES + 1]
+        markers = list(PROBE_MARKER.finditer(bounded))
+        relevant = [marker for marker in markers if marker.group(2) == receipt["attempt_id"]]
+        if len(relevant) > 1:
+            raise ReceiptError("same-attempt Stage A receipt marker is duplicated")
+        for marker in relevant:
+            matches_for_attempt += 1
+            if marker.group(1) != target:
+                raise ReceiptError("Stage A receipt marker target is inconsistent")
+            if len(text.encode("utf-8")) > MAX_COMMENT_BYTES:
+                raise ReceiptError("existing Stage A receipt exceeds the bounded comment limit")
+            if marker.group(0) != expected_marker or text != body:
+                raise ReceiptError("existing Stage A receipt conflicts with the same attempt and target")
+            url = comment.get("html_url")
+            if not isinstance(url, str) or lifecycle_url_pattern(target).fullmatch(url) is None:
+                raise ReceiptError("idempotent Stage A receipt URL is invalid")
+            if exact_url is not None:
+                raise ReceiptError("same-target Stage A receipt is duplicated")
+            exact_url = url
+    if matches_for_attempt > 1:
+        raise ReceiptError("same-target Stage A receipt is duplicated")
+    return exact_url
+
+
+def apply_one_probe_comment(
+    receipt: Mapping[str, Any], target: str, body: str
+) -> Tuple[str, bool, bool]:
+    existing = preflight_existing_probe_receipt(receipt, target, body)
+    if existing is not None:
+        return existing, True, False
+    number = TASK if target == "issue" else PULL_REQUEST
+    argv = [
+        "issue" if target == "issue" else "pr", "comment", str(number),
+        "--repo", REPOSITORY, "--body-file", "-",
+    ]
+    try:
+        output = run_gh(argv, body.encode("utf-8"))
+    except ReceiptError:
+        reconciled = preflight_existing_probe_receipt(receipt, target, body)
+        if reconciled is not None:
+            return reconciled, True, True
+        raise ReceiptError("Stage A receipt POST outcome is uncertain; read-back found no matching target copy")
+    url = output.decode("utf-8", errors="strict").strip()
+    match = lifecycle_url_pattern(target).fullmatch(url)
+    if match is None:
+        raise ReceiptError("GitHub did not return the expected Stage A comment URL")
+    verify_probe_comment_readback(url, target, body)
+    return url, False, False
+
+
+def verify_probe_comment_readback(url: str, target: str, body: str) -> None:
+    """Re-read one exact durable copy after all writes, not only after its POST."""
+    match = lifecycle_url_pattern(target).fullmatch(url)
+    if match is None:
+        raise ReceiptError("Stage A receipt read-back URL is invalid")
+    comment = gh_json(
+        ["api", "repos/{}/issues/comments/{}".format(REPOSITORY, match.group(1))],
+        "posted Stage A receipt read-back",
+    )
+    if (
+        not isinstance(comment, dict)
+        or comment.get("html_url") != url
+        or comment.get("body") != body
+        or probe_marker_from_body(body, target) is None
+    ):
+        raise ReceiptError("posted Stage A receipt read-back differs from the exact target body")
+
+
+def probe_marker_from_body(body: str, target: str) -> Optional[re.Match[str]]:
+    markers = list(PROBE_MARKER.finditer(body))
+    if len(markers) != 1 or markers[0].group(1) != target:
+        return None
+    return markers[0]
+
+
+def apply_probe_comments(
+    receipt: Mapping[str, Any], issue_body: str, pr_body: str
+) -> Dict[str, Any]:
+    verify_external_head(receipt)
+    issue_url, issue_idempotent, issue_reconciled = apply_one_probe_comment(
+        receipt, "issue", issue_body
+    )
+    verify_external_head(receipt)
+    pr_url, pr_idempotent, pr_reconciled = apply_one_probe_comment(
+        receipt, "pr", pr_body
+    )
+    verify_external_head(receipt)
+    verify_probe_comment_readback(issue_url, "issue", issue_body)
+    verify_probe_comment_readback(pr_url, "pr", pr_body)
+    verify_external_head(receipt)
+    return {
+        "schema": "t11-stage-a-probe-receipt-application/v1",
+        "status": "pass",
+        "issue_comment_url": issue_url,
+        "issue_body_sha256": sha256(issue_body.encode("utf-8")),
+        "pr_comment_url": pr_url,
+        "pr_body_sha256": sha256(pr_body.encode("utf-8")),
+        "probe_sha256": sha256(canonical_bytes(receipt)),
+        "idempotent_targets": {"issue": issue_idempotent, "pr": pr_idempotent},
+        "reconciled_after_uncertain_post": {
+            "issue": issue_reconciled, "pr": pr_reconciled,
+        },
+    }
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="T11 append-only runtime receipt actuator")
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -1071,13 +1598,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--lifecycle-dry-run", action="store_true")
     mode.add_argument("--lifecycle-apply", action="store_true")
+    mode.add_argument("--probe-dry-run", action="store_true")
+    mode.add_argument("--probe-apply", action="store_true")
     args = parser.parse_args(argv)
     try:
-        if args.apply or args.lifecycle_apply:
+        if args.apply or args.lifecycle_apply or args.probe_apply:
             require_runtime_fs_capabilities()
         data = read_stdin_bounded()
         decoded = decode_json_object(data, "receipt input")
-        if args.lifecycle_dry_run or args.lifecycle_apply:
+        if args.probe_dry_run or args.probe_apply:
+            receipt = validate_probe_receipt(decoded)
+            issue_body = render_probe_comment(receipt, "issue")
+            pr_body = render_probe_comment(receipt, "pr")
+            if args.probe_dry_run:
+                result = {
+                    "schema": "t11-stage-a-probe-receipt-dry-run/v1",
+                    "status": "pass",
+                    "target_issue": TASK,
+                    "target_pull_request": PULL_REQUEST,
+                    "issue_body_sha256": sha256(issue_body.encode("utf-8")),
+                    "pr_body_sha256": sha256(pr_body.encode("utf-8")),
+                    "probe_sha256": sha256(canonical_bytes(receipt)),
+                    "issue_body": issue_body,
+                    "pr_body": pr_body,
+                }
+            else:
+                verify_local_head(receipt)
+                result = apply_probe_comments(receipt, issue_body, pr_body)
+        elif args.lifecycle_dry_run or args.lifecycle_apply:
             receipt = validate_lifecycle_receipt(decoded)
             issue_body = render_lifecycle_comment(receipt, "issue")
             pr_body = render_lifecycle_comment(receipt, "pr")

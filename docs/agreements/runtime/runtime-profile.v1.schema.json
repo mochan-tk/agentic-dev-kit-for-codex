@@ -9,8 +9,8 @@
     "schema": {"const": "runtime-profile/v1"},
     "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
     "observed_at": {"type": "string", "format": "date-time"},
-    "scope": {"enum": ["task-start-sensor", "exact-head-live-sensor", "fixture"]},
-    "status": {"enum": ["match", "profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]},
+    "scope": {"enum": ["task-start-sensor", "exact-head-probe-only-sensor", "exact-head-live-sensor", "fixture"]},
+    "status": {"enum": ["match", "probe-only-match", "profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]},
     "reason": {"type": "string", "minLength": 1, "maxLength": 256},
     "platform": {
       "type": "object", "additionalProperties": false,
@@ -30,13 +30,13 @@
     },
     "capabilities": {
       "type": "object", "additionalProperties": false,
-      "required": ["exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_containment_probe", "model", "reasoning", "sandbox", "approval", "overrides"],
+      "required": ["exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_cleanup_probe", "model", "reasoning", "sandbox", "approval", "overrides"],
       "properties": {
         "exec_json": {"type": "boolean"}, "ephemeral": {"type": "boolean"}, "strict_config": {"type": "boolean"},
         "ignore_user_config": {"type": "boolean"}, "workspace_write": {"type": "boolean"}, "approval_never": {"type": "boolean"},
         "documented_config_keys_probe": {"enum": ["pass", "fail", "not-proven", "UNCHECKABLE"]},
         "shell_environment_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-        "process_containment_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+        "process_cleanup_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
         "model": {"type": "boolean"}, "reasoning": {"type": "boolean"}, "sandbox": {"type": "boolean"},
         "approval": {"type": "boolean"}, "overrides": {"type": "boolean"}
       }
@@ -70,7 +70,7 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider"],
+      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider", "lane_statuses"],
       "properties": {
         "configuration_intent": {
           "type": "object",
@@ -88,26 +88,39 @@
         "diagnostic_health": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["classification", "status", "codex_issued_effective_configuration_proof"],
+          "required": ["classification", "status", "checks", "codex_issued_effective_configuration_proof"],
           "properties": {
             "classification": {"const": "diagnostic-only"},
-            "status": {"enum": ["pass", "warning", "fail", "not-run", "UNCHECKABLE"]},
+            "status": {"enum": ["pass", "pass-with-advisory-warning", "fail", "not-run", "UNCHECKABLE"]},
+            "checks": {
+              "type": "array", "maxItems": 64,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["id", "category", "status"],
+                "properties": {
+                  "id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                  "category": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                  "status": {"enum": ["ok", "warning", "fail"]}
+                }
+              }
+            },
             "codex_issued_effective_configuration_proof": {"const": false}
           }
         },
         "exact_worker_argv": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status", "rules_bypass_absent", "dynamic_task_data_stdin_only"],
+          "required": ["status", "stage", "reason_code", "rules_bypass_absent", "dynamic_task_data_stdin_only"],
           "properties": {
             "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "stage": {"enum": ["load-envelope", "load-static-role", "environment-contract", "build-argv", "argv-policy", "schema-binding", "filesystem-binding"]},
+            "reason_code": {"enum": ["none", "not-run", "envelope-invalid", "static-role-invalid", "environment-invalid", "argv-build-failed", "argv-policy-rejected", "schema-binding-invalid", "filesystem-binding-invalid"]},
             "rules_bypass_absent": {"type": "boolean"},
             "dynamic_task_data_stdin_only": {"type": "boolean"}
           },
           "allOf": [{
             "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
-            "then": {"properties": {"rules_bypass_absent": {"const": true}, "dynamic_task_data_stdin_only": {"const": true}}},
-            "else": {"properties": {"rules_bypass_absent": {"const": false}, "dynamic_task_data_stdin_only": {"const": false}}}
+            "then": {"properties": {"reason_code": {"const": "none"}, "rules_bypass_absent": {"const": true}, "dynamic_task_data_stdin_only": {"const": true}}}
           }]
         },
         "network_sandbox_behavior": {
@@ -131,8 +144,7 @@
             "vm_instance_identity_sha256", "public_head", "public_tree", "repository_clean",
             "codex_version_output", "approved_archive_sha256", "observed_archive_sha256",
             "extracted_binary_sha256", "runtime_root_binding_sha256",
-            "dedicated_codex_home_binding_sha256", "sandbox_configuration_probe",
-            "network_boundary_probe", "process_containment_probe", "control_plane", "lifecycle"
+            "dedicated_codex_home_binding_sha256", "control_plane", "lifecycle"
           ],
           "properties": {
             "schema": {"const": "t11-containment-provider-evidence/v1"},
@@ -173,9 +185,6 @@
             "extracted_binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "runtime_root_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "dedicated_codex_home_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-            "sandbox_configuration_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-            "network_boundary_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-            "process_containment_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
             "control_plane": {
               "type": "object",
               "additionalProperties": false,
@@ -261,22 +270,10 @@
                   "provider_kind": {"const": "colima-vm"},
                   "vm_backend": {"const": "vz"},
                   "architecture": {"const": "aarch64"},
-                  "host_mount_count": {"const": 1},
-                  "host_mount_classifications": {"const": ["provider-internal-cache"]},
-                  "all_host_mounts_read_only": {"const": true},
-                  "provider_cache_only": {"const": true},
-                  "host_sensitive_mounts_absent": {"const": true},
-                  "unapproved_mounts_absent": {"const": true},
-                  "ssh_agent_forwarding": {"const": false},
-                  "dot_ssh_public_key_loading": {"const": false},
-                  "user_ssh_config_modified": {"const": false},
                   "repository_clean": {"const": true},
                   "codex_version_output": {"const": "codex-cli 0.150.1"},
                   "approved_archive_sha256": {"const": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"},
                   "observed_archive_sha256": {"const": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"},
-                  "sandbox_configuration_probe": {"const": "pass"},
-                  "network_boundary_probe": {"const": "pass"},
-                  "process_containment_probe": {"const": "pass"},
                   "control_plane": {"properties": {"status": {"const": "pass"}}},
                   "lifecycle": {
                     "properties": {
@@ -295,6 +292,19 @@
               "else": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": true}}}}}
             }
           ]
+        },
+        "lane_statuses": {
+          "type": "object", "additionalProperties": false,
+          "required": ["provider_isolation_status", "mount_boundary_status", "process_cleanup_status", "codex_sandbox_network_status", "shell_environment_status", "config_status", "auth_status"],
+          "properties": {
+            "provider_isolation_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "mount_boundary_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "process_cleanup_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "codex_sandbox_network_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "shell_environment_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "config_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "auth_status": {"enum": ["signed-in-client", "api-key", "unavailable", "unknown"]}
+          }
         }
       }
     },
@@ -307,14 +317,15 @@
         "properties": {
           "client": {"properties": {"version_output": {"const": "codex-cli 0.150.1"}, "release_class": {"const": "stable"}}},
           "platform": {"properties": {"os": {"const": "Linux"}, "architecture": {"const": "aarch64"}}},
-          "capabilities": {"properties": {"exec_json": {"const": true}, "ephemeral": {"const": true}, "strict_config": {"const": true}, "ignore_user_config": {"const": true}, "workspace_write": {"const": true}, "approval_never": {"const": true}, "documented_config_keys_probe": {"const": "pass"}, "shell_environment_probe": {"const": "pass"}, "process_containment_probe": {"const": "pass"}, "model": {"const": true}, "reasoning": {"const": true}, "sandbox": {"const": true}, "approval": {"const": true}, "overrides": {"const": true}}, "required": ["exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_containment_probe", "model", "reasoning", "sandbox", "approval", "overrides"]},
+          "capabilities": {"properties": {"exec_json": {"const": true}, "ephemeral": {"const": true}, "strict_config": {"const": true}, "ignore_user_config": {"const": true}, "workspace_write": {"const": true}, "approval_never": {"const": true}, "documented_config_keys_probe": {"const": "pass"}, "shell_environment_probe": {"const": "pass"}, "process_cleanup_probe": {"const": "pass"}, "model": {"const": true}, "reasoning": {"const": true}, "sandbox": {"const": true}, "approval": {"const": true}, "overrides": {"const": true}}, "required": ["exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_cleanup_probe", "model", "reasoning", "sandbox", "approval", "overrides"]},
           "auth": {"properties": {"class": {"const": "signed-in-client"}}},
           "evidence": {
             "properties": {
-              "diagnostic_health": {"properties": {"status": {"const": "pass"}}},
+              "diagnostic_health": {"properties": {"status": {"enum": ["pass", "pass-with-advisory-warning"]}}},
               "exact_worker_argv": {"properties": {"status": {"const": "pass"}}},
               "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}},
-              "containment_provider": {"properties": {"status": {"const": "pass"}}}
+              "containment_provider": {"properties": {"status": {"const": "pass"}}},
+              "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "signed-in-client"}}}
             }
           },
           "live_run_allowed": {"const": true}
@@ -322,11 +333,29 @@
       }
     },
     {
+      "if": {"properties": {"status": {"const": "probe-only-match"}}, "required": ["status"]},
+      "then": {
+        "properties": {
+          "scope": {"const": "exact-head-probe-only-sensor"},
+          "client": {"properties": {"version_output": {"const": "codex-cli 0.150.1"}, "release_class": {"const": "stable"}}},
+          "platform": {"properties": {"os": {"const": "Linux"}, "architecture": {"const": "aarch64"}}},
+          "capabilities": {"properties": {"exec_json": {"const": true}, "ephemeral": {"const": true}, "strict_config": {"const": true}, "ignore_user_config": {"const": true}, "workspace_write": {"const": true}, "approval_never": {"const": true}, "documented_config_keys_probe": {"const": "pass"}, "shell_environment_probe": {"const": "pass"}, "process_cleanup_probe": {"const": "pass"}, "model": {"const": true}, "reasoning": {"const": true}, "sandbox": {"const": true}, "approval": {"const": true}, "overrides": {"const": true}}},
+          "auth": {"properties": {"class": {"const": "unavailable"}}},
+          "evidence": {"properties": {"exact_worker_argv": {"properties": {"status": {"const": "pass"}}}, "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}}, "containment_provider": {"properties": {"status": {"const": "pass"}}}, "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "unavailable"}}}}},
+          "live_run_allowed": {"const": false}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"evidence": {"properties": {"lane_statuses": {"properties": {"mount_boundary_status": {"const": "pass"}}, "required": ["mount_boundary_status"]}}, "required": ["lane_statuses"]}}, "required": ["evidence"]},
+      "then": {"properties": {"evidence": {"properties": {"containment_provider": {"properties": {"host_mount_count": {"const": 1}, "host_mount_classifications": {"const": ["provider-internal-cache"]}, "all_host_mounts_read_only": {"const": true}, "provider_cache_only": {"const": true}, "host_sensitive_mounts_absent": {"const": true}, "unapproved_mounts_absent": {"const": true}, "ssh_agent_forwarding": {"const": false}, "dot_ssh_public_key_loading": {"const": false}, "user_ssh_config_modified": {"const": false}}}}}}}
+    },
+    {
       "if": {"properties": {"client": {"properties": {"release_class": {"enum": ["prerelease-alpha", "prerelease-beta", "prerelease-rc"]}}, "required": ["release_class"]}}, "required": ["client"]},
       "then": {"properties": {"status": {"const": "unsupported-client"}, "live_run_allowed": {"const": false}}}
     },
     {
-      "if": {"properties": {"status": {"enum": ["profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]}}, "required": ["status"]},
+      "if": {"properties": {"status": {"enum": ["probe-only-match", "profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]}}, "required": ["status"]},
       "then": {"properties": {"live_run_allowed": {"const": false}}}
     },
     {

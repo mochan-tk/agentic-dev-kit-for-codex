@@ -39,7 +39,7 @@
         "approval_never": true,
         "documented_config_keys_probe": "pass",
         "shell_environment_probe": "pass",
-        "process_containment_probe": "pass",
+        "process_cleanup_probe": "pass",
         "model": true,
         "reasoning": true,
         "sandbox": true,
@@ -58,10 +58,18 @@
         "diagnostic_health": {
           "classification": "diagnostic-only",
           "status": "pass",
+          "checks": [
+            {"id": "auth.credentials", "category": "auth", "status": "ok"},
+            {"id": "config.load", "category": "config", "status": "ok"},
+            {"id": "runtime.provenance", "category": "runtime", "status": "ok"},
+            {"id": "sandbox.helpers", "category": "sandbox", "status": "ok"}
+          ],
           "codex_issued_effective_configuration_proof": false
         },
         "exact_worker_argv": {
           "status": "pass",
+          "stage": "argv-policy",
+          "reason_code": "none",
           "rules_bypass_absent": true,
           "dynamic_task_data_stdin_only": true
         },
@@ -102,9 +110,6 @@
           "extracted_binary_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "runtime_root_binding_sha256": "6666666666666666666666666666666666666666666666666666666666666666",
           "dedicated_codex_home_binding_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
-          "sandbox_configuration_probe": "pass",
-          "network_boundary_probe": "pass",
-          "process_containment_probe": "pass",
           "control_plane": {
             "schema": "t11-colima-control-plane-evidence/v1",
             "authority": "owner-authored",
@@ -139,6 +144,15 @@
             "destroy_completed": false,
             "profile_absence_readback": "not-run"
           }
+        },
+        "lane_statuses": {
+          "provider_isolation_status": "pass",
+          "mount_boundary_status": "pass",
+          "process_cleanup_status": "pass",
+          "codex_sandbox_network_status": "pass",
+          "shell_environment_status": "pass",
+          "config_status": "pass",
+          "auth_status": "signed-in-client"
         }
       },
       "auth": {
@@ -885,7 +899,7 @@
       },
       "digests": {
         "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
-          "runtime_profile_sha256": "019ceb93766be906ede6c636f4d05ab1b1416fa6e73fb1a43c0bc9234ce99b00"
+          "runtime_profile_sha256": "38c0201c633f64838e42d3a7dbb066f480fd02357cd198aafa3112b2cf2fcee8"
       },
       "privacy": {
         "raw_jsonl_retained": false,

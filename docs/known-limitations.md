@@ -37,10 +37,25 @@ profile predates that decision, so its provider lane remains `not-run` with
 non-claiming sentinels rather than fabricated Colima/VM evidence. A live
 `match` requires official stable `codex-cli 0.150.1`, the approved archive and
 extracted-binary digests, exact public head/tree, a clean guest clone, passing
-configuration/network/process probes, and a closed mount inventory. Colima's
-one unavoidable attempt-only provider-cache mount must be read-only; any other
+independent configuration, shell, sandbox/network, authentication, and
+best-effort process-cleanup lanes, and a closed mount inventory. Colima's one
+unavoidable attempt-only provider-cache mount must be read-only; any other
 shared mount blocks the run. Provider evidence is adapter/owner-authored, not
 a Codex-authenticated attestation.
+
+T11's approved outer containment claim is deliberately narrower than escaped-
+descendant kernel containment. It consists of the fresh disposable Colima VM,
+absence of host-sensitive or unapproved mounts, exact PR head/tree, a
+dedicated private `CODEX_HOME`, exact destruction, and profile-absence
+read-back. PID/start-token tracking provides best-effort cleanup evidence; it
+does not prove kernel-enforced containment. Full escaped-descendant process-
+lifetime containment is deferred to T12.
+
+Provider isolation, mount boundary, process cleanup, Codex sandbox/network,
+shell environment, configuration, and authentication are independent evidence
+lanes. A shell, configuration, authentication, or sandbox/network failure does
+not make an already observed provider-isolation fact `UNCHECKABLE`; each lane
+retains its own result and can still block the aggregate profile where required.
 
 The closed control-plane record also requires pre-create profile/runtime-data
 absence, no reuse of an existing VM, container, volume, default profile, or
@@ -69,7 +84,37 @@ It does not expose or attest the exact T11 override set. The documented config
 keys and their stable digest are adapter-authored intent evidence with
 `effective_configuration_proven=false`; separate behavior probes and exact
 worker-argv validation are still required. Live argv does not use
-`--ignore-rules` or a `--dangerously-bypass-*` flag.
+`--ignore-rules` or a `--dangerously-bypass-*` flag. Only allowlisted doctor
+check IDs, categories, and statuses may be retained. Warning/failure blocks
+only for a T11-required auth, config, runtime, or sandbox check; unrelated
+advisory warnings produce `pass-with-advisory-warning`. Raw report details are
+not durable evidence.
+
+Official 0.150.1 `codex login status` writes successful ChatGPT status to
+stderr. The bounded auth probe therefore exact-matches `Logged in using
+ChatGPT` as `signed-in-client`, exact-matches only the documented API-key
+success form as `api-key`, maps a nonzero exit to `unavailable`, and maps an
+otherwise unknown zero-exit result to `unknown`. Raw stderr, credentials, and
+private paths are never retained. The no-model sandbox probe uses official
+0.150.1 Option B with the exact slice `codex <reviewed-runtime-overrides>
+sandbox --permission-profile :read-only -C <synthetic-root> -- <probe-argv>`.
+The managed `:read-only` profile provides a read-only filesystem and restricted
+network, and T11 requires the explicit `--` delimiter. State flags mixed with
+Option B, `-C` without a permission profile, an omitted delimiter, bypass
+arguments, and unsupported or conflicting arguments are rejected.
+
+Exact-worker-argv failures expose only a fixed `stage` and `reason_code`.
+Allowed stages are `load-envelope`, `load-static-role`,
+`environment-contract`, `build-argv`, `argv-policy`, `schema-binding`, and
+`filesystem-binding`; raw argv, exception text, and private paths are not
+recorded.
+
+The next attempt must stop after Stage A: a fresh unauthenticated Colima VM,
+no device authentication, no model invocation, probe-only lane evidence,
+destruction, and absence read-back. Stage B requires a new review and a
+different fresh VM before device authentication can be enabled temporarily.
+Only a complete Stage B profile `match` can permit exactly one live worker.
+Stage A success is not a live run or a live runtime receipt.
 
 The final six-role topology, native runtime routing, hooks, recovery,
 installer/upgrade, live generalized Task ritual, consent feedback transport,

@@ -66,10 +66,13 @@ allowlist and records a stable adapter-authored intent digest, with
 A no-model runtime probe must separately exercise the reviewed settings that
 the selected client can prove behaviorally. Help output and successful parsing
 of an unknown `-c` key are not recognition evidence. `codex doctor --json` is
-a redacted diagnostic support report only. The adapter records a bounded,
-allowlisted health summary separately and never promotes it to effective-
-configuration evidence. The explicit environment contains bounded PATH,
-private HOME, its exact private CODEX_HOME, and private TMPDIR,
+a redacted diagnostic support report only. The adapter retains only
+allowlisted check ID, category, and status fields and never persists report
+details or the raw report. A warning or failure blocks T11 only for a required
+auth, config, runtime, or sandbox check; unrelated advisory warnings produce
+`pass-with-advisory-warning`. This bounded diagnostic status is never promoted
+to effective-configuration evidence. The explicit environment contains
+bounded PATH, private HOME, its exact private CODEX_HOME, and private TMPDIR,
 `LANG=C.UTF-8`, `LC_ALL=C.UTF-8`, `TZ=UTC`,
 `PYTHONHASHSEED=0`, `GIT_CONFIG_NOSYSTEM=1`, and
 `GIT_TERMINAL_PROMPT=0`. It excludes credential-, token-, secret-, proxy-, and
@@ -82,14 +85,38 @@ The private runtime home supplies the reviewed execpolicy surface. Live and
 probe argv must not contain `--ignore-rules` or any
 `--dangerously-bypass-*` argument.
 
-The approved T11 containment provider is one fresh, attempt-only Colima Linux
-VM using the VZ backend and native `aarch64`. Its profile name is
+The official 0.150.1 no-model sandbox probe uses reviewed Option B. Its exact
+sandbox slice is `codex <reviewed-runtime-overrides> sandbox
+--permission-profile :read-only -C <synthetic-root> -- <probe-argv>`. The
+managed `:read-only` profile provides a read-only filesystem and restricted
+network, and `-C` binds the synthetic root. T11 requires the explicit `--`
+delimiter before the probe argv. Validation rejects state flags mixed with
+Option B, `-C` without a permission profile, an omitted delimiter, bypass
+arguments, and unsupported or conflicting sandbox arguments.
+
+Authentication has a dedicated bounded `codex login status` capture. Official
+0.150.1 success output is read from stderr and compared as exact bytes:
+`Logged in using ChatGPT` maps to `signed-in-client`, and the documented exact
+API-key success form maps to `api-key`. A nonzero exit maps to `unavailable`;
+a zero exit with any other output maps to `unknown`. The adapter records only
+the safe classification. It never persists raw stdout/stderr, authentication
+files, credential material, or private paths.
+
+The approved T11 outer containment boundary is one fresh, attempt-only Colima
+Linux VM using the VZ backend and native `aarch64`. Its profile name is
 `t11-e2e-<exact-public-head-first-12>-01`. The host Mac, default Colima
 profile, any existing VM/container/volume, and PID tracking alone are not the
 approved boundary. The repository is cloned from GitHub onto the VM private
 disk and checked against the exact public PR head/tree; the host repository,
 HOME, Codex/GitHub credentials, SSH agent, Docker socket, private TMPDIR, and
 unrelated paths are not shared.
+
+For T11, the outer containment claim consists only of that fresh disposable
+VM, the closed no-sensitive/unapproved-mount boundary, the exact public PR
+head/tree, a dedicated private `CODEX_HOME`, exact lifecycle destruction, and
+profile-absence read-back. These provider facts are independent of Codex
+configuration, sandbox/network, shell-environment, authentication, and
+best-effort process-cleanup results.
 
 Before creation, owner-authored control-plane evidence must observe both the
 named profile and its runtime-data root as absent. The created instance is
@@ -115,10 +142,12 @@ and the user's SSH configuration is not modified.
 The VM installs official stable `codex-cli 0.150.1` from
 `codex-aarch64-unknown-linux-musl.tar.gz`. Both the approved archive SHA-256
 `5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264`
-and a separately calculated extracted-binary digest are required. Authentication
-uses a dedicated private VM `CODEX_HOME` and device authorization; credential
-values, device codes, and authentication files never enter artifacts or
-durable output.
+and a separately calculated extracted-binary digest are required. Stage A
+keeps the dedicated private VM `CODEX_HOME` unauthenticated. Stage B, if later
+approved after Stage A review, uses a separate fresh VM and device
+authorization in its own dedicated private `CODEX_HOME`; credential values,
+device codes, and authentication files never enter artifacts or durable
+output.
 
 Before worker invocation, descriptor-aware checks require the worktree root and
 `work-item.txt` to keep their directory/file bindings. The only permitted
@@ -151,11 +180,11 @@ Darwin `proc_pidinfo` start seconds/microseconds as immutable birth tokens;
 PPID/PGID are discovery topology, not identity. It refreshes that token before
 each individual signal, so a reused PID receives no signal while a captured
 setsid/reparented descendant remains identifiable. Missing birth-identity
-support is `UNCHECKABLE`. This process-table sensor is not kernel-enforced
-containment. Therefore live `match` additionally requires a separately proven
-`process_containment_probe=pass`; without that proof the profile is
-`UNCHECKABLE` and live execution is blocked. No raw output is copied into the
-durable result.
+support is `UNCHECKABLE` for the process-cleanup lane. This process-table
+sensor is best-effort cleanup evidence, not kernel-enforced containment. T11
+does not claim full escaped-descendant process-lifetime containment; that
+stronger control is deferred to T12. The approved disposable Colima VM is the
+outer containment boundary. No raw output is copied into the durable result.
 
 Immediately around the worker, one private execution root contains only the
 target repository, private HOME, and private TMPDIR. A bounded descriptor-
@@ -188,22 +217,34 @@ Only `match` permits live execution. `profile-drift`, `unsupported-client`,
 candidate, or other prerelease is `unsupported-client`. The committed
 task-start profile is a historical sensor snapshot, not a promise that a later
 client matches. Release class is derived from exact version output rather than
-trusted as caller metadata. A stable client can reach `match` only after the
-documented config-key intent, exact worker argv, diagnostic-health,
-shell-environment, network/sandbox-behavior, and process-containment lanes have
-their independently required success evidence. An adapter-authored intent
-digest or doctor health result alone never proves effective configuration.
-`match` additionally requires a closed `containment_provider` lane with
+trusted as caller metadata. Runtime evidence has independent
+`provider_isolation_status`, `mount_boundary_status`,
+`process_cleanup_status`, `codex_sandbox_network_status`,
+`shell_environment_status`, `config_status`, and `auth_status` lanes. A
+failure or unknown in one lane never overwrites observations in another. A
+stable client can reach `match` only after every independently required lane,
+the exact-worker-argv policy, and the bounded diagnostic-health policy have
+their required success evidence. An adapter-authored intent digest or doctor
+health result alone never proves effective configuration. `match` additionally
+requires a closed `containment_provider` record with
 adapter/owner-authored authority, `codex_authenticated_attestation=false`, the
 exact approved Colima/VZ/aarch64/profile/client/archive boundary, passing
-configuration/network/process probes, exact public head/tree binding, a clean
+provider and mount isolation, exact public head/tree binding, a clean
 guest checkout, and the closed mount/SSH isolation claims above. This lane is
-not a Codex-issued or authenticated attestation. The historical task-start
-profile uses an exact `not-run` sentinel with zero digests and no fabricated
-provider, VM, or creation-time observation.
+not a Codex-issued or authenticated attestation. Configuration, shell,
+sandbox/network, auth, and best-effort process-cleanup statuses remain separate
+and cannot degrade or upgrade the provider-isolation claim. The historical
+task-start profile uses an exact `not-run` sentinel with zero digests and no
+fabricated provider, VM, or creation-time observation.
 Immediately before a
 live worker, the full sensor runs again and must equal the supplied semantic
 profile except for its observation timestamp.
+
+Exact-worker-argv construction fails safely with a fixed `stage` and
+`reason_code`, never exception text, raw argv, or a private path. The only
+allowed stages are `load-envelope`, `load-static-role`,
+`environment-contract`, `build-argv`, `argv-policy`, `schema-binding`, and
+`filesystem-binding`.
 
 ## Offline and live evidence
 
@@ -211,6 +252,29 @@ Required CI uses only fixtures, a fake process, private synthetic Git
 repositories, schemas, and deterministic tests. It has no Codex authentication,
 network, model spend, live mode, or GitHub write. Live execution and receipt
 `--apply` require separate explicit modes and all T11 gates.
+
+The next live-path attempt is split into two non-overlapping stages. Stage A
+uses a fresh unauthenticated Colima VM, performs no device authentication and
+no model invocation, and runs only the provider, mount, process-cleanup,
+shell, config, sandbox/network, and argv-policy probes. It emits a bounded
+probe-only receipt, destroys the VM, proves profile absence, and stops for a
+new code review. A successful Stage A receipt is not a runtime `match`, live
+Task evidence, or authority to start Stage B.
+
+Stage A uses the separate `t11-stage-a-probe-receipt-request/v1` contract and
+the explicit `post-runtime-receipt.py --probe-dry-run` then `--probe-apply`
+actuator modes. Its Issue and pull-request comments carry a distinct
+`t11-stage-a-probe-receipt` marker. The request binds only the safe probe-only
+profile, exact head/tree/checks, no-model facts, destruction chronology, and
+profile/runtime-data absence; it accepts no native live-result bundle and
+does not consume the exactly-once live-receipt marker.
+
+Stage B requires that later review and uses a different fresh Colima VM. Only
+for that attempt may device-code authentication be enabled temporarily. The
+adapter must classify authentication through the exact allowlist above and
+must observe the complete profile as `match` before starting exactly one live
+worker. Receipt dry-run/application and destruction follow only that live
+success, after which device-code authentication is disabled again.
 
 The receipt actuator reads one `runtime-receipt-request/v1` on stdin containing
 the actual bounded `runtime-profile/v1`, `task-execution-envelope/v1`,

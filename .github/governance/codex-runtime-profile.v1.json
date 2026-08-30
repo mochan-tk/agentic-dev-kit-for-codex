@@ -25,7 +25,7 @@
     "approval_never": false,
     "documented_config_keys_probe": "not-proven",
     "shell_environment_probe": "not-run",
-    "process_containment_probe": "not-run",
+    "process_cleanup_probe": "not-run",
     "model": true,
     "reasoning": false,
     "sandbox": true,
@@ -44,10 +44,13 @@
     "diagnostic_health": {
       "classification": "diagnostic-only",
       "status": "not-run",
+      "checks": [],
       "codex_issued_effective_configuration_proof": false
     },
     "exact_worker_argv": {
       "status": "not-run",
+      "stage": "build-argv",
+      "reason_code": "not-run",
       "rules_bypass_absent": false,
       "dynamic_task_data_stdin_only": false
     },
@@ -88,9 +91,6 @@
       "extracted_binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "runtime_root_binding_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "dedicated_codex_home_binding_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "sandbox_configuration_probe": "not-run",
-      "network_boundary_probe": "not-run",
-      "process_containment_probe": "not-run",
       "control_plane": {
         "schema": "t11-colima-control-plane-evidence/v1",
         "authority": "owner-authored",
@@ -125,10 +125,19 @@
         "destroy_completed": false,
         "profile_absence_readback": "not-run"
       }
+    },
+    "lane_statuses": {
+      "provider_isolation_status": "not-run",
+      "mount_boundary_status": "not-run",
+      "process_cleanup_status": "not-run",
+      "codex_sandbox_network_status": "not-run",
+      "shell_environment_status": "not-run",
+      "config_status": "not-run",
+      "auth_status": "unavailable"
     }
   },
   "auth": {
-    "class": "signed-in-client",
+    "class": "unavailable",
     "credential_values_recorded": false
   },
   "request": {

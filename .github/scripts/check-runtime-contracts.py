@@ -111,8 +111,21 @@ CONTAINMENT_PROVIDER_KEYS = (
     "vm_instance_identity_sha256", "public_head", "public_tree", "repository_clean",
     "codex_version_output", "approved_archive_sha256", "observed_archive_sha256",
     "extracted_binary_sha256", "runtime_root_binding_sha256",
-    "dedicated_codex_home_binding_sha256", "sandbox_configuration_probe",
-    "network_boundary_probe", "process_containment_probe", "control_plane", "lifecycle",
+    "dedicated_codex_home_binding_sha256", "control_plane", "lifecycle",
+)
+LANE_STATUS_KEYS = (
+    "provider_isolation_status", "mount_boundary_status", "process_cleanup_status",
+    "codex_sandbox_network_status", "shell_environment_status", "config_status",
+    "auth_status",
+)
+WORKER_ARGV_STAGES = (
+    "load-envelope", "load-static-role", "environment-contract", "build-argv",
+    "argv-policy", "schema-binding", "filesystem-binding",
+)
+WORKER_ARGV_REASON_CODES = (
+    "none", "not-run", "envelope-invalid", "static-role-invalid",
+    "environment-invalid", "argv-build-failed", "argv-policy-rejected",
+    "schema-binding-invalid", "filesystem-binding-invalid",
 )
 CONTROL_PLANE_KEYS = (
     "schema", "authority", "codex_authenticated_attestation", "status",
@@ -316,9 +329,6 @@ def expected_containment_provider_schema() -> Dict[str, Any]:
             "extracted_binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "runtime_root_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "dedicated_codex_home_binding_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-            "sandbox_configuration_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-            "network_boundary_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-            "process_containment_probe": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
             "control_plane": expected_control_plane_schema(),
             "lifecycle": {
                 "type": "object", "additionalProperties": False,
@@ -338,22 +348,10 @@ def expected_containment_provider_schema() -> Dict[str, Any]:
                 "provider_kind": {"const": "colima-vm"},
                 "vm_backend": {"const": "vz"},
                 "architecture": {"const": "aarch64"},
-                "host_mount_count": {"const": 1},
-                "host_mount_classifications": {"const": ["provider-internal-cache"]},
-                "all_host_mounts_read_only": {"const": True},
-                "provider_cache_only": {"const": True},
-                "host_sensitive_mounts_absent": {"const": True},
-                "unapproved_mounts_absent": {"const": True},
-                "ssh_agent_forwarding": {"const": False},
-                "dot_ssh_public_key_loading": {"const": False},
-                "user_ssh_config_modified": {"const": False},
                 "repository_clean": {"const": True},
                 "codex_version_output": {"const": APPROVED_CODEX_VERSION},
                 "approved_archive_sha256": {"const": APPROVED_ARCHIVE_SHA256},
                 "observed_archive_sha256": {"const": APPROVED_ARCHIVE_SHA256},
-                "sandbox_configuration_probe": {"const": "pass"},
-                "network_boundary_probe": {"const": "pass"},
-                "process_containment_probe": {"const": "pass"},
                 "control_plane": {"properties": {"status": {"const": "pass"}}},
                 "lifecycle": {"properties": {
                     "destroy_required": {"const": True},
@@ -376,7 +374,7 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
         "additionalProperties": False,
         "required": [
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
-            "network_sandbox_behavior", "containment_provider",
+            "network_sandbox_behavior", "containment_provider", "lane_statuses",
         ],
         "properties": {
             "configuration_intent": {
@@ -402,12 +400,24 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                 "type": "object",
                 "additionalProperties": False,
                 "required": [
-                    "classification", "status",
+                    "classification", "status", "checks",
                     "codex_issued_effective_configuration_proof",
                 ],
                 "properties": {
                     "classification": {"const": "diagnostic-only"},
-                    "status": {"enum": ["pass", "warning", "fail", "not-run", "UNCHECKABLE"]},
+                    "status": {"enum": ["pass", "pass-with-advisory-warning", "fail", "not-run", "UNCHECKABLE"]},
+                    "checks": {
+                        "type": "array", "maxItems": 64,
+                        "items": {
+                            "type": "object", "additionalProperties": False,
+                            "required": ["id", "category", "status"],
+                            "properties": {
+                                "id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                                "category": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                                "status": {"enum": ["ok", "warning", "fail"]},
+                            },
+                        },
+                    },
                     "codex_issued_effective_configuration_proof": {"const": False},
                 },
             },
@@ -415,10 +425,13 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                 "type": "object",
                 "additionalProperties": False,
                 "required": [
-                    "status", "rules_bypass_absent", "dynamic_task_data_stdin_only",
+                    "status", "stage", "reason_code", "rules_bypass_absent",
+                    "dynamic_task_data_stdin_only",
                 ],
                 "properties": {
                     "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "stage": {"enum": list(WORKER_ARGV_STAGES)},
+                    "reason_code": {"enum": list(WORKER_ARGV_REASON_CODES)},
                     "rules_bypass_absent": {"type": "boolean"},
                     "dynamic_task_data_stdin_only": {"type": "boolean"},
                 },
@@ -428,12 +441,9 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                         "required": ["status"],
                     },
                     "then": {"properties": {
+                        "reason_code": {"const": "none"},
                         "rules_bypass_absent": {"const": True},
                         "dynamic_task_data_stdin_only": {"const": True},
-                    }},
-                    "else": {"properties": {
-                        "rules_bypass_absent": {"const": False},
-                        "dynamic_task_data_stdin_only": {"const": False},
                     }},
                 }],
             },
@@ -446,6 +456,20 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                 },
             },
             "containment_provider": expected_containment_provider_schema(),
+            "lane_statuses": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": list(LANE_STATUS_KEYS),
+                "properties": {
+                    "provider_isolation_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "mount_boundary_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "process_cleanup_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "codex_sandbox_network_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "shell_environment_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "config_status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "auth_status": {"enum": ["signed-in-client", "api-key", "unavailable", "unknown"]},
+                },
+            },
         },
     }
 
@@ -585,9 +609,6 @@ def expected_not_run_containment_provider() -> Dict[str, Any]:
         "extracted_binary_sha256": ZERO_SHA256,
         "runtime_root_binding_sha256": ZERO_SHA256,
         "dedicated_codex_home_binding_sha256": ZERO_SHA256,
-        "sandbox_configuration_probe": "not-run",
-        "network_boundary_probe": "not-run",
-        "process_containment_probe": "not-run",
         "control_plane": expected_not_run_control_plane(),
         "lifecycle": {
             "destroy_required": False,
@@ -645,9 +666,6 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
             errors.append(label + ": provider string field is invalid: " + key)
     if value.get("created_at") is not None and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", str(value.get("created_at"))) is None:
         errors.append(label + ": provider creation timestamp is invalid")
-    for key in ("sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe"):
-        if value.get(key) not in {"pass", "fail", "not-run", "UNCHECKABLE"}:
-            errors.append(label + ": provider probe status is invalid: " + key)
     lifecycle = value.get("lifecycle")
     expected_lifecycle = {
         "destroy_required": value.get("status") != "not-run",
@@ -668,30 +686,17 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
             "provider_kind": "colima-vm",
             "vm_backend": "vz",
             "architecture": "aarch64",
-            "host_mount_count": 1,
-            "host_mount_classifications": ["provider-internal-cache"],
-            "all_host_mounts_read_only": True,
-            "provider_cache_only": True,
-            "host_sensitive_mounts_absent": True,
-            "unapproved_mounts_absent": True,
-            "ssh_agent_forwarding": False,
-            "dot_ssh_public_key_loading": False,
-            "user_ssh_config_modified": False,
             "repository_clean": True,
             "codex_version_output": APPROVED_CODEX_VERSION,
             "approved_archive_sha256": APPROVED_ARCHIVE_SHA256,
             "observed_archive_sha256": APPROVED_ARCHIVE_SHA256,
-            "sandbox_configuration_probe": "pass",
-            "network_boundary_probe": "pass",
-            "process_containment_probe": "pass",
         }
         for key, expected in pass_claims.items():
             if value.get(key) != expected:
                 errors.append(label + ": passing provider evidence drifted: " + key)
         for key in (
-            "provider_configuration_sha256", "effective_mount_inventory_sha256",
-            "provider_cache_mount_sha256", "provider_cache_guest_mountpoint_sha256",
-            "vm_instance_identity_sha256", "extracted_binary_sha256",
+            "provider_configuration_sha256", "vm_instance_identity_sha256",
+            "extracted_binary_sha256",
             "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
         ):
             if value.get(key) == ZERO_SHA256:
@@ -706,14 +711,14 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
             errors.append(label + ": passing provider evidence omits creation time")
         if value.get("control_plane", {}).get("status") != "pass":
             errors.append(label + ": passing provider evidence lacks passing control-plane evidence")
-    if profile_status == "match" and provider_status != "pass":
-        errors.append(label + ": match requires passing containment-provider evidence")
+    if profile_status in {"match", "probe-only-match"} and provider_status != "pass":
+        errors.append(label + ": matching profile requires passing containment-provider evidence")
 
 
 def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[str]) -> None:
     if not isinstance(value, dict) or set(value) != {
         "configuration_intent", "diagnostic_health", "exact_worker_argv",
-        "network_sandbox_behavior", "containment_provider",
+        "network_sandbox_behavior", "containment_provider", "lane_statuses",
     }:
         errors.append(label + ": separated runtime evidence lanes drifted")
         return
@@ -723,26 +728,51 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
     if (
         not isinstance(diagnostic, dict)
         or set(diagnostic) != {
-            "classification", "status", "codex_issued_effective_configuration_proof"
+            "classification", "status", "checks",
+            "codex_issued_effective_configuration_proof"
         }
         or diagnostic.get("classification") != "diagnostic-only"
-        or diagnostic.get("status") not in {"pass", "warning", "fail", "not-run", "UNCHECKABLE"}
+        or diagnostic.get("status") not in {
+            "pass", "pass-with-advisory-warning", "fail", "not-run", "UNCHECKABLE"
+        }
         or diagnostic.get("codex_issued_effective_configuration_proof") is not False
     ):
         errors.append(label + ": doctor evidence must remain diagnostic-only, never effective-config proof")
+    checks = diagnostic.get("checks") if isinstance(diagnostic, dict) else None
+    if not isinstance(checks, list) or len(checks) > 64:
+        errors.append(label + ": doctor checks must be a bounded allowlisted projection")
+    else:
+        for check in checks:
+            if (
+                not isinstance(check, dict)
+                or set(check) != {"id", "category", "status"}
+                or not isinstance(check.get("id"), str)
+                or re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,127}", check["id"]) is None
+                or not isinstance(check.get("category"), str)
+                or re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,63}", check["category"]) is None
+                or check.get("status") not in {"ok", "warning", "fail"}
+            ):
+                errors.append(label + ": doctor check projection contains unsafe or unsupported fields")
+                break
     worker_argv = value.get("exact_worker_argv")
     if (
         not isinstance(worker_argv, dict)
         or set(worker_argv) != {
-            "status", "rules_bypass_absent", "dynamic_task_data_stdin_only"
+            "status", "stage", "reason_code", "rules_bypass_absent",
+            "dynamic_task_data_stdin_only"
         }
         or worker_argv.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+        or worker_argv.get("stage") not in WORKER_ARGV_STAGES
+        or worker_argv.get("reason_code") not in WORKER_ARGV_REASON_CODES
         or type(worker_argv.get("rules_bypass_absent")) is not bool
         or type(worker_argv.get("dynamic_task_data_stdin_only")) is not bool
         or ((worker_argv.get("status") == "pass") is not (
             worker_argv.get("rules_bypass_absent") is True
             and worker_argv.get("dynamic_task_data_stdin_only") is True
         ))
+        or (worker_argv.get("status") == "pass" and worker_argv.get("reason_code") != "none")
+        or (worker_argv.get("status") == "not-run" and worker_argv.get("reason_code") != "not-run")
+        or (worker_argv.get("status") in {"fail", "UNCHECKABLE"} and worker_argv.get("reason_code") in {"none", "not-run"})
     ):
         errors.append(label + ": exact worker argv evidence is invalid")
     network = value.get("network_sandbox_behavior")
@@ -753,13 +783,110 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
     ):
         errors.append(label + ": network/sandbox behavior evidence is invalid")
     validate_containment_provider(value.get("containment_provider"), status, label, errors)
+    lanes = value.get("lane_statuses")
+    if not isinstance(lanes, dict) or set(lanes) != set(LANE_STATUS_KEYS):
+        errors.append(label + ": closed independent runtime lane status shape drifted")
+        lanes = {}
+    else:
+        for key in LANE_STATUS_KEYS[:-1]:
+            if lanes.get(key) not in {"pass", "fail", "not-run", "UNCHECKABLE"}:
+                errors.append(label + ": invalid independent runtime lane status: " + key)
+        if lanes.get("auth_status") not in {"signed-in-client", "api-key", "unavailable", "unknown"}:
+            errors.append(label + ": invalid auth lane status")
+    provider = value.get("containment_provider", {})
+    if lanes.get("provider_isolation_status") != provider.get("status"):
+        errors.append(label + ": provider isolation lane does not match provider evidence")
+    if lanes.get("codex_sandbox_network_status") != (
+        network.get("status") if isinstance(network, dict) else None
+    ):
+        errors.append(label + ": sandbox/network lane does not match network evidence")
+    if lanes.get("mount_boundary_status") == "pass":
+        mount_claims = {
+            "host_mount_count": 1,
+            "host_mount_classifications": ["provider-internal-cache"],
+            "all_host_mounts_read_only": True,
+            "provider_cache_only": True,
+            "host_sensitive_mounts_absent": True,
+            "unapproved_mounts_absent": True,
+            "ssh_agent_forwarding": False,
+            "dot_ssh_public_key_loading": False,
+            "user_ssh_config_modified": False,
+        }
+        for key, expected in mount_claims.items():
+            if provider.get(key) != expected:
+                errors.append(label + ": passing mount boundary lane drifted: " + key)
+        for key in (
+            "effective_mount_inventory_sha256", "provider_cache_mount_sha256",
+            "provider_cache_guest_mountpoint_sha256",
+        ):
+            if provider.get(key) == ZERO_SHA256:
+                errors.append(label + ": passing mount boundary uses placeholder digest: " + key)
     if status == "match" and (
-        not isinstance(diagnostic, dict) or diagnostic.get("status") != "pass"
+        not isinstance(diagnostic, dict) or diagnostic.get("status") not in {"pass", "pass-with-advisory-warning"}
         or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
         or not isinstance(network, dict) or network.get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
+        or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
+        or lanes.get("auth_status") != "signed-in-client"
     ):
         errors.append(label + ": match requires passing diagnostic, argv, and network evidence lanes")
+    if status == "probe-only-match" and (
+        not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
+        or not isinstance(network, dict) or network.get("status") != "pass"
+        or value.get("containment_provider", {}).get("status") != "pass"
+        or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
+        or lanes.get("auth_status") != "unavailable"
+    ):
+        errors.append(label + ": probe-only-match requires all non-auth lanes pass and auth unavailable")
+
+
+def validate_profile_lane_bindings(profile: Any, label: str, errors: List[str]) -> None:
+    """Cross-check independent lane outcomes without collapsing their evidence."""
+    if not isinstance(profile, dict):
+        errors.append(label + ": profile lane bindings require an object")
+        return
+    evidence = profile.get("evidence")
+    lanes = evidence.get("lane_statuses") if isinstance(evidence, dict) else None
+    capabilities = profile.get("capabilities")
+    auth = profile.get("auth")
+    if not isinstance(lanes, dict) or not isinstance(capabilities, dict) or not isinstance(auth, dict):
+        errors.append(label + ": profile lane binding inputs are missing")
+        return
+    expected_bindings = {
+        "provider_isolation_status": (
+            evidence.get("containment_provider", {}).get("status")
+            if isinstance(evidence.get("containment_provider"), dict) else None
+        ),
+        "process_cleanup_status": capabilities.get("process_cleanup_probe"),
+        "codex_sandbox_network_status": (
+            evidence.get("network_sandbox_behavior", {}).get("status")
+            if isinstance(evidence.get("network_sandbox_behavior"), dict) else None
+        ),
+        "shell_environment_status": capabilities.get("shell_environment_probe"),
+        "config_status": (
+            "not-run" if capabilities.get("documented_config_keys_probe") == "not-proven"
+            else capabilities.get("documented_config_keys_probe")
+        ),
+        "auth_status": auth.get("class"),
+    }
+    for key, expected in expected_bindings.items():
+        if lanes.get(key) != expected:
+            errors.append(label + ": independent lane binding drifted: " + key)
+    status = profile.get("status")
+    if status == "match" and (
+        profile.get("live_run_allowed") is not True
+        or lanes.get("auth_status") != "signed-in-client"
+        or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
+    ):
+        errors.append(label + ": live match does not have exact passing lane bindings")
+    if status == "probe-only-match" and (
+        profile.get("scope") != "exact-head-probe-only-sensor"
+        or profile.get("live_run_allowed") is not False
+        or auth.get("class") != "unavailable"
+        or lanes.get("auth_status") != "unavailable"
+        or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
+    ):
+        errors.append(label + ": probe-only match does not have exact unauthenticated lane bindings")
 
 
 def validate_runtime_script_bypass_literals(
@@ -977,12 +1104,30 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
         return
     if schema.get("properties", {}).get("evidence") != expected_profile_evidence_schema():
         errors.append(label + ": separated runtime evidence schema drifted")
+    properties = schema.get("properties", {})
+    if properties.get("scope") != {"enum": [
+        "task-start-sensor", "exact-head-probe-only-sensor",
+        "exact-head-live-sensor", "fixture",
+    ]}:
+        errors.append(label + ": probe-only profile scope is missing or drifted")
+    if properties.get("status") != {"enum": [
+        "match", "probe-only-match", "profile-drift", "unsupported-client",
+        "UNKNOWN", "UNCHECKABLE",
+    ]}:
+        errors.append(label + ": profile status enum is missing probe-only-match or drifted")
+    capabilities = properties.get("capabilities", {})
+    capability_required = capabilities.get("required", []) if isinstance(capabilities, dict) else []
+    capability_properties = capabilities.get("properties", {}) if isinstance(capabilities, dict) else {}
+    if "process_cleanup_probe" not in capability_required or "process_containment_probe" in capability_required:
+        errors.append(label + ": process cleanup capability name drifted")
+    if "process_cleanup_probe" not in capability_properties or "process_containment_probe" in capability_properties:
+        errors.append(label + ": obsolete containment capability remains")
     required = schema.get("required")
     if not isinstance(required, list) or required.count("evidence") != 1:
         errors.append(label + ": separated runtime evidence is not required exactly once")
     conditions = schema["allOf"]
     nonmatch = {
-        "if": {"properties": {"status": {"enum": ["profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]}}, "required": ["status"]},
+        "if": {"properties": {"status": {"enum": ["probe-only-match", "profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"]}}, "required": ["status"]},
         "then": {"properties": {"live_run_allowed": {"const": False}}},
     }
     live_true = {
@@ -1002,14 +1147,24 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
     cap_properties = then_properties.get("capabilities", {}).get("properties", {})
     for key in (
         "documented_config_keys_probe", "shell_environment_probe",
-        "process_containment_probe",
+        "process_cleanup_probe",
     ):
         if cap_properties.get(key) != {"const": "pass"}:
             errors.append(label + ": match does not require passing " + key)
     evidence_properties = then_properties.get("evidence", {}).get("properties", {})
-    for key in ("diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider"):
+    for key in ("exact_worker_argv", "network_sandbox_behavior", "containment_provider"):
         if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
             errors.append(label + ": match does not require passing evidence lane " + key)
+    if evidence_properties.get("diagnostic_health", {}).get("properties", {}).get("status") != {
+        "enum": ["pass", "pass-with-advisory-warning"]
+    }:
+        errors.append(label + ": match does not accept only safe diagnostic outcomes")
+    lane_match = evidence_properties.get("lane_statuses", {}).get("properties", {})
+    for key in LANE_STATUS_KEYS[:-1]:
+        if lane_match.get(key) != {"const": "pass"}:
+            errors.append(label + ": match does not require passing independent lane " + key)
+    if lane_match.get("auth_status") != {"const": "signed-in-client"}:
+        errors.append(label + ": match does not require signed-in auth lane")
     if then_properties.get("client", {}).get("properties", {}).get("version_output") != {"const": APPROVED_CODEX_VERSION}:
         errors.append(label + ": match does not require the exact approved Codex version")
     if then_properties.get("auth", {}).get("properties", {}).get("class") != {"const": "signed-in-client"}:
@@ -1020,6 +1175,43 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
         errors.append(label + ": match does not require the approved Linux aarch64 guest")
     if then_properties.get("live_run_allowed") != {"const": True}:
         errors.append(label + ": match does not require live_run_allowed=true")
+    probe_conditions = [
+        item for item in conditions if isinstance(item, dict)
+        and item.get("if") == {
+            "properties": {"status": {"const": "probe-only-match"}},
+            "required": ["status"],
+        }
+    ]
+    if len(probe_conditions) != 1:
+        errors.append(label + ": exact probe-only-match conditional is missing or duplicated")
+    else:
+        probe_then = probe_conditions[0].get("then", {}).get("properties", {})
+        probe_lanes = probe_then.get("evidence", {}).get("properties", {}).get(
+            "lane_statuses", {}
+        ).get("properties", {})
+        probe_caps = probe_then.get("capabilities", {}).get("properties", {})
+        if (
+            probe_then.get("scope") != {"const": "exact-head-probe-only-sensor"}
+            or probe_then.get("client", {}).get("properties", {}).get("version_output") != {"const": APPROVED_CODEX_VERSION}
+            or probe_then.get("client", {}).get("properties", {}).get("release_class") != {"const": "stable"}
+            or probe_then.get("platform", {}).get("properties", {}) != {
+                "os": {"const": "Linux"}, "architecture": {"const": "aarch64"}
+            }
+            or any(probe_caps.get(key) != {"const": "pass"} for key in (
+                "documented_config_keys_probe", "shell_environment_probe",
+                "process_cleanup_probe",
+            ))
+            or any(probe_caps.get(key) != {"const": True} for key in (
+                "exec_json", "ephemeral", "strict_config", "ignore_user_config",
+                "workspace_write", "approval_never", "model", "reasoning",
+                "sandbox", "approval", "overrides",
+            ))
+            or probe_then.get("auth", {}).get("properties", {}).get("class") != {"const": "unavailable"}
+            or probe_then.get("live_run_allowed") != {"const": False}
+            or any(probe_lanes.get(key) != {"const": "pass"} for key in LANE_STATUS_KEYS[:-1])
+            or probe_lanes.get("auth_status") != {"const": "unavailable"}
+        ):
+            errors.append(label + ": probe-only-match fail-closed constraints drifted")
 
 
 def validate_runtime_receipt_schema(schema: Any, errors: List[str]) -> None:
@@ -1068,11 +1260,12 @@ def validate_profile(profile: Any, errors: List[str]) -> None:
     if client != exact_client:
         errors.append(PROFILE_PATH + ": observed client evidence drifted")
     caps = profile.get("capabilities")
-    if not isinstance(caps, dict) or caps.get("documented_config_keys_probe") != "not-proven" or caps.get("shell_environment_probe") != "not-run" or caps.get("process_containment_probe") != "not-run":
+    if not isinstance(caps, dict) or caps.get("documented_config_keys_probe") != "not-proven" or caps.get("shell_environment_probe") != "not-run" or caps.get("process_cleanup_probe") != "not-run":
         errors.append(PROFILE_PATH + ": help output was overclaimed as a capability probe")
     validate_profile_evidence(
         profile.get("evidence"), profile.get("status"), PROFILE_PATH, errors
     )
+    validate_profile_lane_bindings(profile, PROFILE_PATH, errors)
     if "unapproved-prerelease" not in str(profile.get("reason")):
         errors.append(PROFILE_PATH + ": prerelease blocking reason is missing")
 
@@ -1160,6 +1353,11 @@ def validate_repository(root: Path) -> List[str]:
                 "tests/runtime/fixtures/runtime-profile-valid.v1.json",
                 errors,
             )
+            validate_profile_lane_bindings(
+                fixture_profile,
+                "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+                errors,
+            )
             validate_runtime_override_mapping(
                 adapter.REQUIRED_OVERRIDES,
                 ".github/scripts/codex-exec-adapter.py",
@@ -1208,6 +1406,11 @@ def validate_repository(root: Path) -> List[str]:
                     "tests/runtime/fixtures/runtime-receipt-valid.v1.json profile",
                     errors,
                 )
+                validate_profile_lane_bindings(
+                    receipt_profile,
+                    "tests/runtime/fixtures/runtime-receipt-valid.v1.json profile",
+                    errors,
+                )
                 adapter.validate_runtime_profile(receipt_profile)
                 provider = receipt_profile.get("evidence", {}).get("containment_provider", {})
                 receipt_pr = receipt_request.get("pull_request", {})
@@ -1244,18 +1447,35 @@ def validate_repository(root: Path) -> List[str]:
             doctor_report = {
                 "schemaVersion": 1,
                 "generatedAt": "2026-08-28T00:00:00Z",
-                "codexVersion": "0.150.0",
+                "codexVersion": "0.150.1",
                 "overallStatus": "ok",
                 "checks": {
+                    "auth.credentials": {
+                        "id": "auth.credentials", "category": "auth", "status": "ok",
+                        "summary": "Authentication available", "details": {},
+                        "durationMs": 1, "remediation": None,
+                    },
                     "config.load": {
                         "id": "config.load",
-                        "category": "configuration",
+                        "category": "config",
                         "status": "ok",
                         "summary": "Configuration loaded",
                         "details": {"sources": ["user"]},
                         "durationMs": 1,
                         "remediation": None,
-                    }
+                        "issues": [],
+                        "notes": ["redacted diagnostic note"],
+                    },
+                    "runtime.provenance": {
+                        "id": "runtime.provenance", "category": "runtime", "status": "ok",
+                        "summary": "Runtime identified", "details": {},
+                        "durationMs": 1, "remediation": None,
+                    },
+                    "sandbox.helpers": {
+                        "id": "sandbox.helpers", "category": "sandbox", "status": "ok",
+                        "summary": "Sandbox helpers available", "details": {},
+                        "durationMs": 1, "remediation": None,
+                    },
                 },
             }
             doctor_result = adapter.ProcessResult(
@@ -1265,6 +1485,12 @@ def validate_repository(root: Path) -> List[str]:
             if doctor_evidence != {
                 "classification": "diagnostic-only",
                 "status": "pass",
+                "checks": [
+                    {"id": "auth.credentials", "category": "auth", "status": "ok"},
+                    {"id": "config.load", "category": "config", "status": "ok"},
+                    {"id": "runtime.provenance", "category": "runtime", "status": "ok"},
+                    {"id": "sandbox.helpers", "category": "sandbox", "status": "ok"},
+                ],
                 "codex_issued_effective_configuration_proof": False,
             }:
                 errors.append(

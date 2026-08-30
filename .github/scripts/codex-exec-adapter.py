@@ -131,6 +131,23 @@ PROVIDER_LIFECYCLE_PRE_LIVE = {
     "destroy_completed": False,
     "profile_absence_readback": "not-run",
 }
+RUNTIME_LANE_KEYS = (
+    "provider_isolation_status", "mount_boundary_status",
+    "process_cleanup_status", "codex_sandbox_network_status",
+    "shell_environment_status", "config_status", "auth_status",
+)
+RUNTIME_LANE_STATES = ("pass", "fail", "not-run", "UNCHECKABLE")
+AUTH_STATES = ("signed-in-client", "api-key", "unavailable", "unknown")
+WORKER_ARGV_STAGES = (
+    "load-envelope", "load-static-role", "environment-contract",
+    "build-argv", "argv-policy", "schema-binding", "filesystem-binding",
+)
+WORKER_ARGV_REASON_CODES = (
+    "none", "not-run", "envelope-invalid", "static-role-invalid",
+    "environment-invalid", "argv-build-failed", "argv-policy-rejected",
+    "schema-binding-invalid", "filesystem-binding-invalid",
+)
+DOCTOR_REQUIRED_CATEGORIES = ("auth", "config", "runtime", "sandbox")
 TERMINAL_TYPES = {"turn.completed", "turn.failed"}
 KNOWN_RAW_TYPES = {"thread.started", "turn.started", "item.started", "item.updated", "item.completed", "error"} | TERMINAL_TYPES
 VERIFIER_CHECKS = [
@@ -639,9 +656,6 @@ def not_run_containment_provider_evidence() -> Dict[str, Any]:
         "extracted_binary_sha256": "0" * 64,
         "runtime_root_binding_sha256": "0" * 64,
         "dedicated_codex_home_binding_sha256": "0" * 64,
-        "sandbox_configuration_probe": "not-run",
-        "network_boundary_probe": "not-run",
-        "process_containment_probe": "not-run",
         "control_plane": not_run_control_plane_evidence(),
         "lifecycle": {
             "destroy_required": False,
@@ -1215,7 +1229,6 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
             "public_head", "public_tree", "repository_clean", "codex_version_output",
             "approved_archive_sha256", "observed_archive_sha256", "extracted_binary_sha256",
             "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
-            "sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe",
             "control_plane", "lifecycle",
         ),
         "containment provider evidence",
@@ -1244,9 +1257,6 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
         "dot_ssh_public_key_loading", "user_ssh_config_modified", "repository_clean",
     ):
         require_bool(value[field], "containment provider " + field)
-    for field in ("sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe"):
-        if value[field] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
-            raise ContractError("containment provider probe state is invalid")
     lifecycle = value["lifecycle"]
     if not isinstance(lifecycle, dict):
         raise ContractError("containment lifecycle must be an object")
@@ -1269,26 +1279,26 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
         raise ContractError("containment provider profile name is invalid")
     if value["lifecycle"] != PROVIDER_LIFECYCLE_PRE_LIVE:
         raise ContractError("containment provider evidence is not a pre-live lifecycle record")
-    if value["ssh_agent_forwarding"] is not False or value["dot_ssh_public_key_loading"] is not False or value["user_ssh_config_modified"] is not False:
-        raise ContractError("containment provider SSH isolation drifted")
+    created = datetime.datetime.strptime(value["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+    control_pre = datetime.datetime.strptime(
+        control_plane["pre_create_observed_at"], "%Y-%m-%dT%H:%M:%SZ",
+    )
+    control_post = datetime.datetime.strptime(
+        control_plane["post_create_observed_at"], "%Y-%m-%dT%H:%M:%SZ",
+    )
+    if not control_pre <= created <= control_post:
+        raise ContractError("containment provider/control-plane creation chronology drifted")
     if value["approved_archive_sha256"] != APPROVED_CODEX_ARCHIVE_SHA256 or value["observed_archive_sha256"] != APPROVED_CODEX_ARCHIVE_SHA256:
         raise ContractError("containment provider archive digest drifted")
     if value["codex_version_output"] != APPROVED_CODEX_VERSION:
         raise ContractError("containment provider client version drifted")
     if value["status"] == "pass":
-        required_truths = (
-            value["native_architecture"], value["repository_clean"],
-            value["all_host_mounts_read_only"], value["provider_cache_only"],
-            value["host_sensitive_mounts_absent"], value["unapproved_mounts_absent"],
-        )
-        if not all(required_truths) or value["host_mount_count"] != 1 or value["host_mount_classifications"] != ["provider-internal-cache"]:
-            raise ContractError("passing containment provider evidence lacks the closed isolation facts")
+        if not value["native_architecture"] or not value["repository_clean"]:
+            raise ContractError("passing containment provider evidence lacks provider-isolation facts")
         if value["guest_os"] != "Linux" or not isinstance(value["guest_kernel"], str) or re.fullmatch(r"[0-9A-Za-z._+~-]{1,128}", value["guest_kernel"]) is None:
             raise ContractError("passing containment provider guest platform is invalid")
         if value["profile_name"] != "t11-e2e-{}-01".format(value["public_head"][:12]):
             raise ContractError("containment provider profile/public-head binding drifted")
-        if any(value[field] != "pass" for field in ("sandbox_configuration_probe", "network_boundary_probe", "process_containment_probe")):
-            raise ContractError("passing containment provider evidence has an incomplete probe")
         if control_plane["status"] != "pass":
             raise ContractError("passing containment provider evidence lacks passing control-plane evidence")
         if (
@@ -1312,11 +1322,29 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
     return value
 
 
+def mount_boundary_status_from_provider(value: Mapping[str, Any]) -> str:
+    """Project only mount/host-sharing facts, independently of provider status."""
+    if value.get("status") == "not-run":
+        return "not-run"
+    closed = (
+        value.get("host_mount_count") == 1
+        and value.get("host_mount_classifications") == ["provider-internal-cache"]
+        and value.get("all_host_mounts_read_only") is True
+        and value.get("provider_cache_only") is True
+        and value.get("host_sensitive_mounts_absent") is True
+        and value.get("unapproved_mounts_absent") is True
+        and value.get("ssh_agent_forwarding") is False
+        and value.get("dot_ssh_public_key_loading") is False
+        and value.get("user_ssh_config_modified") is False
+    )
+    return "pass" if closed else "fail"
+
+
 def colima_provider_input_from_profile(profile: Mapping[str, Any]) -> Dict[str, Any]:
     evidence = profile["evidence"]["containment_provider"]
     validate_containment_provider_evidence(evidence)
-    if evidence["status"] != "pass":
-        raise ContractError("live execution requires passing Colima provider evidence")
+    if evidence["status"] != "pass" or mount_boundary_status_from_provider(evidence) != "pass":
+        raise ContractError("live execution requires passing Colima provider and mount evidence")
     value = {
         "schema": COLIMA_PROVIDER_INPUT_SCHEMA,
         "authority": "owner-authored",
@@ -1359,12 +1387,18 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         raise ContractError("runtime profile identity is invalid")
     if not isinstance(profile["observed_at"], str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", profile["observed_at"]) is None:
         raise ContractError("runtime observation time is invalid")
-    if profile["scope"] not in ("task-start-sensor", "exact-head-live-sensor", "fixture"):
+    if profile["scope"] not in (
+        "task-start-sensor", "exact-head-live-sensor",
+        "exact-head-probe-only-sensor", "fixture",
+    ):
         raise ContractError("runtime profile scope is invalid")
     if profile["scope"] == "fixture" and not allow_fixture:
         raise ContractError("fixture runtime profile cannot authorize live execution")
     status_value = profile["status"]
-    if status_value not in ("match", "profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"):
+    if status_value not in (
+        "match", "probe-only-match", "profile-drift",
+        "unsupported-client", "UNKNOWN", "UNCHECKABLE",
+    ):
         raise ContractError("runtime profile status is invalid")
     if not isinstance(profile["reason"], str) or not 1 <= len(profile["reason"]) <= 256:
         raise ContractError("runtime profile reason is invalid")
@@ -1385,18 +1419,18 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     if release_class != derived_release_class:
         raise ContractError("runtime release class disagrees with exact version output")
     caps = profile["capabilities"]
-    required_caps = ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_containment_probe", "model", "reasoning", "sandbox", "approval", "overrides")
+    required_caps = ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "documented_config_keys_probe", "shell_environment_probe", "process_cleanup_probe", "model", "reasoning", "sandbox", "approval", "overrides")
     exact_keys(caps, required_caps, "runtime capabilities")
     for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"):
         require_bool(caps[field], "runtime capability " + field)
-    if caps["documented_config_keys_probe"] not in ("pass", "fail", "not-proven", "UNCHECKABLE") or caps["shell_environment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE") or caps["process_containment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
+    if caps["documented_config_keys_probe"] not in ("pass", "fail", "not-proven", "UNCHECKABLE") or caps["shell_environment_probe"] not in ("pass", "fail", "not-run", "UNCHECKABLE") or caps["process_cleanup_probe"] not in RUNTIME_LANE_STATES:
         raise ContractError("runtime probe status is invalid")
     evidence = profile["evidence"]
     if not isinstance(evidence, dict):
         raise ContractError("runtime evidence must be an object")
     exact_keys(
         evidence,
-        ("configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "containment_provider"),
+        ("configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "lane_statuses", "containment_provider"),
         "runtime evidence",
     )
     if evidence["configuration_intent"] != runtime_configuration_intent():
@@ -1406,21 +1440,50 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         raise ContractError("runtime diagnostic evidence must be an object")
     exact_keys(
         diagnostic,
-        ("classification", "status", "codex_issued_effective_configuration_proof"),
+        ("classification", "status", "checks", "codex_issued_effective_configuration_proof"),
         "runtime diagnostic evidence",
     )
-    if diagnostic["classification"] != "diagnostic-only" or diagnostic["status"] not in ("pass", "warning", "fail", "not-run", "UNCHECKABLE") or diagnostic["codex_issued_effective_configuration_proof"] is not False:
+    if diagnostic["classification"] != "diagnostic-only" or diagnostic["status"] not in ("pass", "pass-with-advisory-warning", "fail", "not-run", "UNCHECKABLE") or diagnostic["codex_issued_effective_configuration_proof"] is not False:
         raise ContractError("runtime diagnostic evidence is invalid")
+    checks = diagnostic["checks"]
+    if not isinstance(checks, list) or len(checks) > 64:
+        raise ContractError("runtime diagnostic safe checks are invalid")
+    if checks != sorted(checks, key=lambda item: (item.get("id", ""), item.get("category", ""), item.get("status", "")) if isinstance(item, dict) else ("", "", "")):
+        raise ContractError("runtime diagnostic safe checks are not canonical")
+    for check in checks:
+        if not isinstance(check, dict):
+            raise ContractError("runtime diagnostic safe check is invalid")
+        exact_keys(check, ("id", "category", "status"), "runtime diagnostic safe check")
+        if re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,127}", str(check["id"])) is None or re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,63}", str(check["category"])) is None or check["status"] not in ("ok", "warning", "fail"):
+            raise ContractError("runtime diagnostic safe check is invalid")
+    if diagnostic["status"] in ("pass", "pass-with-advisory-warning", "fail"):
+        if profile["scope"] == "fixture" and allow_fixture and not checks:
+            derived_diagnostic_status = diagnostic["status"]
+        else:
+            required_doctor_categories = (
+                tuple(category for category in DOCTOR_REQUIRED_CATEGORIES if category != "auth")
+                if profile["scope"] == "exact-head-probe-only-sensor"
+                else DOCTOR_REQUIRED_CATEGORIES
+            )
+            derived_diagnostic_status = classify_doctor_safe_checks(
+                checks, required_doctor_categories,
+            )
+        if diagnostic["status"] != derived_diagnostic_status:
+            raise ContractError("runtime diagnostic status disagrees with safe checks")
+    elif checks:
+        raise ContractError("non-observed runtime diagnostic contains check claims")
     worker_argv_evidence = evidence["exact_worker_argv"]
     if not isinstance(worker_argv_evidence, dict):
         raise ContractError("runtime worker argv evidence must be an object")
     exact_keys(
         worker_argv_evidence,
-        ("status", "rules_bypass_absent", "dynamic_task_data_stdin_only"),
+        ("status", "stage", "reason_code", "rules_bypass_absent", "dynamic_task_data_stdin_only"),
         "runtime worker argv evidence",
     )
     if worker_argv_evidence["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
         raise ContractError("runtime worker argv status is invalid")
+    if worker_argv_evidence["stage"] not in WORKER_ARGV_STAGES or worker_argv_evidence["reason_code"] not in WORKER_ARGV_REASON_CODES:
+        raise ContractError("runtime worker argv stage/reason is invalid")
     for field in ("rules_bypass_absent", "dynamic_task_data_stdin_only"):
         require_bool(worker_argv_evidence[field], "runtime worker argv " + field)
     argv_claims = (
@@ -1431,6 +1494,21 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         worker_argv_evidence["status"] != "pass" and argv_claims != (False, False)
     ):
         raise ContractError("runtime worker argv evidence is internally inconsistent")
+    if worker_argv_evidence["status"] == "pass" and worker_argv_evidence["reason_code"] != "none":
+        raise ContractError("passing runtime worker argv evidence has a failure reason")
+    if worker_argv_evidence["status"] == "not-run" and worker_argv_evidence["reason_code"] != "not-run":
+        raise ContractError("not-run runtime worker argv evidence has an invalid reason")
+    failure_pairs = {
+        "envelope-invalid": "load-envelope",
+        "static-role-invalid": "load-static-role",
+        "environment-invalid": "environment-contract",
+        "argv-build-failed": "build-argv",
+        "argv-policy-rejected": "argv-policy",
+        "schema-binding-invalid": "schema-binding",
+        "filesystem-binding-invalid": "filesystem-binding",
+    }
+    if worker_argv_evidence["status"] in ("fail", "UNCHECKABLE") and failure_pairs.get(worker_argv_evidence["reason_code"]) != worker_argv_evidence["stage"]:
+        raise ContractError("runtime worker argv failure stage/reason pair is invalid")
     network_evidence = evidence["network_sandbox_behavior"]
     if not isinstance(network_evidence, dict):
         raise ContractError("runtime network/sandbox evidence must be an object")
@@ -1440,10 +1518,46 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     containment_evidence = validate_containment_provider_evidence(
         evidence["containment_provider"], allow_fixture=allow_fixture,
     )
-    if containment_evidence["process_containment_probe"] != caps["process_containment_probe"]:
-        raise ContractError("runtime capability and containment-provider probe disagree")
-    if containment_evidence["status"] != "not-run" and containment_evidence["network_boundary_probe"] != network_evidence["status"]:
-        raise ContractError("runtime network and containment-provider evidence disagree")
+    lanes = evidence["lane_statuses"]
+    if not isinstance(lanes, dict):
+        raise ContractError("runtime evidence lanes must be an object")
+    exact_keys(lanes, RUNTIME_LANE_KEYS, "runtime evidence lanes")
+    for field in RUNTIME_LANE_KEYS[:-1]:
+        if lanes[field] not in RUNTIME_LANE_STATES:
+            raise ContractError("runtime evidence lane status is invalid")
+    if lanes["auth_status"] not in AUTH_STATES:
+        raise ContractError("runtime auth evidence lane status is invalid")
+    if lanes["provider_isolation_status"] != containment_evidence["status"]:
+        raise ContractError("provider-isolation lane and provider evidence disagree")
+    if lanes["mount_boundary_status"] != mount_boundary_status_from_provider(containment_evidence):
+        raise ContractError("mount-boundary lane and provider facts disagree")
+    if lanes["process_cleanup_status"] != caps["process_cleanup_probe"]:
+        raise ContractError("process-cleanup lane and capability disagree")
+    if lanes["codex_sandbox_network_status"] != network_evidence["status"]:
+        raise ContractError("sandbox/network lane and evidence disagree")
+    if lanes["shell_environment_status"] != caps["shell_environment_probe"]:
+        raise ContractError("shell-environment lane and capability disagree")
+    if (
+        caps["documented_config_keys_probe"] == "pass"
+        and diagnostic["status"] in ("pass", "pass-with-advisory-warning")
+        and worker_argv_evidence["status"] == "pass"
+    ):
+        derived_config_status = "pass"
+    elif (
+        caps["documented_config_keys_probe"] == "not-proven"
+        and diagnostic["status"] == "not-run"
+        and worker_argv_evidence["status"] == "not-run"
+    ):
+        derived_config_status = "not-run"
+    elif "UNCHECKABLE" in (
+        caps["documented_config_keys_probe"], diagnostic["status"],
+        worker_argv_evidence["status"],
+    ):
+        derived_config_status = "UNCHECKABLE"
+    else:
+        derived_config_status = "fail"
+    if lanes["config_status"] != derived_config_status:
+        raise ContractError("config lane and bounded config evidence disagree")
     platform = profile["platform"]
     if not isinstance(platform, dict):
         raise ContractError("runtime platform must be an object")
@@ -1456,6 +1570,8 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     exact_keys(auth, ("class", "credential_values_recorded"), "runtime auth")
     if auth["class"] not in ("signed-in-client", "api-key", "unavailable", "unknown") or auth["credential_values_recorded"] is not False:
         raise ContractError("runtime profile must not record credential values")
+    if lanes["auth_status"] != auth["class"]:
+        raise ContractError("auth lane and safe auth classification disagree")
     request = profile["request"]
     if request != {"model": "gpt-5.6-sol", "reasoning_effort": "high", "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"}:
         raise ContractError("runtime model/reasoning/sandbox/approval request drifted")
@@ -1470,17 +1586,23 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     }
     if shell_env != expected_shell:
         raise ContractError("runtime shell environment profile drifted")
-    match_ready = (
-        status_value == "match"
-        and release_class == "stable"
+    non_auth_lanes_pass = all(lanes[field] == "pass" for field in RUNTIME_LANE_KEYS[:-1])
+    common_ready = (
+        release_class == "stable"
+        and non_auth_lanes_pass
         and caps["documented_config_keys_probe"] == "pass"
         and caps["shell_environment_probe"] == "pass"
-        and caps["process_containment_probe"] == "pass"
-        and diagnostic["status"] == "pass"
+        and caps["process_cleanup_probe"] == "pass"
+        and diagnostic["status"] in ("pass", "pass-with-advisory-warning")
         and worker_argv_evidence["status"] == "pass"
         and network_evidence["status"] == "pass"
         and containment_evidence["status"] == "pass"
         and all(caps[field] for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
+    )
+    match_ready = (
+        status_value == "match"
+        and common_ready
+        and lanes["auth_status"] == "signed-in-client"
     )
     if profile["live_run_allowed"] is not match_ready:
         raise ContractError("live_run_allowed disagrees with fail-closed profile evidence")
@@ -1488,6 +1610,14 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         raise ContractError("unapproved prerelease must be unsupported-client")
     if status_value == "match" and auth["class"] != "signed-in-client":
         raise ContractError("match profile requires the approved VM device-auth class")
+    if status_value == "probe-only-match":
+        if (
+            profile["scope"] != "exact-head-probe-only-sensor"
+            or not common_ready
+            or auth["class"] != "unavailable"
+            or profile["live_run_allowed"] is not False
+        ):
+            raise ContractError("probe-only-match disagrees with Stage A evidence")
     if status_value == "match" and profile["scope"] != "fixture" and client["version_output"] != APPROVED_CODEX_VERSION:
         raise ContractError("live match requires the exact approved Codex client version")
     if containment_evidence["status"] == "pass" and containment_evidence["extracted_binary_sha256"] != client["binary_sha256"]:
@@ -1501,11 +1631,15 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
             raise ContractError("runtime client and containment provider version disagree")
         created = datetime.datetime.strptime(containment_evidence["created_at"], "%Y-%m-%dT%H:%M:%SZ")
         observed = datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+        control_pre = datetime.datetime.strptime(
+            containment_evidence["control_plane"]["pre_create_observed_at"],
+            "%Y-%m-%dT%H:%M:%SZ",
+        )
         control_post = datetime.datetime.strptime(
             containment_evidence["control_plane"]["post_create_observed_at"],
             "%Y-%m-%dT%H:%M:%SZ",
         )
-        if created > control_post or control_post > observed:
+        if not control_pre <= created <= control_post <= observed:
             raise ContractError("containment provider/control-plane/runtime chronology drifted")
     return profile
 
@@ -1604,6 +1738,9 @@ class ProcessResult(NamedTuple):
     stdout: bytes
     stderr_size: int
     reaped: bool
+    # Raw stderr is retained only for a dedicated bounded in-memory probe.
+    # Callers must opt in, classify it immediately, and persist no bytes.
+    stderr: bytes = b""
 
 
 def parse_linux_process_stat(data: bytes) -> Optional[Tuple[int, int, int, str]]:
@@ -1873,14 +2010,17 @@ class DescendantTracker:
 
 
 def live_containment_proven(evidence: Optional[Mapping[str, Any]] = None) -> bool:
-    """Require the closed adapter/owner-authored disposable-VM evidence lane."""
+    """Require the approved outer VM and mount boundary, not PID containment."""
     if evidence is None:
         return False
     try:
         validate_containment_provider_evidence(evidence)
     except ContractError:
         return False
-    return evidence["status"] == "pass" and evidence["process_containment_probe"] == "pass"
+    return (
+        evidence["status"] == "pass"
+        and mount_boundary_status_from_provider(evidence) == "pass"
+    )
 
 
 def run_bounded_process(
@@ -1892,6 +2032,7 @@ def run_bounded_process(
     stdout_limit: int,
     stderr_limit: int,
     grace_seconds: float = 2.0,
+    capture_stderr: bool = False,
 ) -> ProcessResult:
     require_runtime_fs_capabilities()
     if not argv or any(not isinstance(item, str) or "\x00" in item for item in argv):
@@ -1998,6 +2139,7 @@ def run_bounded_process(
         stdout=bytes(buffers["stdout"][:stdout_limit]),
         stderr_size=sizes["stderr"],
         reaped=reaped,
+        stderr=bytes(buffers["stderr"][:stderr_limit]) if capture_stderr else b"",
     )
 
 
@@ -3507,22 +3649,101 @@ def sanitize_version_output(data: bytes) -> str:
     return value
 
 
-def bounded_capture(argv: Sequence[str], cwd: Path, env: Mapping[str, str], stdin_bytes: bytes = b"", timeout: float = 15) -> ProcessResult:
-    return run_bounded_process(argv, cwd, env, stdin_bytes, timeout, 1_048_576, 1_048_576, 2)
+def bounded_capture(
+    argv: Sequence[str],
+    cwd: Path,
+    env: Mapping[str, str],
+    stdin_bytes: bytes = b"",
+    timeout: float = 15,
+    *,
+    stdout_limit: int = 1_048_576,
+    stderr_limit: int = 1_048_576,
+    capture_stderr: bool = False,
+) -> ProcessResult:
+    return run_bounded_process(
+        argv, cwd, env, stdin_bytes, timeout, stdout_limit, stderr_limit, 2,
+        capture_stderr=capture_stderr,
+    )
 
 
 def auth_class(binary: Path, cwd: Path, env: Mapping[str, str]) -> str:
     argv = [str(binary), "-c", 'cli_auth_credentials_store="file"', "login", "status"]
-    validate_runtime_argv_policy(argv, require_memory_overrides=False)
-    result = bounded_capture(argv, cwd, env)
-    if result.exit_code != 0 or result.timed_out or result.stdout_overflow or result.stderr_overflow:
+    try:
+        validate_runtime_argv_policy(argv, require_memory_overrides=False)
+        result = bounded_capture(
+            argv, cwd, env, timeout=15, stdout_limit=64, stderr_limit=256,
+            capture_stderr=True,
+        )
+    except (ContractError, OSError, subprocess.SubprocessError):
+        return "unknown"
+    if (
+        result.exit_code is None or result.exit_code != 0 or result.timed_out
+        or not result.reaped
+    ):
         return "unavailable"
-    text = result.stdout.decode("utf-8", errors="replace").lower()
-    if "api key" in text:
-        return "api-key"
-    if "logged in" in text or "chatgpt" in text:
-        return "signed-in-client"
-    return "unknown"
+    if result.stdout_overflow or result.stderr_overflow or result.stdout != b"":
+        return "unknown"
+    stderr = result.stderr
+    if stderr == b"Logged in using ChatGPT\n":
+        classification = "signed-in-client"
+    elif re.fullmatch(
+        rb"Logged in using an API key - (?:\*\*\*|[A-Za-z0-9_-]{8}\*\*\*[A-Za-z0-9_-]{5})\n",
+        stderr,
+    ) is not None:
+        classification = "api-key"
+    else:
+        classification = "unknown"
+    # Do not return, hash, or persist even redacted authentication output.
+    del stderr, result
+    return classification
+
+
+def sandbox_probe_argv(
+    binary: Path,
+    env: Mapping[str, str],
+    command_argv: Sequence[str],
+    root: Optional[Path] = None,
+) -> List[str]:
+    """Build the reviewed official 0.150.1 Option B sandbox argv."""
+    if root is None:
+        home_value = env.get("HOME")
+        if not isinstance(home_value, str):
+            raise ContractError("sandbox probe root binding is unavailable")
+        root = Path(home_value).parent
+    if not root.is_absolute() or not command_argv:
+        raise ContractError("sandbox probe argv root or command is invalid")
+    argv = runtime_configuration_argv(binary, env) + [
+        "sandbox", "--permission-profile", ":read-only",
+        "-C", str(root), "--", *list(command_argv),
+    ]
+    validate_sandbox_probe_argv(argv)
+    return argv
+
+
+def validate_sandbox_probe_argv(argv: Sequence[str]) -> None:
+    """Reject unsupported or conflicting 0.150.1 sandbox combinations."""
+    validate_runtime_argv_policy(argv, require_memory_overrides=True)
+    if argv.count("sandbox") != 1:
+        raise ContractError("sandbox probe argv must contain one sandbox subcommand")
+    index = argv.index("sandbox")
+    tail = list(argv[index:])
+    if len(tail) < 7 or tail[:4] != [
+        "sandbox", "--permission-profile", ":read-only", "-C",
+    ]:
+        raise ContractError("sandbox probe argv is not the reviewed Option B profile")
+    if not Path(tail[4]).is_absolute() or tail[5] != "--" or not tail[6:]:
+        raise ContractError("sandbox probe argv lacks its exact root or delimiter")
+    if tail.count("--") != 1 or any(
+        item in ("--sandbox-state-json", "--sandbox-state-disable-network", "--include-managed-config")
+        or item.startswith("--sandbox-state-json=")
+        or item.startswith("--permission-profile=")
+        for item in tail[6:]
+    ):
+        raise ContractError("sandbox probe argv contains unsupported or conflicting arguments")
+    if any(item in ("--sandbox-state-json", "--sandbox-state-disable-network", "--include-managed-config") for item in tail[:6]):
+        raise ContractError("sandbox probe argv contains conflicting state flags")
+    if tail.count("--permission-profile") != 1 or tail.count("-C") != 1:
+        raise ContractError("sandbox probe argv duplicates its reviewed bindings")
 
 
 def reviewed_runtime_configuration(env: Mapping[str, str]) -> Dict[str, Any]:
@@ -3554,11 +3775,41 @@ def runtime_configuration_argv(binary: Path, env: Mapping[str, str]) -> List[str
     return argv
 
 
-def doctor_diagnostic_health(result: ProcessResult) -> Dict[str, Any]:
+def classify_doctor_safe_checks(
+    checks: Sequence[Mapping[str, str]],
+    required_categories: Sequence[str],
+) -> str:
+    """Derive the closed diagnostic status from the persisted safe projection."""
+    required = tuple(required_categories)
+    required_set = set(required)
+    if (
+        len(required_set) != len(required)
+        or not required_set.issubset(DOCTOR_REQUIRED_CATEGORIES)
+    ):
+        raise ContractError("Codex doctor required categories are invalid")
+    observed_categories = {check["category"] for check in checks}
+    if not required_set.issubset(observed_categories):
+        raise ContractError("Codex doctor required category evidence is missing")
+    blocking = any(
+        check["category"] in required_set and check["status"] != "ok"
+        for check in checks
+    )
+    if blocking:
+        return "fail"
+    if any(check["status"] != "ok" for check in checks):
+        return "pass-with-advisory-warning"
+    return "pass"
+
+
+def doctor_diagnostic_health(
+    result: ProcessResult,
+    required_categories: Sequence[str] = DOCTOR_REQUIRED_CATEGORIES,
+) -> Dict[str, Any]:
     """Normalize a real doctor report without treating it as config proof."""
     evidence = {
         "classification": "diagnostic-only",
         "status": "UNCHECKABLE",
+        "checks": [],
         "codex_issued_effective_configuration_proof": False,
     }
     if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped or result.exit_code is None:
@@ -3570,41 +3821,168 @@ def doctor_diagnostic_health(result: ProcessResult) -> Dict[str, Any]:
             ("schemaVersion", "generatedAt", "codexVersion", "overallStatus", "checks"),
             "Codex doctor diagnostic report",
         )
-        if type(report["schemaVersion"]) is not int or report["schemaVersion"] < 1:
+        if type(report["schemaVersion"]) is not int or report["schemaVersion"] != 1:
             raise ContractError("Codex doctor schemaVersion is invalid")
         if not isinstance(report["generatedAt"], str) or not report["generatedAt"]:
             raise ContractError("Codex doctor generatedAt is invalid")
-        if not isinstance(report["codexVersion"], str) or not report["codexVersion"]:
+        if report["codexVersion"] != "0.150.1":
             raise ContractError("Codex doctor version is invalid")
         overall = report["overallStatus"]
         if overall not in ("ok", "warning", "fail"):
             raise ContractError("Codex doctor overallStatus is invalid")
         checks = report["checks"]
-        if not isinstance(checks, dict) or not 1 <= len(checks) <= 128:
+        if not isinstance(checks, dict) or not 1 <= len(checks) <= 64:
             raise ContractError("Codex doctor checks are invalid")
+        safe_checks = []
         for check_id, check in checks.items():
             if not isinstance(check_id, str) or not check_id or not isinstance(check, dict):
                 raise ContractError("Codex doctor check entry is invalid")
             required = {"id", "category", "status", "summary", "details", "durationMs", "remediation"}
-            if not required.issubset(check) or set(check) - required - {"issues"}:
+            if not required.issubset(check) or set(check) - required - {"issues", "notes"}:
                 raise ContractError("Codex doctor check fields are invalid")
             if check["id"] != check_id or check["status"] not in ("ok", "warning", "fail"):
                 raise ContractError("Codex doctor check identity/status is invalid")
             if not isinstance(check["category"], str) or not isinstance(check["summary"], str) or not isinstance(check["details"], dict):
                 raise ContractError("Codex doctor check content is invalid")
-            if type(check["durationMs"]) is not int or check["durationMs"] < 0:
+            if type(check["durationMs"]) is not int or not 0 <= check["durationMs"] <= 18_446_744_073_709_551_615:
                 raise ContractError("Codex doctor duration is invalid")
             if check["remediation"] is not None and not isinstance(check["remediation"], str):
                 raise ContractError("Codex doctor remediation is invalid")
-            if "issues" in check and not isinstance(check["issues"], list):
-                raise ContractError("Codex doctor issues are invalid")
+            if len(check["details"]) > 128:
+                raise ContractError("Codex doctor details exceed their bound")
+            for detail_key, detail_value in check["details"].items():
+                if not isinstance(detail_key, str) or not 1 <= len(detail_key) <= 128:
+                    raise ContractError("Codex doctor detail key is invalid")
+                if isinstance(detail_value, str):
+                    continue
+                if (
+                    not isinstance(detail_value, list)
+                    or len(detail_value) > 128
+                    or any(not isinstance(item, str) for item in detail_value)
+                ):
+                    raise ContractError("Codex doctor detail value is invalid")
+            if "issues" in check:
+                issues = check["issues"]
+                if not isinstance(issues, list) or len(issues) > 128:
+                    raise ContractError("Codex doctor issues are invalid")
+                for issue in issues:
+                    if not isinstance(issue, dict):
+                        raise ContractError("Codex doctor issue is invalid")
+                    exact_keys(
+                        issue,
+                        ("severity", "cause", "measured", "expected", "remedy", "fields"),
+                        "Codex doctor issue",
+                    )
+                    if issue["severity"] not in ("ok", "warning", "fail") or not isinstance(issue["cause"], str):
+                        raise ContractError("Codex doctor issue status/cause is invalid")
+                    if any(issue[field] is not None and not isinstance(issue[field], str) for field in ("measured", "expected", "remedy")):
+                        raise ContractError("Codex doctor issue optional value is invalid")
+                    if not isinstance(issue["fields"], list) or len(issue["fields"]) > 128 or any(not isinstance(field, str) for field in issue["fields"]):
+                        raise ContractError("Codex doctor issue fields are invalid")
+            if "notes" in check and (
+                not isinstance(check["notes"], list)
+                or len(check["notes"]) > 128
+                or any(not isinstance(note, str) for note in check["notes"])
+            ):
+                raise ContractError("Codex doctor notes are invalid")
+            if (
+                re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,127}", check_id) is None
+                or re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,63}", check["category"]) is None
+            ):
+                raise ContractError("Codex doctor safe check projection is invalid")
+            safe_checks.append({
+                "id": check_id,
+                "category": check["category"],
+                "status": check["status"],
+            })
+        derived_overall = (
+            "fail" if any(item["status"] == "fail" for item in safe_checks)
+            else "warning" if any(item["status"] == "warning" for item in safe_checks)
+            else "ok"
+        )
+        if overall != derived_overall:
+            raise ContractError("Codex doctor overall status is inconsistent")
+        if (overall == "fail" and result.exit_code != 1) or (
+            overall != "fail" and result.exit_code != 0
+        ):
+            raise ContractError("Codex doctor exit status is inconsistent")
+        safe_checks.sort(key=lambda item: (item["id"], item["category"], item["status"]))
+        normalized = classify_doctor_safe_checks(safe_checks, required_categories)
     except ContractError:
         return evidence
-    normalized = {"ok": "pass", "warning": "warning", "fail": "fail"}[overall]
-    if result.exit_code != 0 and normalized == "pass":
-        normalized = "fail"
+    evidence["checks"] = safe_checks
     evidence["status"] = normalized
     return evidence
+
+
+def exact_worker_argv_evidence(
+    binary: Path,
+    root: Path,
+    repository_root: Path,
+    env: Mapping[str, str],
+) -> Dict[str, Any]:
+    def failed(stage: str, reason_code: str) -> Dict[str, Any]:
+        return {
+            "status": "fail", "stage": stage, "reason_code": reason_code,
+            "rules_bypass_absent": False,
+            "dynamic_task_data_stdin_only": False,
+        }
+
+    try:
+        envelope = load_repository_json(
+            repository_root, "tests/runtime/fixtures/envelope-valid.v1.json",
+        )
+    except (ContractError, OSError, KeyError, TypeError, ValueError):
+        return failed("load-envelope", "envelope-invalid")
+    try:
+        validate_envelope(envelope)
+    except (ContractError, OSError, KeyError, TypeError, ValueError):
+        return failed("schema-binding", "schema-binding-invalid")
+    try:
+        extract_static_role(repository_root)
+    except (ContractError, OSError, UnicodeError):
+        return failed("load-static-role", "static-role-invalid")
+    try:
+        reviewed_runtime_configuration(env)
+    except (ContractError, KeyError, TypeError, ValueError):
+        return failed("environment-contract", "environment-invalid")
+    try:
+        root_info = os.stat(str(root), follow_symlinks=False)
+        repository_info = os.stat(str(repository_root), follow_symlinks=False)
+        if not stat.S_ISDIR(root_info.st_mode) or not stat.S_ISDIR(repository_info.st_mode):
+            raise ContractError("directory binding is invalid")
+    except (ContractError, OSError):
+        return failed("filesystem-binding", "filesystem-binding-invalid")
+    try:
+        argv = build_live_argv(binary, root, repository_root, envelope, env)
+    except (ContractError, OSError, KeyError, TypeError, ValueError):
+        return failed("build-argv", "argv-build-failed")
+    try:
+        validate_runtime_argv_policy(argv, require_memory_overrides=True)
+    except (ContractError, KeyError, TypeError, ValueError):
+        return failed("argv-policy", "argv-policy-rejected")
+    return {
+        "status": "pass", "stage": "argv-policy", "reason_code": "none",
+        "rules_bypass_absent": True,
+        "dynamic_task_data_stdin_only": True,
+    }
+
+
+def process_cleanup_probe(root: Path, env: Mapping[str, str]) -> str:
+    """Exercise identity-bound process-group cleanup without invoking a model."""
+    program = Path("/usr/bin/true")
+    try:
+        info = os.stat(str(program), follow_symlinks=False)
+        if not stat.S_ISREG(info.st_mode):
+            return "UNCHECKABLE"
+        result = run_bounded_process(
+            [str(program)], root, env, b"", 5, 64, 64, 1,
+        )
+    except (ContractError, OSError, subprocess.SubprocessError):
+        return "UNCHECKABLE"
+    if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped:
+        return "UNCHECKABLE"
+    return "pass" if result.exit_code == 0 else "fail"
 
 
 def shell_environment_probe(
@@ -3619,11 +3997,7 @@ def shell_environment_probe(
     env_program = Path("/usr/bin/env")
     if not env_program.is_file():
         return "UNCHECKABLE"
-    argv = runtime_configuration_argv(binary, env) + [
-        "sandbox", "--sandbox-state-disable-network", "-C", str(root),
-        str(env_program), "-0",
-    ]
-    validate_runtime_argv_policy(argv, require_memory_overrides=True)
+    argv = sandbox_probe_argv(binary, env, [str(env_program), "-0"], root)
     result = bounded_capture(argv, root, probe_env)
     if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped:
         return "UNCHECKABLE"
@@ -3671,11 +4045,11 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
             # the sandbox is applied, so a later denial is behavior evidence.
             with socket.create_connection(("127.0.0.1", port), timeout=2):
                 pass
-            argv = runtime_configuration_argv(binary, env) + [
-                "sandbox", "--sandbox-state-disable-network", "-C", str(root),
-                str(Path(sys.executable).resolve()), "-I", "-c", script, str(port),
-            ]
-            validate_runtime_argv_policy(argv, require_memory_overrides=True)
+            argv = sandbox_probe_argv(
+                binary, env,
+                [str(Path(sys.executable).resolve()), "-I", "-c", script, str(port)],
+                root,
+            )
             result = bounded_capture(argv, root, env)
     except OSError:
         return "UNCHECKABLE"
@@ -3688,39 +4062,82 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
     return "UNCHECKABLE"
 
 
-def probe_runtime_evidence(binary: Path, root: Path, env: Mapping[str, str], repository_root: Path) -> Dict[str, Any]:
+def probe_runtime_evidence(
+    binary: Path,
+    root: Path,
+    env: Mapping[str, str],
+    repository_root: Path,
+    auth_required: bool = True,
+) -> Dict[str, Any]:
     """Collect bounded independent lanes; no lane claims effective config."""
-    required = reviewed_runtime_configuration(env)
-    rules_digest = materialize_reviewed_rules_profile(env)
     intent = runtime_configuration_intent()
-    if rules_digest != intent["rules_profile_sha256"]:
-        raise ContractError("materialized rules profile digest drifted")
-
-    diagnostic_argv = runtime_configuration_argv(binary, env) + ["doctor", "--json"]
-    validate_runtime_argv_policy(diagnostic_argv, require_memory_overrides=True)
-    diagnostic = doctor_diagnostic_health(bounded_capture(diagnostic_argv, root, env))
-
-    worker_status = "pass"
+    required: Optional[Dict[str, Any]] = None
+    config_key_status = "UNCHECKABLE"
     try:
-        envelope = load_repository_json(repository_root, "tests/runtime/fixtures/envelope-valid.v1.json")
-        worker_argv = build_live_argv(binary, root, repository_root, envelope, env)
-        validate_runtime_argv_policy(worker_argv, require_memory_overrides=True)
+        required = reviewed_runtime_configuration(env)
+        rules_digest = materialize_reviewed_rules_profile(env)
+        if rules_digest != intent["rules_profile_sha256"]:
+            raise ContractError("materialized rules profile digest drifted")
+        config_key_status = "pass"
     except (ContractError, OSError, KeyError, TypeError, ValueError):
-        worker_status = "fail"
-    shell_status = shell_environment_probe(binary, root, env, required)
-    network_status = network_sandbox_behavior_probe(binary, root, env)
+        pass
+
+    required_doctor_categories = DOCTOR_REQUIRED_CATEGORIES if auth_required else tuple(
+        category for category in DOCTOR_REQUIRED_CATEGORIES if category != "auth"
+    )
+    diagnostic = {
+        "classification": "diagnostic-only", "status": "UNCHECKABLE",
+        "checks": [], "codex_issued_effective_configuration_proof": False,
+    }
+    if required is not None:
+        try:
+            diagnostic_argv = runtime_configuration_argv(binary, env) + ["doctor", "--json"]
+            validate_runtime_argv_policy(diagnostic_argv, require_memory_overrides=True)
+            diagnostic = doctor_diagnostic_health(
+                bounded_capture(diagnostic_argv, root, env), required_doctor_categories,
+            )
+        except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+            pass
+
+    worker_evidence = exact_worker_argv_evidence(binary, root, repository_root, env)
+    if required is None:
+        shell_status = "UNCHECKABLE"
+    else:
+        try:
+            shell_status = shell_environment_probe(binary, root, env, required)
+        except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+            shell_status = "UNCHECKABLE"
+    try:
+        network_status = network_sandbox_behavior_probe(binary, root, env)
+    except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+        network_status = "UNCHECKABLE"
+    cleanup_status = process_cleanup_probe(root, env)
+    config_status = "pass" if (
+        config_key_status == "pass"
+        and diagnostic["status"] in ("pass", "pass-with-advisory-warning")
+        and worker_evidence["status"] == "pass"
+    ) else (
+        "UNCHECKABLE" if "UNCHECKABLE" in (
+            config_key_status, diagnostic["status"], worker_evidence["status"],
+        ) else "fail"
+    )
     return {
-        "documented_config_keys_probe": "pass",
+        "documented_config_keys_probe": config_key_status,
         "shell_environment_probe": shell_status,
         "evidence": {
             "configuration_intent": intent,
             "diagnostic_health": diagnostic,
-            "exact_worker_argv": {
-                "status": worker_status,
-                "rules_bypass_absent": worker_status == "pass",
-                "dynamic_task_data_stdin_only": worker_status == "pass",
-            },
+            "exact_worker_argv": worker_evidence,
             "network_sandbox_behavior": {"status": network_status},
+            "lane_statuses": {
+                "provider_isolation_status": "not-run",
+                "mount_boundary_status": "not-run",
+                "process_cleanup_status": cleanup_status,
+                "codex_sandbox_network_status": network_status,
+                "shell_environment_status": shell_status,
+                "config_status": config_status,
+                "auth_status": "unavailable",
+            },
         },
     }
 
@@ -3739,14 +4156,26 @@ def not_run_runtime_evidence() -> Dict[str, Any]:
         "diagnostic_health": {
             "classification": "diagnostic-only",
             "status": "not-run",
+            "checks": [],
             "codex_issued_effective_configuration_proof": False,
         },
         "exact_worker_argv": {
             "status": "not-run",
+            "stage": "argv-policy",
+            "reason_code": "not-run",
             "rules_bypass_absent": False,
             "dynamic_task_data_stdin_only": False,
         },
         "network_sandbox_behavior": {"status": "not-run"},
+        "lane_statuses": {
+            "provider_isolation_status": "not-run",
+            "mount_boundary_status": "not-run",
+            "process_cleanup_status": "not-run",
+            "codex_sandbox_network_status": "not-run",
+            "shell_environment_status": "not-run",
+            "config_status": "not-run",
+            "auth_status": "unavailable",
+        },
         "containment_provider": not_run_containment_provider_evidence(),
     }
 
@@ -3801,21 +4230,21 @@ def observe_colima_provider_evidence(
     )
     ssh_agent_absent = "SSH_AUTH_SOCK" not in os.environ and "SSH_AGENT_PID" not in os.environ
     sensitive_mounts_absent = mount_facts["host_sensitive_mounts_absent"] and ssh_agent_absent
-    provider_pass = (
-        mount_facts["status"] == "pass"
-        and platform_ok
+    provider_isolation_pass = (
+        platform_ok
         and repository_matches
         and version_output == provider_input["client"]["version_output"]
         and binary_sha256 == provider_input["client"]["extracted_binary_sha256"]
-        and sensitive_mounts_absent
         and control_plane["status"] == "pass"
         and control_plane["instance_identity_sha256"] == instance_sha256
+        and layout.runtime_root_binding_sha256 != "0" * 64
+        and layout.dedicated_codex_home_binding_sha256 != "0" * 64
     )
     return {
         "schema": CONTAINMENT_PROVIDER_EVIDENCE_SCHEMA,
         "authority": "adapter/owner-authored",
         "codex_authenticated_attestation": False,
-        "status": "pass" if provider_pass else "fail",
+        "status": "pass" if provider_isolation_pass else "fail",
         "provider_kind": provider["kind"],
         "profile_name": provider["profile_name"],
         "vm_backend": provider["vm_backend"],
@@ -3847,23 +4276,23 @@ def observe_colima_provider_evidence(
         "extracted_binary_sha256": binary_sha256,
         "runtime_root_binding_sha256": layout.runtime_root_binding_sha256,
         "dedicated_codex_home_binding_sha256": layout.dedicated_codex_home_binding_sha256,
-        "sandbox_configuration_probe": "not-run",
-        "network_boundary_probe": "not-run",
-        "process_containment_probe": "pass" if provider_pass else "fail",
         "control_plane": dict(control_plane),
         "lifecycle": dict(provider_input["lifecycle"]),
     }
 
 
-def _unavailable_runtime_profile(model: str, reasoning: str) -> Dict[str, Any]:
+def _unavailable_runtime_profile(model: str, reasoning: str, probe_only: bool = False) -> Dict[str, Any]:
+    evidence = not_run_runtime_evidence()
+    evidence["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
+    evidence["lane_statuses"]["config_status"] = "UNCHECKABLE"
     return {
         "schema": "runtime-profile/v1", "repository": REPOSITORY,
         "observed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "scope": "exact-head-live-sensor", "status": "UNKNOWN", "reason": "Codex executable is unavailable",
+        "scope": "exact-head-probe-only-sensor" if probe_only else "exact-head-live-sensor", "status": "UNKNOWN", "reason": "Codex executable is unavailable",
         "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
         "client": {"version_output": "unavailable", "release_class": "unknown", "binary_sha256": "0" * 64, "exec_help_sha256": "0" * 64, "resolved_path_recorded": False},
-        "capabilities": {"exec_json": False, "ephemeral": False, "strict_config": False, "ignore_user_config": False, "workspace_write": False, "approval_never": False, "documented_config_keys_probe": "UNCHECKABLE", "shell_environment_probe": "UNCHECKABLE", "process_containment_probe": "not-run", "model": False, "reasoning": False, "sandbox": False, "approval": False, "overrides": False},
-        "evidence": not_run_runtime_evidence(),
+        "capabilities": {"exec_json": False, "ephemeral": False, "strict_config": False, "ignore_user_config": False, "workspace_write": False, "approval_never": False, "documented_config_keys_probe": "UNCHECKABLE", "shell_environment_probe": "UNCHECKABLE", "process_cleanup_probe": "not-run", "model": False, "reasoning": False, "sandbox": False, "approval": False, "overrides": False},
+        "evidence": evidence,
         "auth": {"class": "unavailable", "credential_values_recorded": False},
         "request": {"model": model, "reasoning_effort": reasoning, "sandbox": "workspace-write", "approval_policy": "never", "config_profile": "t11-live-v1"},
         "shell_environment": {"inherit": "none", "required_names": list(SHELL_ENVIRONMENT_NAMES), "path_policy": "verified-executable-parent+verified-python-parent+/usr/bin+/bin-deduplicated", "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"}, "private_home": True, "private_tmpdir": True, "secret_named_variables_excluded": True, "probe_required": True},
@@ -3880,6 +4309,7 @@ def _observe_runtime_profile_bound(
     env: Mapping[str, str],
     provider_input: Optional[Mapping[str, Any]],
     layout: Optional[ColimaRuntimeLayout],
+    probe_only: bool = False,
 ) -> Dict[str, Any]:
     version_result = bounded_capture([str(binary), "--version"], work, env)
     help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
@@ -3900,7 +4330,24 @@ def _observe_runtime_profile_bound(
         "sandbox": "--sandbox" in help_text,
     }
     if release_class == "stable":
-        probe = probe_runtime_evidence(binary, work, env, repository_root)
+        try:
+            probe = probe_runtime_evidence(
+                binary, work, env, repository_root, auth_required=not probe_only,
+            )
+        except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+            uncheckable = not_run_runtime_evidence()
+            for lane in (
+                "process_cleanup_status", "codex_sandbox_network_status",
+                "shell_environment_status", "config_status",
+            ):
+                uncheckable["lane_statuses"][lane] = "UNCHECKABLE"
+            uncheckable["diagnostic_health"]["status"] = "UNCHECKABLE"
+            uncheckable["network_sandbox_behavior"]["status"] = "UNCHECKABLE"
+            probe = {
+                "documented_config_keys_probe": "UNCHECKABLE",
+                "shell_environment_probe": "UNCHECKABLE",
+                "evidence": uncheckable,
+            }
         config_probe = probe["documented_config_keys_probe"]
         shell_probe = probe["shell_environment_probe"]
         evidence = probe["evidence"]
@@ -3908,54 +4355,36 @@ def _observe_runtime_profile_bound(
             containment = observe_colima_provider_evidence(
                 repository_root, provider_input, layout, binary_sha256, version_output, env,
             )
-            configuration_lane = "pass" if (
-                config_probe == "pass"
-                and shell_probe == "pass"
-                and evidence["diagnostic_health"]["status"] == "pass"
-                and evidence["exact_worker_argv"]["status"] == "pass"
-            ) else ("UNCHECKABLE" if "UNCHECKABLE" in (config_probe, shell_probe, evidence["diagnostic_health"]["status"]) else "fail")
-            containment["sandbox_configuration_probe"] = configuration_lane
-            containment["network_boundary_probe"] = evidence["network_sandbox_behavior"]["status"]
-            if containment["status"] == "pass" and configuration_lane == "pass" and containment["network_boundary_probe"] == "pass":
-                containment["status"] = "pass"
-            elif "UNCHECKABLE" in (configuration_lane, containment["network_boundary_probe"]):
-                containment["status"] = "UNCHECKABLE"
-                containment["process_containment_probe"] = "UNCHECKABLE"
-            else:
-                containment["status"] = "fail"
-                containment["process_containment_probe"] = "fail"
             evidence["containment_provider"] = containment
-            containment_probe = containment["process_containment_probe"]
+            evidence["lane_statuses"]["provider_isolation_status"] = containment["status"]
+            evidence["lane_statuses"]["mount_boundary_status"] = mount_boundary_status_from_provider(containment)
         else:
             containment = not_run_containment_provider_evidence()
             evidence["containment_provider"] = containment
-            containment_probe = "not-run"
     else:
         config_probe, shell_probe = "not-proven", "not-run"
         evidence = not_run_runtime_evidence()
-        containment_probe = "not-run"
-    config_ok = (
-        config_probe == "pass"
-        and shell_probe == "pass"
-        and containment_probe == "pass"
-        and evidence["diagnostic_health"]["status"] == "pass"
-        and evidence["exact_worker_argv"]["status"] == "pass"
-        and evidence["network_sandbox_behavior"]["status"] == "pass"
-        and evidence["containment_provider"]["status"] == "pass"
-    )
+    if release_class == "stable":
+        try:
+            observed_auth_class = auth_class(binary, work, env)
+        except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+            observed_auth_class = "unknown"
+    else:
+        observed_auth_class = "unavailable"
+    evidence["lane_statuses"]["auth_status"] = observed_auth_class
+    non_auth_lanes = [evidence["lane_statuses"][name] for name in RUNTIME_LANE_KEYS[:-1]]
+    config_ok = all(value == "pass" for value in non_auth_lanes)
     caps = {
         **flags,
         "approval_never": config_ok,
         "documented_config_keys_probe": config_probe,
         "shell_environment_probe": shell_probe,
-        "process_containment_probe": containment_probe,
+        "process_cleanup_probe": evidence["lane_statuses"]["process_cleanup_status"],
         "reasoning": config_ok,
         "approval": config_ok,
         "overrides": config_ok,
     }
     all_required = all(caps[name] for name in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
-    containment_status = evidence["containment_provider"]["status"]
-    observed_auth_class = auth_class(binary, work, env)
     if release_class.startswith("prerelease"):
         profile_status, reason = "unsupported-client", "unapproved-prerelease: {} client".format(release_class.split("-", 1)[1])
     elif release_class != "stable":
@@ -3964,20 +4393,26 @@ def _observe_runtime_profile_bound(
         profile_status, reason = "unsupported-client", "stable client version is outside the approved exact release"
     elif provider_input is None:
         profile_status, reason = "UNCHECKABLE", "approved disposable Colima provider input is absent"
-    elif containment_status == "UNCHECKABLE" or config_probe == "UNCHECKABLE" or shell_probe == "UNCHECKABLE":
-        profile_status, reason = "UNCHECKABLE", "required config, shell-environment, network, or containment capability is uncheckable"
-    elif containment_status == "fail":
-        profile_status, reason = "profile-drift", "approved Colima provider or exact repository observation drifted"
+    elif any(value in ("not-run", "UNCHECKABLE") for value in non_auth_lanes):
+        profile_status, reason = "UNCHECKABLE", "one or more independent Stage A runtime lanes are uncheckable"
+    elif any(value == "fail" for value in non_auth_lanes):
+        profile_status, reason = "profile-drift", "one or more independent Stage A runtime lanes failed"
+    elif not all_required:
+        profile_status, reason = "unsupported-client", "required exact client capabilities are unsupported"
+    elif observed_auth_class == "unknown":
+        profile_status, reason = "UNKNOWN", "authentication probe result is unknown"
+    elif probe_only and observed_auth_class != "unavailable":
+        profile_status, reason = "profile-drift", "Stage A requires an unauthenticated dedicated CODEX_HOME"
+    elif probe_only:
+        profile_status, reason = "probe-only-match", "exact unauthenticated Stage A provider and runtime probes match"
     elif observed_auth_class != "signed-in-client":
         profile_status, reason = "profile-drift", "approved VM device-auth class is unavailable or drifted"
-    elif config_probe == "fail" or shell_probe == "fail" or not all_required:
-        profile_status, reason = "unsupported-client", "required config, shell-environment, network, or containment capability is unsupported"
     else:
         profile_status, reason = "match", "exact approved stable client and disposable Colima provider probes match"
     profile = {
         "schema": "runtime-profile/v1", "repository": REPOSITORY,
         "observed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "scope": "exact-head-live-sensor", "status": profile_status, "reason": reason,
+        "scope": "exact-head-probe-only-sensor" if probe_only else "exact-head-live-sensor", "status": profile_status, "reason": reason,
         "platform": {"os": os.uname().sysname, "architecture": os.uname().machine},
         "client": {"version_output": version_output, "release_class": release_class, "binary_sha256": binary_sha256, "exec_help_sha256": sha256_bytes(help_bytes), "resolved_path_recorded": False},
         "capabilities": caps,
@@ -3991,7 +4426,7 @@ def _observe_runtime_profile_bound(
     return profile
 
 
-def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, provider_input: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, provider_input: Optional[Mapping[str, Any]] = None, probe_only: bool = False) -> Dict[str, Any]:
     require_runtime_fs_capabilities()
     if provider_input is not None:
         validate_colima_provider_input(provider_input)
@@ -4000,14 +4435,14 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, p
         try:
             hash_regular_file(binary)
         except (ContractError, OSError):
-            return _unavailable_runtime_profile(model, reasoning)
+            return _unavailable_runtime_profile(model, reasoning, probe_only)
         env = minimal_environment(binary, layout.home, layout.tmp)
         return _observe_runtime_profile_bound(
-            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout,
+            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout, probe_only,
         )
     resolved = resolve_executable_from_path("codex", {"PATH": REVIEWED_SENSOR_PATH})
     if resolved is None:
-        return _unavailable_runtime_profile(model, reasoning)
+        return _unavailable_runtime_profile(model, reasoning, probe_only)
     binary = Path(resolved).resolve()
     with tempfile.TemporaryDirectory(prefix="t11-profile-") as temporary:
         root = Path(temporary)
@@ -4020,7 +4455,7 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, p
         work.mkdir(mode=0o700)
         env = minimal_environment(binary, home, tmpdir)
         return _observe_runtime_profile_bound(
-            repository_root, model, reasoning, binary, work, env, None, None,
+            repository_root, model, reasoning, binary, work, env, None, None, probe_only,
         )
 
 
@@ -4067,6 +4502,7 @@ def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, An
     validate_colima_provider_input(provider_input)
     return observe_runtime_profile(
         repository_root, args.model, args.reasoning_effort, provider_input,
+        probe_only=args.probe_only,
     )
 
 
@@ -4085,6 +4521,10 @@ def build_parser() -> argparse.ArgumentParser:
     profile_parser = subparsers.add_parser("profile", help="observe a bounded live runtime profile without running the Task")
     profile_parser.add_argument("--model", default="gpt-5.6-sol")
     profile_parser.add_argument("--reasoning-effort", choices=("low", "medium", "high", "xhigh"), default="high")
+    profile_parser.add_argument(
+        "--probe-only", action="store_true",
+        help="observe unauthenticated Stage A lanes; never authorize live execution",
+    )
     return parser
 
 
