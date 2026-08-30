@@ -147,6 +147,14 @@ WORKER_ARGV_REASON_CODES = (
     "environment-invalid", "argv-build-failed", "argv-policy-rejected",
     "schema-binding-invalid", "filesystem-binding-invalid",
 )
+PROFILE_PROBE_FAILURES = {
+    "runtime-capabilities": "capability-unavailable",
+    "provider-input": "input-invalid",
+    "runtime-layout": "layout-invalid",
+    "client-evidence": "version-help-uncheckable",
+    "provider-evidence": "observation-invalid",
+    "profile-validation": "profile-invalid",
+}
 DOCTOR_REQUIRED_CATEGORIES = ("auth", "config", "runtime", "sandbox")
 TERMINAL_TYPES = {"turn.completed", "turn.failed"}
 KNOWN_RAW_TYPES = {"thread.started", "turn.started", "item.started", "item.updated", "item.completed", "error"} | TERMINAL_TYPES
@@ -166,6 +174,23 @@ MAX_XATTR_TOTAL_BYTES = 4_194_304
 
 class ContractError(Exception):
     """A bounded, user-safe contract failure."""
+
+
+class ProfileProbeError(Exception):
+    """A fixed-enum profile boundary failure with no private diagnostic text."""
+
+    def __init__(self, stage: str, reason_code: str):
+        if PROFILE_PROBE_FAILURES.get(stage) != reason_code:
+            raise ContractError("runtime profile failure classification is invalid")
+        self.stage = stage
+        self.reason_code = reason_code
+        super().__init__("bounded runtime profile failure")
+
+
+PROFILE_BOUNDARY_EXCEPTIONS = (
+    ProfileProbeError, ContractError, OSError, subprocess.SubprocessError, UnicodeError,
+    ValueError, KeyError, TypeError, RecursionError,
+)
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -3592,9 +3617,16 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         return result
 
 
-def safe_error(reason: str) -> Dict[str, Any]:
-    del reason
-    return {"schema": "codex-exec-adapter-error/v1", "status": "fail", "reason": "bounded runtime contract failure"}
+def safe_error(error: BaseException) -> Dict[str, Any]:
+    value = {
+        "schema": "codex-exec-adapter-error/v1",
+        "status": "fail",
+        "reason": "bounded runtime contract failure",
+    }
+    if isinstance(error, ProfileProbeError):
+        value["stage"] = error.stage
+        value["reason_code"] = error.reason_code
+    return value
 
 
 def hash_regular_file(path: Path, max_bytes: int = 536_870_912) -> str:
@@ -4316,24 +4348,53 @@ def _observe_runtime_profile_bound(
     layout: Optional[ColimaRuntimeLayout],
     probe_only: bool = False,
 ) -> Dict[str, Any]:
-    version_result = bounded_capture([str(binary), "--version"], work, env)
-    help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
-    if version_result.exit_code != 0 or help_result.exit_code != 0 or version_result.timed_out or help_result.timed_out or version_result.stdout_overflow or help_result.stdout_overflow:
-        raise ContractError("runtime version/help sensor is UNCHECKABLE")
-    version_output = sanitize_version_output(version_result.stdout)
-    help_bytes = help_result.stdout
-    help_text = help_bytes.decode("utf-8", errors="strict")
-    release_class = classify_release(version_output)
-    binary_sha256 = hash_regular_file(binary)
-    flags = {
-        "exec_json": "--json" in help_text,
-        "ephemeral": "--ephemeral" in help_text,
-        "strict_config": "--strict-config" in help_text,
-        "ignore_user_config": "--ignore-user-config" in help_text,
-        "workspace_write": "workspace-write" in help_text,
-        "model": "--model" in help_text,
-        "sandbox": "--sandbox" in help_text,
-    }
+    try:
+        return _observe_runtime_profile_bound_inner(
+            repository_root, model, reasoning, binary, work, env,
+            provider_input, layout, probe_only,
+        )
+    except ProfileProbeError:
+        raise
+    except PROFILE_BOUNDARY_EXCEPTIONS:
+        raise ProfileProbeError(
+            "profile-validation", "profile-invalid",
+        ) from None
+
+
+def _observe_runtime_profile_bound_inner(
+    repository_root: Path,
+    model: str,
+    reasoning: str,
+    binary: Path,
+    work: Path,
+    env: Mapping[str, str],
+    provider_input: Optional[Mapping[str, Any]],
+    layout: Optional[ColimaRuntimeLayout],
+    probe_only: bool = False,
+) -> Dict[str, Any]:
+    try:
+        version_result = bounded_capture([str(binary), "--version"], work, env)
+        help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
+        if version_result.exit_code != 0 or help_result.exit_code != 0 or version_result.timed_out or help_result.timed_out or version_result.stdout_overflow or help_result.stdout_overflow:
+            raise ContractError("runtime version/help sensor is UNCHECKABLE")
+        version_output = sanitize_version_output(version_result.stdout)
+        help_bytes = help_result.stdout
+        help_text = help_bytes.decode("utf-8", errors="strict")
+        release_class = classify_release(version_output)
+        binary_sha256 = hash_regular_file(binary)
+        flags = {
+            "exec_json": "--json" in help_text,
+            "ephemeral": "--ephemeral" in help_text,
+            "strict_config": "--strict-config" in help_text,
+            "ignore_user_config": "--ignore-user-config" in help_text,
+            "workspace_write": "workspace-write" in help_text,
+            "model": "--model" in help_text,
+            "sandbox": "--sandbox" in help_text,
+        }
+    except PROFILE_BOUNDARY_EXCEPTIONS:
+        raise ProfileProbeError(
+            "client-evidence", "version-help-uncheckable",
+        ) from None
     if release_class == "stable":
         try:
             probe = probe_runtime_evidence(
@@ -4357,9 +4418,15 @@ def _observe_runtime_profile_bound(
         shell_probe = probe["shell_environment_probe"]
         evidence = probe["evidence"]
         if provider_input is not None and layout is not None:
-            containment = observe_colima_provider_evidence(
-                repository_root, provider_input, layout, binary_sha256, version_output, env,
-            )
+            try:
+                containment = observe_colima_provider_evidence(
+                    repository_root, provider_input, layout, binary_sha256,
+                    version_output, env,
+                )
+            except PROFILE_BOUNDARY_EXCEPTIONS:
+                raise ProfileProbeError(
+                    "provider-evidence", "observation-invalid",
+                ) from None
             evidence["containment_provider"] = containment
             evidence["lane_statuses"]["provider_isolation_status"] = containment["status"]
             evidence["lane_statuses"]["mount_boundary_status"] = mount_boundary_status_from_provider(containment)
@@ -4432,10 +4499,21 @@ def _observe_runtime_profile_bound(
 
 
 def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, provider_input: Optional[Mapping[str, Any]] = None, probe_only: bool = False) -> Dict[str, Any]:
-    require_runtime_fs_capabilities()
+    try:
+        require_runtime_fs_capabilities()
+    except PROFILE_BOUNDARY_EXCEPTIONS:
+        raise ProfileProbeError(
+            "runtime-capabilities", "capability-unavailable",
+        ) from None
     if provider_input is not None:
-        validate_colima_provider_input(provider_input)
-        layout = prepare_colima_runtime_layout()
+        try:
+            validate_colima_provider_input(provider_input)
+        except PROFILE_BOUNDARY_EXCEPTIONS:
+            raise ProfileProbeError("provider-input", "input-invalid") from None
+        try:
+            layout = prepare_colima_runtime_layout()
+        except PROFILE_BOUNDARY_EXCEPTIONS:
+            raise ProfileProbeError("runtime-layout", "layout-invalid") from None
         binary = layout.binary
         try:
             hash_regular_file(binary)
@@ -4502,9 +4580,19 @@ def cli_verify(repository_root: Path) -> Dict[str, Any]:
 
 
 def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, Any]:
-    require_runtime_fs_capabilities()
-    provider_input = decode_json_object(read_stdin_bounded(), "Colima provider input")
-    validate_colima_provider_input(provider_input)
+    try:
+        require_runtime_fs_capabilities()
+    except PROFILE_BOUNDARY_EXCEPTIONS:
+        raise ProfileProbeError(
+            "runtime-capabilities", "capability-unavailable",
+        ) from None
+    try:
+        provider_input = decode_json_object(
+            read_stdin_bounded(), "Colima provider input",
+        )
+        validate_colima_provider_input(provider_input)
+    except PROFILE_BOUNDARY_EXCEPTIONS:
+        raise ProfileProbeError("provider-input", "input-invalid") from None
     return observe_runtime_profile(
         repository_root, args.model, args.reasoning_effort, provider_input,
         probe_only=args.probe_only,
@@ -4548,8 +4636,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             raise ContractError("unsupported adapter command")
         sys.stdout.buffer.write(canonical_bytes(result))
         return 0
-    except (ContractError, OSError, subprocess.SubprocessError, UnicodeError, ValueError, KeyError, TypeError, RecursionError) as error:
-        sys.stdout.buffer.write(canonical_bytes(safe_error(str(error))))
+    except (ProfileProbeError, ContractError, OSError, subprocess.SubprocessError, UnicodeError, ValueError, KeyError, TypeError, RecursionError) as error:
+        sys.stdout.buffer.write(canonical_bytes(safe_error(error)))
         return 1
 
 

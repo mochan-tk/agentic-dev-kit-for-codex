@@ -754,6 +754,159 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 self.assertEqual("unavailable", observed["auth"]["class"])
                 self.assertFalse(observed["live_run_allowed"])
 
+    def test_profile_probe_outer_failures_use_only_fixed_safe_enums(self):
+        private_failure = self.adapter.ContractError(
+            "file:/Users/alice/private sk-proj-abcdefghijklmnopqrstuvwxyz0123456789"
+        )
+        self.assertEqual(
+            {
+                "schema": "codex-exec-adapter-error/v1",
+                "status": "fail",
+                "reason": "bounded runtime contract failure",
+            },
+            self.adapter.safe_error(private_failure),
+        )
+        for stage, reason_code in self.adapter.PROFILE_PROBE_FAILURES.items():
+            with self.subTest(stage=stage):
+                rendered = self.adapter.safe_error(
+                    self.adapter.ProfileProbeError(stage, reason_code),
+                )
+                self.assertEqual(
+                    {
+                        "schema": "codex-exec-adapter-error/v1",
+                        "status": "fail",
+                        "reason": "bounded runtime contract failure",
+                        "stage": stage,
+                        "reason_code": reason_code,
+                    },
+                    rendered,
+                )
+                serialized = json.dumps(rendered)
+                self.assertNotIn("alice", serialized)
+                self.assertNotIn("sk-proj", serialized)
+                self.assertNotRegex(serialized, r"/Users/|/home/|/tmp/")
+        self.assert_contract_error(
+            lambda: self.adapter.ProfileProbeError(
+                "runtime-layout", "not-an-allowed-reason",
+            ),
+            "classification",
+        )
+
+    def test_profile_probe_outer_boundaries_are_safely_classified(self):
+        provider_input = self.colima_provider_input()
+
+        with mock.patch.object(
+            self.adapter, "require_runtime_fs_capabilities",
+            side_effect=self.adapter.ContractError("private capability detail"),
+        ):
+            with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+                self.adapter.observe_runtime_profile(
+                    ROOT, "gpt-5.6-sol", "high", provider_input,
+                    probe_only=True,
+                )
+        self.assertEqual(
+            ("runtime-capabilities", "capability-unavailable"),
+            (raised.exception.stage, raised.exception.reason_code),
+        )
+
+        with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+            self.adapter.observe_runtime_profile(
+                ROOT, "gpt-5.6-sol", "high", {}, probe_only=True,
+            )
+        self.assertEqual(
+            ("provider-input", "input-invalid"),
+            (raised.exception.stage, raised.exception.reason_code),
+        )
+
+        with mock.patch.object(
+            self.adapter, "prepare_colima_runtime_layout",
+            side_effect=self.adapter.ContractError("private layout detail"),
+        ):
+            with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+                self.adapter.observe_runtime_profile(
+                    ROOT, "gpt-5.6-sol", "high", provider_input,
+                    probe_only=True,
+                )
+        self.assertEqual(
+            ("runtime-layout", "layout-invalid"),
+            (raised.exception.stage, raised.exception.reason_code),
+        )
+
+        layout = self.adapter.ColimaRuntimeLayout(
+            ROOT, ROOT, ROOT, ROOT, Path(sys.executable), "6" * 64, "7" * 64,
+        )
+        with mock.patch.object(
+            self.adapter, "bounded_capture",
+            side_effect=self.adapter.ContractError("private client detail"),
+        ):
+            with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+                self.adapter._observe_runtime_profile_bound(
+                    ROOT, "gpt-5.6-sol", "high", Path(sys.executable), ROOT,
+                    {}, provider_input, layout, probe_only=True,
+                )
+        self.assertEqual(
+            ("client-evidence", "version-help-uncheckable"),
+            (raised.exception.stage, raised.exception.reason_code),
+        )
+
+        stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
+        stable_version = b"codex-cli 0.150.1\n"
+
+        def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
+            del stdin_bytes, timeout
+            payload = stable_version if argv[-1] == "--version" else stable_help
+            return self.adapter.ProcessResult(
+                0, None, False, False, False, payload, 0, True,
+            )
+
+        common_patches = (
+            mock.patch.object(self.adapter, "bounded_capture", side_effect=capture),
+            mock.patch.object(
+                self.adapter, "probe_runtime_evidence",
+                return_value=self.passing_runtime_probe(),
+            ),
+            mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64),
+        )
+        with common_patches[0], common_patches[1], common_patches[2], \
+             mock.patch.object(
+                 self.adapter, "observe_colima_provider_evidence",
+                 side_effect=self.adapter.ContractError("private provider detail"),
+             ):
+            with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+                self.adapter._observe_runtime_profile_bound(
+                    ROOT, "gpt-5.6-sol", "high", Path(sys.executable), ROOT,
+                    {}, provider_input, layout, probe_only=True,
+                )
+        self.assertEqual(
+            ("provider-evidence", "observation-invalid"),
+            (raised.exception.stage, raised.exception.reason_code),
+        )
+
+        with mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+             mock.patch.object(
+                 self.adapter, "probe_runtime_evidence",
+                 return_value=self.passing_runtime_probe(),
+             ), mock.patch.object(
+                 self.adapter, "observe_colima_provider_evidence",
+                 return_value=self.passing_containment_evidence(),
+             ), mock.patch.object(
+                 self.adapter, "auth_class", return_value="unavailable",
+             ), mock.patch.object(
+                 self.adapter, "hash_regular_file", return_value="a" * 64,
+             ), mock.patch.object(
+                 self.adapter, "validate_runtime_profile",
+                 side_effect=self.adapter.ContractError("private profile detail"),
+             ):
+            with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+                self.adapter._observe_runtime_profile_bound(
+                    ROOT, "gpt-5.6-sol", "high", Path(sys.executable), ROOT,
+                    {}, provider_input, layout, probe_only=True,
+                )
+        self.assertEqual(
+            ("profile-validation", "profile-invalid"),
+            (raised.exception.stage, raised.exception.reason_code),
+        )
+
     def test_runtime_entrypoints_gate_capabilities_before_side_effects(self):
         with mock.patch.object(self.adapter, "require_runtime_fs_capabilities", side_effect=self.adapter.ContractError("capability gate")) as gate, \
              mock.patch.object(self.adapter, "validate_envelope") as validate, \
@@ -768,7 +921,14 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         with mock.patch.object(self.adapter, "require_runtime_fs_capabilities", side_effect=self.adapter.ContractError("capability gate")) as gate, \
              mock.patch.object(self.adapter, "resolve_executable_from_path") as which, \
              mock.patch.object(self.adapter.tempfile, "TemporaryDirectory") as temporary:
-            self.assert_contract_error(lambda: self.adapter.observe_runtime_profile(ROOT, "gpt-5.6-sol", "high"), "capability gate")
+            with self.assertRaises(self.adapter.ProfileProbeError) as raised:
+                self.adapter.observe_runtime_profile(
+                    ROOT, "gpt-5.6-sol", "high",
+                )
+            self.assertEqual(
+                ("runtime-capabilities", "capability-unavailable"),
+                (raised.exception.stage, raised.exception.reason_code),
+            )
         gate.assert_called_once()
         which.assert_not_called()
         temporary.assert_not_called()
