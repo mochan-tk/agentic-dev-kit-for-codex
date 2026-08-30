@@ -406,6 +406,29 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual(
             "codex/phase-2-minimal-execution-slice", contract["branch"],
         )
+        self.assertEqual("0077", contract["process_umask"])
+        self.assertEqual(
+            [
+                "/usr/bin/python3", "-I", "-c",
+                self.adapter.STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT,
+            ],
+            contract["umask_wrapper_argv"],
+        )
+        self.assertEqual("replace", contract["environment"]["policy"])
+        self.assertEqual(
+            self.adapter.STAGE_A1_GIT_FIXED_ENVIRONMENT,
+            contract["environment"]["fixed"],
+        )
+        self.assertEqual(
+            {
+                "wrapper_input_HOME": (
+                    "private-vm-absolute-empty-current-uid-mode-0700-no-follow"
+                ),
+                "git_child_HOME": "inherited-private-home-directory-descriptor",
+            },
+            contract["environment"]["dynamic"],
+        )
+        self.assertEqual([], contract["environment"]["inherited_keys"])
         self.assertEqual({
             "head": head, "tree": tree, "status_porcelain_v1_z": "empty",
         }, contract["expected_outputs"])
@@ -416,17 +439,20 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertNotIn("/Users/", rendered)
         self.assertNotIn("credential value", rendered)
         for argv in contract["argv_templates"]:
-            self.assertEqual("/usr/bin/git", argv[0])
+            self.assertEqual(contract["umask_wrapper_argv"], argv[:4])
+            self.assertEqual("/usr/bin/git", argv[4])
             self.assertIn("--no-replace-objects", argv)
             self.assertIn("core.hooksPath=/dev/null", argv)
             self.assertIn("credential.helper=", argv)
+            self.assertNotIn("/bin/sh", argv)
+            self.assertNotIn("/bin/bash", argv)
         digest = self.adapter.stage_a1_git_clone_contract_sha256(head, tree)
         self.assertEqual(
             self.adapter.sha256_bytes(self.adapter.canonical_bytes(contract)),
             digest,
         )
         self.assertEqual(
-            "960514bc6501c6b10aa63bd8907f91c883be8860c5d9134801e4458a3d11f80f",
+            "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
             digest,
         )
         self.assertNotEqual(
@@ -441,6 +467,344 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda: self.adapter.stage_a1_git_clone_contract("short", tree),
             "head",
         )
+
+    def test_stage_a1_private_umask_wrapper_is_shell_free_and_effective(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source"
+            target = Path(temporary) / "target"
+            role = source / self.adapter.STATIC_ROLE_PATH
+            role.parent.mkdir(parents=True)
+            role.write_bytes((ROOT / self.adapter.STATIC_ROLE_PATH).read_bytes())
+            envelope_relative = "tests/runtime/fixtures/envelope-valid.v1.json"
+            envelope = source / envelope_relative
+            envelope.parent.mkdir(parents=True)
+            envelope.write_bytes((ROOT / envelope_relative).read_bytes())
+            executable = source / "tool.sh"
+            executable.write_bytes(b"#!/bin/sh\nexit 0\n")
+            os.chmod(executable, 0o755)
+            for argv in (
+                ["/usr/bin/git", "init", "--quiet", str(source)],
+                [
+                    "/usr/bin/git", "-C", str(source), "checkout", "--quiet",
+                    "-b", self.adapter.T11_PUBLIC_BRANCH,
+                ],
+                ["/usr/bin/git", "-C", str(source), "add", "."],
+                [
+                    "/usr/bin/git", "-C", str(source),
+                    "-c", "user.name=T11 Test", "-c", "user.email=t11@example.invalid",
+                    "commit", "--quiet", "-m", "fixture",
+                ],
+            ):
+                subprocess.run(
+                    argv, cwd=ROOT, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, timeout=15, check=True,
+                )
+            head = subprocess.run(
+                ["/usr/bin/git", "-C", str(source), "rev-parse", "HEAD"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=15, check=True,
+            ).stdout.strip().decode("ascii")
+            tree = subprocess.run(
+                ["/usr/bin/git", "-C", str(source), "rev-parse", "HEAD^{tree}"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=15, check=True,
+            ).stdout.strip().decode("ascii")
+            base_python = (
+                Path(sys.base_prefix) / "bin"
+                / ("python" + str(sys.version_info.major) + "." + str(sys.version_info.minor))
+            )
+            self.assertTrue(base_python.is_file())
+            wrapper = [
+                str(base_python), "-I", "-c",
+                self.adapter.STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT,
+            ]
+            private_home = Path(temporary) / "private-home"
+            private_home.mkdir(mode=0o700)
+            git_environment = dict(self.adapter.STAGE_A1_GIT_FIXED_ENVIRONMENT)
+            git_environment["HOME"] = str(private_home)
+            prefix = [
+                "/usr/bin/git", "--no-replace-objects",
+                "-c", "core.hooksPath=/dev/null",
+                "-c", "credential.helper=",
+            ]
+            clone = subprocess.run(
+                [
+                    *wrapper, *prefix, "clone", "--quiet", "--no-checkout",
+                    "--single-branch", "--branch", self.adapter.T11_PUBLIC_BRANCH,
+                    str(source), str(target),
+                ],
+                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=15, env=git_environment,
+            )
+            self.assertEqual(0, clone.returncode, clone.stderr)
+            checkout = subprocess.run(
+                [*wrapper, *prefix, "-C", str(target), "checkout", "--detach", head],
+                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=15, env=git_environment,
+            )
+            self.assertEqual(0, checkout.returncode, checkout.stderr)
+            checked_out_role = target / self.adapter.STATIC_ROLE_PATH
+            checked_out_envelope = target / envelope_relative
+            self.assertEqual(0o600, stat.S_IMODE(checked_out_role.stat().st_mode))
+            self.assertEqual(0o600, stat.S_IMODE(checked_out_envelope.stat().st_mode))
+            self.assertEqual(0o700, stat.S_IMODE((target / "tool.sh").stat().st_mode))
+            self.assertEqual(0o700, stat.S_IMODE(checked_out_role.parent.stat().st_mode))
+            observed = []
+            for suffix in (
+                ["rev-parse", "--verify", "HEAD"],
+                ["rev-parse", "--verify", "HEAD^{tree}"],
+                ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            ):
+                result = subprocess.run(
+                    [*wrapper, *prefix, "-C", str(target), *suffix],
+                    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    timeout=15, env=git_environment,
+                )
+                self.assertEqual(0, result.returncode, result.stderr)
+                observed.append(result.stdout)
+            self.assertEqual(head.encode("ascii"), observed[0].strip())
+            self.assertEqual(tree.encode("ascii"), observed[1].strip())
+            self.assertEqual(b"", observed[2])
+            self.assertEqual(
+                self.adapter.extract_static_role(ROOT),
+                self.adapter.extract_static_role(target),
+            )
+            self.adapter.extract_static_role(
+                target, require_private_projection=True,
+            )
+            self.assertEqual(
+                self.envelope,
+                self.adapter.load_repository_json(target, envelope_relative),
+            )
+            self.assertEqual(
+                self.envelope,
+                self.adapter.load_repository_json(
+                    target, envelope_relative,
+                    require_private_projection=True,
+                ),
+            )
+            for accepted_mode in (0o600, 0o644):
+                os.chmod(checked_out_envelope, accepted_mode)
+                self.assertEqual(
+                    self.envelope,
+                    self.adapter.load_repository_json(target, envelope_relative),
+                )
+                if accepted_mode == 0o600:
+                    self.adapter.load_repository_json(
+                        target, envelope_relative,
+                        require_private_projection=True,
+                    )
+                else:
+                    self.assert_contract_error(
+                        lambda: self.adapter.load_repository_json(
+                            target, envelope_relative,
+                            require_private_projection=True,
+                        ),
+                        "mode",
+                    )
+            for rejected_mode in (0o660, 0o664, 0o620, 0o602):
+                os.chmod(checked_out_envelope, rejected_mode)
+                self.assert_contract_error(
+                    lambda: self.adapter.load_repository_json(
+                        target, envelope_relative,
+                    ),
+                    "non-writable",
+                )
+            os.chmod(checked_out_envelope, 0o600)
+            envelope_alias = target / "envelope-alias.json"
+            os.link(checked_out_envelope, envelope_alias)
+            self.assert_contract_error(
+                lambda: self.adapter.load_repository_json(
+                    target, envelope_relative,
+                ),
+                "single-link",
+            )
+            envelope_alias.unlink()
+            checker_errors = []
+            self.assertEqual(
+                checked_out_role.read_bytes(),
+                self.checker.read_regular(
+                    target, self.adapter.STATIC_ROLE_PATH, checker_errors,
+                ),
+            )
+            self.assertEqual([], checker_errors)
+            for accepted_mode in (0o600, 0o644):
+                os.chmod(checked_out_role, accepted_mode)
+                self.adapter.extract_static_role(target)
+                if accepted_mode == 0o600:
+                    self.adapter.extract_static_role(
+                        target, require_private_projection=True,
+                    )
+                else:
+                    self.assert_contract_error(
+                        lambda: self.adapter.extract_static_role(
+                            target, require_private_projection=True,
+                        ),
+                        "mode",
+                    )
+                checker_errors = []
+                self.assertTrue(self.checker.read_regular(
+                    target, self.adapter.STATIC_ROLE_PATH, checker_errors,
+                ))
+                self.assertEqual([], checker_errors)
+            for rejected_mode in (0o660, 0o664, 0o620, 0o602):
+                os.chmod(checked_out_role, rejected_mode)
+                self.assert_contract_error(
+                    lambda: self.adapter.extract_static_role(target), "mode",
+                )
+                checker_errors = []
+                self.assertEqual(
+                    b"", self.checker.read_regular(
+                        target, self.adapter.STATIC_ROLE_PATH, checker_errors,
+                    ),
+                )
+                self.assertTrue(checker_errors)
+            os.chmod(checked_out_role, 0o600)
+            role_alias = target / "role-alias.toml"
+            os.link(checked_out_role, role_alias)
+            self.assert_contract_error(
+                lambda: self.adapter.extract_static_role(target),
+                "single-link",
+            )
+            checker_errors = []
+            self.assertEqual(
+                b"", self.checker.read_regular(
+                    target, self.adapter.STATIC_ROLE_PATH, checker_errors,
+                ),
+            )
+            self.assertTrue(checker_errors)
+            role_alias.unlink()
+            checked_out_role.unlink()
+            checked_out_role.symlink_to(ROOT / self.adapter.STATIC_ROLE_PATH)
+            self.assert_contract_error(
+                lambda: self.adapter.extract_static_role(target), "regular",
+            )
+            checker_errors = []
+            self.assertEqual(
+                b"", self.checker.read_regular(
+                    target, self.adapter.STATIC_ROLE_PATH, checker_errors,
+                ),
+            )
+            self.assertTrue(checker_errors)
+            wrong_target = subprocess.run(
+                [
+                    str(base_python), "-I", "-c",
+                    self.adapter.STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT,
+                    str(base_python), "-c", "pass",
+                ],
+                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=15, env=git_environment,
+            )
+            self.assertEqual(64, wrong_target.returncode)
+            self.assertEqual(b"", wrong_target.stdout)
+            self.assertEqual(b"", wrong_target.stderr)
+            for poisoned_name in (
+                "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE",
+                "GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS",
+                "GIT_CONFIG_GLOBAL", "GIT_EXEC_PATH",
+                "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+                "GIT_TEMPLATE_DIR", "GIT_ASKPASS", "SSH_AUTH_SOCK",
+            ):
+                poisoned = dict(git_environment)
+                poisoned[poisoned_name] = "unexpected"
+                rejected = subprocess.run(
+                    [*wrapper, "/usr/bin/git", "--version"],
+                    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    timeout=15, env=poisoned,
+                )
+                self.assertEqual(64, rejected.returncode, poisoned_name)
+                self.assertEqual(b"", rejected.stdout)
+                self.assertEqual(b"", rejected.stderr)
+            missing_environment_cases = (
+                {key: value for key, value in git_environment.items() if key != "HOME"},
+                {
+                    key: value for key, value in git_environment.items()
+                    if key != "GIT_CONFIG_NOSYSTEM"
+                },
+            )
+            for incomplete in missing_environment_cases:
+                rejected = subprocess.run(
+                    [*wrapper, "/usr/bin/git", "--version"],
+                    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    timeout=15, env=incomplete,
+                )
+                self.assertEqual(64, rejected.returncode)
+                self.assertEqual(b"", rejected.stdout)
+                self.assertEqual(b"", rejected.stderr)
+            def assert_home_rejected(home_value):
+                invalid = dict(git_environment)
+                invalid["HOME"] = str(home_value)
+                rejected = subprocess.run(
+                    [*wrapper, "/usr/bin/git", "--version"],
+                    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    timeout=15, env=invalid,
+                )
+                self.assertEqual(64, rejected.returncode)
+                self.assertEqual(b"", rejected.stdout)
+                self.assertEqual(b"", rejected.stderr)
+
+            assert_home_rejected("relative-home")
+            assert_home_rejected("/")
+            linked_home = Path(temporary) / "linked-home"
+            linked_home.symlink_to(private_home, target_is_directory=True)
+            assert_home_rejected(linked_home)
+            os.chmod(private_home, 0o755)
+            assert_home_rejected(private_home)
+            os.chmod(private_home, 0o700)
+            for name in (".gitconfig", ".netrc"):
+                injected = private_home / name
+                injected.write_bytes(b"unreviewed\n")
+                assert_home_rejected(private_home)
+                injected.unlink()
+
+    def test_governed_input_mode_and_link_transitions_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / "governed.json"
+            target.write_bytes(b'{"schema":"fixture"}\n')
+            os.chmod(target, 0o600)
+            real_open = self.adapter.os.open
+
+            def writable_before_open(path, flags, *args, **kwargs):
+                os.chmod(target, 0o664)
+                return real_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(
+                self.adapter, "require_runtime_fs_capabilities",
+            ), mock.patch.object(
+                self.adapter.os, "open", side_effect=writable_before_open,
+            ):
+                self.assert_contract_error(
+                    lambda: self.adapter.read_bounded_regular(
+                        target, 1024, allowed_modes=(0o600, 0o644),
+                        require_single_link=True,
+                    ),
+                    "mode",
+                )
+
+            os.chmod(target, 0o600)
+            alias = Path(temporary) / "governed-alias.json"
+            real_read = self.adapter.os.read
+            linked = False
+
+            def link_during_read(descriptor, size):
+                nonlocal linked
+                if not linked:
+                    os.link(target, alias)
+                    linked = True
+                return real_read(descriptor, size)
+
+            with mock.patch.object(
+                self.adapter, "require_runtime_fs_capabilities",
+            ), mock.patch.object(
+                self.adapter.os, "read", side_effect=link_during_read,
+            ):
+                self.assert_contract_error(
+                    lambda: self.adapter.read_bounded_regular(
+                        target, 1024, allowed_modes=(0o600, 0o644),
+                        require_single_link=True,
+                    ),
+                    "changed",
+                )
 
     def test_stage_a1_controller_and_non_root_smoke_argv_are_exact_and_safe(self):
         self.assertEqual((
@@ -716,7 +1080,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             if tuple(argv) == self.adapter.STAGE_A1_LOADED_PROFILES_ARGV:
                 return self.adapter.ProcessResult(
                     0, None, False, False, False,
-                    b"bwrap (enforce)\nbwrap//&unpriv_bwrap (enforce)\n", 0, True,
+                    b"bwrap (enforce)\nunpriv_bwrap (enforce)\n", 0, True,
                 )
             raise AssertionError(list(argv))
 
@@ -757,6 +1121,72 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("none", observed["smoke"]["reason_code"])
         self.assertFalse(observed["smoke"]["raw_stdout_recorded"])
         self.assertFalse(observed["smoke"]["raw_stderr_recorded"])
+
+        stacked_only = self.adapter._stage_a1_profile_load_status(
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                b"bwrap (enforce)\nbwrap//&unpriv_bwrap (enforce)\n",
+                0, True,
+            )
+        )
+        self.assertEqual("not-loaded", stacked_only)
+        self.assertEqual(
+            "UNCHECKABLE",
+            self.adapter._stage_a1_profile_load_status(
+                self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    b"bwrap (enforce)\nunpriv_bwrap (enforce)\n", 1, True,
+                )
+            ),
+        )
+        for missing in (b"bwrap (enforce)\n", b"unpriv_bwrap (enforce)\n"):
+            with self.subTest(missing_source_profile=missing):
+                self.assertEqual(
+                    "not-loaded",
+                    self.adapter._stage_a1_profile_load_status(
+                        self.adapter.ProcessResult(
+                            0, None, False, False, False,
+                            missing, 0, True,
+                        )
+                    ),
+                )
+        self.assertEqual(
+            "not-loaded",
+            self.adapter._stage_a1_profile_load_status(
+                self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    b"bwrap (complain)\nunpriv_bwrap (complain)\n", 0, True,
+                )
+            ),
+        )
+        uncheckable_profile_results = (
+            self.adapter.ProcessResult(
+                1, None, False, False, False,
+                b"bwrap (enforce)\nunpriv_bwrap (enforce)\n", 0, True,
+            ),
+            self.adapter.ProcessResult(
+                None, None, True, False, False, b"", 0, True,
+            ),
+            self.adapter.ProcessResult(
+                0, None, False, True, False, b"", 0, True,
+            ),
+            self.adapter.ProcessResult(
+                0, None, False, False, True, b"", 0, True,
+            ),
+            self.adapter.ProcessResult(
+                0, None, False, False, False, b"\xff", 0, True,
+            ),
+            self.adapter.ProcessResult(
+                0, None, False, False, False,
+                b"bwrap (enforce)\nunpriv_bwrap (enforce)\n", 0, False,
+            ),
+        )
+        for unsafe_result in uncheckable_profile_results:
+            with self.subTest(unsafe_profile_result=unsafe_result):
+                self.assertEqual(
+                    "UNCHECKABLE",
+                    self.adapter._stage_a1_profile_load_status(unsafe_result),
+                )
 
         for query, valid_payload in (
             (
@@ -1784,7 +2214,9 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                      mock.patch.object(self.adapter, "prepare_colima_runtime_layout", return_value=layout), \
                      mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
                      mock.patch.object(self.adapter, "observe_stage_a1_prerequisite", return_value=self.passing_stage_a1_prerequisite()), \
-                     mock.patch.object(self.adapter, "probe_runtime_evidence", return_value=probe), \
+                     mock.patch.object(
+                         self.adapter, "probe_runtime_evidence", return_value=probe,
+                     ) as probe_sensor, \
                      mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=containment), \
                      mock.patch.object(self.adapter, "auth_class", return_value="unavailable"), \
                      mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64), \
@@ -1793,6 +2225,9 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                         ROOT, "gpt-5.6-sol", "high", provider_input,
                         probe_only=True,
                     )
+                self.assertTrue(
+                    probe_sensor.call_args.kwargs["require_private_projection"],
+                )
                 self.assertEqual(expected_status, observed["status"])
                 self.assertEqual(
                     "pass",
@@ -2362,6 +2797,13 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 )
 
     def test_worker_argv_failure_is_fixed_stage_and_reason_only(self):
+        private_projection = self.adapter.exact_worker_argv_evidence(
+            Path("/reviewed/codex"), ROOT, ROOT, {},
+            require_private_projection=True,
+        )
+        self.assertEqual("fail", private_projection["status"])
+        self.assertEqual("load-envelope", private_projection["stage"])
+        self.assertEqual("envelope-invalid", private_projection["reason_code"])
         with mock.patch.object(
             self.adapter, "load_repository_json",
             side_effect=self.adapter.ContractError("file:/Users/alice/private/envelope"),

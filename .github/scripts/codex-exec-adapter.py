@@ -142,6 +142,52 @@ APPROVED_APPARMOR_PACKAGE_VERSION = "4.0.1really4.0.1-0ubuntu0.24.04.7"
 APPROVED_BWRAP_PROFILE_SHA256 = "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
 STAGE_A1_BWRAP_BINARY = "/usr/bin/bwrap"
 STAGE_A1_GIT_BINARY = "/usr/bin/git"
+STAGE_A1_GIT_FIXED_ENVIRONMENT = {
+    "GIT_ATTR_NOSYSTEM": "1",
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "GIT_TERMINAL_PROMPT": "0",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "PATH": "/usr/bin:/bin",
+    "TZ": "UTC",
+}
+STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT = (
+    "import os,stat,sys\n"
+    "def fail(): os._exit(64)\n"
+    "def empty(fd):\n"
+    " with os.scandir(fd) as entries: return next(entries,None) is None\n"
+    "fixed={'GIT_ATTR_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':'/dev/null',"
+    "'GIT_CONFIG_NOSYSTEM':'1','GIT_OPTIONAL_LOCKS':'0',"
+    "'GIT_TERMINAL_PROMPT':'0','LANG':'C.UTF-8','LC_ALL':'C.UTF-8',"
+    "'PATH':'/usr/bin:/bin','TZ':'UTC'}\n"
+    "allowed=set(fixed)|{'HOME'}\n"
+    "extra=set(os.environ)-allowed\n"
+    "home=os.environ.get('HOME','')\n"
+    "if not (len(sys.argv)>1 and sys.argv[1]=='/usr/bin/git' "
+    "and (not extra or (sys.platform=='darwin' and extra=={'__CF_USER_TEXT_ENCODING'})) "
+    "and all(os.environ.get(k)==v for k,v in fixed.items()) "
+    "and os.path.isabs(home) and '\\x00' not in home): fail()\n"
+    "try:\n"
+    " flags=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW\n"
+    " home_fd=os.open(home,flags)\n"
+    " info=os.fstat(home_fd)\n"
+    " if not (stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode)==0o700 "
+    "and info.st_uid==os.getuid() and empty(home_fd)): fail()\n"
+    " after=os.fstat(home_fd)\n"
+    " if (after.st_dev,after.st_ino,after.st_mtime_ns,after.st_ctime_ns)!="
+    "(info.st_dev,info.st_ino,info.st_mtime_ns,info.st_ctime_ns): fail()\n"
+    " rebound=os.stat(home,follow_symlinks=False)\n"
+    " if (rebound.st_dev,rebound.st_ino)!=(info.st_dev,info.st_ino): fail()\n"
+    " os.set_inheritable(home_fd,True)\n"
+    " projection=('/proc/self/fd/' if sys.platform.startswith('linux') "
+    "else '/dev/fd/')+str(home_fd)\n"
+    " child=dict(fixed); child['HOME']=projection\n"
+    " os.umask(0o077)\n"
+    " os.execve(sys.argv[1],sys.argv[1:],child)\n"
+    "except (OSError,ValueError,TypeError,AttributeError): fail()\n"
+)
 STAGE_A1_OS_RELEASE = "/usr/lib/os-release"
 STAGE_A1_APPARMOR_ENABLED = "/sys/module/apparmor/parameters/enabled"
 STAGE_A1_APPARMOR_USERNS_RESTRICTION = (
@@ -416,6 +462,8 @@ def read_bounded_regular(
     max_bytes: int,
     expected_mode: Optional[int] = None,
     max_advertised_bytes: Optional[int] = None,
+    allowed_modes: Optional[Sequence[int]] = None,
+    require_single_link: bool = False,
 ) -> bytes:
     require_runtime_fs_capabilities()
     if (
@@ -429,6 +477,22 @@ def read_bounded_regular(
         )
     ):
         raise ContractError("bounded input size policy is invalid")
+    if type(require_single_link) is not bool:
+        raise ContractError("bounded input link policy is invalid")
+    if (
+        allowed_modes is not None
+        and (
+            expected_mode is not None
+            or not isinstance(allowed_modes, tuple)
+            or not allowed_modes
+            or any(type(mode) is not int for mode in allowed_modes)
+            or len(set(allowed_modes)) != len(allowed_modes)
+        )
+    ):
+        raise ContractError("bounded input mode policy is invalid")
+    reviewed_modes = (
+        (expected_mode,) if expected_mode is not None else allowed_modes
+    )
     advertised_limit = (
         max_bytes if max_advertised_bytes is None else max_advertised_bytes
     )
@@ -441,7 +505,12 @@ def read_bounded_regular(
         or named_before.st_size > advertised_limit
     ):
         raise ContractError("bounded input is not a regular file or exceeds its limit")
-    if expected_mode is not None and stat.S_IMODE(named_before.st_mode) != expected_mode:
+    if require_single_link and named_before.st_nlink != 1:
+        raise ContractError("bounded input is not single-link")
+    if (
+        reviewed_modes is not None
+        and stat.S_IMODE(named_before.st_mode) not in reviewed_modes
+    ):
         raise ContractError("bounded input mode drifted")
     flags = os.O_RDONLY
     if hasattr(os, "O_NOFOLLOW"):
@@ -456,6 +525,13 @@ def read_bounded_regular(
         opened_before = os.fstat(descriptor)
         if not stat.S_ISREG(opened_before.st_mode) or (opened_before.st_dev, opened_before.st_ino) != (named_before.st_dev, named_before.st_ino):
             raise ContractError("bounded input binding changed before read")
+        if require_single_link and opened_before.st_nlink != 1:
+            raise ContractError("bounded input link count drifted before read")
+        if (
+            reviewed_modes is not None
+            and stat.S_IMODE(opened_before.st_mode) not in reviewed_modes
+        ):
+            raise ContractError("bounded input mode drifted before read")
         data = bytearray()
         while len(data) <= max_bytes:
             chunk = os.read(descriptor, min(65_536, max_bytes + 1 - len(data)))
@@ -465,13 +541,40 @@ def read_bounded_regular(
         if len(data) > max_bytes:
             raise ContractError("bounded input exceeds its byte limit")
         opened_after = os.fstat(descriptor)
-        if (opened_after.st_dev, opened_after.st_ino, opened_after.st_size, opened_after.st_mtime_ns) != (opened_before.st_dev, opened_before.st_ino, opened_before.st_size, opened_before.st_mtime_ns):
+        if (
+            (opened_after.st_dev, opened_after.st_ino, opened_after.st_size, opened_after.st_mtime_ns)
+            != (opened_before.st_dev, opened_before.st_ino, opened_before.st_size, opened_before.st_mtime_ns)
+            or stat.S_IMODE(opened_after.st_mode)
+            != stat.S_IMODE(opened_before.st_mode)
+            or (
+                require_single_link
+                and opened_after.st_nlink != opened_before.st_nlink
+            )
+        ):
             raise ContractError("bounded input changed while reading")
+        if (
+            reviewed_modes is not None
+            and stat.S_IMODE(opened_after.st_mode) not in reviewed_modes
+        ):
+            raise ContractError("bounded input mode drifted while reading")
     finally:
         os.close(descriptor)
     named_after = os.stat(str(path), follow_symlinks=False)
-    if (named_after.st_dev, named_after.st_ino, named_after.st_size, named_after.st_mtime_ns) != (named_before.st_dev, named_before.st_ino, named_before.st_size, named_before.st_mtime_ns):
+    if (
+        (named_after.st_dev, named_after.st_ino, named_after.st_size, named_after.st_mtime_ns)
+        != (named_before.st_dev, named_before.st_ino, named_before.st_size, named_before.st_mtime_ns)
+        or stat.S_IMODE(named_after.st_mode) != stat.S_IMODE(named_before.st_mode)
+        or (
+            require_single_link
+            and named_after.st_nlink != named_before.st_nlink
+        )
+    ):
         raise ContractError("bounded input namespace changed after read")
+    if (
+        reviewed_modes is not None
+        and stat.S_IMODE(named_after.st_mode) not in reviewed_modes
+    ):
+        raise ContractError("bounded input mode drifted after read")
     return bytes(data)
 
 
@@ -705,6 +808,10 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         STAGE_A1_GIT_BINARY, "--no-replace-objects",
         "-c", "core.hooksPath=/dev/null", "-c", "credential.helper=",
     ]
+    umask_wrapper = [
+        "/usr/bin/python3", "-I", "-c",
+        STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT,
+    ]
     return {
         "schema": "t11-git-clone-contract/v1",
         "authority": "reviewed-static-contract",
@@ -715,24 +822,38 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "git_binary": STAGE_A1_GIT_BINARY,
         "git_binary_sha256": APPROVED_GIT_BINARY_SHA256,
         "shell": False,
+        "process_umask": "0077",
+        "umask_wrapper_argv": umask_wrapper,
         "environment": {
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_TERMINAL_PROMPT": "0",
-            "credential_helper": "disabled",
+            "policy": "replace",
+            "fixed": dict(STAGE_A1_GIT_FIXED_ENVIRONMENT),
+            "dynamic": {
+                "wrapper_input_HOME": (
+                    "private-vm-absolute-empty-current-uid-mode-0700-no-follow"
+                ),
+                "git_child_HOME": "inherited-private-home-directory-descriptor",
+            },
+            "inherited_keys": [],
+            "credential_helper": "disabled-by-argv",
             "ssh_agent": "absent",
-            "home": "private-vm",
         },
         "destination": "private-vm-disk",
         "host_repository_mounted": False,
         "argv_templates": [
-            prefix + [
+            umask_wrapper + prefix + [
                 "clone", "--no-checkout", "--single-branch", "--branch",
                 T11_PUBLIC_BRANCH, repository_url, target,
             ],
-            prefix + ["-C", target, "checkout", "--detach", head],
-            prefix + ["-C", target, "rev-parse", "--verify", "HEAD"],
-            prefix + ["-C", target, "rev-parse", "--verify", "HEAD^{tree}"],
-            prefix + [
+            umask_wrapper + prefix + [
+                "-C", target, "checkout", "--detach", head,
+            ],
+            umask_wrapper + prefix + [
+                "-C", target, "rev-parse", "--verify", "HEAD",
+            ],
+            umask_wrapper + prefix + [
+                "-C", target, "rev-parse", "--verify", "HEAD^{tree}",
+            ],
+            umask_wrapper + prefix + [
                 "-C", target, "status", "--porcelain=v1", "-z",
                 "--untracked-files=all",
             ],
@@ -1330,14 +1451,14 @@ def _parse_stage_a1_os_release(data: bytes) -> Dict[str, str]:
 def _stage_a1_profile_load_status(result: "ProcessResult") -> str:
     if (
         result.exit_code != 0 or result.timed_out or result.stdout_overflow
-        or result.stderr_overflow or not result.reaped
+        or result.stderr_overflow or result.stderr_size or not result.reaped
     ):
         return "UNCHECKABLE"
     try:
         lines = set(result.stdout.decode("utf-8", errors="strict").splitlines())
     except UnicodeDecodeError:
         return "UNCHECKABLE"
-    required = {"bwrap (enforce)", "bwrap//&unpriv_bwrap (enforce)"}
+    required = {"bwrap (enforce)", "unpriv_bwrap (enforce)"}
     return "enforce" if required.issubset(lines) else "not-loaded"
 
 
@@ -2695,9 +2816,18 @@ def validate_execution_result(
     return value
 
 
-def extract_static_role(repository_root: Path) -> str:
+def extract_static_role(
+    repository_root: Path,
+    require_private_projection: bool = False,
+) -> str:
+    if type(require_private_projection) is not bool:
+        raise ContractError("static role projection policy is invalid")
     role_path = repository_root / STATIC_ROLE_PATH
-    data = read_bounded_regular(role_path, 65_536, 0o644)
+    data = read_bounded_regular(
+        role_path, 65_536,
+        allowed_modes=(0o600,) if require_private_projection else (0o600, 0o644),
+        require_single_link=True,
+    )
     try:
         text = data.decode("utf-8", errors="strict")
     except UnicodeDecodeError:
@@ -4168,8 +4298,18 @@ def validate_runtime_argv_policy(argv: Sequence[str], require_memory_overrides: 
                 raise ContractError("runtime argv must set documented memory key false: " + key)
 
 
-def build_live_argv(binary: Path, target_root: Path, repository_root: Path, envelope: Mapping[str, Any], environment: Optional[Mapping[str, str]] = None) -> List[str]:
-    role = extract_static_role(repository_root)
+def build_live_argv(
+    binary: Path,
+    target_root: Path,
+    repository_root: Path,
+    envelope: Mapping[str, Any],
+    environment: Optional[Mapping[str, str]] = None,
+    require_private_projection: bool = False,
+) -> List[str]:
+    role = extract_static_role(
+        repository_root,
+        require_private_projection=require_private_projection,
+    )
     worker = envelope["worker"]
     if environment is None:
         environment = {
@@ -4540,7 +4680,10 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         if mode == "offline":
             worker_argv = [sys.executable, "-I", str((repository_root / FAKE_PATH).resolve())]
         else:
-            worker_argv = build_live_argv(executable, target_root, repository_root, envelope, environment)
+            worker_argv = build_live_argv(
+                executable, target_root, repository_root, envelope,
+                environment, require_private_projection=True,
+            )
         prompt = static_prompt(envelope)
         if mode == "live":
             assert layout is not None
@@ -4978,6 +5121,7 @@ def exact_worker_argv_evidence(
     root: Path,
     repository_root: Path,
     env: Mapping[str, str],
+    require_private_projection: bool = False,
 ) -> Dict[str, Any]:
     def failed(stage: str, reason_code: str) -> Dict[str, Any]:
         return {
@@ -4989,6 +5133,7 @@ def exact_worker_argv_evidence(
     try:
         envelope = load_repository_json(
             repository_root, "tests/runtime/fixtures/envelope-valid.v1.json",
+            require_private_projection=require_private_projection,
         )
     except (ContractError, OSError, KeyError, TypeError, ValueError):
         return failed("load-envelope", "envelope-invalid")
@@ -4997,7 +5142,10 @@ def exact_worker_argv_evidence(
     except (ContractError, OSError, KeyError, TypeError, ValueError):
         return failed("schema-binding", "schema-binding-invalid")
     try:
-        extract_static_role(repository_root)
+        extract_static_role(
+            repository_root,
+            require_private_projection=require_private_projection,
+        )
     except (ContractError, OSError, UnicodeError):
         return failed("load-static-role", "static-role-invalid")
     try:
@@ -5012,7 +5160,10 @@ def exact_worker_argv_evidence(
     except (ContractError, OSError):
         return failed("filesystem-binding", "filesystem-binding-invalid")
     try:
-        argv = build_live_argv(binary, root, repository_root, envelope, env)
+        argv = build_live_argv(
+            binary, root, repository_root, envelope, env,
+            require_private_projection=require_private_projection,
+        )
     except (ContractError, OSError, KeyError, TypeError, ValueError):
         return failed("build-argv", "argv-build-failed")
     try:
@@ -5126,6 +5277,7 @@ def probe_runtime_evidence(
     repository_root: Path,
     auth_required: bool = True,
     prerequisite_evidence: Optional[Mapping[str, Any]] = None,
+    require_private_projection: bool = False,
 ) -> Dict[str, Any]:
     """Collect bounded independent lanes; no lane claims effective config."""
     prerequisite = validate_stage_a1_prerequisite_evidence(
@@ -5162,7 +5314,10 @@ def probe_runtime_evidence(
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             pass
 
-    worker_evidence = exact_worker_argv_evidence(binary, root, repository_root, env)
+    worker_evidence = exact_worker_argv_evidence(
+        binary, root, repository_root, env,
+        require_private_projection=require_private_projection,
+    )
     prerequisite_pass = prerequisite["status"] == "pass"
     if not prerequisite_pass:
         shell_status = "not-run"
@@ -5470,6 +5625,7 @@ def _observe_runtime_profile_bound_inner(
             probe = probe_runtime_evidence(
                 binary, work, env, repository_root, auth_required=not probe_only,
                 prerequisite_evidence=prerequisite,
+                require_private_projection=provider_input is not None,
             )
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             uncheckable = not_run_runtime_evidence()
@@ -5621,13 +5777,27 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, p
         )
 
 
-def load_repository_json(repository_root: Path, relative: str, max_bytes: int = MAX_STDIN_BYTES) -> Dict[str, Any]:
+def load_repository_json(
+    repository_root: Path,
+    relative: str,
+    max_bytes: int = MAX_STDIN_BYTES,
+    require_private_projection: bool = False,
+) -> Dict[str, Any]:
     require_runtime_fs_capabilities()
+    if type(require_private_projection) is not bool:
+        raise ContractError(relative + " projection policy is invalid")
     path = repository_root / relative
     info = os.stat(str(path), follow_symlinks=False)
     if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) & 0o022 or info.st_size > max_bytes:
         raise ContractError(relative + " is not a bounded non-writable regular file")
-    return decode_json_object(read_bounded_regular(path, max_bytes), relative)
+    return decode_json_object(
+        read_bounded_regular(
+            path, max_bytes,
+            allowed_modes=(0o600,) if require_private_projection else (0o600, 0o644),
+            require_single_link=True,
+        ),
+        relative,
+    )
 
 
 def cli_run(args: argparse.Namespace, repository_root: Path) -> Dict[str, Any]:

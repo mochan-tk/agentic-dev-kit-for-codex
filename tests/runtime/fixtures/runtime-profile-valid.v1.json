@@ -101,7 +101,7 @@
       "repository_clean": true,
       "repository_git_bootstrap": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "git", "package_version": "1:2.43.0-1ubuntu7.3", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942", "version_output": "git version 2.43.0", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false},
       "repository_git_bootstrap_runtime_match": true,
-      "repository_git_clone_contract_sha256": "960514bc6501c6b10aa63bd8907f91c883be8860c5d9134801e4458a3d11f80f",
+      "repository_git_clone_contract_sha256": "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
       "codex_version_output": "codex-cli 0.150.1",
       "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
       "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",

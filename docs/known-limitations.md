@@ -66,15 +66,33 @@ re-observed after clone and before the adapter's first repository Git command;
 it is owner/controller-authored evidence, not a Codex attestation or independent
 proof of pre-clone chronology. A separate exact head/tree-derived clone-contract
 digest is recomputed, and every provider Git operation revalidates and uses the
-fixed root-owned `/usr/bin/git` rather than re-resolving PATH. It also
+fixed root-owned `/usr/bin/git` rather than re-resolving PATH. The clone
+contract also binds a static shell-free `python3 -I` exec wrapper restricted to
+`/usr/bin/git` and private process umask `0077`; this projects tracked
+non-executable files as `0600` and prevents the guest SSH default umask from
+making governed fixed inputs group-writable. Provider-bound Stage A/live
+evidence requires exact `0600`; ordinary offline/checker reads may also accept
+`0644`. Both projections are single-link and non-writable outside the owner,
+Git tree mode `100644` stays canonical, and repository JSON mode checks are not weakened. It also
 verifies the system bwrap binary/version/help
 digest, installs and loads the packaged official `bwrap-userns-restrict`
-profile, and runs the exact non-root smoke test
+profile, requires its source-defined `bwrap` and `unpriv_bwrap` profiles in
+enforce mode rather than a transient stacked execution label, and runs the
+exact non-root smoke test
 `/usr/bin/bwrap --unshare-user --unshare-net --ro-bind / / /bin/true`.
 Raw stderr is discarded and non-success is reduced to a fixed reason code.
 Codex shell-environment and sandbox/network probes remain blocked until that
 smoke passes. T11 does not use legacy Landlock as a fallback and does not
 globally disable the AppArmor restriction.
+
+The pre-clone controller must replace, rather than inherit, its environment.
+The static wrapper accepts reviewed fixed Git/locale/path values plus one
+absolute private-VM home path and rejects every extra controller key. The home
+must be empty, current-uid, mode `0700`, opened no-follow, and binding-stable;
+Git receives its inherited descriptor projection. Global Git config is
+`/dev/null`, and system config/attributes are disabled. The fresh-image
+`/usr/bin/python3` interpreter is a provider-side pre-clone TCB; its binary is
+not independently pinned by T11.
 
 Provider isolation, mount boundary, process cleanup, Codex sandbox/network,
 shell environment, configuration, and authentication are independent evidence

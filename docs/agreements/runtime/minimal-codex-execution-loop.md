@@ -180,6 +180,10 @@ packaged official profile from
 `/usr/share/apparmor/extra-profiles/bwrap-userns-restrict` at
 `/etc/apparmor.d/bwrap-userns-restrict`, verifies both profile digests, loads
 it with `/usr/sbin/apparmor_parser --replace`, and confirms enforce status.
+The load sensor requires the two source-defined kernel profiles
+`bwrap (enforce)` and `unpriv_bwrap (enforce)`. The transient stacked
+execution label `bwrap//&unpriv_bwrap` is not treated as a separately loaded
+profile and cannot substitute for either source-defined profile.
 The fixed package/setup argv and their canonical digest are part of
 `t11-bubblewrap-prerequisite-evidence/v1`.
 
@@ -202,11 +206,33 @@ The fixed pre-clone qualification argv have SHA-256
 The owner input also carries a reviewed clone-contract digest derived from the
 exact repository URL, branch, public head/tree, pinned Git, private-disk
 destination placeholder, shell-free argv templates, disabled credential helper
-and hooks, and expected clean checkout. The adapter recomputes that digest and
-then proves the resulting checkout head/tree/status. This cross-binding checks
-the reviewed contract and post-clone equality; because repository code is not
-available before clone, it does not independently authenticate that the outer
-owner/controller executed the asserted pre-clone chronology.
+and hooks, process umask `0077`, and expected clean checkout. Each template uses
+a static `python3 -I` wrapper that accepts only `/usr/bin/git`, sets that process
+umask, and immediately `execve`s the fixed Git argv; it does not invoke a shell.
+The private umask projects tracked non-executable files as `0600`. Provider-
+bound Stage A and live argv evidence requires that exact private projection;
+`0644` remains valid only for ordinary offline/checker use. Both projections
+must be single-link regular and non-group/world-writable, and Git tree mode
+`100644` remains canonical. The adapter's repository JSON non-writable check is
+unchanged. The adapter
+recomputes the clone-contract
+digest and then proves the resulting checkout head/tree/status. This
+cross-binding checks the reviewed contract and post-clone equality; because
+repository code is not available before clone, it does not independently
+authenticate that the outer owner/controller executed the asserted pre-clone
+chronology.
+
+The controller launches the wrapper with an environment-replacement policy,
+not inherited shell state. Only reviewed fixed Git/locale/path values and one
+absolute private-VM home path reach the wrapper. That home must open no-follow
+as an empty, current-uid, mode-`0700` directory whose binding remains stable;
+Git receives only its inherited descriptor projection. Global Git config is
+fixed to `/dev/null`, system config and attributes are disabled, and any extra
+controller key is rejected. This keeps Git redirection, config/credential
+injection, askpass/SSH-agent variables, and arbitrary loader variables out of
+the Git child. `/usr/bin/python3` remains trusted fresh-image provider
+infrastructure for this pre-clone boundary; T11 does not claim an independently
+pinned interpreter attestation.
 
 The same controller then invokes this exact smoke test directly as the guest
 non-root user:

@@ -148,8 +148,29 @@ from `/usr/share/apparmor/extra-profiles/bwrap-userns-restrict` to
 SHA-256
 `11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9`,
 loads it with `apparmor_parser --replace`, and confirms the profile is in
-enforce mode. T11 does not enable `features.use_legacy_landlock` and does not
-globally disable the AppArmor unprivileged-user-namespace restriction.
+enforce mode by requiring both source-defined profiles, `bwrap (enforce)` and
+`unpriv_bwrap (enforce)`. A transient `bwrap//&unpriv_bwrap` execution label
+cannot substitute for either loaded profile. T11 does not enable
+`features.use_legacy_landlock` and does not globally disable the AppArmor
+unprivileged-user-namespace restriction.
+
+Every reviewed clone, checkout, and Git verification argv is prefixed by a
+static shell-free `python3 -I` wrapper restricted to `/usr/bin/git`. The wrapper
+sets private process umask `0077` before `execve`, projecting tracked
+non-executable files as `0600` even when the guest SSH session defaults to
+`0002`. Provider-bound Stage A/live evidence requires exact `0600`; ordinary
+offline/checker reads may also accept `0644`. Both projections are single-link
+and reject group/world writes, Git tree mode `100644` remains canonical, and
+the repository JSON non-writable guard is unchanged.
+
+The outer controller supplies an inherited-none environment to that wrapper.
+Only reviewed fixed Git/locale/path values plus one absolute private-VM home
+path are accepted; any extra controller key is a bounded failure. The home is
+opened no-follow and must be empty, current-uid, mode `0700`, and binding-stable;
+Git receives only its inherited descriptor projection. Global Git config is
+fixed to `/dev/null`, and system config/attributes are disabled. The fresh-image
+`/usr/bin/python3` is an explicit provider-side pre-clone TCB, not an
+independently pinned T11 attestation.
 
 The prerequisite is successful only when the controller runs this exact
 direct smoke argv without `sudo`, as the guest non-root user, with

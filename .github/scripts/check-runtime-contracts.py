@@ -107,8 +107,54 @@ APPROVED_GIT_VERSION_OUTPUT = "git version 2.43.0"
 APPROVED_GIT_BINARY_SHA256 = "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
 EXPECTED_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 EXPECTED_T11_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
+EXPECTED_STAGE_A1_GIT_FIXED_ENVIRONMENT = {
+    "GIT_ATTR_NOSYSTEM": "1",
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "GIT_TERMINAL_PROMPT": "0",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "PATH": "/usr/bin:/bin",
+    "TZ": "UTC",
+}
+EXPECTED_STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT = (
+    "import os,stat,sys\n"
+    "def fail(): os._exit(64)\n"
+    "def empty(fd):\n"
+    " with os.scandir(fd) as entries: return next(entries,None) is None\n"
+    "fixed={'GIT_ATTR_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':'/dev/null',"
+    "'GIT_CONFIG_NOSYSTEM':'1','GIT_OPTIONAL_LOCKS':'0',"
+    "'GIT_TERMINAL_PROMPT':'0','LANG':'C.UTF-8','LC_ALL':'C.UTF-8',"
+    "'PATH':'/usr/bin:/bin','TZ':'UTC'}\n"
+    "allowed=set(fixed)|{'HOME'}\n"
+    "extra=set(os.environ)-allowed\n"
+    "home=os.environ.get('HOME','')\n"
+    "if not (len(sys.argv)>1 and sys.argv[1]=='/usr/bin/git' "
+    "and (not extra or (sys.platform=='darwin' and extra=={'__CF_USER_TEXT_ENCODING'})) "
+    "and all(os.environ.get(k)==v for k,v in fixed.items()) "
+    "and os.path.isabs(home) and '\\x00' not in home): fail()\n"
+    "try:\n"
+    " flags=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW\n"
+    " home_fd=os.open(home,flags)\n"
+    " info=os.fstat(home_fd)\n"
+    " if not (stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode)==0o700 "
+    "and info.st_uid==os.getuid() and empty(home_fd)): fail()\n"
+    " after=os.fstat(home_fd)\n"
+    " if (after.st_dev,after.st_ino,after.st_mtime_ns,after.st_ctime_ns)!="
+    "(info.st_dev,info.st_ino,info.st_mtime_ns,info.st_ctime_ns): fail()\n"
+    " rebound=os.stat(home,follow_symlinks=False)\n"
+    " if (rebound.st_dev,rebound.st_ino)!=(info.st_dev,info.st_ino): fail()\n"
+    " os.set_inheritable(home_fd,True)\n"
+    " projection=('/proc/self/fd/' if sys.platform.startswith('linux') "
+    "else '/dev/fd/')+str(home_fd)\n"
+    " child=dict(fixed); child['HOME']=projection\n"
+    " os.umask(0o077)\n"
+    " os.execve(sys.argv[1],sys.argv[1:],child)\n"
+    "except (OSError,ValueError,TypeError,AttributeError): fail()\n"
+)
 EXPECTED_REPRESENTATIVE_GIT_CLONE_CONTRACT_SHA256 = (
-    "960514bc6501c6b10aa63bd8907f91c883be8860c5d9134801e4458a3d11f80f"
+    "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7"
 )
 STAGE_A1_REASON_CODES = [
     "none", "not-run", "unsupported-platform", "apparmor-not-enforcing",
@@ -378,6 +424,10 @@ def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "/usr/bin/git", "--no-replace-objects",
         "-c", "core.hooksPath=/dev/null", "-c", "credential.helper=",
     ]
+    umask_wrapper = [
+        "/usr/bin/python3", "-I", "-c",
+        EXPECTED_STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT,
+    ]
     return {
         "schema": "t11-git-clone-contract/v1",
         "authority": "reviewed-static-contract",
@@ -388,24 +438,38 @@ def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "git_binary": "/usr/bin/git",
         "git_binary_sha256": APPROVED_GIT_BINARY_SHA256,
         "shell": False,
+        "process_umask": "0077",
+        "umask_wrapper_argv": umask_wrapper,
         "environment": {
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_TERMINAL_PROMPT": "0",
-            "credential_helper": "disabled",
+            "policy": "replace",
+            "fixed": dict(EXPECTED_STAGE_A1_GIT_FIXED_ENVIRONMENT),
+            "dynamic": {
+                "wrapper_input_HOME": (
+                    "private-vm-absolute-empty-current-uid-mode-0700-no-follow"
+                ),
+                "git_child_HOME": "inherited-private-home-directory-descriptor",
+            },
+            "inherited_keys": [],
+            "credential_helper": "disabled-by-argv",
             "ssh_agent": "absent",
-            "home": "private-vm",
         },
         "destination": "private-vm-disk",
         "host_repository_mounted": False,
         "argv_templates": [
-            prefix + [
+            umask_wrapper + prefix + [
                 "clone", "--no-checkout", "--single-branch", "--branch",
                 EXPECTED_T11_PUBLIC_BRANCH, repository_url, target,
             ],
-            prefix + ["-C", target, "checkout", "--detach", head],
-            prefix + ["-C", target, "rev-parse", "--verify", "HEAD"],
-            prefix + ["-C", target, "rev-parse", "--verify", "HEAD^{tree}"],
-            prefix + [
+            umask_wrapper + prefix + [
+                "-C", target, "checkout", "--detach", head,
+            ],
+            umask_wrapper + prefix + [
+                "-C", target, "rev-parse", "--verify", "HEAD",
+            ],
+            umask_wrapper + prefix + [
+                "-C", target, "rev-parse", "--verify", "HEAD^{tree}",
+            ],
+            umask_wrapper + prefix + [
                 "-C", target, "status", "--porcelain=v1", "-z",
                 "--untracked-files=all",
             ],
@@ -1775,8 +1839,9 @@ def read_regular(root: Path, relative: str, errors: List[str], max_bytes: int = 
     except OSError:
         errors.append(relative + ": missing runtime contract path")
         return b""
-    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o644 or info.st_nlink != 1:
-        errors.append(relative + ": must be a single-link regular mode-100644 file")
+    reviewed_modes = (0o600, 0o644)
+    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) not in reviewed_modes or info.st_nlink != 1:
+        errors.append(relative + ": must be a single-link regular non-writable repository file")
         return b""
     if info.st_size > max_bytes:
         errors.append(relative + ": file exceeds byte limit")
@@ -1793,7 +1858,12 @@ def read_regular(root: Path, relative: str, errors: List[str], max_bytes: int = 
         return b""
     try:
         opened = os.fstat(descriptor)
-        if (opened.st_dev, opened.st_ino, opened.st_size) != (info.st_dev, info.st_ino, info.st_size):
+        if (
+            (opened.st_dev, opened.st_ino, opened.st_size)
+            != (info.st_dev, info.st_ino, info.st_size)
+            or stat.S_IMODE(opened.st_mode) != stat.S_IMODE(info.st_mode)
+            or opened.st_nlink != info.st_nlink
+        ):
             errors.append(relative + ": binding changed before read")
             return b""
         data = bytearray()
@@ -1806,13 +1876,23 @@ def read_regular(root: Path, relative: str, errors: List[str], max_bytes: int = 
             errors.append(relative + ": file exceeds byte limit")
             return b""
         opened_after = os.fstat(descriptor)
-        if (opened_after.st_dev, opened_after.st_ino, opened_after.st_size, opened_after.st_mtime_ns) != (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns):
+        if (
+            (opened_after.st_dev, opened_after.st_ino, opened_after.st_size, opened_after.st_mtime_ns)
+            != (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns)
+            or stat.S_IMODE(opened_after.st_mode) != stat.S_IMODE(opened.st_mode)
+            or opened_after.st_nlink != opened.st_nlink
+        ):
             errors.append(relative + ": changed while reading")
             return b""
     finally:
         os.close(descriptor)
     after = os.stat(str(path), follow_symlinks=False)
-    if (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) != (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns):
+    if (
+        (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+        != (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+        or stat.S_IMODE(after.st_mode) != stat.S_IMODE(info.st_mode)
+        or after.st_nlink != info.st_nlink
+    ):
         errors.append(relative + ": binding changed while reading")
         return b""
     return bytes(data)
