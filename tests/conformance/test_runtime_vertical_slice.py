@@ -1,5 +1,6 @@
 import copy
 import datetime
+import errno
 import importlib.util
 import json
 import os
@@ -1155,6 +1156,155 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     "sandbox probe argv",
                 )
 
+    def test_shell_environment_probe_requires_exact_sandbox_network_marker(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(
+                Path(sys.executable).resolve(), home, tmp,
+            )
+            required = self.adapter.reviewed_runtime_configuration(environment)
+            configured = required["shell_environment_policy.set"]
+            self.assertNotIn("CODEX_SANDBOX_NETWORK_DISABLED", configured)
+
+            def result_with(extra):
+                entries = dict(configured)
+                entries.update(extra)
+                payload = b"\0".join(
+                    (name + "=" + value).encode("utf-8")
+                    for name, value in sorted(entries.items())
+                ) + b"\0"
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False, payload, 0, True,
+                )
+
+            cases = (
+                ({"CODEX_SANDBOX_NETWORK_DISABLED": "1"}, "pass"),
+                ({}, "fail"),
+                ({"CODEX_SANDBOX_NETWORK_DISABLED": "0"}, "fail"),
+                ({"CODEX_SANDBOX_NETWORK_DISABLED": "true"}, "fail"),
+                ({
+                    "CODEX_SANDBOX_NETWORK_DISABLED": "1",
+                    "T11_UNKNOWN_AUTOMATIC": "1",
+                }, "fail"),
+            )
+            for extra, expected in cases:
+                with self.subTest(extra=extra), mock.patch.object(
+                    self.adapter, "bounded_capture", return_value=result_with(extra),
+                ) as capture:
+                    self.assertEqual(
+                        expected,
+                        self.adapter.shell_environment_probe(
+                            Path("/reviewed/codex"), root, environment, required,
+                        ),
+                    )
+                    self.assertEqual(
+                        "must-be-overridden",
+                        capture.call_args.args[2]["CODEX_SANDBOX_NETWORK_DISABLED"],
+                    )
+
+    def test_network_sandbox_child_handles_socket_creation_and_connect_denial(self):
+        class ChildSocket:
+            def __init__(self, connect_error=None):
+                self.connect_error = connect_error
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, _kind, _value, _traceback):
+                return False
+
+            def settimeout(self, _seconds):
+                pass
+
+            def connect(self, _address):
+                if self.connect_error is not None:
+                    raise self.connect_error
+
+        original_import = __import__
+
+        def run_child(factory):
+            fake_socket = SimpleNamespace(socket=factory)
+
+            def import_module(name, *args, **kwargs):
+                if name == "socket":
+                    return fake_socket
+                return original_import(name, *args, **kwargs)
+
+            with mock.patch.object(sys, "argv", ["network-probe", "9"]), \
+                 mock.patch("builtins.__import__", side_effect=import_module), \
+                 self.assertRaises(SystemExit) as raised:
+                exec(
+                    self.adapter.NETWORK_SANDBOX_PROBE_SCRIPT,
+                    {"__builtins__": __builtins__},
+                )
+            return raised.exception.code
+
+        def denied_creation():
+            raise OSError(errno.EPERM, "sandbox denied socket creation")
+
+        def exhausted_creation():
+            raise OSError(errno.EMFILE, "unrelated resource exhaustion")
+
+        self.assertEqual(0, run_child(denied_creation))
+        self.assertEqual(43, run_child(exhausted_creation))
+        self.assertEqual(0, run_child(
+            lambda: ChildSocket(connect_error=OSError(errno.EPERM, "denied")),
+        ))
+        self.assertEqual(42, run_child(ChildSocket))
+        self.assertEqual(43, run_child(
+            lambda: ChildSocket(connect_error=OSError(errno.EMFILE, "unrelated")),
+        ))
+
+    def test_network_sandbox_probe_preserves_closed_result_mapping(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(
+                Path(sys.executable).resolve(), home, tmp,
+            )
+            listener = mock.MagicMock()
+            listener.__enter__.return_value = listener
+            listener.getsockname.return_value = ("127.0.0.1", 43123)
+            connection = mock.MagicMock()
+            connection.__enter__.return_value = connection
+            for exit_code, expected in (
+                (0, "pass"), (42, "fail"), (43, "UNCHECKABLE"),
+                (1, "UNCHECKABLE"),
+            ):
+                result = self.adapter.ProcessResult(
+                    exit_code, None, False, False, False, b"", 0, True,
+                )
+                with self.subTest(exit_code=exit_code), \
+                     mock.patch.object(self.adapter.socket, "socket", return_value=listener), \
+                     mock.patch.object(
+                         self.adapter.socket, "create_connection", return_value=connection,
+                     ), mock.patch.object(
+                         self.adapter, "bounded_capture", return_value=result,
+                     ):
+                    self.assertEqual(
+                        expected,
+                        self.adapter.network_sandbox_behavior_probe(
+                            Path("/reviewed/codex"), root, environment,
+                        ),
+                    )
+
+            with mock.patch.object(
+                self.adapter.socket, "socket", side_effect=OSError("control unavailable"),
+            ):
+                self.assertEqual(
+                    "UNCHECKABLE",
+                    self.adapter.network_sandbox_behavior_probe(
+                        Path("/reviewed/codex"), root, environment,
+                    ),
+                )
+
     def test_worker_argv_failure_is_fixed_stage_and_reason_only(self):
         with mock.patch.object(
             self.adapter, "load_repository_json",
@@ -1495,9 +1645,11 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 if "doctor" in argv:
                     return self.adapter.ProcessResult(1, None, False, False, False, self.adapter.canonical_bytes(report), 0, True)
                 if str(Path("/usr/bin/env")) in argv:
+                    observed = dict(expected["shell_environment_policy.set"])
+                    observed["CODEX_SANDBOX_NETWORK_DISABLED"] = "1"
                     payload = b"\0".join(
                         (name + "=" + value).encode("utf-8")
-                        for name, value in sorted(expected["shell_environment_policy.set"].items())
+                        for name, value in sorted(observed.items())
                     ) + b"\0"
                     return self.adapter.ProcessResult(0, None, False, False, False, payload, 0, True)
                 return self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)

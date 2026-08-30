@@ -102,6 +102,21 @@ SHELL_ENVIRONMENT_NAMES = (
     "GIT_OPTIONAL_LOCKS",
 )
 DYNAMIC_ENVIRONMENT_NAMES = ("CODEX_HOME", "HOME", "PATH", "TMPDIR")
+SANDBOX_NETWORK_MARKER = "CODEX_SANDBOX_NETWORK_DISABLED"
+SANDBOX_NETWORK_MARKER_VALUE = b"1"
+# Official 0.150.1 Linux restricted-network seccomp returns EPERM for the
+# denied AF_INET socket/connect syscalls.  Other OSError values are not proof
+# of sandbox enforcement and remain UNCHECKABLE through exit 43.
+NETWORK_SANDBOX_PROBE_SCRIPT = (
+    "import errno,socket,sys\n"
+    "try:\n"
+    " with socket.socket() as sock:\n"
+    "  sock.settimeout(2)\n"
+    "  sock.connect(('127.0.0.1',int(sys.argv[1])))\n"
+    "except OSError as error:\n"
+    " raise SystemExit(0 if error.errno == errno.EPERM else 43)\n"
+    "raise SystemExit(42)\n"
+)
 REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
 REVIEWED_RULES_BYTES = (
     b"# T11 reviewed empty execpolicy profile. Platform policy remains authoritative.\n"
@@ -4030,6 +4045,7 @@ def shell_environment_probe(
 ) -> str:
     probe_env = dict(env)
     probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
+    probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
     set_values = dict(required["shell_environment_policy.set"])
     env_program = Path("/usr/bin/env")
     if not env_program.is_file():
@@ -4055,7 +4071,12 @@ def shell_environment_probe(
         parsed[key] = value
     if any(parsed.get(name) != value.encode("utf-8") for name, value in set_values.items()) or "T11_FORBIDDEN_SENTINEL" in parsed:
         return "fail"
-    permitted_automatic = {"PWD", "SHLVL", "_", "__CF_USER_TEXT_ENCODING"}
+    if parsed.get(SANDBOX_NETWORK_MARKER) != SANDBOX_NETWORK_MARKER_VALUE:
+        return "fail"
+    permitted_automatic = {
+        "PWD", "SHLVL", "_", "__CF_USER_TEXT_ENCODING",
+        SANDBOX_NETWORK_MARKER,
+    }
     if set(parsed) - set(set_values) - permitted_automatic or any(SECRET_NAME_RE.search(name) for name in parsed):
         return "fail"
     return "pass"
@@ -4063,16 +4084,6 @@ def shell_environment_probe(
 
 def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, str]) -> str:
     """Prove that a sandboxed direct loopback connect is denied."""
-    script = (
-        "import socket,sys\n"
-        "sock=socket.socket()\n"
-        "sock.settimeout(2)\n"
-        "try:\n"
-        " sock.connect(('127.0.0.1',int(sys.argv[1])))\n"
-        "except OSError:\n"
-        " raise SystemExit(0)\n"
-        "raise SystemExit(42)\n"
-    )
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
             listener.bind(("127.0.0.1", 0))
@@ -4084,7 +4095,10 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
                 pass
             argv = sandbox_probe_argv(
                 binary, env,
-                [str(Path(sys.executable).resolve()), "-I", "-c", script, str(port)],
+                [
+                    str(Path(sys.executable).resolve()), "-I", "-c",
+                    NETWORK_SANDBOX_PROBE_SCRIPT, str(port),
+                ],
                 root,
             )
             result = bounded_capture(argv, root, env)
