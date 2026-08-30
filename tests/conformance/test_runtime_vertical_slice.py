@@ -124,6 +124,14 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 "version_output": "bubblewrap 0.9.0",
                 "help_sha256": "a" * 64,
             },
+            "git": {
+                "package_name": "git",
+                "package_version": "1:2.43.0-1ubuntu7.3",
+                "package_architecture": "arm64",
+                "install_status": "installed",
+                "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942",
+                "version_output": "git version 2.43.0",
+            },
             "controller": {
                 "argv_sha256": self.adapter.sha256_bytes(
                     self.adapter.canonical_bytes(controller_argv)
@@ -197,7 +205,14 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 "user_ssh_config_modified": False,
             },
             "control_plane": control_plane,
-            "repository": {"head": head, "tree": tree},
+            "repository": {
+                "head": head,
+                "tree": tree,
+                "git_bootstrap": self.git_bootstrap_evidence(),
+                "git_clone_contract_sha256": (
+                    self.adapter.stage_a1_git_clone_contract_sha256(head, tree)
+                ),
+            },
             "client": {
                 "version_output": "codex-cli 0.150.1",
                 "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
@@ -244,6 +259,11 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             "public_head": head,
             "public_tree": tree,
             "repository_clean": True,
+            "repository_git_bootstrap": self.git_bootstrap_evidence(),
+            "repository_git_bootstrap_runtime_match": True,
+            "repository_git_clone_contract_sha256": (
+                self.adapter.stage_a1_git_clone_contract_sha256(head, tree)
+            ),
             "codex_version_output": "codex-cli 0.150.1",
             "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
             "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
@@ -259,6 +279,28 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             },
         }
 
+    def git_bootstrap_evidence(self):
+        return {
+            "schema": "t11-git-bootstrap-evidence/v1",
+            "authority": "owner/controller-authored",
+            "package_name": "git",
+            "package_version": "1:2.43.0-1ubuntu7.3",
+            "package_architecture": "arm64",
+            "install_status": "installed",
+            "binary_sha256": (
+                "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
+            ),
+            "version_output": "git version 2.43.0",
+            "preclone_qualification_argv_sha256": (
+                "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc"
+            ),
+            "controller_argv_sha256": (
+                "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff"
+            ),
+            "raw_stdout_recorded": False,
+            "raw_stderr_recorded": False,
+        }
+
     def test_colima_provider_input_is_closed_exact_and_stdin_only(self):
         value = self.colima_provider_input()
         self.assertEqual(value, self.adapter.validate_colima_provider_input(copy.deepcopy(value)))
@@ -271,6 +313,54 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda item: item["provider"].__setitem__("profile_name", "default"),
             lambda item: item["repository"].__setitem__("head", "c" * 40),
             lambda item: item["repository"].__setitem__("tree", "short"),
+            lambda item: item["repository"].pop("git_clone_contract_sha256"),
+            lambda item: item["repository"].__setitem__(
+                "git_clone_contract_sha256", "0" * 64,
+            ),
+            lambda item: item["repository"].__setitem__(
+                "git_clone_contract_sha256",
+                self.adapter.stage_a1_git_clone_contract_sha256(
+                    "c" * 40, item["repository"]["tree"],
+                ),
+            ),
+            lambda item: item["repository"].pop("git_bootstrap"),
+            lambda item: item["repository"]["git_bootstrap"].pop("package_name"),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "extra", "forbidden",
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "package_name", "git-core",
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "package_version", "1:2.43.0-1ubuntu7.2",
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "package_architecture", "amd64",
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "install_status", "unknown",
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "binary_sha256", "0" * 64,
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "version_output", "git version 2.42.0",
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "preclone_qualification_argv_sha256", "0" * 64,
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "controller_argv_sha256", "0" * 64,
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "raw_stdout_recorded", True,
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "raw_stderr_recorded", True,
+            ),
+            lambda item: item["repository"]["git_bootstrap"].__setitem__(
+                "version_output", "ghp_abcdefghijklmnopqrstuvwxyz0123456789",
+            ),
             lambda item: item["client"].__setitem__("version_output", "codex-cli 0.150.0"),
             lambda item: item["client"].__setitem__("observed_archive_sha256", "0" * 64),
             lambda item: item["client"].__setitem__("extracted_binary_sha256", "0" * 64),
@@ -289,11 +379,68 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             mutation(candidate)
             with self.subTest(candidate=candidate):
                 self.assert_contract_error(lambda c=candidate: self.adapter.validate_colima_provider_input(c))
+        token = "ghp_abcdefghijklmnopqrstuvwxyz0123456789"
+        token_candidate = copy.deepcopy(value)
+        token_candidate["repository"]["git_bootstrap"]["version_output"] = token
+        with self.assertRaises(self.adapter.ContractError) as raised:
+            self.adapter.validate_colima_provider_input(token_candidate)
+        self.assertNotIn(token, str(raised.exception))
         parser = self.adapter.build_parser()
         parsed = parser.parse_args(["profile"])
         self.assertFalse(any("provider" in token for token in vars(parsed).values() if isinstance(token, str)))
         self.assertFalse(parsed.probe_only)
         self.assertTrue(parser.parse_args(["profile", "--probe-only"]).probe_only)
+
+    def test_git_clone_digest_is_a_closed_owner_contract_not_chronology_proof(self):
+        head = "a" * 40
+        tree = "b" * 40
+        contract = self.adapter.stage_a1_git_clone_contract(head, tree)
+        self.assertEqual("t11-git-clone-contract/v1", contract["schema"])
+        self.assertEqual("reviewed-static-contract", contract["authority"])
+        self.assertFalse(contract["shell"])
+        self.assertEqual("/usr/bin/git", contract["git_binary"])
+        self.assertEqual(
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex.git",
+            contract["repository_url"],
+        )
+        self.assertEqual(
+            "codex/phase-2-minimal-execution-slice", contract["branch"],
+        )
+        self.assertEqual({
+            "head": head, "tree": tree, "status_porcelain_v1_z": "empty",
+        }, contract["expected_outputs"])
+        self.assertNotIn("observed_at", contract)
+        self.assertNotIn("executed_at", contract)
+        rendered = json.dumps(contract, sort_keys=True)
+        self.assertIn("<private-vm-repository>", rendered)
+        self.assertNotIn("/Users/", rendered)
+        self.assertNotIn("credential value", rendered)
+        for argv in contract["argv_templates"]:
+            self.assertEqual("/usr/bin/git", argv[0])
+            self.assertIn("--no-replace-objects", argv)
+            self.assertIn("core.hooksPath=/dev/null", argv)
+            self.assertIn("credential.helper=", argv)
+        digest = self.adapter.stage_a1_git_clone_contract_sha256(head, tree)
+        self.assertEqual(
+            self.adapter.sha256_bytes(self.adapter.canonical_bytes(contract)),
+            digest,
+        )
+        self.assertEqual(
+            "960514bc6501c6b10aa63bd8907f91c883be8860c5d9134801e4458a3d11f80f",
+            digest,
+        )
+        self.assertNotEqual(
+            digest,
+            self.adapter.stage_a1_git_clone_contract_sha256("c" * 40, tree),
+        )
+        self.assertNotEqual(
+            digest,
+            self.adapter.stage_a1_git_clone_contract_sha256(head, "d" * 40),
+        )
+        self.assert_contract_error(
+            lambda: self.adapter.stage_a1_git_clone_contract("short", tree),
+            "head",
+        )
 
     def test_stage_a1_controller_and_non_root_smoke_argv_are_exact_and_safe(self):
         self.assertEqual((
@@ -312,19 +459,33 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
              "--yes", "--no-install-recommends",
              "apparmor=4.0.1really4.0.1-0ubuntu0.24.04.7",
              "apparmor-profiles=4.0.1really4.0.1-0ubuntu0.24.04.7",
-             "bubblewrap=0.9.0-1ubuntu0.1"),
+             "bubblewrap=0.9.0-1ubuntu0.1",
+             "git=1:2.43.0-1ubuntu7.3"),
             commands[1],
         )
-        self.assertEqual("/usr/bin/install", commands[2][2])
-        self.assertEqual("/usr/sbin/apparmor_parser", commands[3][2])
+        self.assertEqual(self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV, commands[2])
+        self.assertEqual(
+            ("/usr/bin/sha256sum", "--", "/usr/bin/git"), commands[3],
+        )
+        self.assertEqual(("/usr/bin/git", "--version"), commands[4])
+        self.assertEqual(
+            self.adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV, commands[:5],
+        )
+        self.assertEqual("/usr/bin/install", commands[5][2])
+        self.assertEqual("/usr/sbin/apparmor_parser", commands[6][2])
         self.assertEqual(self.adapter.STAGE_A1_BWRAP_SMOKE_ARGV, commands[-1])
-        rendered = "\n".join("\0".join(argv) for argv in commands)
+        tokens = [token for argv in commands for token in argv]
         for forbidden in (
             "/bin/sh", "/bin/bash", "-c", "--ignore-rules",
-            "features.use_legacy_landlock", "apparmor_restrict_unprivileged_userns=0",
             "login", "device-auth", "exec", "--model",
         ):
-            self.assertNotIn(forbidden, rendered)
+            self.assertNotIn(forbidden, tokens)
+        for token in tokens:
+            self.assertFalse(token.startswith("--dangerously-bypass-"))
+            self.assertFalse(token.startswith("features.use_legacy_landlock"))
+            self.assertFalse(token.startswith(
+                "apparmor_restrict_unprivileged_userns=0"
+            ))
         for argv in commands:
             self.assertIsInstance(argv, tuple)
             self.assertTrue(argv)
@@ -336,6 +497,20 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             self.adapter.sha256_bytes(self.adapter.canonical_bytes(
                 [list(argv) for argv in commands]
             )),
+            self.adapter.STAGE_A1_CONTROLLER_ARGV_SHA256,
+        )
+        self.assertEqual(
+            "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc",
+            self.adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256,
+        )
+        self.assertEqual(
+            self.adapter.sha256_bytes(self.adapter.canonical_bytes(
+                [list(argv) for argv in self.adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV]
+            )),
+            self.adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256,
+        )
+        self.assertEqual(
+            "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff",
             self.adapter.STAGE_A1_CONTROLLER_ARGV_SHA256,
         )
 
@@ -371,6 +546,17 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             ),
             lambda item: item["bubblewrap"].__setitem__("install_status", "unknown"),
             lambda item: item["bubblewrap"].__setitem__(
+                "version_output", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
+            ),
+            lambda item: item.pop("git"),
+            lambda item: item["git"].__setitem__("package_name", "unreviewed"),
+            lambda item: item["git"].__setitem__(
+                "package_version", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
+            ),
+            lambda item: item["git"].__setitem__("package_architecture", "x86_64"),
+            lambda item: item["git"].__setitem__("install_status", "unknown"),
+            lambda item: item["git"].__setitem__("binary_sha256", "0" * 64),
+            lambda item: item["git"].__setitem__(
                 "version_output", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
             ),
             lambda item: item["controller"].__setitem__("argv_sha256", "0" * 64),
@@ -510,9 +696,18 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     0, None, False, False, False,
                     b"install ok installed\t0.9.0-1ubuntu0.1\tarm64\n", 0, True,
                 )
-            if list(argv)[-1:] == ["--version"]:
+            if tuple(argv) == self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    b"install ok installed\t1:2.43.0-1ubuntu7.3\tarm64\n", 0, True,
+                )
+            if tuple(argv) == (str(self.adapter.STAGE_A1_BWRAP_BINARY), "--version"):
                 return self.adapter.ProcessResult(
                     0, None, False, False, False, b"bubblewrap 0.9.0\n", 0, True,
+                )
+            if tuple(argv) == (str(self.adapter.STAGE_A1_GIT_BINARY), "--version"):
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False, b"git version 2.43.0\n", 0, True,
                 )
             if list(argv)[-1:] == ["--help"]:
                 return self.adapter.ProcessResult(
@@ -531,6 +726,8 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         def hashed(path, *_args, **_kwargs):
             if str(path) == "/usr/bin/bwrap":
                 return "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
+            if str(path) == "/usr/bin/git":
+                return "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
             return "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
 
         with mock.patch.object(self.adapter, "read_bounded_regular", side_effect=read), \
@@ -549,6 +746,13 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("enforce", observed["apparmor"]["load_status"])
         self.assertEqual("0.9.0-1ubuntu0.1", observed["bubblewrap"]["package_version"])
         self.assertEqual("arm64", observed["bubblewrap"]["package_architecture"])
+        self.assertEqual("1:2.43.0-1ubuntu7.3", observed["git"]["package_version"])
+        self.assertEqual("arm64", observed["git"]["package_architecture"])
+        self.assertEqual(
+            "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942",
+            observed["git"]["binary_sha256"],
+        )
+        self.assertEqual("git version 2.43.0", observed["git"]["version_output"])
         self.assertEqual("pass", observed["smoke"]["status"])
         self.assertEqual("none", observed["smoke"]["reason_code"])
         self.assertFalse(observed["smoke"]["raw_stdout_recorded"])
@@ -609,7 +813,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         token = "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789"
 
         def token_version_capture(argv, *args, **kwargs):
-            if list(argv)[-1:] == ["--version"]:
+            if tuple(argv) == (str(self.adapter.STAGE_A1_BWRAP_BINARY), "--version"):
                 return self.adapter.ProcessResult(
                     0, None, False, False, False,
                     (token + "\n").encode("ascii"), 0, True,
@@ -628,6 +832,69 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("binary-drift", sanitized["reason_code"])
         self.assertEqual("unrecognized", sanitized["bubblewrap"]["version_output"])
         self.assertNotIn(token, json.dumps(sanitized, sort_keys=True))
+
+        def token_git_package_capture(argv, *args, **kwargs):
+            if tuple(argv) == self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV:
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    ("install ok installed\t" + token + "\tarm64\n").encode("ascii"),
+                    0, True,
+                )
+            return capture(argv, *args, **kwargs)
+
+        with mock.patch.object(
+            self.adapter, "read_bounded_regular", side_effect=read,
+        ), mock.patch.object(
+            self.adapter, "bounded_capture", side_effect=token_git_package_capture,
+        ), mock.patch.object(
+            self.adapter, "hash_regular_file", side_effect=hashed,
+        ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+            sanitized_git_package = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+        self.assertEqual("fail", sanitized_git_package["status"])
+        self.assertEqual("git-package-drift", sanitized_git_package["reason_code"])
+        self.assertEqual("unrecognized", sanitized_git_package["git"]["package_version"])
+        self.assertNotIn(token, json.dumps(sanitized_git_package, sort_keys=True))
+
+        def token_git_version_capture(argv, *args, **kwargs):
+            if tuple(argv) == (str(self.adapter.STAGE_A1_GIT_BINARY), "--version"):
+                return self.adapter.ProcessResult(
+                    0, None, False, False, False,
+                    (token + "\n").encode("ascii"), 0, True,
+                )
+            return capture(argv, *args, **kwargs)
+
+        with mock.patch.object(
+            self.adapter, "read_bounded_regular", side_effect=read,
+        ), mock.patch.object(
+            self.adapter, "bounded_capture", side_effect=token_git_version_capture,
+        ), mock.patch.object(
+            self.adapter, "hash_regular_file", side_effect=hashed,
+        ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+            sanitized_git_version = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+        self.assertEqual("fail", sanitized_git_version["status"])
+        self.assertEqual("git-binary-drift", sanitized_git_version["reason_code"])
+        self.assertEqual("unrecognized", sanitized_git_version["git"]["version_output"])
+        self.assertNotIn(token, json.dumps(sanitized_git_version, sort_keys=True))
+
+        def missing_git_capture(argv, *args, **kwargs):
+            if tuple(argv) == self.adapter.STAGE_A1_GIT_PACKAGE_QUERY_ARGV:
+                return self.adapter.ProcessResult(
+                    1, None, False, False, False, b"", 0, True,
+                )
+            return capture(argv, *args, **kwargs)
+
+        with mock.patch.object(
+            self.adapter, "read_bounded_regular", side_effect=read,
+        ), mock.patch.object(
+            self.adapter, "bounded_capture", side_effect=missing_git_capture,
+        ), mock.patch.object(
+            self.adapter, "hash_regular_file", side_effect=hashed,
+        ), mock.patch.object(self.adapter.os, "uname", return_value=uname):
+            missing_git = self.adapter.observe_stage_a1_prerequisite(ROOT, {})
+        self.assertEqual("UNCHECKABLE", missing_git["status"])
+        self.assertEqual("observation-uncheckable", missing_git["reason_code"])
+        self.assertEqual("not-run", missing_git["git"]["package_name"])
+        self.assertEqual("UNCHECKABLE", missing_git["smoke"]["status"])
 
     def test_stage_a1_prerequisite_gates_codex_shell_and_network_probes(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -803,14 +1070,38 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 return boot
             raise AssertionError(str(path))
 
-        def git(_root, arguments, _environment, **_kwargs):
+        events = []
+
+        def observe_git(_root, _environment):
+            events.append("git-package-and-binary")
+            bootstrap = value["repository"]["git_bootstrap"]
+            return {
+                key: bootstrap[key] for key in (
+                    "package_name", "package_version", "package_architecture",
+                    "install_status", "binary_sha256", "version_output",
+                )
+            }
+
+        def executable_git(_root, _environment, *, require_approved=False):
+            events.append("git-executable")
+            self.assertTrue(require_approved)
+            bootstrap = value["repository"]["git_bootstrap"]
+            return bootstrap["version_output"], bootstrap["binary_sha256"]
+
+        def provider_git(_root, arguments, _environment, **_kwargs):
+            events.append("run-approved-provider-git")
             if arguments[0] == "status":
                 return b""
             return (value["repository"]["head"] if arguments[-1] == "HEAD" else value["repository"]["tree"]).encode() + b"\n"
 
         uname = SimpleNamespace(sysname="Linux", machine="aarch64", release="6.12.0-t11")
         with mock.patch.object(self.adapter, "read_bounded_regular", side_effect=read), \
-             mock.patch.object(self.adapter, "run_git", side_effect=git), \
+             mock.patch.object(self.adapter, "observe_stage_a1_git", side_effect=observe_git), \
+             mock.patch.object(self.adapter, "git_executable_evidence", side_effect=executable_git), \
+             mock.patch.object(
+                 self.adapter, "run_approved_provider_git", side_effect=provider_git,
+             ) as approved_git, \
+             mock.patch.object(self.adapter, "run_git") as generic_git, \
              mock.patch.object(self.adapter.os, "uname", return_value=uname), \
              mock.patch.dict(os.environ, {}, clear=True):
             passed = self.adapter.observe_colima_provider_evidence(
@@ -820,9 +1111,134 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 ROOT, value, layout, "f" * 64, "codex-cli 0.150.1", {},
             )
         self.assertEqual("pass", passed["status"])
+        self.assertEqual(
+            value["repository"]["git_bootstrap"],
+            passed["repository_git_bootstrap"],
+        )
+        self.assertTrue(passed["repository_git_bootstrap_runtime_match"])
+        self.assertEqual(
+            value["repository"]["git_clone_contract_sha256"],
+            passed["repository_git_clone_contract_sha256"],
+        )
+        self.assertEqual(
+            [
+                "git-package-and-binary", "git-executable",
+                "run-approved-provider-git",
+            ],
+            events[:3],
+        )
+        self.assertEqual(6, approved_git.call_count)
+        generic_git.assert_not_called()
         self.assertEqual("fail", drifted["status"])
         self.assertEqual("f" * 64, drifted["extracted_binary_sha256"])
         self.assertFalse(drifted["codex_authenticated_attestation"])
+
+        mismatched = {
+            **observe_git(ROOT, {}),
+            "package_version": "unrecognized",
+        }
+        with mock.patch.object(self.adapter, "read_bounded_regular", side_effect=read), \
+             mock.patch.object(self.adapter, "observe_stage_a1_git", return_value=mismatched), \
+             mock.patch.object(self.adapter, "git_executable_evidence") as executable_probe, \
+             mock.patch.object(
+                 self.adapter, "run_approved_provider_git",
+             ) as repository_git, \
+             mock.patch.object(self.adapter, "run_git") as generic_git, \
+             mock.patch.object(self.adapter.os, "uname", return_value=uname), \
+             mock.patch.dict(os.environ, {}, clear=True):
+            self.assert_contract_error(
+                lambda: self.adapter.observe_colima_provider_evidence(
+                    ROOT, value, layout, "a" * 64, "codex-cli 0.150.1", {},
+                ),
+                "pre-clone trust anchor",
+            )
+        executable_probe.assert_not_called()
+        repository_git.assert_not_called()
+        generic_git.assert_not_called()
+
+    def test_approved_provider_git_revalidates_fixed_root_owned_binary_each_time(self):
+        safe_directory = SimpleNamespace(
+            st_mode=stat.S_IFDIR | 0o755, st_uid=0, st_nlink=1,
+        )
+        safe_git = SimpleNamespace(
+            st_mode=stat.S_IFREG | 0o755, st_uid=0, st_nlink=1,
+        )
+
+        def safe_stat(path, **_kwargs):
+            return safe_git if str(path) == "/usr/bin/git" else safe_directory
+
+        success = self.adapter.ProcessResult(
+            0, None, False, False, False, b"ok\n", 0, True,
+        )
+        with mock.patch.object(self.adapter.os, "stat", side_effect=safe_stat), \
+             mock.patch.object(
+                 self.adapter, "hash_regular_file",
+                 side_effect=[
+                     self.adapter.APPROVED_GIT_BINARY_SHA256,
+                     "0" * 64,
+                 ],
+             ) as digest_sensor, \
+             mock.patch.object(
+                 self.adapter, "run_bounded_process", return_value=success,
+             ) as process:
+            first = self.adapter.run_approved_provider_git(
+                ROOT, ("rev-parse", "--verify", "HEAD"),
+                {"PATH": "/unreviewed/bin"}, max_bytes=128,
+            )
+            self.assertEqual(b"ok\n", first)
+            self.assertEqual("/usr/bin/git", process.call_args.args[0][0])
+            self.assert_contract_error(
+                lambda: self.adapter.run_approved_provider_git(
+                    ROOT, ("rev-parse", "--verify", "HEAD^{tree}"),
+                    {"PATH": "/unreviewed/bin"}, max_bytes=128,
+                ),
+                "digest drifted",
+            )
+        self.assertEqual(2, digest_sensor.call_count)
+        process.assert_called_once()
+
+        for unsafe_path, unsafe_info in (
+            ("/usr", SimpleNamespace(
+                st_mode=stat.S_IFDIR | 0o775, st_uid=0, st_nlink=1,
+            )),
+            ("/usr/bin", SimpleNamespace(
+                st_mode=stat.S_IFDIR | 0o755, st_uid=501, st_nlink=1,
+            )),
+            ("/usr/bin/git", SimpleNamespace(
+                st_mode=stat.S_IFREG | 0o775, st_uid=0, st_nlink=1,
+            )),
+        ):
+            def unsafe_stat(path, **_kwargs):
+                if str(path) == unsafe_path:
+                    return unsafe_info
+                return safe_git if str(path) == "/usr/bin/git" else safe_directory
+
+            with self.subTest(unsafe_path=unsafe_path), \
+                 mock.patch.object(self.adapter.os, "stat", side_effect=unsafe_stat), \
+                 mock.patch.object(self.adapter, "hash_regular_file") as digest_sensor, \
+                 mock.patch.object(self.adapter, "run_bounded_process") as process:
+                self.assert_contract_error(
+                    lambda: self.adapter.run_approved_provider_git(
+                        ROOT, ("status", "--porcelain=v1", "-z"), {},
+                    ),
+                    "binding is unsafe",
+                )
+            digest_sensor.assert_not_called()
+            process.assert_not_called()
+
+        with mock.patch.object(
+            self.adapter, "resolve_executable_from_path",
+            return_value=Path("/opt/unreviewed/git"),
+        ), mock.patch.object(
+            self.adapter, "run_bounded_process",
+        ) as process:
+            self.assert_contract_error(
+                lambda: self.adapter.git_executable_evidence(
+                    ROOT, {"PATH": "/opt/unreviewed"}, require_approved=True,
+                ),
+                "outside the approved namespace",
+            )
+        process.assert_not_called()
 
     def test_colima_runtime_root_and_codex_home_are_nofollow_private_and_bound(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
@@ -865,6 +1281,59 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertNotIn("/Users/", json.dumps(evidence))
         self.assertEqual("not-run", evidence["control_plane"]["status"])
         self.assertFalse(evidence["control_plane"]["fresh_instance"])
+        self.assertEqual(
+            self.adapter.not_run_git_bootstrap_evidence(),
+            evidence["repository_git_bootstrap"],
+        )
+        self.assertFalse(evidence["repository_git_bootstrap_runtime_match"])
+        self.assertEqual(
+            "0" * 64, evidence["repository_git_clone_contract_sha256"],
+        )
+
+        passing = self.passing_containment_evidence()
+        self.assertEqual(
+            passing,
+            self.adapter.validate_containment_provider_evidence(
+                copy.deepcopy(passing), allow_fixture=True,
+            ),
+        )
+        mutations = (
+            lambda item: item.pop("repository_git_bootstrap"),
+            lambda item: item.__setitem__(
+                "repository_git_bootstrap_runtime_match", False,
+            ),
+            lambda item: item.pop("repository_git_clone_contract_sha256"),
+            lambda item: item.__setitem__(
+                "repository_git_clone_contract_sha256", "0" * 64,
+            ),
+            lambda item: item.__setitem__(
+                "repository_git_clone_contract_sha256",
+                self.adapter.stage_a1_git_clone_contract_sha256(
+                    "c" * 40, item["public_tree"],
+                ),
+            ),
+            lambda item: item["repository_git_bootstrap"].__setitem__(
+                "package_version", "1:2.43.0-1ubuntu7.2",
+            ),
+            lambda item: item["repository_git_bootstrap"].__setitem__(
+                "binary_sha256", "0" * 64,
+            ),
+            lambda item: item["repository_git_bootstrap"].__setitem__(
+                "controller_argv_sha256", "0" * 64,
+            ),
+            lambda item: item["repository_git_bootstrap"].__setitem__(
+                "raw_stderr_recorded", True,
+            ),
+        )
+        for mutation in mutations:
+            candidate = copy.deepcopy(passing)
+            mutation(candidate)
+            with self.subTest(candidate=candidate):
+                self.assert_contract_error(
+                    lambda c=candidate: self.adapter.validate_containment_provider_evidence(
+                        c, allow_fixture=True,
+                    )
+                )
 
     def test_live_profile_cross_binds_provider_platform_client_and_chronology(self):
         valid = copy.deepcopy(self.profile)
@@ -878,6 +1347,15 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda item: item["evidence"]["containment_provider"].__setitem__("codex_authenticated_attestation", True),
             lambda item: item["evidence"]["containment_provider"]["control_plane"].__setitem__("codex_authenticated_attestation", True),
             lambda item: item["evidence"]["containment_provider"].__setitem__("created_at", "2099-01-01T00:00:00Z"),
+            lambda item: item["evidence"]["containment_provider"].__setitem__(
+                "repository_git_bootstrap_runtime_match", False,
+            ),
+            lambda item: item["evidence"]["containment_provider"].__setitem__(
+                "repository_git_clone_contract_sha256", "0" * 64,
+            ),
+            lambda item: item["evidence"]["containment_provider"][
+                "repository_git_bootstrap"
+            ].__setitem__("package_version", "1:2.43.0-1ubuntu7.2"),
         )
         for mutation in mutations:
             profile = copy.deepcopy(valid)
@@ -1164,6 +1642,17 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("t11-colima-provider-input/v1", fresh_provider_input["schema"])
         self.assertEqual(self.envelope["harness"]["commit"], fresh_provider_input["repository"]["head"])
         self.assertEqual(self.envelope["harness"]["tree"], fresh_provider_input["repository"]["tree"])
+        self.assertEqual(
+            self.adapter.expected_git_bootstrap_evidence(),
+            fresh_provider_input["repository"]["git_bootstrap"],
+        )
+        self.assertEqual(
+            self.adapter.stage_a1_git_clone_contract_sha256(
+                self.envelope["harness"]["commit"],
+                self.envelope["harness"]["tree"],
+            ),
+            fresh_provider_input["repository"]["git_clone_contract_sha256"],
+        )
         live_argv_text = "\n".join(self.adapter.build_live_argv(
             Path("/reviewed/codex"), Path("/isolated-target"), ROOT, self.envelope,
         ))
@@ -2581,6 +3070,34 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.checker.validate_runtime_profile_schema(schema, errors)
         self.assertTrue(errors)
 
+    def test_checker_pins_fixed_revalidated_provider_git_call_graph(self):
+        source = ADAPTER_PATH.read_text(encoding="utf-8")
+        errors = []
+        self.checker.validate_provider_git_source(source, str(ADAPTER_PATH), errors)
+        self.assertEqual([], errors)
+        mutations = (
+            source.replace(
+                "head_bytes = run_approved_provider_git(",
+                "head_bytes = run_git(", 1,
+            ),
+            source.replace(
+                "git, _digest = approved_provider_git_binding()",
+                "git = resolve_executable_from_path('git', env)", 1,
+            ),
+            source.replace(
+                "os.stat(raw, follow_symlinks=False)",
+                "os.stat(raw)", 1,
+            ),
+        )
+        for candidate in mutations:
+            self.assertNotEqual(source, candidate)
+            errors = []
+            self.checker.validate_provider_git_source(
+                candidate, str(ADAPTER_PATH), errors,
+            )
+            with self.subTest(errors=errors):
+                self.assertTrue(errors)
+
     def test_runtime_profile_schema_pins_stage_a1_fail_closed_semantics(self):
         original = json.loads((
             ROOT / "docs/agreements/runtime/runtime-profile.v1.schema.json"
@@ -2594,6 +3111,11 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         def pass_then(schema):
             return prerequisite(schema)["allOf"][0]["then"]["properties"]
 
+        def containment(schema):
+            return schema["properties"]["evidence"]["properties"][
+                "containment_provider"
+            ]
+
         mutations = (
             lambda schema: prerequisite(schema)["properties"]["controller"][
                 "properties"
@@ -2605,6 +3127,46 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda schema: pass_then(schema)["bubblewrap"]["properties"][
                 "help_sha256"
             ].pop("not"),
+            lambda schema: prerequisite(schema)["required"].remove("git"),
+            lambda schema: prerequisite(schema)["properties"].pop("git"),
+            lambda schema: pass_then(schema)["git"]["properties"][
+                "package_version"
+            ].__setitem__("const", "1:2.43.0-1ubuntu7.2"),
+            lambda schema: pass_then(schema)["git"]["properties"][
+                "binary_sha256"
+            ].__setitem__("const", "0" * 64),
+            lambda schema: pass_then(schema)["git"]["properties"][
+                "version_output"
+            ].__setitem__("const", "git version 2.42.0"),
+            lambda schema: containment(schema)["required"].remove(
+                "repository_git_bootstrap"
+            ),
+            lambda schema: containment(schema)["properties"].pop(
+                "repository_git_bootstrap_runtime_match"
+            ),
+            lambda schema: containment(schema)["properties"].pop(
+                "repository_git_clone_contract_sha256"
+            ),
+            lambda schema: containment(schema)["properties"][
+                "repository_git_bootstrap"
+            ]["oneOf"][0]["const"].__setitem__(
+                "package_version", "1:2.43.0-1ubuntu7.2",
+            ),
+            lambda schema: containment(schema)["properties"][
+                "repository_git_bootstrap"
+            ]["oneOf"][0]["const"].__setitem__(
+                "binary_sha256", "0" * 64,
+            ),
+            lambda schema: containment(schema)["properties"][
+                "repository_git_bootstrap"
+            ]["oneOf"][0]["const"].__setitem__(
+                "controller_argv_sha256", "0" * 64,
+            ),
+            lambda schema: containment(schema)["properties"][
+                "repository_git_bootstrap"
+            ]["oneOf"][0]["const"].__setitem__(
+                "preclone_qualification_argv_sha256", "0" * 64,
+            ),
             lambda schema: prerequisite(schema)["properties"]["smoke"][
                 "allOf"
             ].pop(),

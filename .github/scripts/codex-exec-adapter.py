@@ -31,6 +31,7 @@ from typing import Any, Dict, Iterable, List, Mapping, NamedTuple, Optional, Seq
 
 
 REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
+T11_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
 TASK_ISSUE = 23
 ATTEMPT_RE = re.compile(r"ATTEMPT-[0-9a-f]{16}\Z")
 OID_RE = re.compile(r"[0-9a-f]{40}\Z")
@@ -123,6 +124,7 @@ REVIEWED_RULES_BYTES = (
 )
 COLIMA_PROVIDER_INPUT_SCHEMA = "t11-colima-provider-input/v1"
 CONTAINMENT_PROVIDER_EVIDENCE_SCHEMA = "t11-containment-provider-evidence/v1"
+GIT_BOOTSTRAP_EVIDENCE_SCHEMA = "t11-git-bootstrap-evidence/v1"
 COLIMA_PROVIDER_KIND = "colima-vm"
 COLIMA_VM_BACKEND = "vz"
 COLIMA_ARCHITECTURE = "aarch64"
@@ -133,9 +135,13 @@ APPROVED_CODEX_ARCHIVE_SHA256 = "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24
 APPROVED_BWRAP_PACKAGE_VERSION = "0.9.0-1ubuntu0.1"
 APPROVED_BWRAP_VERSION_OUTPUT = "bubblewrap 0.9.0"
 APPROVED_BWRAP_BINARY_SHA256 = "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
+APPROVED_GIT_PACKAGE_VERSION = "1:2.43.0-1ubuntu7.3"
+APPROVED_GIT_VERSION_OUTPUT = "git version 2.43.0"
+APPROVED_GIT_BINARY_SHA256 = "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
 APPROVED_APPARMOR_PACKAGE_VERSION = "4.0.1really4.0.1-0ubuntu0.24.04.7"
 APPROVED_BWRAP_PROFILE_SHA256 = "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
 STAGE_A1_BWRAP_BINARY = "/usr/bin/bwrap"
+STAGE_A1_GIT_BINARY = "/usr/bin/git"
 STAGE_A1_OS_RELEASE = "/usr/lib/os-release"
 STAGE_A1_APPARMOR_ENABLED = "/sys/module/apparmor/parameters/enabled"
 STAGE_A1_APPARMOR_USERNS_RESTRICTION = (
@@ -154,11 +160,20 @@ STAGE_A1_PACKAGE_QUERY_ARGV = (
     "--showformat=${db:Status-Status}\\t${Version}\\t${Architecture}\\n",
     "bubblewrap",
 )
+STAGE_A1_GIT_PACKAGE_QUERY_ARGV = (
+    "/usr/bin/dpkg-query", "--show",
+    "--showformat=${db:Status-Status}\\t${Version}\\t${Architecture}\\n",
+    "git",
+)
+STAGE_A1_GIT_HASH_ARGV = (
+    "/usr/bin/sha256sum", "--", STAGE_A1_GIT_BINARY,
+)
+STAGE_A1_GIT_VERSION_ARGV = (STAGE_A1_GIT_BINARY, "--version")
 STAGE_A1_LOADED_PROFILES_ARGV = (
     "/usr/bin/sudo", "-n", "/usr/bin/cat",
     "/sys/kernel/security/apparmor/profiles",
 )
-STAGE_A1_CONTROLLER_ARGV = (
+STAGE_A1_PRECLONE_CONTROLLER_ARGV = (
     ("/usr/bin/sudo", "-n", "/usr/bin/apt-get", "update"),
     (
         "/usr/bin/sudo", "-n", "/usr/bin/apt-get", "install",
@@ -166,7 +181,13 @@ STAGE_A1_CONTROLLER_ARGV = (
         "apparmor=" + APPROVED_APPARMOR_PACKAGE_VERSION,
         "apparmor-profiles=" + APPROVED_APPARMOR_PACKAGE_VERSION,
         "bubblewrap=" + APPROVED_BWRAP_PACKAGE_VERSION,
+        "git=" + APPROVED_GIT_PACKAGE_VERSION,
     ),
+    STAGE_A1_GIT_PACKAGE_QUERY_ARGV,
+    STAGE_A1_GIT_HASH_ARGV,
+    STAGE_A1_GIT_VERSION_ARGV,
+)
+STAGE_A1_POSTCLONE_CONTROLLER_ARGV = (
     (
         "/usr/bin/sudo", "-n", "/usr/bin/install",
         "--owner=root", "--group=root", "--mode=0644",
@@ -178,18 +199,25 @@ STAGE_A1_CONTROLLER_ARGV = (
     ),
     STAGE_A1_BWRAP_SMOKE_ARGV,
 )
+STAGE_A1_CONTROLLER_ARGV = (
+    STAGE_A1_PRECLONE_CONTROLLER_ARGV + STAGE_A1_POSTCLONE_CONTROLLER_ARGV
+)
+STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256 = (
+    "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc"
+)
 STAGE_A1_CONTROLLER_ARGV_SHA256 = (
-    "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd"
+    "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff"
 )
 STAGE_A1_REASON_CODES = (
     "none", "not-run", "unsupported-platform", "apparmor-not-enforcing",
-    "package-drift", "profile-drift", "binary-drift",
+    "package-drift", "profile-drift", "binary-drift", "git-package-drift",
+    "git-binary-drift",
     "observation-uncheckable", "nonzero-exit", "signal", "timeout",
     "output-overflow", "unexpected-output", "process-not-reaped",
 )
 STAGE_A1_PRECONDITION_FAILURE_CODES = (
     "unsupported-platform", "apparmor-not-enforcing", "package-drift",
-    "profile-drift", "binary-drift",
+    "profile-drift", "binary-drift", "git-package-drift", "git-binary-drift",
 )
 STAGE_A1_SMOKE_FAILURE_CODES = (
     "nonzero-exit", "signal", "unexpected-output",
@@ -667,6 +695,124 @@ def validate_control_plane_evidence(value: Any, allow_not_run: bool = True) -> D
     return value
 
 
+def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
+    """Return the reviewed shell-free public-clone contract for one exact head."""
+    require_string(head, "Git clone contract head", OID_RE)
+    require_string(tree, "Git clone contract tree", OID_RE)
+    repository_url = "https://github.com/{}.git".format(REPOSITORY)
+    target = "<private-vm-repository>"
+    prefix = [
+        STAGE_A1_GIT_BINARY, "--no-replace-objects",
+        "-c", "core.hooksPath=/dev/null", "-c", "credential.helper=",
+    ]
+    return {
+        "schema": "t11-git-clone-contract/v1",
+        "authority": "reviewed-static-contract",
+        "repository_url": repository_url,
+        "branch": T11_PUBLIC_BRANCH,
+        "head": head,
+        "tree": tree,
+        "git_binary": STAGE_A1_GIT_BINARY,
+        "git_binary_sha256": APPROVED_GIT_BINARY_SHA256,
+        "shell": False,
+        "environment": {
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+            "credential_helper": "disabled",
+            "ssh_agent": "absent",
+            "home": "private-vm",
+        },
+        "destination": "private-vm-disk",
+        "host_repository_mounted": False,
+        "argv_templates": [
+            prefix + [
+                "clone", "--no-checkout", "--single-branch", "--branch",
+                T11_PUBLIC_BRANCH, repository_url, target,
+            ],
+            prefix + ["-C", target, "checkout", "--detach", head],
+            prefix + ["-C", target, "rev-parse", "--verify", "HEAD"],
+            prefix + ["-C", target, "rev-parse", "--verify", "HEAD^{tree}"],
+            prefix + [
+                "-C", target, "status", "--porcelain=v1", "-z",
+                "--untracked-files=all",
+            ],
+        ],
+        "expected_outputs": {
+            "head": head,
+            "tree": tree,
+            "status_porcelain_v1_z": "empty",
+        },
+    }
+
+
+def stage_a1_git_clone_contract_sha256(head: str, tree: str) -> str:
+    return sha256_bytes(canonical_bytes(stage_a1_git_clone_contract(head, tree)))
+
+
+def expected_git_bootstrap_evidence() -> Dict[str, Any]:
+    """Return the exact owner/controller-authored pre-clone Git trust anchor."""
+    return {
+        "schema": GIT_BOOTSTRAP_EVIDENCE_SCHEMA,
+        "authority": "owner/controller-authored",
+        "package_name": "git",
+        "package_version": APPROVED_GIT_PACKAGE_VERSION,
+        "package_architecture": "arm64",
+        "install_status": "installed",
+        "binary_sha256": APPROVED_GIT_BINARY_SHA256,
+        "version_output": APPROVED_GIT_VERSION_OUTPUT,
+        "controller_argv_sha256": STAGE_A1_CONTROLLER_ARGV_SHA256,
+        "preclone_qualification_argv_sha256": (
+            STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+        ),
+        "raw_stdout_recorded": False,
+        "raw_stderr_recorded": False,
+    }
+
+
+def not_run_git_bootstrap_evidence() -> Dict[str, Any]:
+    """Return an exact sentinel that cannot be mistaken for qualification."""
+    return {
+        "schema": GIT_BOOTSTRAP_EVIDENCE_SCHEMA,
+        "authority": "owner/controller-authored",
+        "package_name": "not-run",
+        "package_version": "not-run",
+        "package_architecture": "not-run",
+        "install_status": "not-run",
+        "binary_sha256": "0" * 64,
+        "version_output": "not-run",
+        "controller_argv_sha256": STAGE_A1_CONTROLLER_ARGV_SHA256,
+        "preclone_qualification_argv_sha256": (
+            STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+        ),
+        "raw_stdout_recorded": False,
+        "raw_stderr_recorded": False,
+    }
+
+
+def validate_git_bootstrap_evidence(
+    value: Any, *, allow_not_run: bool = False,
+) -> Dict[str, Any]:
+    """Accept only the exact pinned bootstrap or its explicit not-run sentinel."""
+    if not isinstance(value, dict):
+        raise ContractError("Git bootstrap evidence must be an object")
+    exact_keys(
+        value,
+        (
+            "schema", "authority", "package_name", "package_version",
+            "package_architecture", "install_status", "binary_sha256",
+            "version_output", "controller_argv_sha256",
+            "preclone_qualification_argv_sha256",
+            "raw_stdout_recorded", "raw_stderr_recorded",
+        ),
+        "Git bootstrap evidence",
+    )
+    if value == expected_git_bootstrap_evidence():
+        return value
+    if allow_not_run and value == not_run_git_bootstrap_evidence():
+        return value
+    raise ContractError("Git bootstrap evidence is not the exact reviewed trust anchor")
+
+
 def validate_colima_provider_input(value: Any) -> Dict[str, Any]:
     """Validate the closed owner-authored Option A input.
 
@@ -681,11 +827,22 @@ def validate_colima_provider_input(value: Any) -> Dict[str, Any]:
     repository = value["repository"]
     if not isinstance(repository, dict):
         raise ContractError("Colima provider repository binding must be an object")
-    exact_keys(repository, ("head", "tree"), "Colima provider repository binding")
+    exact_keys(
+        repository,
+        ("head", "tree", "git_bootstrap", "git_clone_contract_sha256"),
+        "Colima provider repository binding",
+    )
     head = require_string(repository["head"], "Colima public head", OID_RE)
     tree = require_string(repository["tree"], "Colima public tree", OID_RE)
     if head == "0" * 40 or tree == "0" * 40:
         raise ContractError("Colima public repository binding cannot be a sentinel")
+    validate_git_bootstrap_evidence(repository["git_bootstrap"])
+    clone_contract_sha256 = require_string(
+        repository["git_clone_contract_sha256"],
+        "Colima Git clone contract digest", SHA256_RE,
+    )
+    if clone_contract_sha256 != stage_a1_git_clone_contract_sha256(head, tree):
+        raise ContractError("Colima Git clone contract does not bind the exact head/tree")
     provider = value["provider"]
     if not isinstance(provider, dict):
         raise ContractError("Colima provider record must be an object")
@@ -780,6 +937,9 @@ def not_run_containment_provider_evidence() -> Dict[str, Any]:
         "public_head": "0" * 40,
         "public_tree": "0" * 40,
         "repository_clean": False,
+        "repository_git_bootstrap": not_run_git_bootstrap_evidence(),
+        "repository_git_bootstrap_runtime_match": False,
+        "repository_git_clone_contract_sha256": "0" * 64,
         "codex_version_output": "unavailable",
         "approved_archive_sha256": "0" * 64,
         "observed_archive_sha256": "0" * 64,
@@ -832,6 +992,14 @@ def not_run_stage_a1_prerequisite_evidence() -> Dict[str, Any]:
             "version_output": "not-run",
             "help_sha256": "0" * 64,
         },
+        "git": {
+            "package_name": "not-run",
+            "package_version": "not-run",
+            "package_architecture": "not-run",
+            "install_status": "not-run",
+            "binary_sha256": "0" * 64,
+            "version_output": "not-run",
+        },
         "controller": {
             "argv_sha256": STAGE_A1_CONTROLLER_ARGV_SHA256,
             "shell": False,
@@ -859,7 +1027,7 @@ def validate_stage_a1_prerequisite_evidence(value: Any) -> Dict[str, Any]:
         value,
         (
             "schema", "authority", "status", "reason_code", "guest",
-            "apparmor", "bubblewrap", "controller", "smoke",
+            "apparmor", "bubblewrap", "git", "controller", "smoke",
         ),
         "Stage A.1 prerequisite evidence",
     )
@@ -940,6 +1108,32 @@ def validate_stage_a1_prerequisite_evidence(value: Any) -> Dict[str, Any]:
             raise ContractError("Stage A.1 bubblewrap field is invalid")
     for field in ("binary_sha256", "help_sha256"):
         require_string(bubblewrap[field], "Stage A.1 bubblewrap digest", SHA256_RE)
+    git = value["git"]
+    if not isinstance(git, dict):
+        raise ContractError("Stage A.1 Git evidence must be an object")
+    exact_keys(
+        git,
+        (
+            "package_name", "package_version", "package_architecture",
+            "install_status", "binary_sha256", "version_output",
+        ),
+        "Stage A.1 Git evidence",
+    )
+    allowed_git_values = {
+        "package_name": ("git", "not-run"),
+        "package_version": (
+            APPROVED_GIT_PACKAGE_VERSION, "not-run", "unrecognized",
+        ),
+        "package_architecture": ("arm64", "not-run", "unrecognized"),
+        "install_status": ("installed", "not-run"),
+        "version_output": (
+            APPROVED_GIT_VERSION_OUTPUT, "not-run", "unrecognized",
+        ),
+    }
+    for field, allowed in allowed_git_values.items():
+        if git[field] not in allowed:
+            raise ContractError("Stage A.1 Git field is invalid")
+    require_string(git["binary_sha256"], "Stage A.1 Git digest", SHA256_RE)
     controller = value["controller"]
     if not isinstance(controller, dict):
         raise ContractError("Stage A.1 controller evidence must be an object")
@@ -1043,6 +1237,15 @@ def validate_stage_a1_prerequisite_evidence(value: Any) -> Dict[str, Any]:
             "help_sha256": bubblewrap["help_sha256"],
         } or bubblewrap["help_sha256"] == "0" * 64:
             raise ContractError("passing Stage A.1 bubblewrap boundary drifted")
+        if git != {
+            "package_name": "git",
+            "package_version": APPROVED_GIT_PACKAGE_VERSION,
+            "package_architecture": "arm64",
+            "install_status": "installed",
+            "binary_sha256": APPROVED_GIT_BINARY_SHA256,
+            "version_output": APPROVED_GIT_VERSION_OUTPUT,
+        }:
+            raise ContractError("passing Stage A.1 Git boundary drifted")
         if value["reason_code"] != "none" or smoke["status"] != "pass":
             raise ContractError("passing Stage A.1 evidence has a failure reason")
     elif value["status"] == "fail":
@@ -1066,7 +1269,7 @@ def validate_stage_a1_prerequisite_evidence(value: Any) -> Dict[str, Any]:
             raise ContractError("uncheckable Stage A.1 outcome is inconsistent")
     validate_json_limits(
         value,
-        {"json_depth": 8, "json_nodes": 96, "json_string_bytes": 256},
+        {"json_depth": 8, "json_nodes": 112, "json_string_bytes": 256},
         "Stage A.1 prerequisite evidence",
     )
     return value
@@ -1138,6 +1341,75 @@ def _stage_a1_profile_load_status(result: "ProcessResult") -> str:
     return "enforce" if required.issubset(lines) else "not-loaded"
 
 
+def observe_stage_a1_git(root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
+    """Observe a bounded safe projection of the exact guest Git prerequisite."""
+    package_result = bounded_capture(
+        STAGE_A1_GIT_PACKAGE_QUERY_ARGV, root, env,
+        timeout=15, stdout_limit=1024, stderr_limit=1024,
+    )
+    if (
+        package_result.exit_code != 0 or package_result.timed_out
+        or package_result.stdout_overflow or package_result.stderr_overflow
+        or not package_result.reaped
+    ):
+        raise ContractError("Stage A.1 Git package observation is uncheckable")
+    package_match = re.fullmatch(
+        rb"install ok installed\t([^\t\n]{1,128})\t([^\t\n]{1,32})\n",
+        package_result.stdout,
+    )
+    if package_match is None:
+        raise ContractError("Stage A.1 Git package observation is malformed")
+    observed_version = package_match.group(1).decode("ascii", errors="strict")
+    observed_architecture = package_match.group(2).decode("ascii", errors="strict")
+    _git_path, binary_sha256 = approved_provider_git_binding(
+        require_digest=False,
+    )
+    if binary_sha256 != APPROVED_GIT_BINARY_SHA256:
+        return {
+            "package_name": "git",
+            "package_version": (
+                APPROVED_GIT_PACKAGE_VERSION
+                if observed_version == APPROVED_GIT_PACKAGE_VERSION
+                else "unrecognized"
+            ),
+            "package_architecture": (
+                "arm64" if observed_architecture == "arm64" else "unrecognized"
+            ),
+            "install_status": "installed",
+            "binary_sha256": binary_sha256,
+            "version_output": "not-run",
+        }
+    version_result = bounded_capture(
+        (STAGE_A1_GIT_BINARY, "--version"), root, env,
+        timeout=15, stdout_limit=256, stderr_limit=1024,
+    )
+    if (
+        version_result.exit_code != 0 or version_result.timed_out
+        or version_result.stdout_overflow or version_result.stderr_overflow
+        or not version_result.reaped
+    ):
+        raise ContractError("Stage A.1 Git binary observation is uncheckable")
+    observed_output = version_result.stdout.decode("utf-8", errors="strict").strip()
+    return {
+        "package_name": "git",
+        "package_version": (
+            APPROVED_GIT_PACKAGE_VERSION
+            if observed_version == APPROVED_GIT_PACKAGE_VERSION
+            else "unrecognized"
+        ),
+        "package_architecture": (
+            "arm64" if observed_architecture == "arm64" else "unrecognized"
+        ),
+        "install_status": "installed",
+        "binary_sha256": binary_sha256,
+        "version_output": (
+            APPROVED_GIT_VERSION_OUTPUT
+            if observed_output == APPROVED_GIT_VERSION_OUTPUT
+            else "unrecognized"
+        ),
+    }
+
+
 def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
     """Re-observe the installed Noble prerequisite and run one direct smoke."""
     fallback = not_run_stage_a1_prerequisite_evidence()
@@ -1196,6 +1468,7 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
             "arm64" if observed_package_architecture == "arm64"
             else "unrecognized"
         )
+        git = observe_stage_a1_git(root, env)
         binary_sha = hash_regular_file(STAGE_A1_BWRAP_BINARY)
         version_result = bounded_capture(
             (str(STAGE_A1_BWRAP_BINARY), "--version"), root, env,
@@ -1273,6 +1546,10 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
         and package_architecture == "arm64"
         and binary_sha == APPROVED_BWRAP_BINARY_SHA256
         and version_output == APPROVED_BWRAP_VERSION_OUTPUT
+        and git["package_version"] == APPROVED_GIT_PACKAGE_VERSION
+        and git["package_architecture"] == "arm64"
+        and git["binary_sha256"] == APPROVED_GIT_BINARY_SHA256
+        and git["version_output"] == APPROVED_GIT_VERSION_OUTPUT
     )
     smoke = not_run_stage_a1_prerequisite_evidence()["smoke"]
     if preconditions:
@@ -1309,6 +1586,16 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
         status, reason = "fail", "profile-drift"
     elif binary_sha != APPROVED_BWRAP_BINARY_SHA256 or version_output != APPROVED_BWRAP_VERSION_OUTPUT:
         status, reason = "fail", "binary-drift"
+    elif (
+        git["package_version"] != APPROVED_GIT_PACKAGE_VERSION
+        or git["package_architecture"] != "arm64"
+    ):
+        status, reason = "fail", "git-package-drift"
+    elif (
+        git["binary_sha256"] != APPROVED_GIT_BINARY_SHA256
+        or git["version_output"] != APPROVED_GIT_VERSION_OUTPUT
+    ):
+        status, reason = "fail", "git-binary-drift"
     else:
         status, reason = smoke["status"], smoke["reason_code"]
     evidence = {
@@ -1319,6 +1606,7 @@ def observe_stage_a1_prerequisite(root: Path, env: Mapping[str, str]) -> Dict[st
         "guest": guest,
         "apparmor": apparmor,
         "bubblewrap": bubblewrap,
+        "git": git,
         "controller": not_run_stage_a1_prerequisite_evidence()["controller"],
         "smoke": smoke,
     }
@@ -1885,7 +2173,10 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
             "host_mount_classifications", "all_host_mounts_read_only", "provider_cache_only",
             "host_sensitive_mounts_absent", "unapproved_mounts_absent", "ssh_agent_forwarding",
             "dot_ssh_public_key_loading", "user_ssh_config_modified", "vm_instance_identity_sha256",
-            "public_head", "public_tree", "repository_clean", "codex_version_output",
+            "public_head", "public_tree", "repository_clean",
+            "repository_git_bootstrap", "repository_git_bootstrap_runtime_match",
+            "repository_git_clone_contract_sha256",
+            "codex_version_output",
             "approved_archive_sha256", "observed_archive_sha256", "extracted_binary_sha256",
             "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
             "control_plane", "lifecycle",
@@ -1902,6 +2193,7 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
         "vm_instance_identity_sha256", "approved_archive_sha256", "observed_archive_sha256",
         "extracted_binary_sha256", "runtime_root_binding_sha256",
         "dedicated_codex_home_binding_sha256",
+        "repository_git_clone_contract_sha256",
     ):
         require_string(value[field], "containment provider " + field, SHA256_RE)
     require_string(value["public_head"], "containment provider public head", OID_RE)
@@ -1914,8 +2206,12 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
         "native_architecture", "all_host_mounts_read_only", "provider_cache_only",
         "host_sensitive_mounts_absent", "unapproved_mounts_absent", "ssh_agent_forwarding",
         "dot_ssh_public_key_loading", "user_ssh_config_modified", "repository_clean",
+        "repository_git_bootstrap_runtime_match",
     ):
         require_bool(value[field], "containment provider " + field)
+    validate_git_bootstrap_evidence(
+        value["repository_git_bootstrap"], allow_not_run=True,
+    )
     lifecycle = value["lifecycle"]
     if not isinstance(lifecycle, dict):
         raise ContractError("containment lifecycle must be an object")
@@ -1952,12 +2248,23 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
     if value["codex_version_output"] != APPROVED_CODEX_VERSION:
         raise ContractError("containment provider client version drifted")
     if value["status"] == "pass":
-        if not value["native_architecture"] or not value["repository_clean"]:
+        if (
+            not value["native_architecture"]
+            or not value["repository_clean"]
+            or not value["repository_git_bootstrap_runtime_match"]
+            or value["repository_git_bootstrap"] != expected_git_bootstrap_evidence()
+        ):
             raise ContractError("passing containment provider evidence lacks provider-isolation facts")
         if value["guest_os"] != "Linux" or not isinstance(value["guest_kernel"], str) or re.fullmatch(r"[0-9A-Za-z._+~-]{1,128}", value["guest_kernel"]) is None:
             raise ContractError("passing containment provider guest platform is invalid")
         if value["profile_name"] != "t11-e2e-{}-01".format(value["public_head"][:12]):
             raise ContractError("containment provider profile/public-head binding drifted")
+        if value["repository_git_clone_contract_sha256"] != (
+            stage_a1_git_clone_contract_sha256(
+                value["public_head"], value["public_tree"],
+            )
+        ):
+            raise ContractError("containment provider clone contract binding drifted")
         if control_plane["status"] != "pass":
             raise ContractError("passing containment provider evidence lacks passing control-plane evidence")
         if (
@@ -2025,7 +2332,14 @@ def colima_provider_input_from_profile(profile: Mapping[str, Any]) -> Dict[str, 
             "user_ssh_config_modified": evidence["user_ssh_config_modified"],
         },
         "control_plane": dict(evidence["control_plane"]),
-        "repository": {"head": evidence["public_head"], "tree": evidence["public_tree"]},
+        "repository": {
+            "head": evidence["public_head"],
+            "tree": evidence["public_tree"],
+            "git_bootstrap": dict(evidence["repository_git_bootstrap"]),
+            "git_clone_contract_sha256": evidence[
+                "repository_git_clone_contract_sha256"
+            ],
+        },
         "client": {
             "version_output": evidence["codex_version_output"],
             "approved_archive_sha256": evidence["approved_archive_sha256"],
@@ -2977,11 +3291,70 @@ def run_git(root: Path, arguments: Sequence[str], env: Mapping[str, str], expect
     return result.stdout
 
 
-def git_executable_evidence(root: Path, env: Mapping[str, str]) -> Tuple[str, str]:
+def approved_provider_git_binding(
+    *, require_digest: bool = True,
+) -> Tuple[Path, str]:
+    """Bind the provider Git to a root-owned immutable-by-guest namespace."""
+    for raw in ("/usr", "/usr/bin"):
+        info = os.stat(raw, follow_symlinks=False)
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != 0
+            or stat.S_IMODE(info.st_mode) & 0o022
+        ):
+            raise ContractError("approved provider Git parent binding is unsafe")
+    path = Path(STAGE_A1_GIT_BINARY)
+    info = os.stat(str(path), follow_symlinks=False)
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or info.st_uid != 0
+        or stat.S_IMODE(info.st_mode) & 0o022
+        or not stat.S_IMODE(info.st_mode) & 0o111
+        or info.st_nlink < 1
+    ):
+        raise ContractError("approved provider Git executable binding is unsafe")
+    digest = hash_regular_file(path)
+    if require_digest and digest != APPROVED_GIT_BINARY_SHA256:
+        raise ContractError("approved provider Git executable digest drifted")
+    return path, digest
+
+
+def run_approved_provider_git(
+    root: Path,
+    arguments: Sequence[str],
+    env: Mapping[str, str],
+    expected: Sequence[int] = (0,),
+    max_bytes: int = 262_144,
+) -> bytes:
+    """Run only the fixed root-owned Git, revalidating it before every use."""
+    git, _digest = approved_provider_git_binding()
+    result = run_bounded_process(
+        [
+            str(git), "--no-replace-objects", "-c",
+            "core.hooksPath=/dev/null", "-C", str(root),
+        ] + list(arguments),
+        root, env, b"", 30, max_bytes, max_bytes, 2,
+    )
+    if (
+        result.timed_out or result.stdout_overflow or result.stderr_overflow
+        or not result.reaped or result.exit_code not in expected
+    ):
+        raise ContractError("bounded approved provider Git operation failed")
+    return result.stdout
+
+
+def git_executable_evidence(
+    root: Path, env: Mapping[str, str], *, require_approved: bool = False,
+) -> Tuple[str, str]:
     git = resolve_executable_from_path("git", env)
     if git is None:
         raise ContractError("Git executable is unavailable from the explicit PATH")
-    digest = hash_regular_file(git)
+    if require_approved:
+        if str(git) != STAGE_A1_GIT_BINARY:
+            raise ContractError("PATH-resolved Git is outside the approved namespace")
+        git, digest = approved_provider_git_binding()
+    else:
+        digest = hash_regular_file(git)
     result = run_bounded_process([str(git), "--version"], root, env, b"", 15, 4096, 4096, 2)
     if result.exit_code != 0 or result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped or result.stderr_size:
         raise ContractError("Git version sensor is uncheckable")
@@ -2991,6 +3364,8 @@ def git_executable_evidence(root: Path, env: Mapping[str, str]) -> Tuple[str, st
         raise ContractError("Git version sensor is malformed")
     if re.fullmatch(r"git version [0-9]+\.[0-9]+\.[0-9]+(?:\.[A-Za-z0-9.-]+)?(?: \([A-Za-z0-9 ._-]+\))?", version) is None:
         raise ContractError("Git version sensor is malformed")
+    if require_approved and version != APPROVED_GIT_VERSION_OUTPUT:
+        raise ContractError("Git executable version is outside the approved trust anchor")
     return version, digest
 
 
@@ -4906,9 +5281,39 @@ def observe_colima_provider_evidence(
         and guest_architecture == COLIMA_ARCHITECTURE
         and re.fullmatch(r"[0-9A-Za-z._+~-]{1,128}", guest_kernel) is not None
     )
-    head_bytes = run_git(repository_root, ("rev-parse", "--verify", "HEAD"), environment, max_bytes=128)
-    tree_bytes = run_git(repository_root, ("rev-parse", "--verify", "HEAD^{tree}"), environment, max_bytes=128)
-    status_bytes = run_git(repository_root, ("status", "--porcelain=v1", "-z", "--untracked-files=all"), environment, max_bytes=262_144)
+    git_bootstrap = provider_input["repository"]["git_bootstrap"]
+    observed_git = observe_stage_a1_git(repository_root, environment)
+    expected_observed_git = {
+        "package_name": git_bootstrap["package_name"],
+        "package_version": git_bootstrap["package_version"],
+        "package_architecture": git_bootstrap["package_architecture"],
+        "install_status": git_bootstrap["install_status"],
+        "binary_sha256": git_bootstrap["binary_sha256"],
+        "version_output": git_bootstrap["version_output"],
+    }
+    if observed_git != expected_observed_git:
+        raise ContractError("post-clone Git prerequisite differs from its pre-clone trust anchor")
+    resolved_git_version, resolved_git_sha256 = git_executable_evidence(
+        repository_root, environment, require_approved=True,
+    )
+    if (
+        resolved_git_version != git_bootstrap["version_output"]
+        or resolved_git_sha256 != git_bootstrap["binary_sha256"]
+    ):
+        raise ContractError("runtime Git differs from its pre-clone trust anchor")
+    head_bytes = run_approved_provider_git(
+        repository_root, ("rev-parse", "--verify", "HEAD"),
+        environment, max_bytes=128,
+    )
+    tree_bytes = run_approved_provider_git(
+        repository_root, ("rev-parse", "--verify", "HEAD^{tree}"),
+        environment, max_bytes=128,
+    )
+    status_bytes = run_approved_provider_git(
+        repository_root,
+        ("status", "--porcelain=v1", "-z", "--untracked-files=all"),
+        environment, max_bytes=262_144,
+    )
     try:
         public_head = head_bytes.decode("ascii", errors="strict").strip()
         public_tree = tree_bytes.decode("ascii", errors="strict").strip()
@@ -4964,6 +5369,11 @@ def observe_colima_provider_evidence(
         "public_head": public_head,
         "public_tree": public_tree,
         "repository_clean": repository_clean,
+        "repository_git_bootstrap": dict(git_bootstrap),
+        "repository_git_bootstrap_runtime_match": True,
+        "repository_git_clone_contract_sha256": provider_input[
+            "repository"
+        ]["git_clone_contract_sha256"],
         "codex_version_output": version_output,
         "approved_archive_sha256": provider_input["client"]["approved_archive_sha256"],
         "observed_archive_sha256": provider_input["client"]["observed_archive_sha256"],

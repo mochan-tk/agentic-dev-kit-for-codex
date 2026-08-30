@@ -51,14 +51,25 @@ read-back. PID/start-token tracking provides best-effort cleanup evidence; it
 does not prove kernel-enforced containment. Full escaped-descendant process-
 lifetime containment is deferred to T12.
 
-The current Stage A.1 attempt adds a narrow bubblewrap prerequisite; it does
-not widen that containment claim. The adapter/owner-authored evidence is
+The current Stage A.1 attempt adds narrow Git and bubblewrap prerequisites; it
+does not widen that containment claim. The adapter/owner-authored evidence is
 successful only on Ubuntu 24.04 `noble`, Linux `aarch64`, with AppArmor and
 its unprivileged-user-namespace restriction active. A fixed shell-free
-controller installs exact Ubuntu package versions for `bubblewrap`, `apparmor`,
-and `apparmor-profiles`, verifies the system bwrap binary/version/help digest,
-installs and loads the packaged official `bwrap-userns-restrict` profile, and
-runs the exact non-root smoke test
+controller installs exact Ubuntu package versions for `git`, `bubblewrap`,
+`apparmor`, and `apparmor-profiles`. Before cloning, it verifies
+`git=1:2.43.0-1ubuntu7.3`, `/usr/bin/git` version
+`git version 2.43.0`, and executable SHA-256
+`aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942`,
+then clones the exact public PR head/tree onto the VM private disk without a
+host-repository mount. The closed pre-clone `repository.git_bootstrap` input is
+re-observed after clone and before the adapter's first repository Git command;
+it is owner/controller-authored evidence, not a Codex attestation or independent
+proof of pre-clone chronology. A separate exact head/tree-derived clone-contract
+digest is recomputed, and every provider Git operation revalidates and uses the
+fixed root-owned `/usr/bin/git` rather than re-resolving PATH. It also
+verifies the system bwrap binary/version/help
+digest, installs and loads the packaged official `bwrap-userns-restrict`
+profile, and runs the exact non-root smoke test
 `/usr/bin/bwrap --unshare-user --unshare-net --ro-bind / / /bin/true`.
 Raw stderr is discarded and non-success is reduced to a fixed reason code.
 Codex shell-environment and sandbox/network probes remain blocked until that
@@ -124,11 +135,12 @@ Allowed stages are `load-envelope`, `load-static-role`,
 recorded.
 
 The next attempt must stop after Stage A.1: a fresh unauthenticated Colima VM,
-no device authentication, no model invocation, the bubblewrap qualification,
-and, only after its smoke passes, Codex shell-environment and sandbox/network
-probe evidence. Device-code authentication remains disabled, no live worker
-starts, and no runtime-receipt dry-run/application is performed. After
-append-only allowlisted probe evidence, the VM is destroyed and
+no device authentication, no model invocation, Git qualification before the
+private-disk clone, bubblewrap qualification, and, only after its smoke
+passes, Codex shell-environment and sandbox/network probe evidence. Device-
+code authentication remains disabled, no live worker starts, and no runtime-
+receipt dry-run/application is performed. After append-only allowlisted probe
+evidence, the VM is destroyed and
 profile/runtime-data/process absence is read back. Stage B
 requires a new review and a different fresh VM before device authentication
 can be enabled temporarily. Only a complete Stage B profile `match` can

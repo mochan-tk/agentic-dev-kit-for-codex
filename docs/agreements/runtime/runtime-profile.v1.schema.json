@@ -132,12 +132,12 @@
         "bubblewrap_prerequisite": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["schema", "authority", "status", "reason_code", "guest", "apparmor", "bubblewrap", "controller", "smoke"],
+          "required": ["schema", "authority", "status", "reason_code", "guest", "apparmor", "bubblewrap", "git", "controller", "smoke"],
           "properties": {
             "schema": {"const": "t11-bubblewrap-prerequisite-evidence/v1"},
             "authority": {"const": "adapter/owner-authored"},
             "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-            "reason_code": {"enum": ["none", "not-run", "unsupported-platform", "apparmor-not-enforcing", "package-drift", "profile-drift", "binary-drift", "observation-uncheckable", "nonzero-exit", "signal", "timeout", "output-overflow", "unexpected-output", "process-not-reaped"]},
+            "reason_code": {"enum": ["none", "not-run", "unsupported-platform", "apparmor-not-enforcing", "package-drift", "profile-drift", "binary-drift", "git-package-drift", "git-binary-drift", "observation-uncheckable", "nonzero-exit", "signal", "timeout", "output-overflow", "unexpected-output", "process-not-reaped"]},
             "guest": {
               "type": "object", "additionalProperties": false,
               "required": ["distribution_id", "distribution_version", "distribution_codename", "kernel", "architecture"],
@@ -175,11 +175,23 @@
                 "help_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
               }
             },
+            "git": {
+              "type": "object", "additionalProperties": false,
+              "required": ["package_name", "package_version", "package_architecture", "install_status", "binary_sha256", "version_output"],
+              "properties": {
+                "package_name": {"enum": ["git", "not-run"]},
+                "package_version": {"enum": ["1:2.43.0-1ubuntu7.3", "not-run", "unrecognized"]},
+                "package_architecture": {"enum": ["arm64", "not-run", "unrecognized"]},
+                "install_status": {"enum": ["installed", "not-run"]},
+                "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "version_output": {"enum": ["git version 2.43.0", "not-run", "unrecognized"]}
+              }
+            },
             "controller": {
               "type": "object", "additionalProperties": false,
               "required": ["argv_sha256", "shell", "model_invoked", "device_auth_performed", "legacy_landlock_enabled", "global_apparmor_userns_disabled"],
               "properties": {
-                "argv_sha256": {"const": "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd"},
+                "argv_sha256": {"const": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff"},
                 "shell": {"const": false},
                 "model_invoked": {"const": false},
                 "device_auth_performed": {"const": false},
@@ -193,7 +205,7 @@
               "properties": {
                 "argv_sha256": {"const": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08"},
                 "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
-                "reason_code": {"enum": ["none", "not-run", "unsupported-platform", "apparmor-not-enforcing", "package-drift", "profile-drift", "binary-drift", "observation-uncheckable", "nonzero-exit", "signal", "timeout", "output-overflow", "unexpected-output", "process-not-reaped"]},
+                "reason_code": {"enum": ["none", "not-run", "unsupported-platform", "apparmor-not-enforcing", "package-drift", "profile-drift", "binary-drift", "git-package-drift", "git-binary-drift", "observation-uncheckable", "nonzero-exit", "signal", "timeout", "output-overflow", "unexpected-output", "process-not-reaped"]},
                 "exit_code": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
                 "raw_stdout_recorded": {"const": false},
                 "raw_stderr_recorded": {"const": false}
@@ -216,6 +228,7 @@
               "guest": {"properties": {"distribution_id": {"const": "ubuntu"}, "distribution_version": {"const": "24.04"}, "distribution_codename": {"const": "noble"}, "kernel": {"type": "string", "pattern": "^[0-9][0-9A-Za-z._+~-]{0,127}$"}, "architecture": {"const": "aarch64"}}},
               "apparmor": {"properties": {"enabled": {"const": true}, "unprivileged_userns_restriction": {"const": "active"}, "profile_required": {"const": true}, "profile_source": {"const": "ubuntu-noble-apparmor-profiles"}, "source_sha256": {"const": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"}, "installed_sha256": {"const": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"}, "load_status": {"const": "enforce"}}},
               "bubblewrap": {"properties": {"package_name": {"const": "bubblewrap"}, "package_version": {"const": "0.9.0-1ubuntu0.1"}, "package_architecture": {"const": "arm64"}, "install_status": {"const": "installed"}, "binary_sha256": {"const": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"}, "version_output": {"const": "bubblewrap 0.9.0"}, "help_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}}},
+              "git": {"properties": {"package_name": {"const": "git"}, "package_version": {"const": "1:2.43.0-1ubuntu7.3"}, "package_architecture": {"const": "arm64"}, "install_status": {"const": "installed"}, "binary_sha256": {"const": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"}, "version_output": {"const": "git version 2.43.0"}}},
               "smoke": {"properties": {"status": {"const": "pass"}, "reason_code": {"const": "none"}, "exit_code": {"const": 0}}}
             }}
           }, {
@@ -225,13 +238,14 @@
               "guest": {"const": {"distribution_id": "not-run", "distribution_version": "not-run", "distribution_codename": "not-run", "kernel": "not-run", "architecture": "not-run"}},
               "apparmor": {"const": {"enabled": false, "unprivileged_userns_restriction": "not-run", "profile_required": false, "profile_source": "not-run", "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "installed_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "load_status": "not-run"}},
               "bubblewrap": {"const": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}},
+              "git": {"const": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run"}},
               "smoke": {"properties": {"status": {"const": "not-run"}}}
             }}
           }, {
             "if": {"properties": {"status": {"const": "fail"}}, "required": ["status"]},
-            "then": {"properties": {"reason_code": {"enum": ["apparmor-not-enforcing", "binary-drift", "nonzero-exit", "package-drift", "profile-drift", "signal", "unexpected-output", "unsupported-platform"]}, "smoke": {"properties": {"status": {"enum": ["fail", "not-run"]}}}}}
+            "then": {"properties": {"reason_code": {"enum": ["apparmor-not-enforcing", "binary-drift", "git-binary-drift", "git-package-drift", "nonzero-exit", "package-drift", "profile-drift", "signal", "unexpected-output", "unsupported-platform"]}, "smoke": {"properties": {"status": {"enum": ["fail", "not-run"]}}}}}
           }, {
-            "if": {"properties": {"reason_code": {"enum": ["apparmor-not-enforcing", "binary-drift", "package-drift", "profile-drift", "unsupported-platform"]}}, "required": ["reason_code"]},
+            "if": {"properties": {"reason_code": {"enum": ["apparmor-not-enforcing", "binary-drift", "git-binary-drift", "git-package-drift", "package-drift", "profile-drift", "unsupported-platform"]}}, "required": ["reason_code"]},
             "then": {"properties": {"status": {"const": "fail"}, "smoke": {"properties": {"status": {"const": "not-run"}, "reason_code": {"const": "not-run"}}}}}
           }, {
             "if": {"properties": {"reason_code": {"const": "nonzero-exit"}}, "required": ["reason_code"]},
@@ -272,6 +286,8 @@
             "provider_cache_only", "host_sensitive_mounts_absent", "unapproved_mounts_absent",
             "ssh_agent_forwarding", "dot_ssh_public_key_loading", "user_ssh_config_modified",
             "vm_instance_identity_sha256", "public_head", "public_tree", "repository_clean",
+            "repository_git_bootstrap", "repository_git_bootstrap_runtime_match",
+            "repository_git_clone_contract_sha256",
             "codex_version_output", "approved_archive_sha256", "observed_archive_sha256",
             "extracted_binary_sha256", "runtime_root_binding_sha256",
             "dedicated_codex_home_binding_sha256", "control_plane", "lifecycle"
@@ -309,6 +325,31 @@
             "public_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
             "public_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
             "repository_clean": {"type": "boolean"},
+            "repository_git_bootstrap": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["schema", "authority", "package_name", "package_version", "package_architecture", "install_status", "binary_sha256", "version_output", "controller_argv_sha256", "preclone_qualification_argv_sha256", "raw_stdout_recorded", "raw_stderr_recorded"],
+              "properties": {
+                "schema": {"const": "t11-git-bootstrap-evidence/v1"},
+                "authority": {"const": "owner/controller-authored"},
+                "package_name": {"enum": ["git", "not-run"]},
+                "package_version": {"enum": ["1:2.43.0-1ubuntu7.3", "not-run"]},
+                "package_architecture": {"enum": ["arm64", "not-run"]},
+                "install_status": {"enum": ["installed", "not-run"]},
+                "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "version_output": {"enum": ["git version 2.43.0", "not-run"]},
+                "controller_argv_sha256": {"const": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff"},
+                "preclone_qualification_argv_sha256": {"const": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc"},
+                "raw_stdout_recorded": {"const": false},
+                "raw_stderr_recorded": {"const": false}
+              },
+              "oneOf": [
+                {"const": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "git", "package_version": "1:2.43.0-1ubuntu7.3", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942", "version_output": "git version 2.43.0", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false}},
+                {"const": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false}}
+              ]
+            },
+            "repository_git_bootstrap_runtime_match": {"type": "boolean"},
+            "repository_git_clone_contract_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "codex_version_output": {"type": "string", "minLength": 1, "maxLength": 128},
             "approved_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "observed_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -401,6 +442,9 @@
                   "vm_backend": {"const": "vz"},
                   "architecture": {"const": "aarch64"},
                   "repository_clean": {"const": true},
+                  "repository_git_bootstrap": {"const": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "git", "package_version": "1:2.43.0-1ubuntu7.3", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942", "version_output": "git version 2.43.0", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false}},
+                  "repository_git_bootstrap_runtime_match": {"const": true},
+                  "repository_git_clone_contract_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}},
                   "codex_version_output": {"const": "codex-cli 0.150.1"},
                   "approved_archive_sha256": {"const": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"},
                   "observed_archive_sha256": {"const": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264"},
@@ -418,7 +462,7 @@
             },
             {
               "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
-              "then": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": false}}}}},
+              "then": {"properties": {"repository_git_bootstrap": {"const": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false}}, "repository_git_bootstrap_runtime_match": {"const": false}, "repository_git_clone_contract_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "lifecycle": {"properties": {"destroy_required": {"const": false}}}}},
               "else": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": true}}}}}
             }
           ]

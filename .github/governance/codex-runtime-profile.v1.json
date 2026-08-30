@@ -63,7 +63,8 @@
       "guest": {"distribution_id": "not-run", "distribution_version": "not-run", "distribution_codename": "not-run", "kernel": "not-run", "architecture": "not-run"},
       "apparmor": {"enabled": false, "unprivileged_userns_restriction": "not-run", "profile_required": false, "profile_source": "not-run", "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "installed_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "load_status": "not-run"},
       "bubblewrap": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
-      "controller": {"argv_sha256": "0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd", "shell": false, "model_invoked": false, "device_auth_performed": false, "legacy_landlock_enabled": false, "global_apparmor_userns_disabled": false},
+      "git": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run"},
+      "controller": {"argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "shell": false, "model_invoked": false, "device_auth_performed": false, "legacy_landlock_enabled": false, "global_apparmor_userns_disabled": false},
       "smoke": {"argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08", "status": "not-run", "reason_code": "not-run", "exit_code": null, "raw_stdout_recorded": false, "raw_stderr_recorded": false}
     },
     "containment_provider": {
@@ -96,6 +97,9 @@
       "public_head": "0000000000000000000000000000000000000000",
       "public_tree": "0000000000000000000000000000000000000000",
       "repository_clean": false,
+      "repository_git_bootstrap": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false},
+      "repository_git_bootstrap_runtime_match": false,
+      "repository_git_clone_contract_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "codex_version_output": "unavailable",
       "approved_archive_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "observed_archive_sha256": "0000000000000000000000000000000000000000000000000000000000000000",

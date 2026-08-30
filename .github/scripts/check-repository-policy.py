@@ -40,12 +40,12 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "bd775cc27c66d92c1cffa596db1f2a04c1e287db00104f0475eecb7d3f163561"
+    "c3f795bb01a1bb218f7fd2c79ecdd586c326345cfc5162615dc7adc432da63e4"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "87aa174fe552d3c0cb6b7dcebb6b48655b39e91e655b588bbbf930a63127ed4d"
+    "0680ba7d588f435f659bbb4689b93d83eb0079c0fbd2a0a7d68087ade4eeacc3"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
@@ -1658,16 +1658,25 @@ def validate_offline_runtime_checker_boundary(
         "adapter.APPROVED_BWRAP_PACKAGE_VERSION",
         "adapter.APPROVED_BWRAP_PROFILE_SHA256",
         "adapter.APPROVED_BWRAP_VERSION_OUTPUT",
+        "adapter.APPROVED_GIT_BINARY_SHA256",
+        "adapter.APPROVED_GIT_PACKAGE_VERSION",
+        "adapter.APPROVED_GIT_VERSION_OUTPUT",
         "adapter.ProcessResult",
         "adapter.REQUIRED_OVERRIDES",
         "adapter.REQUIRED_OVERRIDES.items",
         "adapter.STAGE_A1_BWRAP_SMOKE_ARGV",
         "adapter.STAGE_A1_CONTROLLER_ARGV",
         "adapter.STAGE_A1_CONTROLLER_ARGV_SHA256",
+        "adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV",
+        "adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256",
         "adapter.build_live_argv",
         "adapter.doctor_diagnostic_health",
+        "adapter.expected_git_bootstrap_evidence",
+        "adapter.not_run_git_bootstrap_evidence",
         "adapter.parse_jsonl",
         "adapter.runtime_configuration_intent",
+        "adapter.stage_a1_git_clone_contract",
+        "adapter.stage_a1_git_clone_contract_sha256",
         "adapter.toml_literal",
         "adapter.validate_runtime_argv_policy",
         "adapter.validate_envelope",

@@ -102,15 +102,25 @@ APPROVED_BWRAP_VERSION_OUTPUT = "bubblewrap 0.9.0"
 APPROVED_BWRAP_BINARY_SHA256 = "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
 APPROVED_APPARMOR_PACKAGE_VERSION = "4.0.1really4.0.1-0ubuntu0.24.04.7"
 APPROVED_BWRAP_PROFILE_SHA256 = "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9"
+APPROVED_GIT_PACKAGE_VERSION = "1:2.43.0-1ubuntu7.3"
+APPROVED_GIT_VERSION_OUTPUT = "git version 2.43.0"
+APPROVED_GIT_BINARY_SHA256 = "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
+EXPECTED_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
+EXPECTED_T11_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
+EXPECTED_REPRESENTATIVE_GIT_CLONE_CONTRACT_SHA256 = (
+    "960514bc6501c6b10aa63bd8907f91c883be8860c5d9134801e4458a3d11f80f"
+)
 STAGE_A1_REASON_CODES = [
     "none", "not-run", "unsupported-platform", "apparmor-not-enforcing",
-    "package-drift", "profile-drift", "binary-drift",
+    "package-drift", "profile-drift", "binary-drift", "git-package-drift",
+    "git-binary-drift",
     "observation-uncheckable", "nonzero-exit", "signal", "timeout",
     "output-overflow", "unexpected-output", "process-not-reaped",
 ]
 STAGE_A1_PRECONDITION_FAILURE_CODES = {
     "unsupported-platform", "apparmor-not-enforcing", "package-drift",
-    "profile-drift", "binary-drift",
+    "profile-drift", "binary-drift", "git-package-drift",
+    "git-binary-drift",
 }
 STAGE_A1_SMOKE_FAILURE_CODES = {
     "nonzero-exit", "signal", "unexpected-output",
@@ -123,7 +133,7 @@ EXPECTED_STAGE_A1_SMOKE_ARGV = [
     "/usr/bin/bwrap", "--unshare-user", "--unshare-net",
     "--ro-bind", "/", "/", "/bin/true",
 ]
-EXPECTED_STAGE_A1_CONTROLLER_ARGV = [
+EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV = [
     ["/usr/bin/sudo", "-n", "/usr/bin/apt-get", "update"],
     [
         "/usr/bin/sudo", "-n", "/usr/bin/apt-get", "install",
@@ -131,7 +141,17 @@ EXPECTED_STAGE_A1_CONTROLLER_ARGV = [
         "apparmor=" + APPROVED_APPARMOR_PACKAGE_VERSION,
         "apparmor-profiles=" + APPROVED_APPARMOR_PACKAGE_VERSION,
         "bubblewrap=" + APPROVED_BWRAP_PACKAGE_VERSION,
+        "git=" + APPROVED_GIT_PACKAGE_VERSION,
     ],
+    [
+        "/usr/bin/dpkg-query", "--show",
+        "--showformat=${db:Status-Status}\\t${Version}\\t${Architecture}\\n",
+        "git",
+    ],
+    ["/usr/bin/sha256sum", "--", "/usr/bin/git"],
+    ["/usr/bin/git", "--version"],
+]
+EXPECTED_STAGE_A1_POSTCLONE_CONTROLLER_ARGV = [
     [
         "/usr/bin/sudo", "-n", "/usr/bin/install", "--owner=root",
         "--group=root", "--mode=0644",
@@ -144,6 +164,16 @@ EXPECTED_STAGE_A1_CONTROLLER_ARGV = [
     ],
     EXPECTED_STAGE_A1_SMOKE_ARGV,
 ]
+EXPECTED_STAGE_A1_CONTROLLER_ARGV = (
+    EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV
+    + EXPECTED_STAGE_A1_POSTCLONE_CONTROLLER_ARGV
+)
+EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256 = (
+    "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc"
+)
+EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256 = (
+    "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff"
+)
 ZERO_OID = "0" * 40
 ZERO_SHA256 = "0" * 64
 CONTAINMENT_PROVIDER_KEYS = (
@@ -156,9 +186,18 @@ CONTAINMENT_PROVIDER_KEYS = (
     "provider_cache_only", "host_sensitive_mounts_absent", "unapproved_mounts_absent",
     "ssh_agent_forwarding", "dot_ssh_public_key_loading", "user_ssh_config_modified",
     "vm_instance_identity_sha256", "public_head", "public_tree", "repository_clean",
+    "repository_git_bootstrap", "repository_git_bootstrap_runtime_match",
+    "repository_git_clone_contract_sha256",
     "codex_version_output", "approved_archive_sha256", "observed_archive_sha256",
     "extracted_binary_sha256", "runtime_root_binding_sha256",
     "dedicated_codex_home_binding_sha256", "control_plane", "lifecycle",
+)
+GIT_BOOTSTRAP_KEYS = (
+    "schema", "authority", "package_name", "package_version",
+    "package_architecture", "install_status", "binary_sha256",
+    "version_output", "controller_argv_sha256",
+    "preclone_qualification_argv_sha256", "raw_stdout_recorded",
+    "raw_stderr_recorded",
 )
 LANE_STATUS_KEYS = (
     "provider_isolation_status", "mount_boundary_status", "process_cleanup_status",
@@ -332,6 +371,129 @@ def expected_control_plane_schema() -> Dict[str, Any]:
     }
 
 
+def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
+    repository_url = "https://github.com/{}.git".format(EXPECTED_REPOSITORY)
+    target = "<private-vm-repository>"
+    prefix = [
+        "/usr/bin/git", "--no-replace-objects",
+        "-c", "core.hooksPath=/dev/null", "-c", "credential.helper=",
+    ]
+    return {
+        "schema": "t11-git-clone-contract/v1",
+        "authority": "reviewed-static-contract",
+        "repository_url": repository_url,
+        "branch": EXPECTED_T11_PUBLIC_BRANCH,
+        "head": head,
+        "tree": tree,
+        "git_binary": "/usr/bin/git",
+        "git_binary_sha256": APPROVED_GIT_BINARY_SHA256,
+        "shell": False,
+        "environment": {
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+            "credential_helper": "disabled",
+            "ssh_agent": "absent",
+            "home": "private-vm",
+        },
+        "destination": "private-vm-disk",
+        "host_repository_mounted": False,
+        "argv_templates": [
+            prefix + [
+                "clone", "--no-checkout", "--single-branch", "--branch",
+                EXPECTED_T11_PUBLIC_BRANCH, repository_url, target,
+            ],
+            prefix + ["-C", target, "checkout", "--detach", head],
+            prefix + ["-C", target, "rev-parse", "--verify", "HEAD"],
+            prefix + ["-C", target, "rev-parse", "--verify", "HEAD^{tree}"],
+            prefix + [
+                "-C", target, "status", "--porcelain=v1", "-z",
+                "--untracked-files=all",
+            ],
+        ],
+        "expected_outputs": {
+            "head": head,
+            "tree": tree,
+            "status_porcelain_v1_z": "empty",
+        },
+    }
+
+
+def expected_git_clone_contract_sha256(head: str, tree: str) -> str:
+    return sha256(canonical_bytes(expected_git_clone_contract(head, tree)))
+
+
+def expected_git_bootstrap_evidence() -> Dict[str, Any]:
+    return {
+        "schema": "t11-git-bootstrap-evidence/v1",
+        "authority": "owner/controller-authored",
+        "package_name": "git",
+        "package_version": APPROVED_GIT_PACKAGE_VERSION,
+        "package_architecture": "arm64",
+        "install_status": "installed",
+        "binary_sha256": APPROVED_GIT_BINARY_SHA256,
+        "version_output": APPROVED_GIT_VERSION_OUTPUT,
+        "preclone_qualification_argv_sha256": (
+            EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+        ),
+        "controller_argv_sha256": EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256,
+        "raw_stdout_recorded": False,
+        "raw_stderr_recorded": False,
+    }
+
+
+def expected_not_run_git_bootstrap_evidence() -> Dict[str, Any]:
+    return {
+        "schema": "t11-git-bootstrap-evidence/v1",
+        "authority": "owner/controller-authored",
+        "package_name": "not-run",
+        "package_version": "not-run",
+        "package_architecture": "not-run",
+        "install_status": "not-run",
+        "binary_sha256": ZERO_SHA256,
+        "version_output": "not-run",
+        "preclone_qualification_argv_sha256": (
+            EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+        ),
+        "controller_argv_sha256": EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256,
+        "raw_stdout_recorded": False,
+        "raw_stderr_recorded": False,
+    }
+
+
+def expected_git_bootstrap_schema() -> Dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(GIT_BOOTSTRAP_KEYS),
+        "properties": {
+            "schema": {"const": "t11-git-bootstrap-evidence/v1"},
+            "authority": {"const": "owner/controller-authored"},
+            "package_name": {"enum": ["git", "not-run"]},
+            "package_version": {
+                "enum": [APPROVED_GIT_PACKAGE_VERSION, "not-run"]
+            },
+            "package_architecture": {"enum": ["arm64", "not-run"]},
+            "install_status": {"enum": ["installed", "not-run"]},
+            "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "version_output": {
+                "enum": [APPROVED_GIT_VERSION_OUTPUT, "not-run"]
+            },
+            "preclone_qualification_argv_sha256": {
+                "const": EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+            },
+            "controller_argv_sha256": {
+                "const": EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256
+            },
+            "raw_stdout_recorded": {"const": False},
+            "raw_stderr_recorded": {"const": False},
+        },
+        "oneOf": [
+            {"const": expected_git_bootstrap_evidence()},
+            {"const": expected_not_run_git_bootstrap_evidence()},
+        ],
+    }
+
+
 def expected_containment_provider_schema() -> Dict[str, Any]:
     return {
         "type": "object",
@@ -370,6 +532,11 @@ def expected_containment_provider_schema() -> Dict[str, Any]:
             "public_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
             "public_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
             "repository_clean": {"type": "boolean"},
+            "repository_git_bootstrap": expected_git_bootstrap_schema(),
+            "repository_git_bootstrap_runtime_match": {"type": "boolean"},
+            "repository_git_clone_contract_sha256": {
+                "type": "string", "pattern": "^[0-9a-f]{64}$"
+            },
             "codex_version_output": {"type": "string", "minLength": 1, "maxLength": 128},
             "approved_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "observed_archive_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -396,6 +563,14 @@ def expected_containment_provider_schema() -> Dict[str, Any]:
                 "vm_backend": {"const": "vz"},
                 "architecture": {"const": "aarch64"},
                 "repository_clean": {"const": True},
+                "repository_git_bootstrap": {
+                    "const": expected_git_bootstrap_evidence()
+                },
+                "repository_git_bootstrap_runtime_match": {"const": True},
+                "repository_git_clone_contract_sha256": {
+                    "type": "string", "pattern": "^[0-9a-f]{64}$",
+                    "not": {"const": ZERO_SHA256},
+                },
                 "codex_version_output": {"const": APPROVED_CODEX_VERSION},
                 "approved_archive_sha256": {"const": APPROVED_ARCHIVE_SHA256},
                 "observed_archive_sha256": {"const": APPROVED_ARCHIVE_SHA256},
@@ -409,7 +584,14 @@ def expected_containment_provider_schema() -> Dict[str, Any]:
             }},
         }, {
             "if": {"properties": {"status": {"const": "not-run"}}, "required": ["status"]},
-            "then": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": False}}}}},
+            "then": {"properties": {
+                "repository_git_bootstrap": {
+                    "const": expected_not_run_git_bootstrap_evidence()
+                },
+                "repository_git_bootstrap_runtime_match": {"const": False},
+                "repository_git_clone_contract_sha256": {"const": ZERO_SHA256},
+                "lifecycle": {"properties": {"destroy_required": {"const": False}}},
+            }},
             "else": {"properties": {"lifecycle": {"properties": {"destroy_required": {"const": True}}}}},
         }],
     }
@@ -423,7 +605,7 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
         "additionalProperties": False,
         "required": [
             "schema", "authority", "status", "reason_code", "guest",
-            "apparmor", "bubblewrap", "controller", "smoke",
+            "apparmor", "bubblewrap", "git", "controller", "smoke",
         ],
         "properties": {
             "schema": {"const": "t11-bubblewrap-prerequisite-evidence/v1"},
@@ -492,6 +674,29 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
                     "help_sha256": dict(digest_field),
                 },
             },
+            "git": {
+                "type": "object", "additionalProperties": False,
+                "required": [
+                    "package_name", "package_version", "package_architecture",
+                    "install_status", "binary_sha256", "version_output",
+                ],
+                "properties": {
+                    "package_name": {"enum": ["git", "not-run"]},
+                    "package_version": {"enum": [
+                        APPROVED_GIT_PACKAGE_VERSION,
+                        "not-run", "unrecognized",
+                    ]},
+                    "package_architecture": {
+                        "enum": ["arm64", "not-run", "unrecognized"]
+                    },
+                    "install_status": {"enum": ["installed", "not-run"]},
+                    "binary_sha256": dict(digest_field),
+                    "version_output": {"enum": [
+                        APPROVED_GIT_VERSION_OUTPUT,
+                        "not-run", "unrecognized",
+                    ]},
+                },
+            },
             "controller": {
                 "type": "object", "additionalProperties": False,
                 "required": [
@@ -501,7 +706,7 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
                 ],
                 "properties": {
                     "argv_sha256": {
-                        "const": sha256(canonical_bytes(EXPECTED_STAGE_A1_CONTROLLER_ARGV))
+                        "const": EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256
                     },
                     "shell": {"const": False},
                     "model_invoked": {"const": False},
@@ -605,6 +810,14 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
                         "not": {"const": ZERO_SHA256},
                     },
                 }},
+                "git": {"properties": {
+                    "package_name": {"const": "git"},
+                    "package_version": {"const": APPROVED_GIT_PACKAGE_VERSION},
+                    "package_architecture": {"const": "arm64"},
+                    "install_status": {"const": "installed"},
+                    "binary_sha256": {"const": APPROVED_GIT_BINARY_SHA256},
+                    "version_output": {"const": APPROVED_GIT_VERSION_OUTPUT},
+                }},
                 "smoke": {"properties": {
                     "status": {"const": "pass"},
                     "reason_code": {"const": "none"},
@@ -618,6 +831,7 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
                 "guest": {"const": expected_not_run_stage_a1_prerequisite()["guest"]},
                 "apparmor": {"const": expected_not_run_stage_a1_prerequisite()["apparmor"]},
                 "bubblewrap": {"const": expected_not_run_stage_a1_prerequisite()["bubblewrap"]},
+                "git": {"const": expected_not_run_stage_a1_prerequisite()["git"]},
                 "smoke": {"properties": {"status": {"const": "not-run"}}},
             }},
         }, {
@@ -913,6 +1127,9 @@ def expected_not_run_containment_provider() -> Dict[str, Any]:
         "public_head": ZERO_OID,
         "public_tree": ZERO_OID,
         "repository_clean": False,
+        "repository_git_bootstrap": expected_not_run_git_bootstrap_evidence(),
+        "repository_git_bootstrap_runtime_match": False,
+        "repository_git_clone_contract_sha256": ZERO_SHA256,
         "codex_version_output": "unavailable",
         "approved_archive_sha256": ZERO_SHA256,
         "observed_archive_sha256": ZERO_SHA256,
@@ -952,6 +1169,7 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
         "vm_instance_identity_sha256", "observed_archive_sha256",
         "extracted_binary_sha256", "runtime_root_binding_sha256",
         "dedicated_codex_home_binding_sha256", "approved_archive_sha256",
+        "repository_git_clone_contract_sha256",
     ):
         if not isinstance(value.get(key), str) or SHA.fullmatch(value[key]) is None:
             errors.append(label + ": invalid provider digest field " + key)
@@ -963,6 +1181,7 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
         "host_sensitive_mounts_absent", "unapproved_mounts_absent",
         "ssh_agent_forwarding", "dot_ssh_public_key_loading",
         "user_ssh_config_modified", "repository_clean",
+        "repository_git_bootstrap_runtime_match",
     ):
         if type(value.get(key)) is not bool:
             errors.append(label + ": provider boolean field is invalid: " + key)
@@ -986,6 +1205,12 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
     if lifecycle != expected_lifecycle:
         errors.append(label + ": pre-live lifecycle must require later destruction without claiming it occurred")
     validate_control_plane(value.get("control_plane"), value, label, errors)
+    git_bootstrap = value.get("repository_git_bootstrap")
+    if git_bootstrap not in (
+        expected_git_bootstrap_evidence(),
+        expected_not_run_git_bootstrap_evidence(),
+    ):
+        errors.append(label + ": repository Git bootstrap evidence drifted")
 
     provider_status = value.get("status")
     if provider_status == "not-run" and value != expected_not_run_containment_provider():
@@ -997,6 +1222,8 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
             "vm_backend": "vz",
             "architecture": "aarch64",
             "repository_clean": True,
+            "repository_git_bootstrap": expected_git_bootstrap_evidence(),
+            "repository_git_bootstrap_runtime_match": True,
             "codex_version_output": APPROVED_CODEX_VERSION,
             "approved_archive_sha256": APPROVED_ARCHIVE_SHA256,
             "observed_archive_sha256": APPROVED_ARCHIVE_SHA256,
@@ -1015,6 +1242,12 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
             errors.append(label + ": passing provider evidence uses placeholder Git binding")
         elif value.get("profile_name") != "t11-e2e-{}-01".format(value["public_head"][:12]):
             errors.append(label + ": provider profile name is not bound to the public head")
+        if value.get("repository_git_clone_contract_sha256") != (
+            expected_git_clone_contract_sha256(
+                str(value.get("public_head")), str(value.get("public_tree")),
+            )
+        ):
+            errors.append(label + ": provider Git clone contract does not bind the exact head/tree")
         if value.get("guest_os") == "not-run" or value.get("guest_kernel") == "not-run":
             errors.append(label + ": passing provider evidence omits guest OS/kernel")
         if value.get("created_at") is None:
@@ -1048,8 +1281,13 @@ def expected_not_run_stage_a1_prerequisite() -> Dict[str, Any]:
             "binary_sha256": ZERO_SHA256, "version_output": "not-run",
             "help_sha256": ZERO_SHA256,
         },
+        "git": {
+            "package_name": "not-run", "package_version": "not-run",
+            "package_architecture": "not-run", "install_status": "not-run",
+            "binary_sha256": ZERO_SHA256, "version_output": "not-run",
+        },
         "controller": {
-            "argv_sha256": sha256(canonical_bytes(EXPECTED_STAGE_A1_CONTROLLER_ARGV)),
+            "argv_sha256": EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256,
             "shell": False, "model_invoked": False,
             "device_auth_performed": False, "legacy_landlock_enabled": False,
             "global_apparmor_userns_disabled": False,
@@ -1127,6 +1365,7 @@ def validate_stage_a1_prerequisite(value: Any, profile_status: Any, label: str, 
         guest = value.get("guest")
         apparmor = value.get("apparmor")
         bubblewrap = value.get("bubblewrap")
+        git = value.get("git")
         if not isinstance(guest, dict) or any(guest.get(key) != expected for key, expected in {
             "distribution_id": "ubuntu", "distribution_version": "24.04",
             "distribution_codename": "noble", "architecture": "aarch64",
@@ -1157,6 +1396,16 @@ def validate_stage_a1_prerequisite(value: Any, profile_status: Any, label: str, 
             bubblewrap.get("help_sha256", "")
         ) is None or bubblewrap.get("help_sha256") == ZERO_SHA256:
             errors.append(label + ": passing Stage A.1 bubblewrap boundary drifted")
+        if not isinstance(git, dict) or any(
+            git.get(key) != expected for key, expected in {
+                "package_name": "git",
+                "package_version": APPROVED_GIT_PACKAGE_VERSION,
+                "package_architecture": "arm64", "install_status": "installed",
+                "binary_sha256": APPROVED_GIT_BINARY_SHA256,
+                "version_output": APPROVED_GIT_VERSION_OUTPUT,
+            }.items()
+        ):
+            errors.append(label + ": passing Stage A.1 Git boundary drifted")
         if (
             value.get("reason_code") != "none" or smoke.get("status") != "pass"
             or smoke.get("reason_code") != "none" or smoke.get("exit_code") != 0
@@ -1388,6 +1637,99 @@ def validate_runtime_script_bypass_literals(
                 or node.value.startswith("--dangerously-bypass-")
             ):
                 errors.append(label + ": runtime/config argv contains forbidden policy bypass " + node.value)
+
+
+def validate_provider_git_source(text: str, label: str, errors: List[str]) -> None:
+    """Pin the fixed, revalidated provider-Git call graph."""
+    try:
+        tree = ast.parse(text, filename=label)
+    except (SyntaxError, ValueError):
+        errors.append(label + ": cannot inspect approved provider Git boundary")
+        return
+    functions = {
+        node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)
+    }
+    required = {
+        "approved_provider_git_binding",
+        "run_approved_provider_git",
+        "observe_colima_provider_evidence",
+    }
+    if not required.issubset(functions):
+        errors.append(label + ": approved provider Git functions are missing")
+        return
+
+    def call_name(node: ast.Call) -> str:
+        if isinstance(node.func, ast.Name):
+            return node.func.id
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            return node.func.value.id + "." + node.func.attr
+        return ""
+
+    binding = functions["approved_provider_git_binding"]
+    binding_calls = [
+        node for node in ast.walk(binding) if isinstance(node, ast.Call)
+    ]
+    binding_names = [call_name(node) for node in binding_calls]
+    binding_constants = {
+        node.value for node in ast.walk(binding)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    stat_calls = [
+        node for node in binding_calls if call_name(node) == "os.stat"
+    ]
+    nofollow_stats = all(
+        any(
+            keyword.arg == "follow_symlinks"
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is False
+            for keyword in node.keywords
+        )
+        for node in stat_calls
+    )
+    binding_identifiers = {
+        node.id for node in ast.walk(binding) if isinstance(node, ast.Name)
+    }
+    if (
+        not {"/usr", "/usr/bin"}.issubset(binding_constants)
+        or len(stat_calls) < 2
+        or not nofollow_stats
+        or "hash_regular_file" not in binding_names
+        or "STAGE_A1_GIT_BINARY" not in binding_identifiers
+        or "APPROVED_GIT_BINARY_SHA256" not in binding_identifiers
+    ):
+        errors.append(label + ": root-owned no-follow provider Git binding drifted")
+
+    runner = functions["run_approved_provider_git"]
+    runner_calls = [
+        node for node in ast.walk(runner) if isinstance(node, ast.Call)
+    ]
+    runner_names = [call_name(node) for node in runner_calls]
+    binding_lines = [
+        node.lineno for node in runner_calls
+        if call_name(node) == "approved_provider_git_binding"
+    ]
+    process_lines = [
+        node.lineno for node in runner_calls
+        if call_name(node) == "run_bounded_process"
+    ]
+    if (
+        len(binding_lines) != 1
+        or len(process_lines) != 1
+        or binding_lines[0] >= process_lines[0]
+        or "resolve_executable_from_path" in runner_names
+        or "run_git" in runner_names
+    ):
+        errors.append(label + ": provider Git is not rebound before every fixed execution")
+
+    observer = functions["observe_colima_provider_evidence"]
+    observer_names = [
+        call_name(node) for node in ast.walk(observer) if isinstance(node, ast.Call)
+    ]
+    if (
+        observer_names.count("run_approved_provider_git") != 3
+        or "run_git" in observer_names
+    ):
+        errors.append(label + ": provider observation bypasses the fixed Git runner")
 
 
 def runtime_fs_capability_error() -> str:
@@ -1856,6 +2198,13 @@ def validate_repository(root: Path) -> List[str]:
             observed_stage_a1_controller = [
                 list(argv) for argv in adapter.STAGE_A1_CONTROLLER_ARGV
             ]
+            observed_stage_a1_preclone = [
+                list(argv) for argv in adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV
+            ]
+            if observed_stage_a1_preclone != EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: Stage A.1 pre-clone qualification argv drifted"
+                )
             if observed_stage_a1_controller != EXPECTED_STAGE_A1_CONTROLLER_ARGV:
                 errors.append(
                     ".github/scripts/codex-exec-adapter.py: Stage A.1 controller argv drifted"
@@ -1867,9 +2216,64 @@ def validate_repository(root: Path) -> List[str]:
             expected_controller_digest = sha256(
                 canonical_bytes(EXPECTED_STAGE_A1_CONTROLLER_ARGV)
             )
-            if adapter.STAGE_A1_CONTROLLER_ARGV_SHA256 != expected_controller_digest:
+            expected_preclone_digest = sha256(
+                canonical_bytes(EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV)
+            )
+            if (
+                expected_preclone_digest
+                != EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+            ):
+                errors.append(
+                    ".github/scripts/check-runtime-contracts.py: Stage A.1 reviewed pre-clone argv/digest disagree"
+                )
+            if (
+                adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+                != EXPECTED_STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256
+            ):
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: Stage A.1 pre-clone argv digest drifted"
+                )
+            if expected_controller_digest != EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256:
+                errors.append(
+                    ".github/scripts/check-runtime-contracts.py: Stage A.1 reviewed controller argv/digest disagree"
+                )
+            if adapter.STAGE_A1_CONTROLLER_ARGV_SHA256 != EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256:
                 errors.append(
                     ".github/scripts/codex-exec-adapter.py: Stage A.1 controller argv digest drifted"
+                )
+            if (
+                getattr(adapter, "GIT_BOOTSTRAP_EVIDENCE_SCHEMA", None)
+                != "t11-git-bootstrap-evidence/v1"
+                or adapter.expected_git_bootstrap_evidence()
+                != expected_git_bootstrap_evidence()
+                or adapter.not_run_git_bootstrap_evidence()
+                != expected_not_run_git_bootstrap_evidence()
+            ):
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: Git bootstrap trust anchor drifted"
+                )
+            representative_head = "a" * 40
+            representative_tree = "b" * 40
+            if (
+                getattr(adapter, "REPOSITORY", None) != EXPECTED_REPOSITORY
+                or getattr(adapter, "T11_PUBLIC_BRANCH", None)
+                != EXPECTED_T11_PUBLIC_BRANCH
+                or adapter.stage_a1_git_clone_contract(
+                    representative_head, representative_tree,
+                ) != expected_git_clone_contract(
+                    representative_head, representative_tree,
+                )
+                or adapter.stage_a1_git_clone_contract_sha256(
+                    representative_head, representative_tree,
+                ) != expected_git_clone_contract_sha256(
+                    representative_head, representative_tree,
+                )
+                or expected_git_clone_contract_sha256(
+                    representative_head, representative_tree,
+                ) != EXPECTED_REPRESENTATIVE_GIT_CLONE_CONTRACT_SHA256
+            ):
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: reviewed Git clone contract drifted"
                 )
             approved_stage_a1_values = (
                 ("bubblewrap package", adapter.APPROVED_BWRAP_PACKAGE_VERSION,
@@ -1882,6 +2286,12 @@ def validate_repository(root: Path) -> List[str]:
                  APPROVED_APPARMOR_PACKAGE_VERSION),
                 ("AppArmor profile", adapter.APPROVED_BWRAP_PROFILE_SHA256,
                  APPROVED_BWRAP_PROFILE_SHA256),
+                ("Git package", adapter.APPROVED_GIT_PACKAGE_VERSION,
+                 APPROVED_GIT_PACKAGE_VERSION),
+                ("Git version", adapter.APPROVED_GIT_VERSION_OUTPUT,
+                 APPROVED_GIT_VERSION_OUTPUT),
+                ("Git binary", adapter.APPROVED_GIT_BINARY_SHA256,
+                 APPROVED_GIT_BINARY_SHA256),
             )
             for name, observed, expected in approved_stage_a1_values:
                 if observed != expected:
@@ -2031,6 +2441,9 @@ def validate_repository(root: Path) -> List[str]:
         ".github/scripts/codex-exec-adapter.py",
         errors,
         guard_function="validate_runtime_argv_policy",
+    )
+    validate_provider_git_source(
+        adapter_text, ".github/scripts/codex-exec-adapter.py", errors,
     )
     validate_runtime_script_bypass_literals(
         receipt_text,

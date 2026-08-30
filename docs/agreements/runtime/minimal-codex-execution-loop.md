@@ -149,14 +149,14 @@ authorization in its own dedicated private `CODEX_HOME`; credential values,
 device codes, and authentication files never enter artifacts or durable
 output.
 
-### Stage A.1 bubblewrap prerequisite
+### Stage A.1 Git and bubblewrap prerequisites
 
-The current bounded attempt qualifies the documented bubblewrap prerequisite
-inside a fresh disposable Colima VM before any Codex shell-environment or
-sandbox/network probe. The provider controller uses fixed argv arrays with
-`shell=false`; package installation is never delegated to a model. It first
-records only these allowlisted guest facts: distribution ID/version/codename,
-kernel, architecture, AppArmor enabled state, and the
+The current bounded attempt qualifies the documented Git and bubblewrap
+prerequisites inside a fresh disposable Colima VM before any Codex shell-
+environment or sandbox/network probe. The provider controller uses fixed argv
+arrays with `shell=false`; package installation is never delegated to a model.
+It first records only these allowlisted guest facts: distribution ID/version/
+codename, kernel, architecture, AppArmor enabled state, and the
 `kernel.apparmor_restrict_unprivileged_userns` state. A passing platform is
 Ubuntu 24.04 `noble`, Linux `aarch64`, AppArmor enabled, with that restriction
 set to `1`.
@@ -170,6 +170,9 @@ The controller pins the Ubuntu packages and expected installed facts below:
 | `/usr/bin/bwrap` SHA-256 | `ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8` |
 | `apparmor` and `apparmor-profiles` packages | `4.0.1really4.0.1-0ubuntu0.24.04.7` |
 | `bwrap-userns-restrict` profile SHA-256 | `11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9` |
+| `git` package | `1:2.43.0-1ubuntu7.3` / `arm64` |
+| `/usr/bin/git` version | `git version 2.43.0` |
+| `/usr/bin/git` SHA-256 | `aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942` |
 
 It records the bubblewrap help digest, not raw help. When the Ubuntu 24.04
 AppArmor unprivileged-user-namespace restriction is active, it installs the
@@ -180,6 +183,31 @@ it with `/usr/sbin/apparmor_parser --replace`, and confirms enforce status.
 The fixed package/setup argv and their canonical digest are part of
 `t11-bubblewrap-prerequisite-evidence/v1`.
 
+Git installation and its closed evidence precede the repository clone. The
+controller records only the exact package status/version/architecture,
+`/usr/bin/git --version` classification, and executable digest; raw command
+output is not durable. Only after those facts match may `/usr/bin/git` clone
+the exact public PR head/tree onto the VM private disk. The host repository is
+not mounted or copied in as a substitute, and Git package work is never
+delegated to a model. The owner/controller-authored pre-clone facts enter the
+adapter through the closed `repository.git_bootstrap` stdin record. Before its
+first repository Git command, the adapter re-observes the package, architecture,
+fixed `/usr/bin/git`, and PATH-resolved Git version/digest and requires exact
+equality with that trust anchor. Each provider Git operation then revalidates
+the root-owned, non-group/world-writable `/usr` -> `/usr/bin` ->
+`/usr/bin/git` binding and invokes that fixed path without PATH re-resolution.
+
+The fixed pre-clone qualification argv have SHA-256
+`a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc`.
+The owner input also carries a reviewed clone-contract digest derived from the
+exact repository URL, branch, public head/tree, pinned Git, private-disk
+destination placeholder, shell-free argv templates, disabled credential helper
+and hooks, and expected clean checkout. The adapter recomputes that digest and
+then proves the resulting checkout head/tree/status. This cross-binding checks
+the reviewed contract and post-clone equality; because repository code is not
+available before clone, it does not independently authenticate that the outer
+owner/controller executed the asserted pre-clone chronology.
+
 The same controller then invokes this exact smoke test directly as the guest
 non-root user:
 
@@ -188,7 +216,7 @@ non-root user:
 ```
 
 The canonical fixed controller-argv list has SHA-256
-`0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd`;
+`3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff`;
 the smoke argv alone has SHA-256
 `8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08`.
 
@@ -312,10 +340,11 @@ network, model spend, live mode, or GitHub write. Live execution and receipt
 `--apply` require separate explicit modes and all T11 gates.
 
 The next live-path attempt is Stage A.1 only. It uses a fresh unauthenticated
-Colima VM, performs no device authentication or model invocation, and first
-qualifies the bubblewrap prerequisite above. Only after the direct smoke
-passes may it run the Codex shell-environment and sandbox/network probes. It
-does not start a live worker or run a runtime-receipt dry-run/application.
+Colima VM, performs no device authentication or model invocation, qualifies
+Git before the private-disk clone, and then qualifies bubblewrap. Only after
+the direct smoke passes may it run the Codex shell-environment and sandbox/
+network probes. It does not start a live worker or run a runtime-receipt dry-
+run/application.
 
 Device-code authentication remains disabled throughout Stage A.1. Stage A.1
 appends only closed, allowlisted probe evidence to Issue #23 and PR

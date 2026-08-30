@@ -116,10 +116,30 @@ shell-free package-manager argv. A passing boundary is Ubuntu 24.04 `noble`
 on Linux `aarch64`, with AppArmor enabled and
 `kernel.apparmor_restrict_unprivileged_userns=1`. The controller pins
 `bubblewrap=0.9.0-1ubuntu0.1`, `apparmor` and `apparmor-profiles` at
-`4.0.1really4.0.1-0ubuntu0.24.04.7`, and verifies `/usr/bin/bwrap` as
-`bubblewrap 0.9.0` with SHA-256
+`4.0.1really4.0.1-0ubuntu0.24.04.7`, and
+`git=1:2.43.0-1ubuntu7.3`, all for Ubuntu Noble `arm64`. It verifies
+`/usr/bin/bwrap` as `bubblewrap 0.9.0` with SHA-256
 `ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8`.
 It also records a bounded help-output digest rather than the output.
+
+The fixed package operation and Git observation occur before the repository
+clone. The guest clone uses the exact `/usr/bin/git` binding only after its
+version is exactly `git version 2.43.0` and its SHA-256 is
+`aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942`.
+Only allowlisted package, architecture, version, and digest facts are durable.
+The exact public PR head/tree is then cloned and checked out on the VM private
+disk; the host repository is never mounted as a substitute. Those pre-clone
+facts are carried by the closed owner/controller-authored
+`repository.git_bootstrap` stdin record. Before the adapter's first repository
+Git operation, it re-observes the exact package/architecture and both fixed and
+PATH-resolved executable bindings; any mismatch stops before repository Git.
+Every later provider Git operation revalidates the root-owned, non-group/world-
+writable `/usr`, `/usr/bin`, and `/usr/bin/git` namespace and invokes the fixed
+path without PATH re-resolution. A head/tree-derived clone-contract digest binds
+the reviewed shell-free clone/checkout/verification templates and expected clean
+result. This is owner/controller-authored pre-clone evidence plus deterministic
+post-clone equality checking; repository code does not authenticate the asserted
+pre-clone chronology itself.
 
 Because the approved Ubuntu 24.04 AppArmor restriction is active, the
 controller installs the packaged official `bwrap-userns-restrict` profile
@@ -140,7 +160,9 @@ direct smoke argv without `sudo`, as the guest non-root user, with
 ```
 
 The canonical fixed controller-argv list has SHA-256
-`0ab2466caf998d3e0d2ca8c76e4abc4d2205dff737e6809dff7d919d73b187dd`;
+`3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff`;
+its pre-clone Git qualification subset has SHA-256
+`a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc`;
 the smoke argv alone has SHA-256
 `8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08`.
 
@@ -207,10 +229,11 @@ sandbox/network, shell environment, configuration, or authentication status.
   observation must be no more than 3600 seconds old at validation.
 
 The next attempt is deliberately limited to Stage A.1. It provisions a fresh
-unauthenticated Colima VM, performs the bubblewrap qualification above, and
-runs Codex shell-environment and sandbox/network probes only after the direct
-bubblewrap smoke passes. It performs no device authentication, model
-invocation, live worker, or runtime-receipt dry-run/application. Its closed,
+unauthenticated Colima VM, qualifies Git before the private-disk clone,
+performs the bubblewrap qualification above, and runs Codex shell-environment
+and sandbox/network probes only after the direct bubblewrap smoke passes. It
+performs no device authentication, model invocation, live worker, or
+runtime-receipt dry-run/application. Its closed,
 allowlisted probe evidence is appended to Issue #23 and PR #24, after which
 the VM is destroyed and profile, runtime data, and process absence are read
 back. Stage A.1 then stops for owner judgment; it grants no authority to start
