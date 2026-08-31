@@ -275,6 +275,91 @@ class LedgerTemplatesTest(unittest.TestCase):
             self.contract["semantics"]["opaque_runtime_reference_format"],
         )
 
+    def test_t11_agreement_v2_runtime_frontier_is_exact(self):
+        frontier = self.contract["runtime_frontier"]
+        self.assertEqual("t11-agreement-v2", frontier["agreement"]["version"])
+        self.assertEqual(
+            {
+                "AC-01-through-AC-12": "applicable-offline-static-boundary",
+                "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+                "AC-14": "unchanged",
+                "AC-15": "owner-merge-gate-offline-harness",
+            },
+            frontier["acceptance_mapping"],
+        )
+        self.assertEqual(
+            {
+                "runtime_harness": "minimal-offline-implemented",
+                "live_codex_execution": "deferred-to-T12",
+                "sandbox_compatibility": "unresolved-non-success",
+                "runtime_receipt_apply": "deferred-to-T12",
+                "phase_2": "incomplete",
+                "repository": "incomplete",
+                "release_blocked": True,
+            },
+            frontier["status"],
+        )
+        self.assertEqual("T12", frontier["deferred_task"]["id"])
+        self.assertEqual(
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
+            frontier["deferred_task"]["issue"],
+        )
+        self.assertEqual(
+            "open-planning-only-inactive", frontier["deferred_task"]["state"]
+        )
+
+    def test_t11_agreement_v2_mapping_status_and_t12_link_fail_closed(self):
+        cases = (
+            (
+                "acceptance mapping",
+                lambda frontier: frontier["acceptance_mapping"].__setitem__(
+                    "AC-13", "pass"
+                ),
+                "runtime frontier acceptance mapping drifted",
+            ),
+            (
+                "runtime harness",
+                lambda frontier: frontier["status"].__setitem__(
+                    "runtime_harness", "fully-live-implemented"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "live execution",
+                lambda frontier: frontier["status"].__setitem__(
+                    "live_codex_execution", "implemented"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "sandbox compatibility",
+                lambda frontier: frontier["status"].__setitem__(
+                    "sandbox_compatibility", "pass"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "receipt apply",
+                lambda frontier: frontier["status"].__setitem__(
+                    "runtime_receipt_apply", "applied"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "T12 URL",
+                lambda frontier: frontier["deferred_task"].__setitem__(
+                    "issue",
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+                ),
+                "runtime frontier T12 deferral drifted",
+            ),
+        )
+        for label, mutation, fragment in cases:
+            with self.subTest(label=label):
+                contract = copy.deepcopy(self.contract)
+                mutation(contract["runtime_frontier"])
+                self.assert_error(self.contract_errors(contract), fragment)
+
     def test_unknown_and_uncheckable_are_valid_record_states_but_not_success(self):
         for state in ("UNKNOWN", "UNCHECKABLE"):
             with self.subTest(state=state):

@@ -2050,6 +2050,152 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertEqual("runtime contracts: OK\n", result.stdout)
 
+    def test_stage_a2_remains_non_success_with_no_real_worker_or_receipt_apply(self):
+        contract = json.loads(
+            (ROOT / ".github/governance/ledger-contracts.v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        stage_a2 = contract["runtime_frontier"]["stage_a2"]
+        self.assertEqual("bounded-non-success", stage_a2["classification"])
+        self.assertEqual("UNCHECKABLE", stage_a2["aggregate_status"])
+        self.assertEqual("fail", stage_a2["shell_environment_status"])
+        self.assertEqual("process-nonzero", stage_a2["shell_environment_reason_code"])
+        self.assertEqual(
+            "UNCHECKABLE", stage_a2["codex_sandbox_network_status"]
+        )
+        self.assertEqual(
+            "process-nonzero", stage_a2["codex_sandbox_network_reason_code"]
+        )
+        self.assertEqual("unavailable", stage_a2["auth_status"])
+        self.assertIs(stage_a2["device_auth_performed"], False)
+        self.assertIs(stage_a2["model_invoked"], False)
+        self.assertEqual(0, stage_a2["real_codex_worker_success_count"])
+        self.assertEqual(0, stage_a2["runtime_receipt_dry_run_count"])
+        self.assertEqual(0, stage_a2["runtime_receipt_apply_count"])
+
+    def test_runtime_checker_rejects_stage_a2_success_or_live_receipt_claims(self):
+        contract_path = ".github/governance/ledger-contracts.v1.json"
+        original_read = self.checker.read_regular
+        original_contract = json.loads(
+            (ROOT / contract_path).read_text(encoding="utf-8")
+        )
+        mutations = (
+            lambda stage: stage.__setitem__("classification", "pass"),
+            lambda stage: stage.__setitem__("aggregate_status", "match"),
+            lambda stage: stage.__setitem__("shell_environment_status", "pass"),
+            lambda stage: stage.__setitem__("real_codex_worker_success_count", 1),
+            lambda stage: stage.__setitem__("runtime_receipt_apply_count", 1),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                candidate = copy.deepcopy(original_contract)
+                mutation(candidate["runtime_frontier"]["stage_a2"])
+                encoded = (
+                    json.dumps(candidate, ensure_ascii=False, indent=2) + "\n"
+                ).encode("utf-8")
+
+                def altered_read(root, relative, errors):
+                    if relative == contract_path:
+                        return encoded
+                    return original_read(root, relative, errors)
+
+                with mock.patch.object(
+                    self.checker, "read_regular", side_effect=altered_read
+                ):
+                    errors = self.checker.validate_repository(ROOT)
+                self.assertTrue(
+                    errors,
+                    "runtime checker accepted a forbidden Stage A.2/live claim",
+                )
+
+    def test_runtime_checker_binds_canonical_scenarios_and_release_sentinels(self):
+        originals = {
+            relative: json.loads((ROOT / relative).read_text(encoding="utf-8"))
+            for relative in (
+                "tests/conformance/coverage.json",
+                "tests/conformance/manifest.json",
+                "tests/conformance/results.json",
+            )
+        }
+        original_read = self.checker.read_regular
+        cases = (
+            (
+                "scenario passed",
+                "tests/conformance/coverage.json",
+                lambda value: value["entries"][0].__setitem__(
+                    "verification_state", "pass"
+                ),
+            ),
+            (
+                "scenario missing",
+                "tests/conformance/coverage.json",
+                lambda value: value["entries"].pop(),
+            ),
+            (
+                "scenario duplicate",
+                "tests/conformance/coverage.json",
+                lambda value: value["entries"][1].__setitem__(
+                    "scenario", value["entries"][0]["scenario"]
+                ),
+            ),
+            (
+                "manifest scenario state",
+                "tests/conformance/manifest.json",
+                lambda value: value["scenario_catalog"].__setitem__(
+                    "verification_state", "pass"
+                ),
+            ),
+            (
+                "manifest result",
+                "tests/conformance/manifest.json",
+                lambda value: value.__setitem__(
+                    "results", [{"scenario": "C-001", "result": "pass"}]
+                ),
+            ),
+            (
+                "manifest release blocker",
+                "tests/conformance/manifest.json",
+                lambda value: value.__setitem__("release_blocked", False),
+            ),
+            (
+                "release result",
+                "tests/conformance/results.json",
+                lambda value: value.update(
+                    {
+                        "result_count": 1,
+                        "results": [{"scenario": "C-001", "result": "pass"}],
+                    }
+                ),
+            ),
+            (
+                "results release blocker",
+                "tests/conformance/results.json",
+                lambda value: value.__setitem__("release_blocked", False),
+            ),
+        )
+        for label, relative, mutation in cases:
+            with self.subTest(label=label):
+                candidate = copy.deepcopy(originals[relative])
+                mutation(candidate)
+                encoded = (
+                    json.dumps(candidate, ensure_ascii=False, indent=2) + "\n"
+                ).encode("utf-8")
+
+                def altered_read(root, observed, errors, max_bytes=self.checker.MAX_FILE_BYTES):
+                    if observed == relative:
+                        return encoded
+                    return original_read(root, observed, errors, max_bytes)
+
+                with mock.patch.object(
+                    self.checker, "read_regular", side_effect=altered_read
+                ):
+                    errors = self.checker.validate_repository(ROOT)
+                self.assertTrue(
+                    errors,
+                    "runtime checker accepted canonical release-state drift",
+                )
+
     def test_offline_slice_runs_one_worker_and_fresh_verifier(self):
         result = self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), copy.deepcopy(self.profile), "offline")
         self.assertEqual("pass", result["status"])

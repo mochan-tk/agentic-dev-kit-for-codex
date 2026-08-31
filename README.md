@@ -3,7 +3,12 @@
 > [!WARNING]
 > **Current status:** Phase 0 is complete. This tree satisfies the **Phase 1 portable-core implementation gate**.
 > The current durable owner-acceptance outcome is external GitHub state, authoritative in [Issue #12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12) and [Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2); this immutable tree records only its creation-time snapshot and does not embed a later post-merge outcome.
-> Phase 2 [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) adds a minimal/partial execution slice with deterministic offline evidence. It does not embed or claim a successful live Codex run or runtime receipt. The Task-start observation found `codex-cli 0.150.0-alpha.8`, an unsupported prerelease for the approved live gate, so live execution remains blocked unless a later exact-head observation matches an approved supported profile.
+> Phase 2 [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) delivers a deterministic offline execution harness. Its approved agreement v2 defers live Codex compatibility, the exactly-one live E2E, and runtime-receipt application to planning-only [T12 / Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25), which remains blocked by T11 and PR #24.
+> Stage A.1 and Stage A.2 remain bounded non-success evidence. Stage A.1
+> qualified only its narrow prerequisite set; Stage A.2's aggregate profile was
+> `UNCHECKABLE`, with shell-environment `fail` and sandbox/network
+> `UNCHECKABLE`. No successful real Codex worker or applied runtime receipt is
+> claimed.
 > The overall repository implementation remains incomplete, not installable, and not a parity release.
 > `release_blocked` remains `true`.
 
@@ -68,7 +73,8 @@ The Phase 1 portable core adds:
 - all eight repository Skills with source-to-target parity records; and
 - a machine-readable acceptance package and human scorecard.
 
-The current Phase 2 T11 tree adds, at a deliberately narrow evidence level:
+The current Phase 2 T11 tree adds, at a deliberately narrow offline evidence
+level:
 
 - three static role-definition files that are configuration layers, not
   authenticated identities or proof of native named-agent selection;
@@ -80,9 +86,25 @@ The current Phase 2 T11 tree adds, at a deliberately narrow evidence level:
   the Phase 2 live repository policy; and
 - fake-process and synthetic-repository coverage reachable from required CI.
 
-These are minimal/partial offline capabilities. A real `codex exec` run and
-receipt are explicit owner-run, exact-head evidence gates and are not produced
-by required CI. No successful live run or receipt is claimed in this tree.
+Together these form the deterministic offline harness. Its durable status is:
+
+```text
+runtime_harness = minimal-offline-implemented
+live_codex_execution = deferred-to-T12
+sandbox_compatibility = unresolved-non-success
+runtime_receipt_apply = deferred-to-T12
+Phase 2 = incomplete
+repository = incomplete
+release_blocked = true
+```
+
+Required CI proves only the offline/static boundary. The current Stage A.2
+evidence remains non-success and is not rewritten as runtime-profile `match`,
+sandbox compatibility, live-worker success, or receipt evidence. A real
+`codex exec` worker, live compatibility qualification, receipt dry-run/apply,
+and exact read-back are T12 acceptance work. T11 claims only deterministic
+fixture-based receipt validation, dry-run, zero-write, idempotency, conflict,
+and read-back behavior.
 
 ## What remains outside the portable core
 
@@ -107,9 +129,10 @@ any capability.
    vocabulary, and bootstrap CI.
 2. **Portable core:** GitHub ledger/contracts and all eight Codex repository
    Skills.
-3. **Codex adapter:** first establish the minimal offline-tested Task envelope,
-   event, controller/worker/verifier, and receipt slice; then harden roles,
-   recovery, hooks, and runtime parity from live evidence.
+3. **Codex adapter:** accept the T11 deterministic offline Task envelope,
+   event, controller/fake-worker/verifier, and receipt-validation harness; then
+   use T12 to qualify live Codex compatibility and obtain an exact-head live
+   receipt before hardening roles, recovery, hooks, and runtime parity.
 4. **Enforcement and distribution:** installer/upgrade, Task ritual,
    ownership, and governance.
 5. **Parity release:** static and runtime probes, all 136 conformance
@@ -123,11 +146,14 @@ remain subject to their own scoped evidence and owner merge gates. An
 unavailable runtime probe is `unverified`, `not-run`, `UNKNOWN`, or
 `UNCHECKABLE`, never passed.
 
-For T11 specifically, observable client drift is `profile-drift`, an
+For the runtime sensor, observable client drift is `profile-drift`, an
 unsupported feature or unapproved prerelease is `unsupported-client`, and only
-unobservable evidence is `UNKNOWN` or `UNCHECKABLE`. The currently observed
-alpha client is `unsupported-client`; this is a non-success state, not a live
-runtime result.
+unobservable evidence is `UNKNOWN` or `UNCHECKABLE`. The committed task-start
+alpha snapshot remains `unsupported-client`. The later Stage A.2 observation
+also remains non-success; neither record is a successful live runtime result.
+The approved [T11 agreement-v2 decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734)
+makes AC-13 `deferred-to-T12-by-approved-agreement-replan`, not passed or
+silently omitted.
 
 ## Repository completion boundary
 

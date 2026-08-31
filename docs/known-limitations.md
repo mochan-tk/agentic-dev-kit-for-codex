@@ -1,7 +1,7 @@
 # Known limitations
 
 Observed and documentation-derived statements are current through
-`2026-08-28`. Phase 0 is complete. This tree satisfies the **Phase 1
+`2026-08-31`. Phase 0 is complete. This tree satisfies the **Phase 1
 portable-core implementation gate**. Its committed status is a creation-time
 snapshot. The current durable owner-acceptance outcome is external GitHub state
 authoritative in Issue #12 and Epic #2; a later post-merge outcome is not
@@ -9,7 +9,7 @@ embedded in this tree.
 The overall repository implementation remains incomplete, the repository is
 not installable, and it is not a parity release. `release_blocked` remains `true`.
 
-## The minimal execution slice is not the operating harness
+## The deterministic offline harness is not a live Codex runtime
 
 Phase 1 contains the Option B agreement, frozen/live policy split,
 conformance catalog, pinned CI/toolchain policy, Epic/Task/PR ledger templates,
@@ -20,18 +20,30 @@ universal runtime control plane.
 Phase 2 T11 adds three static role definitions, minimal envelope/event/final-
 response/result/profile/receipt contracts, a deterministic Python controller,
 bounded process and Git verification, an offline fake process, and an
-append-only Task-receipt actuator. This is a minimal/partial offline slice. The
+append-only Task-receipt actuator. Together these provide the T11 deterministic
+offline harness, with `runtime_harness = minimal-offline-implemented`. The
 static TOML files do not prove native named-agent selection or identity, and
 required CI cannot run real Codex, enter live mode, or apply a receipt.
+
+The approved agreement-v2 boundary records
+`live_codex_execution = deferred-to-T12`,
+`sandbox_compatibility = unresolved-non-success`, and
+`runtime_receipt_apply = deferred-to-T12`. T12 is the open, planning-only
+[Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25)
+and remains inactive and blocked by T11 / PR #24. Phase 2 and the repository
+remain incomplete, and `release_blocked = true`.
 
 The Task-start observation found `codex-cli 0.150.0-alpha.8`. That prerelease
 is `unsupported-client` under the approved live gate. Consequently this tree
 does not claim a completed live representative Task, a successful live runtime
-profile, or a posted runtime receipt. A later exact-head owner-run observation
-must be `match` on an approved supported non-prerelease before those actions
-are permitted.
+profile, or a posted runtime receipt. The later Stage A.2 attempt remained
+bounded non-success evidence: the aggregate profile was `UNCHECKABLE`, the
+shell-environment lane failed with `process-nonzero`, and sandbox/network was
+`UNCHECKABLE` with `process-nonzero`. It performed no device authentication,
+model invocation, live worker, runtime-receipt dry-run, or receipt application.
+Live qualification and those actions now belong only to T12.
 
-The approved live boundary is a new exact-head T11-only Colima Linux VM using
+The qualification design uses a new exact-head attempt-only Colima Linux VM using
 VZ and native `aarch64`, not the everyday host Mac. The historical task-start
 profile predates that decision, so its provider lane remains `not-run` with
 non-claiming sentinels rather than fabricated Colima/VM evidence. A live
@@ -43,7 +55,7 @@ unavoidable attempt-only provider-cache mount must be read-only; any other
 shared mount blocks the run. Provider evidence is adapter/owner-authored, not
 a Codex-authenticated attestation.
 
-T11's approved outer containment claim is deliberately narrower than escaped-
+The approved outer-containment claim is deliberately narrower than escaped-
 descendant kernel containment. It consists of the fresh disposable Colima VM,
 absence of host-sensitive or unapproved mounts, exact PR head/tree, a
 dedicated private `CODEX_HOME`, exact destruction, and profile-absence
@@ -51,9 +63,9 @@ read-back. PID/start-token tracking provides best-effort cleanup evidence; it
 does not prove kernel-enforced containment. Full escaped-descendant process-
 lifetime containment is deferred to T12.
 
-The accepted Stage A.1 attempt qualified narrow Git and bubblewrap
-prerequisites; Stage A.2 freezes those inputs and does not widen that
-containment claim. The adapter/owner-authored evidence is
+Stage A.1 remains a bounded non-success attempt; only its narrow Git and
+bubblewrap prerequisites were qualified. Stage A.2 freezes those inputs and
+does not widen that containment claim. The adapter/owner-authored evidence is
 successful only on Ubuntu 24.04 `noble`, Linux `aarch64`, with AppArmor and
 its unprivileged-user-namespace restriction active. A fixed shell-free
 controller installs exact Ubuntu package versions for `git`, `bubblewrap`,
@@ -121,21 +133,26 @@ additional disk, unchanged activation context, and private-VM-disk placement
 for the clone and runtime root. Its digest covers normalized safe fields only;
 raw paths and provider configuration remain local transport.
 
-Receipt application happens before the disposable VM is destroyed. The
+The offline actuator tests enforce that receipt application would happen before
+the disposable VM is destroyed. The
 receipt therefore records only the destruction obligation and does not claim
 destroy completion or profile absence. Those outcomes require a later
 append-only read-back after the attempt. Until that record exists, destruction
 evidence is incomplete rather than implicitly successful.
-The separate lifecycle actuator binds the already-posted runtime receipt and
-its GitHub creation time, exact PR #24 head/tree/checks, destroy chronology,
-and both profile/runtime-data absence read-backs. It regenerates the exact
+The current separate lifecycle actuator is fixture-tested against Issue #23
+and PR #24; it was not applied. T12 must bind its own exact Task and PR targets
+before any live actuation. The tested contract binds an already-posted runtime
+receipt and its GitHub creation time, exact PR head/tree/checks, destroy
+chronology, and both profile/runtime-data absence read-backs. It regenerates the exact
 canonical runtime-receipt body from the original validated native request;
 caller-authored marker/body text is not proof. Every lifecycle timestamp is
 bounded to at most 300 seconds of future skew and the latest absence read-back
 must be no more than 3600 seconds old at validation. A runtime receipt by
-itself does not prove teardown. T11 permits one durable runtime receipt: only
-an exact same-attempt receipt is idempotent, while a different attempt is a
-closed conflict rather than a second receipt.
+itself does not prove teardown. T11 proves only deterministic fixture-based
+validation, dry-run, zero-write, idempotency, conflict, and read-back behavior;
+no runtime receipt has been applied. T12 owns any later exact-head application.
+Under that deferred contract, only an exact same-attempt receipt is idempotent,
+while a different attempt is a closed conflict rather than a second receipt.
 
 `codex doctor --json` is treated only as a redacted diagnostic support report.
 It does not expose or attest the exact T11 override set. The documented config
@@ -167,20 +184,16 @@ Allowed stages are `load-envelope`, `load-static-role`,
 `filesystem-binding`; raw argv, exception text, and private paths are not
 recorded.
 
-The next attempt must stop after one Stage A.2 run: a fresh unauthenticated
-Colima VM, no device authentication, no model invocation, exact re-verification
-of the frozen qualified Stage A.1 prerequisites, and classified Codex shell-
-environment and sandbox/network probe evidence. Device-code authentication
-remains disabled, no live worker starts, and no runtime-receipt dry-run/
-application is performed. After append-only allowlisted probe evidence, the VM
-is destroyed and profile/runtime-data/process absence is read back. If Stage
-A.2 is non-success, T11 performs no Stage A.3 and instead proposes a replan
-that accepts the offline harness separately and moves live compatibility and
-receipt proof to a subsequent bounded Task. Stage B
-requires a new review and a different fresh VM before device authentication
-can be enabled temporarily. Only a complete Stage B profile `match` can
-permit exactly one live worker. Stage A.1 success is prerequisite evidence,
-not a live run or a live runtime receipt.
+The single Stage A.2 attempt finished fail-closed and its VM, runtime data, and
+tracked processes were removed with absence read-back. It is not rewritten as
+pass. T11 performs no Stage A.3. The approved
+[agreement-v2 decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734)
+accepts only the deterministic offline harness and supersedes T11 AC-13 by
+deferring it to T12. Stage B requires a new review and a different fresh VM
+before device authentication can be enabled temporarily. Only a complete T12
+profile `match` may permit exactly one live worker and the subsequent receipt
+dry-run/apply/read-back. Stage A.1 qualification and the Stage A.2 non-success
+record are prerequisite evidence, not a live run or a live runtime receipt.
 
 The final six-role topology, native runtime routing, hooks, recovery,
 installer/upgrade, live generalized Task ritual, consent feedback transport,

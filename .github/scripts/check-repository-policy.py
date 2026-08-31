@@ -20,6 +20,8 @@ from typing import Any, Iterable, Mapping
 ROOT_MANIFEST = ".github/governance/phase-task-ownership.v1.json"
 CONFORMANCE_MANIFEST = "tests/conformance/manifest.json"
 COVERAGE = "tests/conformance/coverage.json"
+CONFORMANCE_RESULTS = "tests/conformance/results.json"
+LEDGER_CONTRACT = ".github/governance/ledger-contracts.v1.json"
 CI_WORKFLOW = ".github/workflows/ci.yml"
 ACCEPTED_PHASE0_COMMIT = "32615344ad4f0310948bc59d234a84718741788a"
 ACCEPTED_PHASE0_TREE = "33259721ec9f378fa67392ef8e1c7645db1321f9"
@@ -27,6 +29,7 @@ ACCEPTED_PHASE1_COMMIT = "36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2"
 ACCEPTED_PHASE1_TREE = "1c1f46ad20dd289a713663c84eaf1dbb62840deb"
 PHASE2_EPIC = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22"
 T11_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+T12_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
 T11_BRANCH = "codex/phase-2-minimal-execution-slice"
 HISTORICAL_PHASE1_CHECKER = ".github/scripts/check-phase1-acceptance.py"
 HISTORICAL_PHASE1_CHECKER_BLOB = "9e8cccbc824efbb11756ac72c5e1e5ec8726ef4d"
@@ -40,7 +43,7 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "6f6ea210c2c13ab62252f9af355111c862d1826ff071fed3064a1c396f2f74a6"
+    "9e782f44ac240c5323effa03ffa85b3c62515074e969c6afdcabd6a5a90bd69f"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
@@ -60,6 +63,8 @@ HIERARCHY_AGREEMENT_PATH = (
 )
 REPOSITORY_COMPLETION_PATH = "docs/agreements/repository-completion.md"
 KNOWN_LIMITATIONS_PATH = "docs/known-limitations.md"
+RUNTIME_ADR_PATH = "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md"
+RUNTIME_AGREEMENT_PATH = "docs/agreements/runtime/minimal-codex-execution-loop.md"
 HIERARCHY_AGREEMENT_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
@@ -96,6 +101,11 @@ FORBIDDEN_LIVE_AUTHORITY_MARKERS = (
     "A GitHub Projects board is authoritative.",
     "Project Record -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
     "Phase 1 completion completes the repository.",
+)
+FORBIDDEN_T11_LIVE_SUCCESS_MARKERS = (
+    "runtime-profile `match` was achieved",
+    "a successful real Codex worker",
+    "runtime receipt was applied",
 )
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
 ALLOWED_MODES = {"100644", "100755"}
@@ -2368,6 +2378,145 @@ def validate_required_markers(
         errors.append(diagnostic)
 
 
+def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
+    """Keep the offline T11 frontier bound to canonical non-release state."""
+
+    contract = read_json(root / LEDGER_CONTRACT, errors, "ledger contract")
+    frontier = contract.get("runtime_frontier")
+    if not isinstance(frontier, dict):
+        errors.append("ledger runtime_frontier must be an object")
+        frontier = {}
+    exact_keys(
+        frontier,
+        {
+            "agreement",
+            "acceptance_mapping",
+            "status",
+            "deferred_task",
+            "stage_a2",
+            "canonical_release_boundary",
+        },
+        "ledger runtime_frontier",
+        errors,
+    )
+    expected_mapping = {
+        "AC-01-through-AC-12": "applicable-offline-static-boundary",
+        "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+        "AC-14": "unchanged",
+        "AC-15": "owner-merge-gate-offline-harness",
+    }
+    if frontier.get("acceptance_mapping") != expected_mapping:
+        errors.append("T11 agreement-v2 acceptance mapping drifted")
+    expected_status = {
+        "runtime_harness": "minimal-offline-implemented",
+        "live_codex_execution": "deferred-to-T12",
+        "sandbox_compatibility": "unresolved-non-success",
+        "runtime_receipt_apply": "deferred-to-T12",
+        "phase_2": "incomplete",
+        "repository": "incomplete",
+        "release_blocked": True,
+    }
+    if frontier.get("status") != expected_status:
+        errors.append("T11 agreement-v2 runtime status drifted or overclaims live evidence")
+    expected_deferred = {
+        "id": "T12",
+        "issue": T12_RECORD,
+        "state": "open-planning-only-inactive",
+        "blocked_by": [T11_RECORD, "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"],
+    }
+    if frontier.get("deferred_task") != expected_deferred:
+        errors.append("T11 agreement-v2 must retain the exact planning-only T12 URL")
+
+    stage_a2 = frontier.get("stage_a2")
+    expected_stage_a2 = {
+        "classification": "bounded-non-success",
+        "aggregate_status": "UNCHECKABLE",
+        "provider_isolation_status": "pass",
+        "mount_boundary_status": "pass",
+        "process_cleanup_status": "pass",
+        "config_status": "pass",
+        "shell_environment_status": "fail",
+        "shell_environment_reason_code": "process-nonzero",
+        "codex_sandbox_network_status": "UNCHECKABLE",
+        "codex_sandbox_network_reason_code": "process-nonzero",
+        "auth_status": "unavailable",
+        "device_auth_performed": False,
+        "model_invoked": False,
+        "real_codex_worker_success_count": 0,
+        "runtime_receipt_dry_run_count": 0,
+        "runtime_receipt_apply_count": 0,
+        "evidence_issue_url": (
+            T11_RECORD + "#issuecomment-5472529555"
+        ),
+        "evidence_pull_request_url": (
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
+            "#issuecomment-5472529704"
+        ),
+        "evidence_body_sha256": (
+            "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
+        ),
+    }
+    if stage_a2 != expected_stage_a2:
+        errors.append("Stage A.2 must remain exact bounded non-success evidence")
+
+    expected_release = {
+        "scenario_count": 136,
+        "scenario_state": "not-run",
+        "release_result_count": 0,
+        "release_results": [],
+        "release_blocked": True,
+    }
+    if frontier.get("canonical_release_boundary") != expected_release:
+        errors.append("T11 runtime frontier release boundary drifted")
+
+    coverage = read_json(root / COVERAGE, errors, "conformance coverage")
+    entries = coverage.get("entries")
+    identifiers = (
+        [entry.get("scenario") for entry in entries if isinstance(entry, dict)]
+        if isinstance(entries, list)
+        else []
+    )
+    if (
+        coverage.get("scenario_count") != 136
+        or not isinstance(entries, list)
+        or len(entries) != 136
+        or len(identifiers) != 136
+        or any(not isinstance(identifier, str) for identifier in identifiers)
+        or len(
+            {
+                identifier
+                for identifier in identifiers
+                if isinstance(identifier, str)
+            }
+        )
+        != 136
+        or any(entry.get("verification_state") != "not-run" for entry in entries)
+    ):
+        errors.append("T11 deferral requires all 136 canonical scenarios to remain not-run")
+
+    manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
+    catalog = manifest.get("scenario_catalog")
+    result_store = catalog.get("result_store") if isinstance(catalog, dict) else None
+    if (
+        not isinstance(catalog, dict)
+        or catalog.get("total") != 136
+        or catalog.get("verification_state") != "not-run"
+        or not isinstance(result_store, dict)
+        or result_store.get("result_count") != 0
+        or manifest.get("results") != []
+        or manifest.get("release_blocked") is not True
+    ):
+        errors.append("T11 deferral requires the manifest release sentinel to remain blocked")
+
+    results = read_json(root / CONFORMANCE_RESULTS, errors, "conformance results")
+    if (
+        results.get("result_count") != 0
+        or results.get("results") != []
+        or results.get("release_blocked") is not True
+    ):
+        errors.append("T11 deferral requires empty release-level results")
+
+
 def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
     manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
 
@@ -2527,6 +2676,18 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         "known limitations",
         errors,
     )
+    runtime_adr = policy_text(
+        root,
+        RUNTIME_ADR_PATH,
+        "T11 runtime ADR",
+        errors,
+    )
+    runtime_agreement = policy_text(
+        root,
+        RUNTIME_AGREEMENT_PATH,
+        "T11 runtime agreement",
+        errors,
+    )
     agents_markers = " ".join(agents.split()) if agents is not None else None
     readme_markers = " ".join(readme.split()) if readme is not None else None
     limitation_markers = (
@@ -2549,12 +2710,18 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
     validate_required_markers(
         limitation_markers,
         (
-            "minimal/partial offline slice",
+            "deterministic offline harness",
+            "runtime_harness = minimal-offline-implemented",
+            "live_codex_execution = deferred-to-T12",
+            "sandbox_compatibility = unresolved-non-success",
+            "runtime_receipt_apply = deferred-to-T12",
+            "Issue #25",
+            "Stage A.2",
+            "bounded non-success",
             "codex-cli 0.150.0-alpha.8",
             "unsupported-client",
             "required CI cannot run real Codex",
             "does not claim a completed live representative Task",
-            "posted runtime receipt",
             "release-level conformance result set is empty",
             "`release_blocked` remains `true`",
         ),
@@ -2575,11 +2742,16 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
             "Epic #2",
             "post-merge receipt",
             "Issue #23",
-            "minimal/partial execution slice",
-            "codex-cli 0.150.0-alpha.8",
+            "deterministic offline execution harness",
+            "runtime_harness = minimal-offline-implemented",
+            "live_codex_execution = deferred-to-T12",
+            "sandbox_compatibility = unresolved-non-success",
+            "runtime_receipt_apply = deferred-to-T12",
+            "Issue #25",
+            "Stage A.1 and Stage A.2 remain bounded non-success evidence",
+            "alpha snapshot remains `unsupported-client`",
             "unsupported-client",
-            "does not embed or claim a successful live Codex run or runtime receipt",
-            "No successful live run or receipt is claimed in this tree.",
+            "No successful real Codex worker or applied runtime receipt",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
@@ -2587,6 +2759,37 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         "Option B hierarchy or Phase 2 current-status markers are missing from README.md",
         errors,
     )
+    runtime_status_markers = (
+        "runtime_harness",
+        "minimal-offline-implemented",
+        "live_codex_execution",
+        "deferred-to-T12",
+        "sandbox_compatibility",
+        "unresolved-non-success",
+        "runtime_receipt_apply",
+        T12_RECORD,
+        "Stage A.2",
+        "Phase 2",
+        "incomplete",
+        "release_blocked",
+        "true",
+    )
+    for label, text in (
+        ("README.md", readme),
+        (KNOWN_LIMITATIONS_PATH, limitations),
+        (RUNTIME_ADR_PATH, runtime_adr),
+        (RUNTIME_AGREEMENT_PATH, runtime_agreement),
+    ):
+        validate_required_markers(
+            text,
+            runtime_status_markers,
+            f"T11 agreement-v2 status markers are missing from {label}",
+            errors,
+        )
+        if text is not None and any(
+            marker in text for marker in FORBIDDEN_T11_LIVE_SUCCESS_MARKERS
+        ):
+            errors.append(f"{label} contains a forbidden T11 live-success claim")
     validate_required_markers(
         agents_markers,
         (
@@ -3068,6 +3271,7 @@ def validate_repository(
             root, payload, os.environ if environment is None else environment, errors
         )
     validate_invariants(root, policy, errors)
+    validate_t11_agreement_v2(root, errors)
     validate_hierarchy_and_completion(root, errors)
     validate_workflows(root, policy, errors)
     validate_historical_phase1_checker_boundary(root, payload, policy, errors)

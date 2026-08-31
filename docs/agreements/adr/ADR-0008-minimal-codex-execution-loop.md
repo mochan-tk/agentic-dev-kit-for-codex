@@ -1,10 +1,13 @@
 # ADR-0008: Minimal Codex execution loop
 
-- Status: accepted for T11 implementation; bounded containment and Stage A.1
-  prerequisite amendments accepted; live evidence pending
+- Status: T11 agreement v2 accepted for deterministic offline-harness
+  implementation; live compatibility and receipt application deferred to T12
 - Decision date: 2026-08-28
 - Bounded amendment date: 2026-08-30
+- Agreement-v2 date: 2026-08-31
 - Task: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23>
+- Deferred Task: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25>
+- Agreement-v2 decision: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734>
 - Parent Epic: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22>
 
 ## Context
@@ -16,15 +19,15 @@ would postpone evidence that a bounded Task can traverse a complete loop.
 
 ## Decision
 
-T11 implements one deliberately narrow vertical slice:
+T11 implements one deliberately narrow deterministic offline harness:
 
 ```text
 human-authored envelope
 -> deterministic Python controller
--> one direct logical-worker codex exec
+-> deterministic fake logical worker
 -> adapter-normalized loop events and execution result
 -> fresh deterministic read-only verifier
--> allowlisted append-only GitHub receipt
+-> receipt validation, dry-run, zero-write, idempotency, conflict, and read-back fixtures
 ```
 
 The Python adapter is the only supervisor/controller. The model authors only a
@@ -32,11 +35,29 @@ bounded `codex-final-response/v1` value. The adapter, not the model, establishes
 process, event, Git, digest, and verifier facts. Receipt publication is a
 separate explicit actuator.
 
-The representative target is a private synthetic Git repository whose only
+The representative offline target is a private synthetic Git repository whose only
 worktree entry is regular mode-`100644` `work-item.txt`. Its exact bytes change
 from `status=pending\n` to `status=complete\n`; all other filesystem or Git
-change is a failure. The adapter starts exactly one direct logical worker and a
-fresh Python verifier process.
+change is a failure. The adapter's deterministic offline mode starts exactly
+one fake logical worker and a fresh Python verifier process. T11 does not claim
+real-Codex-worker success from that fixture.
+
+The approved agreement-v2 status is exact:
+
+```text
+runtime_harness = minimal-offline-implemented
+live_codex_execution = deferred-to-T12
+sandbox_compatibility = unresolved-non-success
+runtime_receipt_apply = deferred-to-T12
+Phase 2 = incomplete
+repository = incomplete
+release_blocked = true
+```
+
+AC-01 through AC-12 remain applicable only inside their offline/static
+boundary. AC-13 is superseded for T11 and deferred to T12; it is neither passed
+nor omitted. AC-14 is unchanged, and AC-15 remains the owner merge gate for
+the deterministic offline harness. Full K09, K10, K11, and K12 are not claimed.
 
 All dynamic Task and context bytes travel on stdin. Worker argv may include the
 static reviewed `task_worker` developer-instruction string, bound by SHA-256,
@@ -44,9 +65,10 @@ but contains no Task prompt. Commands use argv arrays with `shell=false`, an
 exact cwd, a minimal environment, bounded output/time, process-group
 TERM/KILL/reap handling, and pre/post Git-state verification.
 
-Before live execution a sensor must prove a supported runtime profile.
-`profile-drift`, `unsupported-client` (including an unapproved prerelease), `UNKNOWN`, and
-`UNCHECKABLE` are non-success and block the worker. Help output alone is not a
+Before any later T12 live execution, a sensor must prove a supported runtime
+profile. `profile-drift`, `unsupported-client` (including an unapproved
+prerelease), `UNKNOWN`, and `UNCHECKABLE` are non-success and block the worker.
+Help output alone is not a
 configuration-recognition probe, and `codex doctor --json` is diagnostic
 health evidence rather than an effective-configuration attestation. Only
 allowlisted check ID, category, and status fields leave the diagnostic probe;
@@ -63,7 +85,7 @@ lanes. A failure in shell, config, auth, or Codex sandbox/network evidence does
 not rewrite a separately observed provider-isolation fact. Release class is
 derived from exact version syntax. A stable client becomes `match` only when
 every independently required lane passes; the full sensor is rerun and
-reconciled immediately before the one live worker.
+reconciled immediately before the one T12 live worker.
 
 Authentication classification is derived from a dedicated bounded probe of
 `codex login status`. The official 0.150.1 client writes its successful status
@@ -82,17 +104,18 @@ policy gate rejects state flags mixed with Option B, `-C` without a permission
 profile, an omitted delimiter, bypass arguments, and unsupported or conflicting
 arguments.
 
-The approved outer containment boundary uses one fresh T11-only Colima Linux
-VM with VZ and native `aarch64`, named from the exact public head. The guest
-clones that head onto its private disk. It neither mounts the host repository
+The Stage A qualification boundary used one fresh T11-only Colima Linux VM per
+attempt with VZ and native `aarch64`, named from the exact public head. The
+guest clones that head onto its private disk. It neither mounts the host repository
 nor reuses the default profile, existing runtime data, or host credentials.
 The sole permitted host mount is Colima 0.10.1's unavoidable provider-internal
 cache entry, redirected to a fresh attempt-only root and proven read-only; no
 other shared mount is permitted. Raw paths remain local-only. The closed
 provider evidence is adapter/owner-authored and explicitly not a Codex-issued
-authenticated attestation. T11 containment is established by this fresh VM,
-the closed mount boundary, exact PR head/tree, a dedicated `CODEX_HOME`, exact
-lifecycle destruction, and profile-absence read-back.
+authenticated attestation. The bounded outer-containment evidence is
+established by this fresh VM, the closed mount boundary, exact PR head/tree, a
+dedicated `CODEX_HOME`, exact lifecycle destruction, and profile-absence
+read-back.
 
 Owner-authored control-plane evidence must prove pre-create absence of both
 the exact profile and its runtime data. The attempt reuses no existing VM,
@@ -189,9 +212,10 @@ the smoke argv alone has SHA-256
 
 Raw stderr is discarded and failure is reduced to a fixed reason code. Codex
 shell-environment and sandbox/network probes are not invoked unless this
-direct smoke passes. Stage A.1 is now qualified and frozen for T11; Stage A.2
-does not alter its package, AppArmor, sysctl, smoke, or Codex-version inputs.
-The prerequisite is distinct gate evidence: it does not
+direct smoke passes. Stage A.1 remains bounded non-success evidence; only this
+narrow prerequisite set is qualified and frozen. Stage A.2 does not alter its
+package, AppArmor, sysctl, smoke, or Codex-version inputs. The prerequisite is
+distinct gate evidence: it does not
 overwrite provider isolation, mount boundary, process cleanup, Codex
 sandbox/network, shell environment, configuration, or authentication status.
 
@@ -238,25 +262,28 @@ sandbox/network, shell environment, configuration, or authentication status.
   where exposed, allowing only the exact owned-leaf transition. It does not
   observe arbitrary host paths or prove transient create/delete activity,
   portable ACL equivalence, or kernel containment.
-- The append-only receipt validates four native artifacts and derives its
+- The append-only receipt implementation validates four native artifacts and derives its
   cross-bound projection. Native JSON provenance remains unsigned/unverified.
   It uses a fresh observation, structured limitations, and an idempotent
   attempt/digest marker with bounded all-attempt scanning. An exact existing
   receipt is idempotent, while a different-attempt marker or conflicting
   same-attempt marker fails closed. Read-back reconciles uncertain POST
-  outcomes without creating a second durable runtime receipt.
+  outcomes without creating a second durable runtime receipt. T11 validates
+  these behaviors with deterministic fixtures only; it does not apply a
+  runtime receipt.
 - Linux `/proc` start ticks or Darwin high-resolution `proc_pidinfo` birth
   tokens bind observed descendant signals across reparenting/setsid and reject
   PID reuse. This process-table tracking is best-effort cleanup evidence, not
   kernel-enforced containment. T11 does not claim full escaped-descendant
   process-lifetime containment; that stronger control is deferred to T12. The
   approved disposable-VM outer boundary remains mandatory for live `match`.
-- Runtime receipt application occurs before provider destruction. The receipt
+- Any T12 runtime receipt application occurs before provider destruction. The receipt
   records the pre-live destruction obligation without claiming completion;
   destroy request/completion and profile-absence read-back are later,
   append-only owner/adapter evidence.
-- Final destruction uses a distinct lifecycle actuator after the ordinary
-  runtime receipt. It posts stable idempotent copies to Issue #23 and PR #24,
+- The current T11 lifecycle actuator is fixture-tested against Issue #23 and
+  PR #24 and is not applied. T12 must bind its own exact Task and PR targets
+  before any live actuation. The tested actuator posts stable idempotent copies,
   regenerates the canonical receipt projection/comment from the original
   validated native request, cross-binds the linked receipt's GitHub creation
   time, and requires the sequence receipt -> destroy request -> destroy
@@ -264,33 +291,33 @@ sandbox/network, shell environment, configuration, or authentication status.
   timestamps have a 300-second maximum future skew, and the latest absence
   observation must be no more than 3600 seconds old at validation.
 
-The next attempt is deliberately limited to one Stage A.2 run. It provisions
-a fresh unauthenticated Colima VM, re-verifies the frozen qualified Stage A.1
-inputs, and runs only the classified Codex shell-environment and sandbox/
-network probes. It
-performs no device authentication, model invocation, live worker, or
-runtime-receipt dry-run/application. Its closed,
-allowlisted probe evidence is appended to Issue #23 and PR #24, after which
-the VM is destroyed and profile, runtime data, and process absence are read
-back. Stage A.2 then stops for owner judgment; it grants no authority to start
-Stage B. A non-successful Stage A.2 does not authorize Stage A.3 in T11; it
-requires an agreement replan separating offline-harness acceptance from later
-live compatibility and receipt proof.
+The single Stage A.2 attempt completed fail-closed. Its aggregate runtime
+profile was `UNCHECKABLE`: provider isolation, mount boundary, process cleanup,
+and configuration passed; shell environment failed with `process-nonzero`;
+sandbox/network was `UNCHECKABLE` with `process-nonzero`; authentication was
+unavailable. It performed no device authentication, model invocation, live
+worker, runtime-receipt dry-run, or receipt application. Its VM, runtime data,
+and tracked processes were destroyed with absence read-back. This remains
+bounded non-success evidence and is not rewritten as pass. T11 performs no
+Stage A.3.
 
-Stage B requires that later review and a separate fresh VM; only then may
-device-code authentication be enabled temporarily. A Stage B worker remains
+The agreement-v2 decision moves live compatibility and receipt proof to the
+planning-only T12. Stage B requires later review and a separate fresh VM; only
+then may device-code authentication be enabled temporarily. A Stage B worker remains
 blocked unless exact auth classification and the complete runtime profile are
-`match`. Stage A.2 success is probe-only evidence, not live-execution or
-runtime-receipt evidence, and cannot consume or impersonate the one later
-Stage B receipt.
+`match`. The Stage A.2 non-success record is qualification evidence, not
+live-execution or runtime-receipt evidence, and cannot consume or impersonate
+the one later T12 receipt.
 
 ## Limitations
 
 The three `.codex/agents/*.toml` files are K09-partial static role guidance.
 T11 does not prove named-agent runtime selection, authenticated role identity,
-full K09 parity, hooks, a generalized Task ritual, installation, upgrade,
-feedback transport, full escaped-descendant process-lifetime containment, or
-release readiness. Offline fixtures and Stage A.1/A.2 probe-only evidence do not
-constitute a live Codex run. Only an exact-head supported-profile Stage B run
-and read-back receipt can supply T11 live evidence; owner merge remains the
-acceptance gate.
+full K09/K10/K11/K12 parity, hooks, a generalized Task ritual, installation,
+upgrade, feedback transport, full escaped-descendant process-lifetime
+containment, or release readiness. Offline fixtures and Stage A.1/A.2
+probe-only evidence do not
+constitute a live Codex run. Only a later exact-head supported-profile T12
+Stage B run and read-back receipt can supply live evidence. T11 owner merge
+remains only the acceptance gate for the deterministic offline harness; it
+does not complete Phase 2, the repository, or a release.

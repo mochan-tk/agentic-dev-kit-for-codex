@@ -51,6 +51,10 @@ OTHER_FILES = (
     "tests/runtime/fixtures/fake-codex.py",
     "tests/runtime/fixtures/loop-events-valid.v1.jsonl",
 )
+LEDGER_CONTRACT_PATH = ".github/governance/ledger-contracts.v1.json"
+CONFORMANCE_COVERAGE_PATH = "tests/conformance/coverage.json"
+CONFORMANCE_MANIFEST_PATH = "tests/conformance/manifest.json"
+CONFORMANCE_RESULTS_PATH = "tests/conformance/results.json"
 EXPECTED_ROLE_DIGEST = "813baae383e35eea7195ffc0ad8695c7f562eac57c37ef1bb61ede6914661d23"
 EXPECTED_INITIAL = b"status=pending\n"
 EXPECTED_FINAL = b"status=complete\n"
@@ -258,6 +262,88 @@ EXPECTED_STAGE_A1_CONTROLLER_ARGV_SHA256 = (
 )
 ZERO_OID = "0" * 40
 ZERO_SHA256 = "0" * 64
+
+
+def expected_runtime_frontier() -> Dict[str, Any]:
+    """Return the exact owner-approved T11 agreement-v2 status record."""
+
+    return {
+        "agreement": {
+            "version": "t11-agreement-v2",
+            "task_issue": (
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+            ),
+            "decision_url": (
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                "#issuecomment-5472720734"
+            ),
+            "decision_body_sha256": (
+                "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
+            ),
+        },
+        "acceptance_mapping": {
+            "AC-01-through-AC-12": "applicable-offline-static-boundary",
+            "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+            "AC-14": "unchanged",
+            "AC-15": "owner-merge-gate-offline-harness",
+        },
+        "status": {
+            "runtime_harness": "minimal-offline-implemented",
+            "live_codex_execution": "deferred-to-T12",
+            "sandbox_compatibility": "unresolved-non-success",
+            "runtime_receipt_apply": "deferred-to-T12",
+            "phase_2": "incomplete",
+            "repository": "incomplete",
+            "release_blocked": True,
+        },
+        "deferred_task": {
+            "id": "T12",
+            "issue": (
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
+            ),
+            "state": "open-planning-only-inactive",
+            "blocked_by": [
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24",
+            ],
+        },
+        "stage_a2": {
+            "classification": "bounded-non-success",
+            "aggregate_status": "UNCHECKABLE",
+            "provider_isolation_status": "pass",
+            "mount_boundary_status": "pass",
+            "process_cleanup_status": "pass",
+            "config_status": "pass",
+            "shell_environment_status": "fail",
+            "shell_environment_reason_code": "process-nonzero",
+            "codex_sandbox_network_status": "UNCHECKABLE",
+            "codex_sandbox_network_reason_code": "process-nonzero",
+            "auth_status": "unavailable",
+            "device_auth_performed": False,
+            "model_invoked": False,
+            "real_codex_worker_success_count": 0,
+            "runtime_receipt_dry_run_count": 0,
+            "runtime_receipt_apply_count": 0,
+            "evidence_issue_url": (
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                "#issuecomment-5472529555"
+            ),
+            "evidence_pull_request_url": (
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
+                "#issuecomment-5472529704"
+            ),
+            "evidence_body_sha256": (
+                "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
+            ),
+        },
+        "canonical_release_boundary": {
+            "scenario_count": 136,
+            "scenario_state": "not-run",
+            "release_result_count": 0,
+            "release_results": [],
+            "release_blocked": True,
+        },
+    }
 CONTAINMENT_PROVIDER_KEYS = (
     "schema", "authority", "codex_authenticated_attestation", "status",
     "provider_kind", "profile_name", "vm_backend", "architecture",
@@ -2840,13 +2926,116 @@ def validate_execution_fixture(value: Any, envelope: Mapping[str, Any], profile:
 PROFILE_PATH = ".github/governance/codex-runtime-profile.v1.json"
 
 
+def validate_runtime_frontier(
+    ledger: Any,
+    coverage: Any,
+    manifest: Any,
+    results: Any,
+    errors: List[str],
+) -> None:
+    """Bind the T11 offline acceptance boundary to canonical release state."""
+
+    if not isinstance(ledger, dict):
+        errors.append(LEDGER_CONTRACT_PATH + ": ledger must be an object")
+        return
+    frontier = ledger.get("runtime_frontier")
+    if frontier != expected_runtime_frontier():
+        errors.append(
+            LEDGER_CONTRACT_PATH
+            + ": runtime_frontier must match the exact T11 agreement-v2 deferral"
+        )
+
+    if not isinstance(coverage, dict):
+        errors.append(CONFORMANCE_COVERAGE_PATH + ": coverage must be an object")
+        coverage = {}
+    entries = coverage.get("entries")
+    if not isinstance(entries, list):
+        errors.append(CONFORMANCE_COVERAGE_PATH + ": entries must be a list")
+        entries = []
+    scenario_ids = [
+        entry.get("scenario") if isinstance(entry, dict) else None
+        for entry in entries
+    ]
+    if (
+        coverage.get("scenario_count") != 136
+        or len(entries) != 136
+        or any(not isinstance(identifier, str) for identifier in scenario_ids)
+        or len(set(scenario_ids)) != 136
+    ):
+        errors.append(
+            CONFORMANCE_COVERAGE_PATH
+            + ": canonical coverage must contain exactly 136 unique scenarios"
+        )
+    if any(
+        not isinstance(entry, dict) or entry.get("verification_state") != "not-run"
+        for entry in entries
+    ):
+        errors.append(
+            CONFORMANCE_COVERAGE_PATH
+            + ": every canonical scenario must remain not-run"
+        )
+
+    if not isinstance(manifest, dict):
+        errors.append(CONFORMANCE_MANIFEST_PATH + ": manifest must be an object")
+        manifest = {}
+    catalog = manifest.get("scenario_catalog")
+    if not isinstance(catalog, dict):
+        errors.append(
+            CONFORMANCE_MANIFEST_PATH + ": scenario_catalog must be an object"
+        )
+        catalog = {}
+    result_store = catalog.get("result_store")
+    if not isinstance(result_store, dict):
+        errors.append(
+            CONFORMANCE_MANIFEST_PATH
+            + ": scenario_catalog.result_store must be an object"
+        )
+        result_store = {}
+    if catalog.get("total") != 136 or catalog.get("verification_state") != "not-run":
+        errors.append(
+            CONFORMANCE_MANIFEST_PATH
+            + ": catalog must preserve 136 scenarios in not-run state"
+        )
+    if (
+        manifest.get("results") != []
+        or manifest.get("release_blocked") is not True
+        or result_store.get("result_count") != 0
+    ):
+        errors.append(
+            CONFORMANCE_MANIFEST_PATH
+            + ": release results must remain empty and release_blocked true"
+        )
+
+    if not isinstance(results, dict):
+        errors.append(CONFORMANCE_RESULTS_PATH + ": results must be an object")
+        results = {}
+    if (
+        results.get("result_count") != 0
+        or results.get("results") != []
+        or results.get("release_blocked") is not True
+    ):
+        errors.append(
+            CONFORMANCE_RESULTS_PATH
+            + ": release-level results must remain empty and release_blocked true"
+        )
+
+
 def validate_repository(root: Path) -> List[str]:
     errors: List[str] = []
-    for relative in SCHEMAS + JSON_FIXTURES + OTHER_FILES:
+    for relative in SCHEMAS + JSON_FIXTURES + OTHER_FILES + (
+        LEDGER_CONTRACT_PATH,
+        CONFORMANCE_COVERAGE_PATH,
+        CONFORMANCE_MANIFEST_PATH,
+        CONFORMANCE_RESULTS_PATH,
+    ):
         read_regular(root, relative, errors)
     schemas = {relative: load_json(root, relative, errors) for relative in SCHEMAS}
     fixtures = {relative: load_json(root, relative, errors) for relative in JSON_FIXTURES}
     profile = load_json(root, PROFILE_PATH, errors)
+    ledger = load_json(root, LEDGER_CONTRACT_PATH, errors)
+    coverage = load_json(root, CONFORMANCE_COVERAGE_PATH, errors)
+    manifest = load_json(root, CONFORMANCE_MANIFEST_PATH, errors)
+    results = load_json(root, CONFORMANCE_RESULTS_PATH, errors)
     for relative, schema in schemas.items():
         validate_schema(relative, schema, errors)
     validate_runtime_profile_schema(
@@ -2862,6 +3051,7 @@ def validate_repository(root: Path) -> List[str]:
         errors,
     )
     validate_profile(profile, errors)
+    validate_runtime_frontier(ledger, coverage, manifest, results, errors)
 
     role_instructions = {}
     for name, sandbox in (("task_supervisor", "read-only"), ("task_worker", "workspace-write"), ("task_verifier", "read-only")):

@@ -28,6 +28,66 @@
       "X": "not-run"
     }
   },
+  "runtime_frontier": {
+    "agreement": {
+      "version": "t11-agreement-v2",
+      "task_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+      "decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734",
+      "decision_body_sha256": "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
+    },
+    "acceptance_mapping": {
+      "AC-01-through-AC-12": "applicable-offline-static-boundary",
+      "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+      "AC-14": "unchanged",
+      "AC-15": "owner-merge-gate-offline-harness"
+    },
+    "status": {
+      "runtime_harness": "minimal-offline-implemented",
+      "live_codex_execution": "deferred-to-T12",
+      "sandbox_compatibility": "unresolved-non-success",
+      "runtime_receipt_apply": "deferred-to-T12",
+      "phase_2": "incomplete",
+      "repository": "incomplete",
+      "release_blocked": true
+    },
+    "deferred_task": {
+      "id": "T12",
+      "issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
+      "state": "open-planning-only-inactive",
+      "blocked_by": [
+        "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+        "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
+      ]
+    },
+    "stage_a2": {
+      "classification": "bounded-non-success",
+      "aggregate_status": "UNCHECKABLE",
+      "provider_isolation_status": "pass",
+      "mount_boundary_status": "pass",
+      "process_cleanup_status": "pass",
+      "config_status": "pass",
+      "shell_environment_status": "fail",
+      "shell_environment_reason_code": "process-nonzero",
+      "codex_sandbox_network_status": "UNCHECKABLE",
+      "codex_sandbox_network_reason_code": "process-nonzero",
+      "auth_status": "unavailable",
+      "device_auth_performed": false,
+      "model_invoked": false,
+      "real_codex_worker_success_count": 0,
+      "runtime_receipt_dry_run_count": 0,
+      "runtime_receipt_apply_count": 0,
+      "evidence_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472529555",
+      "evidence_pull_request_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-5472529704",
+      "evidence_body_sha256": "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
+    },
+    "canonical_release_boundary": {
+      "scenario_count": 136,
+      "scenario_state": "not-run",
+      "release_result_count": 0,
+      "release_results": [],
+      "release_blocked": true
+    }
+  },
   "validation_boundary": {
     "validated_offline": [
       "canonical same-repository URL shape",

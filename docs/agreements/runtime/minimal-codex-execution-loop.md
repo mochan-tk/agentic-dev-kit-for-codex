@@ -1,8 +1,22 @@
 # Minimal Codex execution loop
 
-This document is the human-readable companion to the T11 runtime schemas. The
-machine schemas are authoritative for record shape; deterministic code and
-current Git/GitHub evidence are authoritative for execution facts.
+This document is the human-readable companion to the T11 runtime schemas and
+deterministic offline harness. The machine schemas are authoritative for
+record shape; deterministic code and current Git/GitHub evidence are
+authoritative for execution facts. The approved
+[T11 agreement v2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734)
+defers live Codex compatibility and runtime-receipt application to planning-only
+[T12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25).
+
+```text
+runtime_harness = minimal-offline-implemented
+live_codex_execution = deferred-to-T12
+sandbox_compatibility = unresolved-non-success
+runtime_receipt_apply = deferred-to-T12
+Phase 2 = incomplete
+repository = incomplete
+release_blocked = true
+```
 
 ## Authority boundaries
 
@@ -37,10 +51,11 @@ Dynamic Task and context data are stdin-only. The sole developer-instruction
 value permitted in worker argv is the exact static reviewed `task_worker`
 string, identified by its recorded SHA-256.
 
-## Runtime isolation
+## Deferred live runtime isolation contract
 
-The live argv selects the approved exact binary, model, and reasoning effort;
-uses `codex exec --json --ephemeral --strict-config --ignore-user-config` in a
+The T12 live argv contract selects the approved exact binary, model, and
+reasoning effort; uses
+`codex exec --json --ephemeral --strict-config --ignore-user-config` in a
 private synthetic worktree; selects `workspace-write` and approval `never`;
 and provides these reviewed overrides:
 
@@ -68,8 +83,8 @@ the selected client can prove behaviorally. Help output and successful parsing
 of an unknown `-c` key are not recognition evidence. `codex doctor --json` is
 a redacted diagnostic support report only. The adapter retains only
 allowlisted check ID, category, and status fields and never persists report
-details or the raw report. A warning or failure blocks T11 only for a required
-auth, config, runtime, or sandbox check; unrelated advisory warnings produce
+details or the raw report. A warning or failure blocks qualification for a
+required auth, config, runtime, or sandbox check; unrelated advisory warnings produce
 `pass-with-advisory-warning`. This bounded diagnostic status is never promoted
 to effective-configuration evidence. The explicit environment contains
 bounded PATH, private HOME, its exact private CODEX_HOME, and private TMPDIR,
@@ -102,7 +117,7 @@ a zero exit with any other output maps to `unknown`. The adapter records only
 the safe classification. It never persists raw stdout/stderr, authentication
 files, credential material, or private paths.
 
-The approved T11 outer containment boundary is one fresh, attempt-only Colima
+The qualification boundary is one fresh, attempt-only Colima
 Linux VM using the VZ backend and native `aarch64`. Its profile name is
 `t11-e2e-<exact-public-head-first-12>-01`. The host Mac, default Colima
 profile, any existing VM/container/volume, and PID tracking alone are not the
@@ -111,7 +126,7 @@ disk and checked against the exact public PR head/tree; the host repository,
 HOME, Codex/GitHub credentials, SSH agent, Docker socket, private TMPDIR, and
 unrelated paths are not shared.
 
-For T11, the outer containment claim consists only of that fresh disposable
+The outer containment claim consists only of that fresh disposable
 VM, the closed no-sensitive/unapproved-mount boundary, the exact public PR
 head/tree, a dedicated private `CODEX_HOME`, exact lifecycle destruction, and
 profile-absence read-back. These provider facts are independent of Codex
@@ -143,16 +158,18 @@ The VM installs official stable `codex-cli 0.150.1` from
 `codex-aarch64-unknown-linux-musl.tar.gz`. Both the approved archive SHA-256
 `5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264`
 and a separately calculated extracted-binary digest are required. Stage A.1
-keeps the dedicated private VM `CODEX_HOME` unauthenticated. Stage B, if later
-approved after Stage A.1 review, uses a separate fresh VM and device
+keeps the dedicated private VM `CODEX_HOME` unauthenticated. T12 Stage B, if
+later approved after the required unauthenticated qualification, uses a
+separate fresh VM and device
 authorization in its own dedicated private `CODEX_HOME`; credential values,
 device codes, and authentication files never enter artifacts or durable
 output.
 
 ### Qualified Stage A.1 Git and bubblewrap prerequisites
 
-The accepted Stage A.1 attempt qualified the documented Git and bubblewrap
-prerequisites inside a fresh disposable Colima VM before any Codex shell-
+Stage A.1 remains a bounded non-success attempt. It qualified only the
+documented Git and bubblewrap prerequisites inside a fresh disposable Colima
+VM before any Codex shell-
 environment or sandbox/network probe. The provider controller uses fixed argv
 arrays with `shell=false`; package installation is never delegated to a model.
 It first records only these allowlisted guest facts: distribution ID/version/
@@ -353,7 +370,7 @@ reasserts the exact base/branch/tree/index/ref/object facts itself and compares
 against a private canonical baseline; it does not trust caller pre-state as
 base truth. Worker/event/final/exit/verifier inconsistency is failure.
 
-## Runtime profile states
+## Runtime profile states for deferred T12 qualification
 
 Only `match` permits live execution. `profile-drift`, `unsupported-client`,
 `UNKNOWN`, and `UNCHECKABLE` are non-success. An unapproved alpha, beta, release
@@ -380,7 +397,7 @@ sandbox/network, auth, and best-effort process-cleanup statuses remain separate
 and cannot degrade or upgrade the provider-isolation claim. The historical
 task-start profile uses an exact `not-run` sentinel with zero digests and no
 fabricated provider, VM, or creation-time observation.
-Immediately before a
+Immediately before a later T12
 live worker, the full sensor runs again and must equal the supplied semantic
 profile except for its observation timestamp.
 
@@ -390,42 +407,39 @@ allowed stages are `load-envelope`, `load-static-role`,
 `environment-contract`, `build-argv`, `argv-policy`, `schema-binding`, and
 `filesystem-binding`.
 
-## Offline and live evidence
+## T11 offline acceptance and T12 deferred live evidence
 
 Required CI uses only fixtures, a fake process, private synthetic Git
 repositories, schemas, and deterministic tests. It has no Codex authentication,
-network, model spend, live mode, or GitHub write. Live execution and receipt
-`--apply` require separate explicit modes and all T11 gates.
+network, model spend, live mode, or GitHub write. T11 accepts only this
+deterministic offline boundary, including fixture-based receipt validation,
+dry-run, zero-write, idempotency, conflict, and read-back behavior.
 
-The next live-path attempt is Stage A.2 only. It uses one fresh
-unauthenticated Colima VM, performs no device authentication or model
-invocation, re-verifies the frozen qualified Stage A.1 prerequisites, and runs
-only the Codex shell-environment and sandbox/network probes. It does not start
-a live worker or run a runtime-receipt dry-run/application.
+The single Stage A.2 attempt completed with aggregate status `UNCHECKABLE`.
+Provider isolation, mount boundary, process cleanup, and configuration passed;
+shell environment failed with `process-nonzero`; sandbox/network was
+`UNCHECKABLE` with `process-nonzero`; authentication was unavailable. Device
+authentication remained disabled, and no model, live worker, runtime-receipt
+dry-run, or receipt application ran. The VM, runtime data, and tracked
+processes were destroyed and absence was read back. Stage A.2 remains bounded
+non-success evidence; it is not converted to runtime-profile `match`, sandbox
+compatibility, live-worker success, or receipt evidence. T11 performs no Stage
+A.3.
 
-Device-code authentication remains disabled throughout Stage A.2. Stage A.2
-appends only closed, allowlisted probe evidence to Issue #23 and PR
-#24. That evidence binds the exact head/tree/checks, no-auth/no-model facts,
-qualified-prerequisite binding, classified shell/network records, separate
-lane statuses, and destruction/absence
-read-back without a live result bundle or runtime-receipt claim. The VM is
-destroyed, profile/runtime-data/process absence is read back, and the attempt
-stops for owner judgment. A successful Stage A.2 record is not a runtime
-`match`, live Task evidence, a live runtime receipt, or authority to start
-Stage B; it cannot consume the exactly-once Stage B receipt marker. If this
-single Stage A.2 attempt is non-success, T11 performs no Stage A.3; the owner
-must replan acceptance of the offline runnable harness separately and move
-live compatibility and receipt proof to a subsequent bounded Task.
-
-Stage B requires that later review and uses a different fresh Colima VM. Only
+AC-13 is `deferred-to-T12-by-approved-agreement-replan`, not pass and not
+omitted. T12 owns shell-environment and sandbox/network compatibility,
+supported runtime-profile qualification, unauthenticated Stage A success,
+authenticated Stage B, exactly one live Codex E2E, receipt dry-run/apply/read-
+back, and exact head/tree/check binding. Stage B requires later review and a
+different fresh Colima VM. Only
 for that attempt may device-code authentication be enabled temporarily. The
 adapter must classify authentication through the exact allowlist above and
 must observe the complete profile as `match` before starting exactly one live
 worker. Receipt dry-run/application and destruction follow only that live
 success, after which device-code authentication is disabled again.
 
-The receipt actuator reads one `runtime-receipt-request/v1` on stdin containing
-the actual bounded `runtime-profile/v1`, `task-execution-envelope/v1`,
+The offline-tested receipt actuator reads one `runtime-receipt-request/v1` on
+stdin containing the actual bounded `runtime-profile/v1`, `task-execution-envelope/v1`,
 `execution-result/v1`, and verifier artifacts. It validates each native
 artifact, calculates canonical artifact digests itself, checks the
 profile/envelope/verifier -> result digest graph, and only then derives the
@@ -444,18 +458,22 @@ say `destroy_required=true`, `destroy_requested=false`,
 application precedes VM destruction, so destroy completion and the final
 profile-absence read-back are recorded only afterward as separate append-only
 owner/adapter evidence; the receipt must not claim them early.
-`--apply` preflights a bounded comment set using a stable attempt/digest marker:
+When separately authorized in T12, `--apply` preflights a bounded comment set
+using a stable attempt/digest marker:
 the same receipt is idempotent without POST, any marker for a different attempt
-fails because T11 permits exactly one durable runtime receipt, a conflicting
-same-attempt marker fails, and an uncertain POST is reconciled by read-back before any retry. POST
-body bytes travel only on stdin; comments are never edited or deleted. Exact
-read-back and a second post-write head/tree/check read are required. The receipt does not change `release_blocked`, scenario
-states, a Ruleset, a tag, or a release.
+fails because the bounded live attempt permits exactly one durable runtime
+receipt, a conflicting same-attempt marker fails, and an uncertain POST is
+reconciled by read-back before any retry. POST body bytes travel only on stdin;
+comments are never edited or deleted. Exact read-back and a second post-write
+head/tree/check read are required. The receipt does not change
+`release_blocked`, scenario states, a Ruleset, a tag, or a release.
 
-After that runtime receipt is posted, destruction uses a separate closed
-`t11-colima-lifecycle-receipt-request/v1` actuator. `--lifecycle-dry-run`
-renders canonical Issue #23 and PR #24 copies; `--lifecycle-apply` appends each
-copy with a target-specific stable marker and idempotent read-back. Its input
+The current T11 lifecycle actuator is fixture-tested against Issue #23 and PR
+#24 and is not applied. T12 must bind its own exact Task and PR before any live
+actuation. The tested `t11-colima-lifecycle-receipt-request/v1` path uses
+`--lifecycle-dry-run` to render canonical target copies and
+`--lifecycle-apply` to append each copy with a target-specific stable marker
+and idempotent read-back. Its input
 includes the original validated native runtime-receipt request. The lifecycle
 validator regenerates the safe canonical `runtime-receipt/v1` projection and
 its exact rendered comment rather than trusting caller-authored marker/body

@@ -530,6 +530,150 @@ class RepositoryPolicyTest(unittest.TestCase):
         t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
         self.assertEqual("accepted", t10["state"])
 
+    def test_t11_agreement_v2_preserves_the_actual_release_boundary(self):
+        catalog = self.read_json(ROOT, "tests/conformance/catalog.json")
+        scenario_ids = [
+            scenario["id"]
+            for family in catalog["families"]
+            for scenario in family["scenarios"]
+        ]
+        self.assertEqual(136, catalog["scenario_count"])
+        self.assertEqual(136, len(scenario_ids))
+        self.assertEqual(136, len(set(scenario_ids)))
+
+        coverage = self.read_json(ROOT, COVERAGE)
+        coverage_ids = [entry["scenario"] for entry in coverage["entries"]]
+        self.assertEqual(scenario_ids, coverage_ids)
+        self.assertTrue(
+            all(
+                entry["verification_state"] == "not-run"
+                for entry in coverage["entries"]
+            )
+        )
+
+        results = self.read_json(ROOT, "tests/conformance/results.json")
+        self.assertEqual(0, results["result_count"])
+        self.assertEqual([], results["results"])
+        self.assertIs(results["release_blocked"], True)
+
+        manifest = self.read_json(ROOT, PHASE_MANIFEST)
+        self.assertEqual(136, manifest["scenario_catalog"]["total"])
+        self.assertEqual(
+            "not-run", manifest["scenario_catalog"]["verification_state"]
+        )
+        self.assertEqual(
+            0, manifest["scenario_catalog"]["result_store"]["result_count"]
+        )
+        self.assertEqual([], manifest["results"])
+        self.assertIs(manifest["release_blocked"], True)
+
+        contract = self.read_json(
+            ROOT, ".github/governance/ledger-contracts.v1.json"
+        )
+        self.assertEqual(
+            {
+                "scenario_count": 136,
+                "scenario_state": "not-run",
+                "release_result_count": 0,
+                "release_results": [],
+                "release_blocked": True,
+            },
+            contract["runtime_frontier"]["canonical_release_boundary"],
+        )
+
+    def test_canonical_release_state_drift_is_rejected(self):
+        cases = (
+            (
+                "manifest scenario count",
+                lambda manifest, _results: manifest["scenario_catalog"].__setitem__(
+                    "total", 135
+                ),
+            ),
+            (
+                "manifest scenario state",
+                lambda manifest, _results: manifest["scenario_catalog"].__setitem__(
+                    "verification_state", "pass"
+                ),
+            ),
+            (
+                "manifest result count",
+                lambda manifest, _results: manifest["scenario_catalog"][
+                    "result_store"
+                ].__setitem__("result_count", 1),
+            ),
+            (
+                "manifest results",
+                lambda manifest, _results: manifest.__setitem__(
+                    "results", [{"contract": "K10", "state": "pass"}]
+                ),
+            ),
+            (
+                "result store count",
+                lambda _manifest, results: results.__setitem__("result_count", 1),
+            ),
+            (
+                "result store release blocker",
+                lambda _manifest, results: results.__setitem__(
+                    "release_blocked", False
+                ),
+            ),
+        )
+        for label, mutation in cases:
+            with self.subTest(label=label):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                manifest = self.read_json(fixture, PHASE_MANIFEST)
+                results = self.read_json(fixture, "tests/conformance/results.json")
+                mutation(manifest, results)
+                self.write_json(fixture, PHASE_MANIFEST, manifest)
+                self.write_json(fixture, "tests/conformance/results.json", results)
+                self.assert_rejected(self.errors_for(fixture))
+
+    def test_t11_agreement_v2_status_is_explicit_without_live_overclaim(self):
+        documents = (
+            "README.md",
+            "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
+            "docs/agreements/runtime/minimal-codex-execution-loop.md",
+            "docs/known-limitations.md",
+        )
+        status = {
+            "runtime_harness": "minimal-offline-implemented",
+            "live_codex_execution": "deferred-to-T12",
+            "sandbox_compatibility": "unresolved-non-success",
+            "runtime_receipt_apply": "deferred-to-T12",
+        }
+        for relative in documents:
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            with self.subTest(relative=relative):
+                for key, value in status.items():
+                    self.assertIn(key, text)
+                    self.assertIn(value, text)
+                self.assertNotIn("runtime-profile `match` was achieved", text)
+                self.assertNotIn("a successful real Codex worker", text)
+                self.assertNotIn("runtime receipt was applied", text)
+
+    def test_live_capability_overclaims_are_rejected_on_every_durable_surface(self):
+        documents = (
+            "README.md",
+            "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
+            "docs/agreements/runtime/minimal-codex-execution-loop.md",
+            "docs/known-limitations.md",
+        )
+        overclaim = (
+            "\nT11 runtime-profile `match` was achieved; a successful real Codex "
+            "worker ran and the runtime receipt was applied.\n"
+        )
+        for relative in documents:
+            with self.subTest(relative=relative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / relative
+                path.write_text(
+                    path.read_text(encoding="utf-8") + overclaim,
+                    encoding="utf-8",
+                )
+                self.assert_rejected(self.errors_for(fixture))
+
     def test_phase2_frontier_rejects_t10_or_t11_drift(self):
         cases = (
             (
@@ -950,23 +1094,34 @@ class RepositoryPolicyTest(unittest.TestCase):
             "Epic #2",
             "post-merge receipt",
             "Issue #23",
-            "minimal/partial execution slice",
-            "codex-cli 0.150.0-alpha.8",
+            "deterministic offline execution harness",
+            "runtime_harness = minimal-offline-implemented",
+            "live_codex_execution = deferred-to-T12",
+            "sandbox_compatibility = unresolved-non-success",
+            "runtime_receipt_apply = deferred-to-T12",
+            "Issue #25",
+            "Stage A.1 and Stage A.2 remain bounded non-success evidence",
+            "alpha snapshot remains `unsupported-client`",
             "unsupported-client",
-            "does not embed or claim a successful live Codex run or runtime receipt",
-            "No successful live run or receipt is claimed in this tree.",
+            "No successful real Codex worker or applied runtime receipt",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
         ):
             self.assertIn(marker, readme)
         for marker in (
-            "minimal/partial offline slice",
+            "deterministic offline harness",
+            "runtime_harness = minimal-offline-implemented",
+            "live_codex_execution = deferred-to-T12",
+            "sandbox_compatibility = unresolved-non-success",
+            "runtime_receipt_apply = deferred-to-T12",
+            "Issue #25",
+            "Stage A.2",
+            "bounded non-success",
             "codex-cli 0.150.0-alpha.8",
             "unsupported-client",
             "required CI cannot run real Codex",
             "does not claim a completed live representative Task",
-            "posted runtime receipt",
             "release-level conformance result set is empty",
             "`release_blocked` remains `true`",
         ):
