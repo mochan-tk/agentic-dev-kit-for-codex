@@ -29,56 +29,145 @@
     }
   },
   "runtime_frontier": {
-    "agreement": {
-      "version": "t11-agreement-v2",
-      "task_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
-      "decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734",
-      "decision_body_sha256": "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
+    "tree_snapshot": {
+      "t11": "accepted",
+      "t12": "sole-active",
+      "live_evidence": "external-github-current-outcome-not-embedded-in-tree"
     },
-    "acceptance_mapping": {
-      "AC-01-through-AC-12": "applicable-offline-static-boundary",
-      "AC-13": "deferred-to-T12-by-approved-agreement-replan",
-      "AC-14": "unchanged",
-      "AC-15": "owner-merge-gate-offline-harness"
+    "t11_history": {
+      "agreement": {
+        "version": "t11-agreement-v2",
+        "task_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+        "decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734",
+        "decision_body_sha256": "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
+      },
+      "acceptance_mapping": {
+        "AC-01-through-AC-12": "applicable-offline-static-boundary",
+        "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+        "AC-14": "unchanged",
+        "AC-15": "owner-merge-gate-offline-harness"
+      },
+      "status": {
+        "task": "accepted",
+        "runtime_harness": "minimal-offline-implemented",
+        "live_codex_execution": "deferred-to-T12",
+        "sandbox_compatibility": "unresolved-non-success",
+        "runtime_receipt_apply": "deferred-to-T12"
+      },
+      "merge": {
+        "commit": "4a85a007ed62795b48bcbce04f6b7e5482e71e82",
+        "tree": "49afe003de2bbb04249d6f4c36ea6462c271c26f",
+        "receipt": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5473274452"
+      },
+      "stage_a1": {
+        "classification": "bounded-non-success",
+        "qualified_boundary": "git-and-bubblewrap-prerequisites-only",
+        "aggregate_status": "UNCHECKABLE",
+        "direct_bwrap_smoke_status": "pass",
+        "device_auth_performed": false,
+        "logical_codex_exec_worker_process_invocation_count": 0,
+        "runtime_receipt_dry_run_count": 0,
+        "runtime_receipt_apply_count": 0,
+        "evidence_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5470293000",
+        "evidence_body_sha256": "5911657f46e4a0f555ac642ed69f38dd31efe771ec5846d5a19d2a4f1a62dbce"
+      },
+      "stage_a2": {
+        "classification": "bounded-non-success",
+        "aggregate_status": "UNCHECKABLE",
+        "provider_isolation_status": "pass",
+        "mount_boundary_status": "pass",
+        "process_cleanup_status": "pass",
+        "config_status": "pass",
+        "shell_environment_status": "fail",
+        "shell_environment_reason_code": "process-nonzero",
+        "codex_sandbox_network_status": "UNCHECKABLE",
+        "codex_sandbox_network_reason_code": "process-nonzero",
+        "auth_status": "unavailable",
+        "device_auth_performed": false,
+        "logical_codex_exec_worker_process_invocation_count": 0,
+        "runtime_receipt_dry_run_count": 0,
+        "runtime_receipt_apply_count": 0,
+        "evidence_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472529555",
+        "evidence_pull_request_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-5472529704",
+        "evidence_body_sha256": "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
+      }
+    },
+    "t12_activation": {
+      "task_issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
+      "state": "active-in-this-tree",
+      "branch": "codex/phase-2-live-codex-runtime",
+      "phase_origin": {
+        "commit": "36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2",
+        "tree": "1c1f46ad20dd289a713663c84eaf1dbb62840deb"
+      },
+      "task_base": {
+        "commit": "4a85a007ed62795b48bcbce04f6b7e5482e71e82",
+        "tree": "49afe003de2bbb04249d6f4c36ea6462c271c26f"
+      },
+      "owner_amendment": {
+        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5480062206",
+        "body_sha256": "b3f051da26ebba7e0d49b79917cffa81ec6e9c66d409029ffd0020d0211850ee"
+      },
+      "ownership": {
+        "transferred_path_count": 21,
+        "path_transitions": [],
+        "expansion_requires_replan": true
+      },
+      "runtime_evidence": {
+        "authority": "external-github-current-outcome-not-embedded-in-tree",
+        "stage_a": "required-before-stage-b",
+        "stage_b": "required-before-runtime-receipt",
+        "sandbox_compatibility": "must-be-qualified-not-embedded",
+        "runtime_receipt_apply": "exactly-once-required-not-embedded",
+        "lifecycle_completion": "separate-append-only-comment-not-runtime-receipt"
+      },
+      "compatibility_baseline": {
+        "client": "official-stable-codex-cli-0.150.1",
+        "scope": "one-exact-receipt-bound-profile-only",
+        "current_latest_stable_claimed": false,
+        "version_change": "ownership-and-source-review-replan-required"
+      },
+      "invocation_boundary": {
+        "claim": "exactly-one-owner-triggered-logical-codex-exec-worker-process-invocation",
+        "execution_result_logical_invocations": 1,
+        "backend_model_request_count_claimed": false,
+        "automatic_worker_retry": false
+      },
+      "pull_request_binding": "dynamic-github-readback-required-no-static-pr-number",
+      "receipt_chronology": [
+        "stage-b-live-worker",
+        "deterministic-verification",
+        "receipt-dry-run",
+        "exact-head-tree-check-readback",
+        "exactly-one-runtime-receipt-apply",
+        "canonical-receipt-readback",
+        "provider-and-runtime-destruction",
+        "profile-runtime-data-process-absence-readback",
+        "one-append-only-lifecycle-completion-evidence-comment",
+        "owner-merge-judgment"
+      ],
+      "source_parity": {
+        "repository": "mochan-tk/agentic-dev-kit-for-copilot",
+        "commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+        "tree": "88f96493ec167602750c8dfec044629bd494a586",
+        "contributes": [
+          "capability-aware-routing-for-one-exact-profile",
+          "bounded-worker-execution",
+          "durable-attempt-and-receipt-trail",
+          "independent-verification-over-worker-claim",
+          "privacy-by-reference"
+        ],
+        "does_not_complete": ["K09", "K10", "K11", "K12", "full-runtime-parity"]
+      }
     },
     "status": {
       "runtime_harness": "minimal-offline-implemented",
-      "live_codex_execution": "deferred-to-T12",
-      "sandbox_compatibility": "unresolved-non-success",
-      "runtime_receipt_apply": "deferred-to-T12",
+      "live_codex_execution": "active-qualification-external-evidence-not-embedded",
+      "sandbox_compatibility": "required-external-evidence-not-embedded",
+      "runtime_receipt_apply": "required-external-evidence-not-embedded",
       "phase_2": "incomplete",
       "repository": "incomplete",
       "release_blocked": true
-    },
-    "deferred_task": {
-      "id": "T12",
-      "issue": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
-      "state": "open-planning-only-inactive",
-      "blocked_by": [
-        "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
-        "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
-      ]
-    },
-    "stage_a2": {
-      "classification": "bounded-non-success",
-      "aggregate_status": "UNCHECKABLE",
-      "provider_isolation_status": "pass",
-      "mount_boundary_status": "pass",
-      "process_cleanup_status": "pass",
-      "config_status": "pass",
-      "shell_environment_status": "fail",
-      "shell_environment_reason_code": "process-nonzero",
-      "codex_sandbox_network_status": "UNCHECKABLE",
-      "codex_sandbox_network_reason_code": "process-nonzero",
-      "auth_status": "unavailable",
-      "device_auth_performed": false,
-      "model_invoked": false,
-      "real_codex_worker_success_count": 0,
-      "runtime_receipt_dry_run_count": 0,
-      "runtime_receipt_apply_count": 0,
-      "evidence_issue_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472529555",
-      "evidence_pull_request_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-5472529704",
-      "evidence_body_sha256": "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
     },
     "canonical_release_boundary": {
       "scenario_count": 136,

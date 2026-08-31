@@ -25,22 +25,24 @@ offline harness, with `runtime_harness = minimal-offline-implemented`. The
 static TOML files do not prove native named-agent selection or identity, and
 required CI cannot run real Codex, enter live mode, or apply a receipt.
 
-The approved agreement-v2 boundary records
+The accepted T11 agreement-v2 history records
 `live_codex_execution = deferred-to-T12`,
 `sandbox_compatibility = unresolved-non-success`, and
-`runtime_receipt_apply = deferred-to-T12`. T12 is the open, planning-only
+`runtime_receipt_apply = deferred-to-T12`. T12 is the open, sole-active
 [Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25)
-and remains inactive and blocked by T11 / PR #24. Phase 2 and the repository
-remain incomplete, and `release_blocked = true`.
+in this tree. Its current live-evidence outcome is external GitHub state, not a
+mutable status embedded here. Phase 2 and the repository remain incomplete,
+and `release_blocked = true`.
 
 The Task-start observation found `codex-cli 0.150.0-alpha.8`. That prerelease
 is `unsupported-client` under the approved live gate. Consequently this tree
 does not claim a completed live representative Task, a successful live runtime
-profile, or a posted runtime receipt. The later Stage A.2 attempt remained
+profile, or a posted runtime receipt. The historical Stage A.2 attempt remained
 bounded non-success evidence: the aggregate profile was `UNCHECKABLE`, the
 shell-environment lane failed with `process-nonzero`, and sandbox/network was
 `UNCHECKABLE` with `process-nonzero`. It performed no device authentication,
-model invocation, live worker, runtime-receipt dry-run, or receipt application.
+logical `codex exec` worker-process invocation, runtime-receipt dry-run, or
+receipt application.
 Live qualification and those actions now belong only to T12.
 
 The qualification design uses a new exact-head attempt-only Colima Linux VM using
@@ -61,7 +63,8 @@ absence of host-sensitive or unapproved mounts, exact PR head/tree, a
 dedicated private `CODEX_HOME`, exact destruction, and profile-absence
 read-back. PID/start-token tracking provides best-effort cleanup evidence; it
 does not prove kernel-enforced containment. Full escaped-descendant process-
-lifetime containment is deferred to T12.
+lifetime containment is deferred to T13; T12 uses only this reviewed outer
+boundary.
 
 Stage A.1 remains a bounded non-success attempt; only its narrow Git and
 bubblewrap prerequisites were qualified. Stage A.2 freezes those inputs and
@@ -139,19 +142,25 @@ receipt therefore records only the destruction obligation and does not claim
 destroy completion or profile absence. Those outcomes require a later
 append-only read-back after the attempt. Until that record exists, destruction
 evidence is incomplete rather than implicitly successful.
-The current separate lifecycle actuator is fixture-tested against Issue #23
-and PR #24; it was not applied. T12 must bind its own exact Task and PR targets
-before any live actuation. The tested contract binds an already-posted runtime
-receipt and its GitHub creation time, exact PR head/tree/checks, destroy
-chronology, and both profile/runtime-data absence read-backs. It regenerates the exact
-canonical runtime-receipt body from the original validated native request;
-caller-authored marker/body text is not proof. Every lifecycle timestamp is
-bounded to at most 300 seconds of future skew and the latest absence read-back
-must be no more than 3600 seconds old at validation. A runtime receipt by
-itself does not prove teardown. T11 proves only deterministic fixture-based
-validation, dry-run, zero-write, idempotency, conflict, and read-back behavior;
-no runtime receipt has been applied. T12 owns any later exact-head application.
-Under that deferred contract, only an exact same-attempt receipt is idempotent,
+The separate lifecycle actuator was fixture-tested against Issue #23 and PR
+#24; it was not applied. T12 binds its exact Task plus a same-repository,
+non-fork PR on the approved branch through GitHub read-back before live
+actuation. Runtime `--apply` also requires the deterministic digest emitted by
+the preceding `--dry-run`; this binds the exact validated request and render
+but is not authenticated proof that a human ran either command. The T12
+lifecycle-completion contract binds an already-posted runtime receipt and its
+GitHub creation time, exact PR head/tree/checks, destroy chronology, and
+profile, runtime-data, and tracked-process absence read-backs. It regenerates
+the exact canonical runtime-receipt body from the original validated native
+request; caller-authored marker/body text is not proof. Each lifecycle
+timestamp is bounded to at most 300 seconds of future skew, and every absence
+read-back must independently be no more than 3600 seconds old at validation.
+A runtime receipt by itself does not prove teardown. After teardown, exactly
+one Issue #25 lifecycle-completion comment is appended; it is not a second
+runtime receipt and is not copied to the PR. T11 proves only deterministic
+fixture-based validation, dry-run, zero-write, idempotency, conflict, and
+read-back behavior; T11 applied zero runtime receipts. T12 owns any later
+exact-head application. Only an exact same-attempt receipt is idempotent,
 while a different attempt is a closed conflict rather than a second receipt.
 
 `codex doctor --json` is treated only as a redacted diagnostic support report.
@@ -191,9 +200,19 @@ pass. T11 performs no Stage A.3. The approved
 accepts only the deterministic offline harness and supersedes T11 AC-13 by
 deferring it to T12. Stage B requires a new review and a different fresh VM
 before device authentication can be enabled temporarily. Only a complete T12
-profile `match` may permit exactly one live worker and the subsequent receipt
-dry-run/apply/read-back. Stage A.1 qualification and the Stage A.2 non-success
+profile `match` may permit exactly one owner-triggered logical `codex exec`
+worker-process invocation. This does not claim exactly one backend model
+request. Deterministic verification then precedes receipt dry-run, exact head/
+tree/check read-back, exactly one runtime-receipt apply, and canonical read-
+back. Provider/runtime destruction and absence read-back follow; one lifecycle-
+completion evidence comment is appended afterward and is not a second runtime
+receipt. Stage A.1 qualification and the Stage A.2 non-success
 record are prerequisite evidence, not a live run or a live runtime receipt.
+
+T12 intentionally qualifies official stable Codex CLI `0.150.1` as one exact
+receipt-bound compatibility baseline. It does not describe `0.150.1` as the
+current latest stable, prove every stable release, or permit a switch to
+`0.151.0` without an ownership and source-review replan.
 
 The final six-role topology, native runtime routing, hooks, recovery,
 installer/upgrade, live generalized Task ritual, consent feedback transport,

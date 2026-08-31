@@ -275,83 +275,43 @@ class LedgerTemplatesTest(unittest.TestCase):
             self.contract["semantics"]["opaque_runtime_reference_format"],
         )
 
-    def test_t11_agreement_v2_runtime_frontier_is_exact(self):
+    def test_t11_history_and_t12_activation_frontier_are_exact(self):
         frontier = self.contract["runtime_frontier"]
-        self.assertEqual("t11-agreement-v2", frontier["agreement"]["version"])
-        self.assertEqual(
-            {
-                "AC-01-through-AC-12": "applicable-offline-static-boundary",
-                "AC-13": "deferred-to-T12-by-approved-agreement-replan",
-                "AC-14": "unchanged",
-                "AC-15": "owner-merge-gate-offline-harness",
-            },
-            frontier["acceptance_mapping"],
-        )
-        self.assertEqual(
-            {
-                "runtime_harness": "minimal-offline-implemented",
-                "live_codex_execution": "deferred-to-T12",
-                "sandbox_compatibility": "unresolved-non-success",
-                "runtime_receipt_apply": "deferred-to-T12",
-                "phase_2": "incomplete",
-                "repository": "incomplete",
-                "release_blocked": True,
-            },
-            frontier["status"],
-        )
-        self.assertEqual("T12", frontier["deferred_task"]["id"])
+        self.assertEqual("accepted", frontier["tree_snapshot"]["t11"])
+        self.assertEqual("sole-active", frontier["tree_snapshot"]["t12"])
+        self.assertEqual("t11-agreement-v2", frontier["t11_history"]["agreement"]["version"])
+        self.assertEqual("bounded-non-success", frontier["t11_history"]["stage_a1"]["classification"])
+        self.assertEqual("bounded-non-success", frontier["t11_history"]["stage_a2"]["classification"])
         self.assertEqual(
             "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
-            frontier["deferred_task"]["issue"],
+            frontier["t12_activation"]["task_issue"],
         )
         self.assertEqual(
-            "open-planning-only-inactive", frontier["deferred_task"]["state"]
+            "active-in-this-tree", frontier["t12_activation"]["state"]
         )
+        self.assertEqual(
+            "b3f051da26ebba7e0d49b79917cffa81ec6e9c66d409029ffd0020d0211850ee",
+            frontier["t12_activation"]["owner_amendment"]["body_sha256"],
+        )
+        self.assertFalse(frontier["t12_activation"]["compatibility_baseline"]["current_latest_stable_claimed"])
+        self.assertFalse(frontier["t12_activation"]["invocation_boundary"]["backend_model_request_count_claimed"])
 
-    def test_t11_agreement_v2_mapping_status_and_t12_link_fail_closed(self):
+    def test_t11_history_and_t12_activation_fail_closed(self):
         cases = (
             (
-                "acceptance mapping",
-                lambda frontier: frontier["acceptance_mapping"].__setitem__(
-                    "AC-13", "pass"
-                ),
-                "runtime frontier acceptance mapping drifted",
+                "T11 history",
+                lambda frontier: frontier["t11_history"]["stage_a2"].__setitem__("aggregate_status", "pass"),
+                "runtime frontier T11 history drifted",
             ),
             (
-                "runtime harness",
-                lambda frontier: frontier["status"].__setitem__(
-                    "runtime_harness", "fully-live-implemented"
-                ),
-                "runtime frontier status drifted",
+                "amendment",
+                lambda frontier: frontier["t12_activation"]["owner_amendment"].__setitem__("body_sha256", "0" * 64),
+                "runtime frontier T12 activation drifted",
             ),
             (
-                "live execution",
-                lambda frontier: frontier["status"].__setitem__(
-                    "live_codex_execution", "implemented"
-                ),
-                "runtime frontier status drifted",
-            ),
-            (
-                "sandbox compatibility",
-                lambda frontier: frontier["status"].__setitem__(
-                    "sandbox_compatibility", "pass"
-                ),
-                "runtime frontier status drifted",
-            ),
-            (
-                "receipt apply",
-                lambda frontier: frontier["status"].__setitem__(
-                    "runtime_receipt_apply", "applied"
-                ),
-                "runtime frontier status drifted",
-            ),
-            (
-                "T12 URL",
-                lambda frontier: frontier["deferred_task"].__setitem__(
-                    "issue",
-                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
-                ),
-                "runtime frontier T12 deferral drifted",
+                "chronology",
+                lambda frontier: frontier["t12_activation"]["receipt_chronology"].reverse(),
+                "runtime frontier T12 activation drifted",
             ),
         )
         for label, mutation, fragment in cases:
@@ -1311,7 +1271,8 @@ class LedgerTemplatesTest(unittest.TestCase):
         self.assertIn("<!-- field:task_relationship", text)
         self.assertIn("|---|---|---|---|---|---|---|", text)
         self.assertIn("does not prove", text)
-        self.assertIn("minimal/partial offline T11 slice", text)
+        self.assertIn("accepted minimal/partial offline T11 slice", text)
+        self.assertIn("T12 live evidence is external GitHub", text)
         self.assertIn("opaque references do not prove validity", text)
 
         fixture = self.payload["records"]["pull_requests"][0]

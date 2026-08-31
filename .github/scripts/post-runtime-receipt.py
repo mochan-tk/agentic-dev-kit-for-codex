@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate, render, and explicitly append the allowlisted T11 receipt."""
+"""Validate and explicitly append the allowlisted T12 runtime evidence."""
 
 from __future__ import annotations
 
@@ -19,8 +19,10 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 
 REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
-TASK = 23
-PULL_REQUEST = 24
+TASK = 25
+T12_PUBLIC_BRANCH = "codex/phase-2-live-codex-runtime"
+PROBE_TASK = 23
+PROBE_PULL_REQUEST = 24
 MAX_INPUT = 262_144
 MAX_COMMENT_BYTES = 65_536
 MAX_EXISTING_COMMENTS = 256
@@ -31,10 +33,11 @@ SHA = re.compile(r"[0-9a-f]{64}\Z")
 ATTEMPT = re.compile(r"ATTEMPT-[0-9a-f]{16}\Z")
 PR_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/pull/([0-9]+)\Z")
 CHECK_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/[0-9]+/job/[0-9]+\Z")
-COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-([0-9]+)\Z")
-PR_COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-([0-9]+)\Z")
-MARKER = re.compile(r"<!-- t11-runtime-receipt attempt=(ATTEMPT-[0-9a-f]{16}) receipt_sha256=([0-9a-f]{64}) -->")
-LIFECYCLE_MARKER = re.compile(r"<!-- t11-colima-lifecycle-receipt target=(issue|pr) attempt=(ATTEMPT-[0-9a-f]{16}) lifecycle_sha256=([0-9a-f]{64}) -->")
+COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-([0-9]+)\Z")
+PROBE_COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-([0-9]+)\Z")
+PROBE_PR_COMMENT_URL = re.compile(r"https://github\.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-([0-9]+)\Z")
+MARKER = re.compile(r"<!-- t12-runtime-receipt attempt=(ATTEMPT-[0-9a-f]{16}) receipt_sha256=([0-9a-f]{64}) -->")
+LIFECYCLE_MARKER = re.compile(r"<!-- t12-colima-lifecycle-completion attempt=(ATTEMPT-[0-9a-f]{16}) lifecycle_sha256=([0-9a-f]{64}) -->")
 PROBE_MARKER = re.compile(r"<!-- t11-stage-a-probe-receipt target=(issue|pr) attempt=(ATTEMPT-[0-9a-f]{16}) probe_sha256=([0-9a-f]{64}) -->")
 PRIVATE_PATH = re.compile(r"(?i)(?:^|[\s'\"]|file:(?://)?)(?:/users/|/home/|/root/|/tmp/|/private/|/var/folders/|~/|[a-z]:[\\/]|\\\\)")
 SENSITIVE = (
@@ -251,6 +254,23 @@ def parse_observed_at(value: str) -> datetime.datetime:
         raise ReceiptError("runtime_profile observation time is invalid")
 
 
+def validate_pull_request_binding(value: Any, label: str) -> Dict[str, Any]:
+    """Validate one coherent, same-repository PR number/URL/head/tree binding."""
+    if not isinstance(value, dict):
+        raise ReceiptError(label + " must be an object")
+    exact_keys(value, ("number", "url", "head", "tree"), label)
+    number = value.get("number")
+    match = PR_URL.fullmatch(str(value.get("url")))
+    if (
+        type(number) is not int or number < 1 or match is None
+        or int(match.group(1)) != number
+        or OID.fullmatch(str(value.get("head"))) is None
+        or OID.fullmatch(str(value.get("tree"))) is None
+    ):
+        raise ReceiptError(label + " binding is invalid")
+    return dict(value)
+
+
 def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dict[str, Any]:
     """Validate native runtime artifacts and derive a safe receipt projection."""
     if not isinstance(value, dict):
@@ -261,13 +281,7 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
         raise ReceiptError("receipt request identity is invalid")
     if value["task"] != {"issue": TASK, "url": "https://github.com/{}/issues/{}".format(REPOSITORY, TASK)}:
         raise ReceiptError("receipt request Task binding is invalid")
-    pr = value["pull_request"]
-    if not isinstance(pr, dict):
-        raise ReceiptError("pull request must be an object")
-    exact_keys(pr, ("number", "url", "head", "tree"), "pull request")
-    match = PR_URL.fullmatch(str(pr["url"]))
-    if type(pr["number"]) is not int or pr["number"] != PULL_REQUEST or not match or int(match.group(1)) != PULL_REQUEST or not OID.fullmatch(str(pr["head"])) or not OID.fullmatch(str(pr["tree"])):
-        raise ReceiptError("pull-request binding is invalid")
+    pr = validate_pull_request_binding(value["pull_request"], "pull request")
     artifacts = value["artifacts"]
     if not isinstance(artifacts, dict):
         raise ReceiptError("native runtime artifacts must be an object")
@@ -451,7 +465,7 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
 
 
 def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dict[str, Any]:
-    """Validate the closed final-destroy evidence, separate from runtime receipt apply."""
+    """Validate post-destroy lifecycle completion, never a runtime receipt."""
     if not isinstance(value, dict):
         raise ReceiptError("lifecycle receipt request must be an object")
     validate_tree_limits(value)
@@ -465,7 +479,7 @@ def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = No
         "lifecycle receipt request",
     )
     if (
-        value["schema"] != "t11-colima-lifecycle-receipt-request/v1"
+        value["schema"] != "t12-colima-lifecycle-completion-request/v1"
         or value["repository"] != REPOSITORY
         or value["authority"] != "owner-authored"
         or value["codex_authenticated_attestation"] is not False
@@ -474,16 +488,9 @@ def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = No
     task = value["task"]
     if task != {"issue": TASK, "url": "https://github.com/{}/issues/{}".format(REPOSITORY, TASK)}:
         raise ReceiptError("lifecycle receipt Task binding is invalid")
-    pr = value["pull_request"]
-    expected_pr_url = "https://github.com/{}/pull/{}".format(REPOSITORY, PULL_REQUEST)
-    if not isinstance(pr, dict):
-        raise ReceiptError("lifecycle pull request must be an object")
-    exact_keys(pr, ("number", "url", "head", "tree"), "lifecycle pull request")
-    if (
-        pr.get("number") != PULL_REQUEST or pr.get("url") != expected_pr_url
-        or not OID.fullmatch(str(pr.get("head"))) or not OID.fullmatch(str(pr.get("tree")))
-    ):
-        raise ReceiptError("lifecycle receipt must bind exact PR #24 head/tree")
+    pr = validate_pull_request_binding(
+        value["pull_request"], "lifecycle pull request"
+    )
     attempt = value["attempt_id"]
     if not isinstance(attempt, str) or ATTEMPT.fullmatch(attempt) is None:
         raise ReceiptError("lifecycle attempt ID is invalid")
@@ -582,6 +589,8 @@ def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = No
             "destroy_completed_at", "profile_absence_readback",
             "profile_absence_observed_at", "runtime_data_absence_readback",
             "runtime_data_absence_observed_at",
+            "tracked_process_absence_readback",
+            "tracked_process_absence_observed_at",
         ),
         "lifecycle destroy evidence",
     )
@@ -590,12 +599,14 @@ def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = No
         or destroy.get("destroy_completed") is not True
         or destroy.get("profile_absence_readback") != "absent"
         or destroy.get("runtime_data_absence_readback") != "absent"
+        or destroy.get("tracked_process_absence_readback") != "absent"
     ):
         raise ReceiptError("lifecycle destroy/absence evidence is incomplete")
     times = {}
     for key in (
         "destroy_requested_at", "destroy_completed_at",
         "profile_absence_observed_at", "runtime_data_absence_observed_at",
+        "tracked_process_absence_observed_at",
     ):
         times[key] = parse_observed_at(destroy.get(key))
     if any(
@@ -606,20 +617,31 @@ def validate_lifecycle_receipt(value: Any, now: Optional[datetime.datetime] = No
     if not (
         runtime_receipt_posted_at <= times["destroy_requested_at"]
         <= times["destroy_completed_at"]
-        <= times["profile_absence_observed_at"]
-        and times["destroy_completed_at"] <= times["runtime_data_absence_observed_at"]
+        and all(
+            times["destroy_completed_at"] <= times[field]
+            for field in (
+                "profile_absence_observed_at",
+                "runtime_data_absence_observed_at",
+                "tracked_process_absence_observed_at",
+            )
+        )
     ):
         raise ReceiptError("lifecycle destroy/read-back chronology is invalid")
-    latest_absence = max(
-        times["profile_absence_observed_at"],
-        times["runtime_data_absence_observed_at"],
+    absence_fields = (
+        "profile_absence_observed_at",
+        "runtime_data_absence_observed_at",
+        "tracked_process_absence_observed_at",
     )
-    if (current - latest_absence).total_seconds() > MAX_LIFECYCLE_ABSENCE_AGE_SECONDS:
+    if any(
+        (current - times[field]).total_seconds()
+        > MAX_LIFECYCLE_ABSENCE_AGE_SECONDS
+        for field in absence_fields
+    ):
         raise ReceiptError("lifecycle absence read-back is stale")
     if value["privacy"] != LIFECYCLE_PRIVACY:
         raise ReceiptError("lifecycle receipt privacy boundary is invalid")
     receipt = {
-        "schema": "t11-colima-lifecycle-receipt/v1",
+        "schema": "t12-colima-lifecycle-completion/v1",
         "repository": REPOSITORY,
         "authority": value["authority"],
         "codex_authenticated_attestation": value["codex_authenticated_attestation"],
@@ -708,17 +730,17 @@ def validate_probe_receipt(value: Any, now: Optional[datetime.datetime] = None) 
         not isinstance(task, dict)
         or set(task) != {"issue", "url"}
         or type(task.get("issue")) is not int
-        or task != {"issue": TASK, "url": "https://github.com/{}/issues/{}".format(REPOSITORY, TASK)}
+        or task != {"issue": PROBE_TASK, "url": "https://github.com/{}/issues/{}".format(REPOSITORY, PROBE_TASK)}
     ):
         raise ReceiptError("Stage A probe receipt Task binding is invalid")
     pr = value.get("pull_request")
-    expected_pr_url = "https://github.com/{}/pull/{}".format(REPOSITORY, PULL_REQUEST)
+    expected_pr_url = "https://github.com/{}/pull/{}".format(REPOSITORY, PROBE_PULL_REQUEST)
     if not isinstance(pr, dict):
         raise ReceiptError("Stage A pull request must be an object")
     exact_keys(pr, ("number", "url", "head", "tree"), "Stage A pull request")
     if (
         type(pr.get("number")) is not int
-        or pr.get("number") != PULL_REQUEST or pr.get("url") != expected_pr_url
+        or pr.get("number") != PROBE_PULL_REQUEST or pr.get("url") != expected_pr_url
         or OID.fullmatch(str(pr.get("head"))) is None
         or OID.fullmatch(str(pr.get("tree"))) is None
     ):
@@ -935,13 +957,31 @@ def validate_probe_receipt(value: Any, now: Optional[datetime.datetime] = None) 
 
 
 def receipt_marker(receipt: Mapping[str, Any]) -> str:
-    return "<!-- t11-runtime-receipt attempt={} receipt_sha256={} -->".format(receipt["attempt_id"], sha256(canonical_bytes(receipt)))
+    return "<!-- t12-runtime-receipt attempt={} receipt_sha256={} -->".format(receipt["attempt_id"], sha256(canonical_bytes(receipt)))
+
+
+def runtime_dry_run_proof_sha256(receipt: Mapping[str, Any], body: str) -> str:
+    """Bind apply to the exact deterministic dry-run projection.
+
+    This is a repository-generated deterministic binding, not an authenticated
+    attestation that a particular human or process executed the dry-run.
+    """
+    binding = {
+        "schema": "runtime-receipt-dry-run-binding/v1",
+        "repository": REPOSITORY,
+        "task": receipt["task"],
+        "pull_request": receipt["pull_request"],
+        "body_sha256": sha256(body.encode("utf-8")),
+        "receipt_sha256": sha256(canonical_bytes(receipt)),
+        "authenticated_proof": False,
+    }
+    return sha256(canonical_bytes(binding))
 
 
 def render_comment(receipt: Mapping[str, Any]) -> str:
     checks = {check["context"]: check for check in receipt["checks"]}
     body = """{marker}
-## T11 exact-head runtime receipt
+## T12 exact-head runtime receipt
 
 - Schema: `runtime-receipt/v1`
 - Attempt: `{attempt}`
@@ -985,21 +1025,18 @@ is stored. This receipt does not complete Phase 2, the repository, or a release.
     return body
 
 
-def lifecycle_marker(receipt: Mapping[str, Any], target: str) -> str:
-    if target not in ("issue", "pr"):
-        raise ReceiptError("lifecycle receipt target is invalid")
-    return "<!-- t11-colima-lifecycle-receipt target={} attempt={} lifecycle_sha256={} -->".format(
-        target, receipt["attempt_id"], sha256(canonical_bytes(receipt))
+def lifecycle_marker(receipt: Mapping[str, Any]) -> str:
+    return "<!-- t12-colima-lifecycle-completion attempt={} lifecycle_sha256={} -->".format(
+        receipt["attempt_id"], sha256(canonical_bytes(receipt))
     )
 
 
-def render_lifecycle_comment(receipt: Mapping[str, Any], target: str) -> str:
+def render_lifecycle_comment(receipt: Mapping[str, Any]) -> str:
     checks = {check["context"]: check for check in receipt["checks"]}
     body = """{marker}
-## T11 Colima final-destroy evidence
+## T12 Colima lifecycle-completion evidence
 
-- Target copy: `{target}`
-- Schema: `t11-colima-lifecycle-receipt/v1`
+- Schema: `t12-colima-lifecycle-completion/v1`
 - Authority: `owner-authored`; Codex-authenticated attestation: `false`
 - Attempt: `{attempt}`
 - Pull request/head/tree: {pr_url} / `{head}` / `{tree}`
@@ -1010,14 +1047,16 @@ def render_lifecycle_comment(receipt: Mapping[str, Any], target: str) -> str:
 - Destroy requested/completed: `{requested_at}` / `{completed_at}`
 - Profile absence read-back: `absent` / `{profile_absence_at}`
 - Runtime-data absence read-back: `absent` / `{runtime_absence_at}`
+- Tracked-process absence read-back: `absent` / `{process_absence_at}`
 - quality: [success]({quality_url})
 - conformance: [success]({conformance_url})
 
 Privacy projection is closed and allowlisted. It contains no raw mount or
 provider configuration, private path, credential, auth file, device code,
 environment dump, JSONL, reasoning, stderr, or transcript. This final-destroy
-record does not complete Phase 2, the repository, or a release.""".format(
-        marker=lifecycle_marker(receipt, target), target=target,
+record is not a runtime receipt and does not complete Phase 2, the repository,
+or a release.""".format(
+        marker=lifecycle_marker(receipt),
         attempt=receipt["attempt_id"], pr_url=receipt["pull_request"]["url"],
         head=receipt["pull_request"]["head"], tree=receipt["pull_request"]["tree"],
         runtime_url=receipt["runtime_receipt"]["comment_url"],
@@ -1031,6 +1070,7 @@ record does not complete Phase 2, the repository, or a release.""".format(
         completed_at=receipt["destroy"]["destroy_completed_at"],
         profile_absence_at=receipt["destroy"]["profile_absence_observed_at"],
         runtime_absence_at=receipt["destroy"]["runtime_data_absence_observed_at"],
+        process_absence_at=receipt["destroy"]["tracked_process_absence_observed_at"],
         quality_url=checks["quality"]["url"], conformance_url=checks["conformance"]["url"],
     )
     if len(body.encode("utf-8")) > MAX_COMMENT_BYTES:
@@ -1184,13 +1224,26 @@ def gh_json(argv: Sequence[str], label: str, privacy: bool = True) -> Any:
 
 
 def verify_external_head(receipt: Mapping[str, Any]) -> None:
+    task = receipt["task"]
     pr = receipt["pull_request"]
-    issue = gh_json(["issue", "view", str(TASK), "--repo", REPOSITORY, "--json", "state,url"], "Task read-back")
-    if issue != {"state": "OPEN", "url": "https://github.com/{}/issues/{}".format(REPOSITORY, TASK)}:
+    issue = gh_json(["issue", "view", str(task["issue"]), "--repo", REPOSITORY, "--json", "state,url"], "Task read-back")
+    if issue != {"state": "OPEN", "url": task["url"]}:
         raise ReceiptError("Task Issue is not the exact open receipt target")
-    payload = gh_json(["pr", "view", str(pr["number"]), "--repo", REPOSITORY, "--json", "headRefOid,state,statusCheckRollup,url"], "PR read-back")
+    payload = gh_json([
+        "pr", "view", str(pr["number"]), "--repo", REPOSITORY, "--json",
+        "headRefOid,state,statusCheckRollup,url,isCrossRepository,headRepository,headRefName",
+    ], "PR read-back")
     if not isinstance(payload, dict) or payload.get("headRefOid") != pr["head"] or payload.get("state") != "OPEN" or payload.get("url") != pr["url"]:
         raise ReceiptError("pull-request head drifted before receipt application")
+    if task["issue"] == TASK:
+        head_repository = payload.get("headRepository")
+        if (
+            payload.get("isCrossRepository") is not False
+            or not isinstance(head_repository, dict)
+            or head_repository.get("nameWithOwner") != REPOSITORY
+            or payload.get("headRefName") != T12_PUBLIC_BRANCH
+        ):
+            raise ReceiptError("pull-request repository or branch binding drifted")
     expected_checks = {check["context"]: check["url"] for check in receipt["checks"]}
     observed_checks: Dict[str, Tuple[str, Any]] = {}
     rollup = payload.get("statusCheckRollup")
@@ -1311,7 +1364,7 @@ def preflight_existing_receipt(receipt: Mapping[str, Any], body: str) -> Optiona
         bounded_text = text[:MAX_COMMENT_BYTES + 1]
         for marker in MARKER.finditer(bounded_text):
             if marker.group(1) != attempt:
-                raise ReceiptError("a T11 runtime receipt already exists for a different attempt")
+                raise ReceiptError("a T12 runtime receipt already exists for a different attempt")
             if len(text.encode("utf-8")) > MAX_COMMENT_BYTES:
                 raise ReceiptError("existing same-attempt receipt exceeds the bounded comment limit")
             if marker.group(0) != expected_marker or text != body:
@@ -1325,41 +1378,59 @@ def preflight_existing_receipt(receipt: Mapping[str, Any], body: str) -> Optiona
     return exact_url
 
 
-def application_record(receipt: Mapping[str, Any], body: str, url: str, idempotent: bool, reconciled: bool) -> Dict[str, Any]:
+def read_comment_exact(url: str, pattern: re.Pattern[str], body: str, label: str) -> str:
+    match = pattern.fullmatch(url)
+    if match is None:
+        raise ReceiptError(label + " URL is invalid")
+    comment = gh_json(
+        ["api", "repos/{}/issues/comments/{}".format(REPOSITORY, match.group(1))],
+        label + " read-back",
+    )
+    if (
+        not isinstance(comment, dict)
+        or comment.get("html_url") != url
+        or comment.get("body") != body
+    ):
+        raise ReceiptError(label + " read-back differs from the exact rendered body")
+    posted_at = comment.get("created_at")
+    parse_observed_at(posted_at)
+    return posted_at
+
+
+def application_record(receipt: Mapping[str, Any], body: str, url: str, posted_at: str, idempotent: bool, reconciled: bool) -> Dict[str, Any]:
     digest = sha256(body.encode("utf-8"))
-    return {"schema": "runtime-receipt-application/v1", "status": "pass", "comment_url": url, "body_sha256": digest, "readback_sha256": digest, "receipt_sha256": sha256(canonical_bytes(receipt)), "idempotent": idempotent, "reconciled_after_uncertain_post": reconciled}
+    return {"schema": "runtime-receipt-application/v1", "status": "pass", "comment_url": url, "posted_at": posted_at, "body_sha256": digest, "readback_sha256": digest, "receipt_sha256": sha256(canonical_bytes(receipt)), "idempotent": idempotent, "reconciled_after_uncertain_post": reconciled}
 
 
 def apply_comment(receipt: Mapping[str, Any], body: str) -> Dict[str, Any]:
     verify_external_head(receipt)
     existing = preflight_existing_receipt(receipt, body)
     if existing is not None:
+        posted_at = read_comment_exact(existing, COMMENT_URL, body, "idempotent runtime receipt")
         verify_external_head(receipt)
-        return application_record(receipt, body, existing, True, False)
+        return application_record(receipt, body, existing, posted_at, True, False)
     try:
         output = run_gh(["issue", "comment", str(TASK), "--repo", REPOSITORY, "--body-file", "-"], body.encode("utf-8"))
     except ReceiptError:
         reconciled = preflight_existing_receipt(receipt, body)
         if reconciled is not None:
+            posted_at = read_comment_exact(reconciled, COMMENT_URL, body, "reconciled runtime receipt")
             verify_external_head(receipt)
-            return application_record(receipt, body, reconciled, True, True)
+            return application_record(receipt, body, reconciled, posted_at, True, True)
         raise ReceiptError("receipt POST outcome is uncertain; read-back found no matching receipt before retry")
     url = output.decode("utf-8", errors="strict").strip()
     match = COMMENT_URL.fullmatch(url)
     if not match:
         raise ReceiptError("GitHub did not return the expected Task comment URL")
-    comment = gh_json(["api", "repos/{}/issues/comments/{}".format(REPOSITORY, match.group(1))], "posted receipt read-back")
-    readback = comment.get("body") if isinstance(comment, dict) else None
-    if readback != body:
-        raise ReceiptError("posted receipt read-back differs from the exact rendered body")
+    posted_at = read_comment_exact(url, COMMENT_URL, body, "posted runtime receipt")
     # A successful POST is not a success receipt if the governed head, tree,
     # or required checks drifted during the actuator/read-back interval.
     verify_external_head(receipt)
-    return application_record(receipt, body, url, False, False)
+    return application_record(receipt, body, url, posted_at, False, False)
 
 
 def lifecycle_existing_comments(number: int) -> List[Mapping[str, Any]]:
-    if number not in (TASK, PULL_REQUEST):
+    if number not in (TASK, PROBE_TASK, PROBE_PULL_REQUEST):
         raise ReceiptError("lifecycle comment target number is invalid")
     data = run_gh([
         "api", "repos/{}/issues/{}/comments?per_page=100".format(REPOSITORY, number),
@@ -1382,96 +1453,99 @@ def lifecycle_existing_comments(number: int) -> List[Mapping[str, Any]]:
     return comments
 
 
-def lifecycle_url_pattern(target: str):
+def probe_url_pattern(target: str):
     if target == "issue":
-        return COMMENT_URL
+        return PROBE_COMMENT_URL
     if target == "pr":
-        return PR_COMMENT_URL
-    raise ReceiptError("lifecycle receipt target is invalid")
+        return PROBE_PR_COMMENT_URL
+    raise ReceiptError("Stage A receipt target is invalid")
 
 
-def preflight_existing_lifecycle_receipt(receipt: Mapping[str, Any], target: str, body: str) -> Optional[str]:
-    expected_marker = lifecycle_marker(receipt, target)
+def preflight_existing_lifecycle_receipt(receipt: Mapping[str, Any], body: str) -> Optional[str]:
+    expected_marker = lifecycle_marker(receipt)
     exact_url: Optional[str] = None
-    number = TASK if target == "issue" else PULL_REQUEST
-    for comment in lifecycle_existing_comments(number):
+    for comment in lifecycle_existing_comments(TASK):
         text = comment.get("body")
         if not isinstance(text, str):
             continue
         bounded = text[:MAX_COMMENT_BYTES + 1]
         for marker in LIFECYCLE_MARKER.finditer(bounded):
-            if marker.group(1) != target or marker.group(2) != receipt["attempt_id"]:
-                continue
+            if marker.group(1) != receipt["attempt_id"]:
+                raise ReceiptError("a T12 lifecycle completion already exists for a different attempt")
             if len(text.encode("utf-8")) > MAX_COMMENT_BYTES:
-                raise ReceiptError("existing lifecycle receipt exceeds the bounded comment limit")
+                raise ReceiptError("existing lifecycle completion exceeds the bounded comment limit")
             if marker.group(0) != expected_marker or text != body:
-                raise ReceiptError("existing lifecycle receipt conflicts with the same attempt and target")
+                raise ReceiptError("existing lifecycle completion conflicts with the same attempt")
             url = comment.get("html_url")
-            if not isinstance(url, str) or lifecycle_url_pattern(target).fullmatch(url) is None:
-                raise ReceiptError("idempotent lifecycle receipt URL is invalid")
+            if not isinstance(url, str) or COMMENT_URL.fullmatch(url) is None:
+                raise ReceiptError("idempotent lifecycle completion URL is invalid")
             if exact_url is not None and exact_url != url:
-                raise ReceiptError("same-target lifecycle receipt is duplicated")
+                raise ReceiptError("lifecycle completion is duplicated")
             exact_url = url
     return exact_url
 
 
-def apply_one_lifecycle_comment(receipt: Mapping[str, Any], target: str, body: str) -> Tuple[str, bool, bool]:
-    existing = preflight_existing_lifecycle_receipt(receipt, target, body)
+def _verify_lifecycle_comment_time(receipt: Mapping[str, Any], posted_at: str) -> None:
+    observed = parse_observed_at(posted_at)
+    latest_absence = max(
+        parse_observed_at(receipt["destroy"][field])
+        for field in (
+            "profile_absence_observed_at",
+            "runtime_data_absence_observed_at",
+            "tracked_process_absence_observed_at",
+        )
+    )
+    if observed < latest_absence:
+        raise ReceiptError("lifecycle completion comment predates an absence read-back")
+
+
+def apply_one_lifecycle_comment(receipt: Mapping[str, Any], body: str) -> Tuple[str, str, bool, bool]:
+    existing = preflight_existing_lifecycle_receipt(receipt, body)
     if existing is not None:
-        return existing, True, False
-    number = TASK if target == "issue" else PULL_REQUEST
-    argv = ["issue" if target == "issue" else "pr", "comment", str(number), "--repo", REPOSITORY, "--body-file", "-"]
+        posted_at = read_comment_exact(
+            existing, COMMENT_URL, body, "idempotent lifecycle completion"
+        )
+        _verify_lifecycle_comment_time(receipt, posted_at)
+        return existing, posted_at, True, False
+    argv = ["issue", "comment", str(TASK), "--repo", REPOSITORY, "--body-file", "-"]
     try:
         output = run_gh(argv, body.encode("utf-8"))
     except ReceiptError:
-        reconciled = preflight_existing_lifecycle_receipt(receipt, target, body)
+        reconciled = preflight_existing_lifecycle_receipt(receipt, body)
         if reconciled is not None:
-            return reconciled, True, True
-        raise ReceiptError("lifecycle receipt POST outcome is uncertain; read-back found no matching target copy")
+            posted_at = read_comment_exact(
+                reconciled, COMMENT_URL, body, "reconciled lifecycle completion"
+            )
+            _verify_lifecycle_comment_time(receipt, posted_at)
+            return reconciled, posted_at, True, True
+        raise ReceiptError("lifecycle completion POST outcome is uncertain; read-back found no matching comment")
     url = output.decode("utf-8", errors="strict").strip()
-    match = lifecycle_url_pattern(target).fullmatch(url)
-    if match is None:
+    if COMMENT_URL.fullmatch(url) is None:
         raise ReceiptError("GitHub did not return the expected lifecycle comment URL")
-    comment = gh_json(
-        ["api", "repos/{}/issues/comments/{}".format(REPOSITORY, match.group(1))],
-        "posted lifecycle receipt read-back",
+    posted_at = read_comment_exact(
+        url, COMMENT_URL, body, "posted lifecycle completion"
     )
-    if not isinstance(comment, dict) or comment.get("html_url") != url or comment.get("body") != body:
-        raise ReceiptError("posted lifecycle receipt read-back differs from the exact target body")
-    return url, False, False
+    _verify_lifecycle_comment_time(receipt, posted_at)
+    return url, posted_at, False, False
 
 
-def apply_lifecycle_comments(
-    receipt: Mapping[str, Any], issue_body: str, pr_body: str
-) -> Dict[str, Any]:
+def apply_lifecycle_comments(receipt: Mapping[str, Any], body: str) -> Dict[str, Any]:
     verify_external_head(receipt)
     verify_linked_runtime_receipt(receipt)
-    issue_url, issue_idempotent, issue_reconciled = apply_one_lifecycle_comment(
-        receipt, "issue", issue_body
-    )
-    verify_external_head(receipt)
-    verify_linked_runtime_receipt(receipt)
-    pr_url, pr_idempotent, pr_reconciled = apply_one_lifecycle_comment(
-        receipt, "pr", pr_body
+    issue_url, posted_at, idempotent, reconciled = apply_one_lifecycle_comment(
+        receipt, body
     )
     verify_external_head(receipt)
     verify_linked_runtime_receipt(receipt)
     return {
-        "schema": "t11-colima-lifecycle-receipt-application/v1",
+        "schema": "t12-colima-lifecycle-completion-application/v1",
         "status": "pass",
         "issue_comment_url": issue_url,
-        "issue_body_sha256": sha256(issue_body.encode("utf-8")),
-        "pr_comment_url": pr_url,
-        "pr_body_sha256": sha256(pr_body.encode("utf-8")),
+        "posted_at": posted_at,
+        "body_sha256": sha256(body.encode("utf-8")),
         "lifecycle_sha256": sha256(canonical_bytes(receipt)),
-        "idempotent_targets": {
-            "issue": issue_idempotent,
-            "pr": pr_idempotent,
-        },
-        "reconciled_after_uncertain_post": {
-            "issue": issue_reconciled,
-            "pr": pr_reconciled,
-        },
+        "idempotent": idempotent,
+        "reconciled_after_uncertain_post": reconciled,
     }
 
 
@@ -1481,7 +1555,7 @@ def preflight_existing_probe_receipt(
     expected_marker = probe_marker(receipt, target)
     exact_url: Optional[str] = None
     matches_for_attempt = 0
-    number = TASK if target == "issue" else PULL_REQUEST
+    number = PROBE_TASK if target == "issue" else PROBE_PULL_REQUEST
     for comment in lifecycle_existing_comments(number):
         text = comment.get("body")
         if not isinstance(text, str):
@@ -1500,7 +1574,7 @@ def preflight_existing_probe_receipt(
             if marker.group(0) != expected_marker or text != body:
                 raise ReceiptError("existing Stage A receipt conflicts with the same attempt and target")
             url = comment.get("html_url")
-            if not isinstance(url, str) or lifecycle_url_pattern(target).fullmatch(url) is None:
+            if not isinstance(url, str) or probe_url_pattern(target).fullmatch(url) is None:
                 raise ReceiptError("idempotent Stage A receipt URL is invalid")
             if exact_url is not None:
                 raise ReceiptError("same-target Stage A receipt is duplicated")
@@ -1516,7 +1590,7 @@ def apply_one_probe_comment(
     existing = preflight_existing_probe_receipt(receipt, target, body)
     if existing is not None:
         return existing, True, False
-    number = TASK if target == "issue" else PULL_REQUEST
+    number = PROBE_TASK if target == "issue" else PROBE_PULL_REQUEST
     argv = [
         "issue" if target == "issue" else "pr", "comment", str(number),
         "--repo", REPOSITORY, "--body-file", "-",
@@ -1529,7 +1603,7 @@ def apply_one_probe_comment(
             return reconciled, True, True
         raise ReceiptError("Stage A receipt POST outcome is uncertain; read-back found no matching target copy")
     url = output.decode("utf-8", errors="strict").strip()
-    match = lifecycle_url_pattern(target).fullmatch(url)
+    match = probe_url_pattern(target).fullmatch(url)
     if match is None:
         raise ReceiptError("GitHub did not return the expected Stage A comment URL")
     verify_probe_comment_readback(url, target, body)
@@ -1538,7 +1612,7 @@ def apply_one_probe_comment(
 
 def verify_probe_comment_readback(url: str, target: str, body: str) -> None:
     """Re-read one exact durable copy after all writes, not only after its POST."""
-    match = lifecycle_url_pattern(target).fullmatch(url)
+    match = probe_url_pattern(target).fullmatch(url)
     if match is None:
         raise ReceiptError("Stage A receipt read-back URL is invalid")
     comment = gh_json(
@@ -1592,7 +1666,7 @@ def apply_probe_comments(
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="T11 append-only runtime receipt actuator")
+    parser = argparse.ArgumentParser(description="T12 append-only runtime evidence actuator")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--apply", action="store_true")
@@ -1600,8 +1674,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     mode.add_argument("--lifecycle-apply", action="store_true")
     mode.add_argument("--probe-dry-run", action="store_true")
     mode.add_argument("--probe-apply", action="store_true")
+    parser.add_argument("--dry-run-proof-sha256")
     args = parser.parse_args(argv)
     try:
+        if args.apply:
+            if (
+                not isinstance(args.dry_run_proof_sha256, str)
+                or SHA.fullmatch(args.dry_run_proof_sha256) is None
+            ):
+                raise ReceiptError("runtime receipt apply requires a dry-run binding")
+        elif args.dry_run_proof_sha256 is not None:
+            raise ReceiptError("dry-run binding is valid only for runtime receipt apply")
         if args.apply or args.lifecycle_apply or args.probe_apply:
             require_runtime_fs_capabilities()
         data = read_stdin_bounded()
@@ -1614,8 +1697,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 result = {
                     "schema": "t11-stage-a-probe-receipt-dry-run/v1",
                     "status": "pass",
-                    "target_issue": TASK,
-                    "target_pull_request": PULL_REQUEST,
+                    "target_issue": PROBE_TASK,
+                    "target_pull_request": PROBE_PULL_REQUEST,
                     "issue_body_sha256": sha256(issue_body.encode("utf-8")),
                     "pr_body_sha256": sha256(pr_body.encode("utf-8")),
                     "probe_sha256": sha256(canonical_bytes(receipt)),
@@ -1627,29 +1710,28 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 result = apply_probe_comments(receipt, issue_body, pr_body)
         elif args.lifecycle_dry_run or args.lifecycle_apply:
             receipt = validate_lifecycle_receipt(decoded)
-            issue_body = render_lifecycle_comment(receipt, "issue")
-            pr_body = render_lifecycle_comment(receipt, "pr")
+            body = render_lifecycle_comment(receipt)
             if args.lifecycle_dry_run:
                 result = {
-                    "schema": "t11-colima-lifecycle-receipt-dry-run/v1",
+                    "schema": "t12-colima-lifecycle-completion-dry-run/v1",
                     "status": "pass",
                     "target_issue": TASK,
-                    "target_pull_request": PULL_REQUEST,
-                    "issue_body_sha256": sha256(issue_body.encode("utf-8")),
-                    "pr_body_sha256": sha256(pr_body.encode("utf-8")),
+                    "body_sha256": sha256(body.encode("utf-8")),
                     "lifecycle_sha256": sha256(canonical_bytes(receipt)),
-                    "issue_body": issue_body,
-                    "pr_body": pr_body,
+                    "body": body,
                 }
             else:
                 verify_local_head(receipt)
-                result = apply_lifecycle_comments(receipt, issue_body, pr_body)
+                result = apply_lifecycle_comments(receipt, body)
         else:
             receipt = validate_receipt(decoded)
             body = render_comment(receipt)
             if args.dry_run:
-                result = {"schema": "runtime-receipt-dry-run/v1", "status": "pass", "target_issue": TASK, "body_sha256": sha256(body.encode("utf-8")), "receipt_sha256": sha256(canonical_bytes(receipt)), "body": body}
+                result = {"schema": "runtime-receipt-dry-run/v1", "status": "pass", "target_issue": TASK, "body_sha256": sha256(body.encode("utf-8")), "receipt_sha256": sha256(canonical_bytes(receipt)), "dry_run_proof_sha256": runtime_dry_run_proof_sha256(receipt, body), "dry_run_proof_kind": "repository-generated-deterministic-binding", "dry_run_proof_authenticated": False, "body": body}
             else:
+                expected_proof = runtime_dry_run_proof_sha256(receipt, body)
+                if args.dry_run_proof_sha256 != expected_proof:
+                    raise ReceiptError("runtime receipt dry-run binding does not match")
                 verify_local_head(receipt)
                 result = apply_comment(receipt, body)
         sys.stdout.buffer.write(canonical_bytes(result))

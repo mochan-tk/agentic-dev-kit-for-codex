@@ -58,6 +58,105 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         jsonschema.Draft202012Validator.check_schema(schema)
         self.assertFalse(jsonschema.Draft202012Validator(schema).is_valid(instance))
 
+    def t12_live_profile(self):
+        profile = copy.deepcopy(self.profile)
+        provider = profile["evidence"]["containment_provider"]
+        provider["repository_git_clone_contract_sha256"] = (
+            self.adapter.stage_a1_git_clone_contract_sha256(
+                provider["public_head"], provider["public_tree"],
+                self.adapter.T12_PUBLIC_BRANCH,
+            )
+        )
+        return profile
+
+    def test_t12_activation_identity_is_exact_and_pr_agnostic(self):
+        self.assertEqual(25, self.adapter.TASK_ISSUE)
+        self.assertEqual(
+            "codex/phase-2-live-codex-runtime",
+            self.adapter.T12_PUBLIC_BRANCH,
+        )
+        self.assertEqual(
+            "codex/phase-2-minimal-execution-slice",
+            self.adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+        )
+        self.assertFalse(hasattr(self.adapter, "T11_PUBLIC_BRANCH"))
+        self.assertEqual(
+            {
+                "repository": "mochan-tk/agentic-dev-kit-for-codex",
+                "issue": 25,
+                "url": (
+                    "https://github.com/mochan-tk/"
+                    "agentic-dev-kit-for-codex/issues/25"
+                ),
+            },
+            self.envelope["task"],
+        )
+        schema = json.loads(
+            (
+                ROOT
+                / "docs/agreements/runtime/"
+                "task-execution-envelope.v1.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(25, schema["properties"]["task"]["properties"]["issue"]["const"])
+        self.assertEqual(
+            self.envelope["task"]["url"],
+            schema["properties"]["task"]["properties"]["url"]["const"],
+        )
+        source = ADAPTER_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("PULL_REQUEST", source)
+
+    def test_t12_stage_a_and_stage_b_profile_semantics_are_exact(self):
+        stage_a = self.t12_live_profile()
+        stage_a["scope"] = "exact-head-probe-only-sensor"
+        stage_a["status"] = "probe-only-match"
+        stage_a["reason"] = "exact unauthenticated Stage A probes match"
+        stage_a["auth"]["class"] = "unavailable"
+        stage_a["evidence"]["lane_statuses"]["auth_status"] = "unavailable"
+        stage_a["live_run_allowed"] = False
+        self.adapter.validate_runtime_profile(stage_a, allow_fixture=True)
+        self.assert_contract_error(
+            lambda: self.adapter.execute_slice(
+                ROOT, copy.deepcopy(self.envelope), stage_a, "live"
+            ),
+            "blocked",
+        )
+
+        stage_b = self.t12_live_profile()
+        stage_b["scope"] = "exact-head-live-sensor"
+        stage_b["status"] = "match"
+        stage_b["auth"]["class"] = "signed-in-client"
+        stage_b["evidence"]["lane_statuses"]["auth_status"] = (
+            "signed-in-client"
+        )
+        stage_b["live_run_allowed"] = True
+        self.adapter.validate_runtime_profile(stage_b, allow_fixture=True)
+
+    def test_execution_result_requires_exactly_one_logical_invocation(self):
+        verifier = {
+            "schema": "t11-verifier-result/v1",
+            "attempt_id": self.envelope["attempt_id"],
+            "status": "pass",
+            "fresh_process": True,
+            "read_only": True,
+            "checks": self.adapter.VERIFIER_CHECKS,
+        }
+        result = json.loads(
+            (
+                ROOT / "tests/runtime/fixtures/execution-result-valid.v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        for count in (0, 2):
+            candidate = copy.deepcopy(result)
+            candidate["worker"]["logical_invocations"] = count
+            with self.subTest(count=count):
+                self.assert_contract_error(
+                    lambda value=candidate: self.adapter.validate_execution_result(
+                        value, self.envelope, self.profile, verifier
+                    ),
+                    "exactly one logical invocation",
+                )
+
     def minimal_process_environment(self, root, behavior=None):
         home = root / "home"
         tmp = root / "tmp"
@@ -434,7 +533,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             contract["repository_url"],
         )
         self.assertEqual(
-            "codex/phase-2-minimal-execution-slice", contract["branch"],
+            "codex/phase-2-live-codex-runtime", contract["branch"],
         )
         self.assertEqual("0077", contract["process_umask"])
         self.assertEqual(
@@ -482,8 +581,26 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             digest,
         )
         self.assertEqual(
-            "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
+            "af134538a459119e618854b6455199ac92ee0b7abd4546fabc1c7330d4eb51d8",
             digest,
+        )
+        historical = self.adapter.stage_a1_git_clone_contract(
+            head, tree, self.adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+        )
+        self.assertEqual(
+            "codex/phase-2-minimal-execution-slice", historical["branch"],
+        )
+        self.assertEqual(
+            "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
+            self.adapter.stage_a1_git_clone_contract_sha256(
+                head, tree, self.adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+            ),
+        )
+        self.assert_contract_error(
+            lambda: self.adapter.stage_a1_git_clone_contract(
+                head, tree, "codex/unreviewed-branch",
+            ),
+            "branch",
         )
         self.assertNotEqual(
             digest,
@@ -516,7 +633,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 ["/usr/bin/git", "init", "--quiet", str(source)],
                 [
                     "/usr/bin/git", "-C", str(source), "checkout", "--quiet",
-                    "-b", self.adapter.T11_PUBLIC_BRANCH,
+                    "-b", self.adapter.T12_PUBLIC_BRANCH,
                 ],
                 ["/usr/bin/git", "-C", str(source), "add", "."],
                 [
@@ -560,7 +677,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             clone = subprocess.run(
                 [
                     *wrapper, *prefix, "clone", "--quiet", "--no-checkout",
-                    "--single-branch", "--branch", self.adapter.T11_PUBLIC_BRANCH,
+                    "--single-branch", "--branch", self.adapter.T12_PUBLIC_BRANCH,
                     str(source), str(target),
                 ],
                 cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1864,7 +1981,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 )
 
     def test_live_profile_cross_binds_provider_platform_client_and_chronology(self):
-        valid = copy.deepcopy(self.profile)
+        valid = self.t12_live_profile()
         valid["scope"] = "exact-head-live-sensor"
         valid["platform"] = {"os": "Linux", "architecture": "aarch64"}
         self.adapter.validate_runtime_profile(valid)
@@ -2020,7 +2137,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             root = Path(temporary)
             os.chmod(root, 0o700)
-            profile = copy.deepcopy(self.profile)
+            profile = self.t12_live_profile()
             profile["evidence"]["containment_provider"]["public_head"] = "f" * 40
             with mock.patch.object(self.adapter, "run_bounded_process", return_value=failed_worker) as worker:
                 self.assert_contract_error(lambda: self.adapter.run_claimed_live_worker(
@@ -2056,7 +2173,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        stage_a2 = contract["runtime_frontier"]["stage_a2"]
+        stage_a2 = contract["runtime_frontier"]["t11_history"]["stage_a2"]
         self.assertEqual("bounded-non-success", stage_a2["classification"])
         self.assertEqual("UNCHECKABLE", stage_a2["aggregate_status"])
         self.assertEqual("fail", stage_a2["shell_environment_status"])
@@ -2069,8 +2186,9 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         )
         self.assertEqual("unavailable", stage_a2["auth_status"])
         self.assertIs(stage_a2["device_auth_performed"], False)
-        self.assertIs(stage_a2["model_invoked"], False)
-        self.assertEqual(0, stage_a2["real_codex_worker_success_count"])
+        self.assertEqual(
+            0, stage_a2["logical_codex_exec_worker_process_invocation_count"],
+        )
         self.assertEqual(0, stage_a2["runtime_receipt_dry_run_count"])
         self.assertEqual(0, stage_a2["runtime_receipt_apply_count"])
 
@@ -2084,13 +2202,15 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda stage: stage.__setitem__("classification", "pass"),
             lambda stage: stage.__setitem__("aggregate_status", "match"),
             lambda stage: stage.__setitem__("shell_environment_status", "pass"),
-            lambda stage: stage.__setitem__("real_codex_worker_success_count", 1),
+            lambda stage: stage.__setitem__(
+                "logical_codex_exec_worker_process_invocation_count", 1
+            ),
             lambda stage: stage.__setitem__("runtime_receipt_apply_count", 1),
         )
         for mutation in mutations:
             with self.subTest(mutation=mutation):
                 candidate = copy.deepcopy(original_contract)
-                mutation(candidate["runtime_frontier"]["stage_a2"])
+                mutation(candidate["runtime_frontier"]["t11_history"]["stage_a2"])
                 encoded = (
                     json.dumps(candidate, ensure_ascii=False, indent=2) + "\n"
                 ).encode("utf-8")
@@ -2232,7 +2352,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
 
     def test_profile_fail_closed_states_never_authorize_live(self):
         for state in ("profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"):
-            profile = copy.deepcopy(self.profile)
+            profile = self.t12_live_profile()
             profile["scope"] = "exact-head-live-sensor"
             profile["status"] = state
             profile["live_run_allowed"] = False
@@ -3581,7 +3701,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("UNCHECKABLE", inconsistent_exit["status"])
 
     def test_runtime_lanes_are_independent_and_probe_only_never_authorizes_live(self):
-        profile = copy.deepcopy(self.profile)
+        profile = self.t12_live_profile()
         profile["scope"] = "exact-head-probe-only-sensor"
         profile["status"] = "probe-only-match"
         profile["live_run_allowed"] = False
@@ -3843,7 +3963,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             self.assertIn(required, argv)
         rendered = "\n".join(argv)
         self.assertNotIn(self.envelope["attempt_id"], rendered)
-        self.assertNotIn("Issue #23", rendered)
+        self.assertNotIn("Issue #25", rendered)
         self.assertNotIn("--add-dir", argv)
         self.assertNotIn("--ignore-rules", argv)
         self.assertFalse(any(value.startswith("--dangerously-bypass-") for value in argv))

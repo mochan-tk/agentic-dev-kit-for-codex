@@ -13,8 +13,8 @@
       "required": ["repository", "issue", "url"],
       "properties": {
         "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
-        "issue": {"const": 23},
-        "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"}
+        "issue": {"const": 25},
+        "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"}
       }
     },
     "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},

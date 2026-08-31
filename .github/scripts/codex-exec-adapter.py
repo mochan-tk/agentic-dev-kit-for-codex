@@ -31,8 +31,9 @@ from typing import Any, Dict, Iterable, List, Mapping, NamedTuple, Optional, Seq
 
 
 REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
-T11_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
-TASK_ISSUE = 23
+T11_ACCEPTED_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
+T12_PUBLIC_BRANCH = "codex/phase-2-live-codex-runtime"
+TASK_ISSUE = 25
 ATTEMPT_RE = re.compile(r"ATTEMPT-[0-9a-f]{16}\Z")
 OID_RE = re.compile(r"[0-9a-f]{40}\Z")
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
@@ -875,10 +876,16 @@ def validate_control_plane_evidence(value: Any, allow_not_run: bool = True) -> D
     return value
 
 
-def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
+def stage_a1_git_clone_contract(
+    head: str,
+    tree: str,
+    public_branch: str = T12_PUBLIC_BRANCH,
+) -> Dict[str, Any]:
     """Return the reviewed shell-free public-clone contract for one exact head."""
     require_string(head, "Git clone contract head", OID_RE)
     require_string(tree, "Git clone contract tree", OID_RE)
+    if public_branch not in (T11_ACCEPTED_PUBLIC_BRANCH, T12_PUBLIC_BRANCH):
+        raise ContractError("Git clone contract branch is not reviewed")
     repository_url = "https://github.com/{}.git".format(REPOSITORY)
     target = "<private-vm-repository>"
     prefix = [
@@ -893,7 +900,7 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "schema": "t11-git-clone-contract/v1",
         "authority": "reviewed-static-contract",
         "repository_url": repository_url,
-        "branch": T11_PUBLIC_BRANCH,
+        "branch": public_branch,
         "head": head,
         "tree": tree,
         "git_binary": STAGE_A1_GIT_BINARY,
@@ -919,7 +926,7 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "argv_templates": [
             umask_wrapper + prefix + [
                 "clone", "--no-checkout", "--single-branch", "--branch",
-                T11_PUBLIC_BRANCH, repository_url, target,
+                public_branch, repository_url, target,
             ],
             umask_wrapper + prefix + [
                 "-C", target, "checkout", "--detach", head,
@@ -943,8 +950,14 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
     }
 
 
-def stage_a1_git_clone_contract_sha256(head: str, tree: str) -> str:
-    return sha256_bytes(canonical_bytes(stage_a1_git_clone_contract(head, tree)))
+def stage_a1_git_clone_contract_sha256(
+    head: str,
+    tree: str,
+    public_branch: str = T12_PUBLIC_BRANCH,
+) -> str:
+    return sha256_bytes(
+        canonical_bytes(stage_a1_git_clone_contract(head, tree, public_branch))
+    )
 
 
 def expected_git_bootstrap_evidence() -> Dict[str, Any]:
@@ -2218,7 +2231,7 @@ def validate_shell_free_command(command: Any) -> None:
     argv = command["argv"]
     if not isinstance(argv, list) or not 1 <= len(argv) <= 64 or any(not isinstance(x, str) or not x or len(x.encode("utf-8")) > 4096 for x in argv):
         raise ContractError("verification command argv is invalid")
-    if any("status=pending" in x or "status=complete" in x or "Issue #23" in x for x in argv):
+    if any("status=pending" in x or "status=complete" in x or "Issue #25" in x for x in argv):
         raise ContractError("dynamic Task/context bytes must not appear in argv")
     cwd = command["cwd"]
     if not isinstance(cwd, dict):
@@ -2459,11 +2472,18 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
             raise ContractError("passing containment provider guest platform is invalid")
         if value["profile_name"] != "t11-e2e-{}-01".format(value["public_head"][:12]):
             raise ContractError("containment provider profile/public-head binding drifted")
-        if value["repository_git_clone_contract_sha256"] != (
+        clone_branches = (
+            (T11_ACCEPTED_PUBLIC_BRANCH, T12_PUBLIC_BRANCH)
+            if allow_fixture
+            else (T12_PUBLIC_BRANCH,)
+        )
+        expected_clone_digests = {
             stage_a1_git_clone_contract_sha256(
-                value["public_head"], value["public_tree"],
+                value["public_head"], value["public_tree"], clone_branch,
             )
-        ):
+            for clone_branch in clone_branches
+        }
+        if value["repository_git_clone_contract_sha256"] not in expected_clone_digests:
             raise ContractError("containment provider clone contract binding drifted")
         if control_plane["status"] != "pass":
             raise ContractError("passing containment provider evidence lacks passing control-plane evidence")
@@ -3105,7 +3125,10 @@ def validate_execution_result(
         raise ContractError("execution result worker evidence is invalid")
     exact_keys(worker, ("logical_invocations", "exit_code", "timed_out", "signal", "stdout_bytes", "stderr_bytes"), "execution result worker")
     if worker["logical_invocations"] != 1 or worker["exit_code"] != 0 or worker["timed_out"] is not False or worker["signal"] is not None or type(worker["stdout_bytes"]) is not int or not 0 <= worker["stdout_bytes"] <= DEFAULT_LIMITS["stdout_bytes"] or type(worker["stderr_bytes"]) is not int or not 0 <= worker["stderr_bytes"] <= DEFAULT_LIMITS["stderr_bytes"]:
-        raise ContractError("execution result worker is not one bounded successful invocation")
+        raise ContractError(
+            "execution result worker is not exactly one logical invocation "
+            "with a bounded successful process result"
+        )
     events = value.get("events")
     if not isinstance(events, dict) or set(events) != {"count", "terminal_count", "terminal_state", "canonical_sha256"} or type(events["count"]) is not int or not 1 <= events["count"] <= DEFAULT_LIMITS["event_count"] or events["terminal_count"] != 1 or events["terminal_state"] != "completed" or SHA256_RE.fullmatch(str(events["canonical_sha256"])) is None:
         raise ContractError("execution result terminal event evidence is invalid")
@@ -4655,7 +4678,7 @@ def build_live_argv(
     for key in sorted(REQUIRED_OVERRIDES):
         argv.extend(["-c", "{}={}".format(key, toml_literal(REQUIRED_OVERRIDES[key]))])
     argv.append("-")
-    dynamic_markers = (envelope["attempt_id"], "Issue #23")
+    dynamic_markers = (envelope["attempt_id"], "Issue #25")
     if any(any(marker in argument for marker in dynamic_markers) for argument in argv):
         raise ContractError("dynamic Task/context data leaked into worker argv")
     validate_runtime_argv_policy(argv, require_memory_overrides=True)

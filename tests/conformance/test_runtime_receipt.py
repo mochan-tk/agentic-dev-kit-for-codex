@@ -39,12 +39,21 @@ class RuntimeReceiptTest(unittest.TestCase):
     def fixture_now(self):
         return datetime.datetime(2026, 8, 28, 0, 5, tzinfo=datetime.timezone.utc)
 
+    def t12_pr_metadata(self):
+        return {
+            "isCrossRepository": False,
+            "headRepository": {
+                "nameWithOwner": "mochan-tk/agentic-dev-kit-for-codex"
+            },
+            "headRefName": "codex/phase-2-live-codex-runtime",
+        }
+
     def lifecycle_fixture(self):
         runtime = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(runtime)
         provider = runtime["containment_provider"]
         return {
-            "schema": "t11-colima-lifecycle-receipt-request/v1",
+            "schema": "t12-colima-lifecycle-completion-request/v1",
             "repository": "mochan-tk/agentic-dev-kit-for-codex",
             "authority": "owner-authored",
             "codex_authenticated_attestation": False,
@@ -57,7 +66,7 @@ class RuntimeReceiptTest(unittest.TestCase):
                 "normalized_control_plane_sha256": provider["control_plane"]["normalized_control_plane_sha256"],
             },
             "runtime_receipt": {
-                "comment_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-900",
+                "comment_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-900",
                 "body_sha256": self.receipt.sha256(body.encode("utf-8")),
                 "receipt_sha256": self.receipt.sha256(self.receipt.canonical_bytes(runtime)),
                 "posted_at": "2026-08-28T00:00:30Z",
@@ -73,6 +82,8 @@ class RuntimeReceiptTest(unittest.TestCase):
                 "profile_absence_observed_at": "2026-08-28T00:03:00Z",
                 "runtime_data_absence_readback": "absent",
                 "runtime_data_absence_observed_at": "2026-08-28T00:04:00Z",
+                "tracked_process_absence_readback": "absent",
+                "tracked_process_absence_observed_at": "2026-08-28T00:04:30Z",
             },
             "privacy": copy.deepcopy(self.receipt.LIFECYCLE_PRIVACY),
         }
@@ -101,7 +112,12 @@ class RuntimeReceiptTest(unittest.TestCase):
                 "issue": 23,
                 "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
             },
-            "pull_request": copy.deepcopy(self.fixture["pull_request"]),
+            "pull_request": {
+                "number": 24,
+                "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24",
+                "head": self.fixture["pull_request"]["head"],
+                "tree": self.fixture["pull_request"]["tree"],
+            },
             "attempt_id": "ATTEMPT-0123456789abcdef",
             "runtime_profile": profile,
             "probe_execution": {
@@ -162,7 +178,7 @@ class RuntimeReceiptTest(unittest.TestCase):
     def test_valid_receipt_and_dry_run_are_canonical_and_private_path_free(self):
         validated = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(validated)
-        self.assertIn("T11 exact-head runtime receipt", body)
+        self.assertIn("T12 exact-head runtime receipt", body)
         self.assertNotRegex(body, r"/Users/|/var/folders/|/tmp/")
         fresh = self.refresh_artifact_chain(
             copy.deepcopy(self.fixture),
@@ -176,10 +192,20 @@ class RuntimeReceiptTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual("pass", payload["status"])
-        self.assertEqual(23, payload["target_issue"])
+        self.assertEqual(25, payload["target_issue"])
         fresh_body = self.receipt.render_comment(self.receipt.validate_receipt(fresh))
         self.assertEqual(fresh_body, payload["body"])
         self.assertEqual(self.receipt.sha256(fresh_body.encode("utf-8")), payload["body_sha256"])
+        fresh_receipt = self.receipt.validate_receipt(fresh)
+        self.assertEqual(
+            self.receipt.runtime_dry_run_proof_sha256(fresh_receipt, fresh_body),
+            payload["dry_run_proof_sha256"],
+        )
+        self.assertEqual(
+            "repository-generated-deterministic-binding",
+            payload["dry_run_proof_kind"],
+        )
+        self.assertFalse(payload["dry_run_proof_authenticated"])
 
     def test_receipt_rejects_stale_or_incomplete_check_bindings(self):
         mutations = (
@@ -197,8 +223,8 @@ class RuntimeReceiptTest(unittest.TestCase):
 
     def test_receipt_rejects_identity_digest_and_nonpass_drift(self):
         mutations = (
-            lambda value: value["task"].__setitem__("issue", 24),
-            lambda value: value["pull_request"].update({"number": 25, "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/25"}),
+            lambda value: value["task"].__setitem__("issue", 23),
+            lambda value: value["pull_request"].__setitem__("url", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/72"),
             lambda value: value["pull_request"].__setitem__("head", "short"),
             lambda value: value["artifacts"]["envelope"]["harness"].__setitem__("commit", "f" * 40),
             lambda value: value["artifacts"]["runtime_profile"].__setitem__("status", "UNKNOWN"),
@@ -211,6 +237,45 @@ class RuntimeReceiptTest(unittest.TestCase):
             mutation(fixture)
             with self.subTest(mutation=mutation):
                 self.assert_receipt_error(lambda f=fixture: self.receipt.validate_receipt(f, now=self.fixture_now()))
+
+    def test_t12_task_is_fixed_and_future_pull_request_binding_is_dynamic_and_coherent(self):
+        fixture = copy.deepcopy(self.fixture)
+        fixture["task"] = {
+            "issue": 25,
+            "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
+        }
+        fixture["pull_request"].update({
+            "number": 73,
+            "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/73",
+        })
+        fixture["artifacts"]["envelope"]["task"] = {
+            "repository": "mochan-tk/agentic-dev-kit-for-codex",
+            "issue": 25,
+            "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
+        }
+        adapter = mock.Mock()
+        with mock.patch.object(self.receipt, "load_adapter", return_value=adapter):
+            validated = self.receipt.validate_receipt(fixture, now=self.fixture_now())
+        self.assertEqual(25, validated["task"]["issue"])
+        self.assertEqual(73, validated["pull_request"]["number"])
+
+        for mutation in (
+            lambda value: value["task"].__setitem__("issue", 23),
+            lambda value: value["pull_request"].__setitem__("number", 72),
+            lambda value: value["pull_request"].__setitem__(
+                "url", "https://github.com/other/repository/pull/73"
+            ),
+        ):
+            invalid = copy.deepcopy(fixture)
+            mutation(invalid)
+            with self.subTest(mutation=mutation), mock.patch.object(
+                self.receipt, "load_adapter", return_value=adapter
+            ):
+                self.assert_receipt_error(
+                    lambda value=invalid: self.receipt.validate_receipt(
+                        value, now=self.fixture_now()
+                    )
+                )
 
     def test_receipt_projects_only_allowlisted_containment_provider_evidence(self):
         projection = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
@@ -361,10 +426,103 @@ class RuntimeReceiptTest(unittest.TestCase):
              mock.patch.object(self.receipt, "read_stdin_bounded") as read_input, \
              mock.patch.object(self.receipt, "run_gh") as github:
             with mock.patch.object(sys, "stdout", mock.Mock(buffer=mock.Mock())):
-                self.assertEqual(1, self.receipt.main(["--apply"]))
+                self.assertEqual(1, self.receipt.main([
+                    "--apply", "--dry-run-proof-sha256", "f" * 64,
+                ]))
         gate.assert_called_once()
         read_input.assert_not_called()
         github.assert_not_called()
+
+    def test_runtime_apply_requires_the_exact_deterministic_dry_run_binding(self):
+        fixture = self.receipt.validate_receipt(
+            copy.deepcopy(self.fixture), now=self.fixture_now()
+        )
+        body = self.receipt.render_comment(fixture)
+        proof = self.receipt.runtime_dry_run_proof_sha256(fixture, body)
+        self.assertRegex(proof, r"^[0-9a-f]{64}$")
+
+        for argv in (
+            ["--apply"],
+            ["--apply", "--dry-run-proof-sha256", "f" * 64],
+        ):
+            with self.subTest(argv=argv), mock.patch.object(
+                self.receipt, "read_stdin_bounded",
+                return_value=self.receipt.canonical_bytes(self.fixture),
+            ) as read_input, mock.patch.object(
+                self.receipt, "validate_receipt", return_value=fixture,
+            ), mock.patch.object(
+                self.receipt, "verify_local_head"
+            ) as local, mock.patch.object(
+                self.receipt, "apply_comment"
+            ) as apply, mock.patch.object(
+                sys, "stdout", mock.Mock(buffer=io.BytesIO())
+            ):
+                self.assertEqual(1, self.receipt.main(argv))
+            local.assert_not_called()
+            apply.assert_not_called()
+            if argv == ["--apply"]:
+                read_input.assert_not_called()
+
+        stdout = mock.Mock(buffer=io.BytesIO())
+        with mock.patch.object(
+            self.receipt, "read_stdin_bounded",
+            return_value=self.receipt.canonical_bytes(self.fixture),
+        ), mock.patch.object(
+            self.receipt, "validate_receipt", return_value=fixture,
+        ), mock.patch.object(
+            self.receipt, "verify_local_head"
+        ) as local, mock.patch.object(
+            self.receipt, "apply_comment",
+            return_value={"schema": "runtime-receipt-application/v1", "status": "pass"},
+        ) as apply, mock.patch.object(sys, "stdout", stdout):
+            self.assertEqual(0, self.receipt.main([
+                "--apply", "--dry-run-proof-sha256", proof,
+            ]))
+        local.assert_called_once()
+        apply.assert_called_once()
+
+    def test_external_runtime_pr_rejects_fork_or_wrong_head_branch(self):
+        fixture = self.receipt.validate_receipt(
+            copy.deepcopy(self.fixture), now=self.fixture_now()
+        )
+        base_pr = {
+            "headRefOid": fixture["pull_request"]["head"],
+            "state": "OPEN",
+            "url": fixture["pull_request"]["url"],
+            "statusCheckRollup": [
+                {
+                    "name": check["context"],
+                    "conclusion": "SUCCESS",
+                    "detailsUrl": check["url"],
+                }
+                for check in fixture["checks"]
+            ],
+            "isCrossRepository": False,
+            "headRepository": {"nameWithOwner": self.receipt.REPOSITORY},
+            "headRefName": "codex/phase-2-live-codex-runtime",
+        }
+        mutations = (
+            lambda value: value.__setitem__("isCrossRepository", True),
+            lambda value: value.__setitem__(
+                "headRepository", {"nameWithOwner": "someone/fork"}
+            ),
+            lambda value: value.__setitem__("headRefName", "codex/wrong-branch"),
+        )
+        for mutation in mutations:
+            pr = copy.deepcopy(base_pr)
+            mutation(pr)
+            with self.subTest(mutation=mutation), mock.patch.object(
+                self.receipt, "gh_json",
+                side_effect=[
+                    {"state": "OPEN", "url": fixture["task"]["url"]},
+                    pr,
+                    {"tree": {"sha": fixture["pull_request"]["tree"]}},
+                ],
+            ):
+                self.assert_receipt_error(
+                    lambda: self.receipt.verify_external_head(fixture),
+                    "repository or branch",
+                )
 
     def test_receipt_input_contains_and_binds_actual_runtime_artifacts(self):
         self.assertIn("artifacts", self.fixture)
@@ -405,6 +563,7 @@ class RuntimeReceiptTest(unittest.TestCase):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         pr_state = {
+            **self.t12_pr_metadata(),
             "headRefOid": "a" * 40,
             "state": "OPEN",
             "url": fixture["pull_request"]["url"],
@@ -418,8 +577,8 @@ class RuntimeReceiptTest(unittest.TestCase):
             json.dumps(pr_state).encode(),
             json.dumps({"tree": {"sha": "b" * 40}}).encode(),
             b"[]",
-            b"https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987\n",
-            json.dumps({"body": body}).encode(),
+            b"https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987\n",
+            json.dumps({"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "created_at": "2026-08-28T00:00:30Z", "body": body}).encode(),
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(pr_state).encode(),
             json.dumps({"tree": {"sha": "b" * 40}}).encode(),
@@ -437,22 +596,24 @@ class RuntimeReceiptTest(unittest.TestCase):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         pr_state = {
+            **self.t12_pr_metadata(),
             "headRefOid": "a" * 40, "state": "OPEN", "url": fixture["pull_request"]["url"],
             "statusCheckRollup": [{"name": check["context"], "conclusion": "SUCCESS", "detailsUrl": check["url"]} for check in fixture["checks"]],
         }
         marker = self.receipt.receipt_marker(fixture)
-        existing = [{"url": "https://api.github.invalid/comments/987", "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987", "body": body}]
+        existing = [{"url": "https://api.github.invalid/comments/987", "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "body": body}]
         outputs = [
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(pr_state).encode(), json.dumps({"tree": {"sha": "b" * 40}}).encode(),
             json.dumps(existing).encode(),
+            json.dumps({"html_url": existing[0]["html_url"], "created_at": "2026-08-28T00:00:30Z", "body": body}).encode(),
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(pr_state).encode(), json.dumps({"tree": {"sha": "b" * 40}}).encode(),
         ]
         with mock.patch.object(self.receipt, "run_gh", side_effect=outputs) as run_gh:
             record = self.receipt.apply_comment(fixture, body)
         self.assertTrue(record["idempotent"])
-        self.assertEqual(7, run_gh.call_count)
+        self.assertEqual(8, run_gh.call_count)
         self.assertIn(marker, body)
 
         conflict = copy.deepcopy(existing)
@@ -462,7 +623,7 @@ class RuntimeReceiptTest(unittest.TestCase):
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "conflict")
         self.assertEqual(4, run_gh.call_count)
 
-        reconciled_comment = [{"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987", "body": body}]
+        reconciled_comment = [{"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "body": body}]
         outputs = [
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(pr_state).encode(),
@@ -470,6 +631,7 @@ class RuntimeReceiptTest(unittest.TestCase):
             b"[]",
             self.receipt.ReceiptError("uncertain transport"),
             json.dumps(reconciled_comment).encode(),
+            json.dumps({"html_url": reconciled_comment[0]["html_url"], "created_at": "2026-08-28T00:00:30Z", "body": body}).encode(),
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(pr_state).encode(),
             json.dumps({"tree": {"sha": "b" * 40}}).encode(),
@@ -478,15 +640,15 @@ class RuntimeReceiptTest(unittest.TestCase):
             record = self.receipt.apply_comment(fixture, body)
         self.assertTrue(record["idempotent"])
         self.assertTrue(record["reconciled_after_uncertain_post"])
-        self.assertEqual(9, run_gh.call_count)
+        self.assertEqual(10, run_gh.call_count)
 
     def test_same_attempt_scan_rejects_conflict_even_after_exact_match(self):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         marker = self.receipt.receipt_marker(fixture)
         comments = [
-            {"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987", "body": body},
-            {"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-988", "body": marker + "\nconflict"},
+            {"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "body": body},
+            {"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-988", "body": marker + "\nconflict"},
         ]
         with mock.patch.object(self.receipt, "existing_comments", return_value=comments):
             self.assert_receipt_error(
@@ -497,10 +659,10 @@ class RuntimeReceiptTest(unittest.TestCase):
     def test_same_attempt_scan_checks_markers_after_other_attempts(self):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
-        other_marker = "<!-- t11-runtime-receipt attempt=ATTEMPT-fedcba9876543210 receipt_sha256={} -->".format("f" * 64)
+        other_marker = "<!-- t12-runtime-receipt attempt=ATTEMPT-fedcba9876543210 receipt_sha256={} -->".format("f" * 64)
         current_marker = self.receipt.receipt_marker(fixture)
         comments = [{
-            "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987",
+            "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987",
             "body": other_marker + "\nunrelated\n" + current_marker + "\nconflict",
         }]
         with mock.patch.object(self.receipt, "existing_comments", return_value=comments):
@@ -513,8 +675,8 @@ class RuntimeReceiptTest(unittest.TestCase):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         other = {
-            "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-986",
-            "body": "<!-- t11-runtime-receipt attempt=ATTEMPT-fedcba9876543210 receipt_sha256={} -->\nprior".format(
+            "html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-986",
+            "body": "<!-- t12-runtime-receipt attempt=ATTEMPT-fedcba9876543210 receipt_sha256={} -->\nprior".format(
                 "f" * 64
             ),
         }
@@ -528,12 +690,13 @@ class RuntimeReceiptTest(unittest.TestCase):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         good_pr = {
+            **self.t12_pr_metadata(),
             "headRefOid": "a" * 40, "state": "OPEN", "url": fixture["pull_request"]["url"],
             "statusCheckRollup": [{"name": check["context"], "conclusion": "SUCCESS", "detailsUrl": check["url"]} for check in fixture["checks"]],
         }
         drifted_pr = dict(good_pr)
         drifted_pr["headRefOid"] = "f" * 40
-        existing = [{"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987", "body": body}]
+        existing = [{"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "body": body}]
         initial = [
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(good_pr).encode(), json.dumps({"tree": {"sha": "b" * 40}}).encode(),
@@ -542,14 +705,15 @@ class RuntimeReceiptTest(unittest.TestCase):
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(drifted_pr).encode(),
         ]
-        with mock.patch.object(self.receipt, "run_gh", side_effect=initial + [json.dumps(existing).encode()] + final_drift):
+        exact_readback = json.dumps({"html_url": existing[0]["html_url"], "created_at": "2026-08-28T00:00:30Z", "body": body}).encode()
+        with mock.patch.object(self.receipt, "run_gh", side_effect=initial + [json.dumps(existing).encode(), exact_readback] + final_drift):
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "head drifted")
 
         reconciled = [{"html_url": existing[0]["html_url"], "body": body}]
         with mock.patch.object(
             self.receipt,
             "run_gh",
-            side_effect=initial + [b"[]", self.receipt.ReceiptError("uncertain"), json.dumps(reconciled).encode()] + final_drift,
+            side_effect=initial + [b"[]", self.receipt.ReceiptError("uncertain"), json.dumps(reconciled).encode(), exact_readback] + final_drift,
         ):
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "head drifted")
 
@@ -557,6 +721,7 @@ class RuntimeReceiptTest(unittest.TestCase):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         good_pr = {
+            **self.t12_pr_metadata(),
             "headRefOid": "a" * 40, "state": "OPEN", "url": fixture["pull_request"]["url"],
             "statusCheckRollup": [{"name": check["context"], "conclusion": "SUCCESS", "detailsUrl": check["url"]} for check in fixture["checks"]],
         }
@@ -566,8 +731,8 @@ class RuntimeReceiptTest(unittest.TestCase):
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(good_pr).encode(), json.dumps({"tree": {"sha": "b" * 40}}).encode(),
             b"[]",
-            b"https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987\n",
-            json.dumps({"body": body}).encode(),
+            b"https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987\n",
+            json.dumps({"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "created_at": "2026-08-28T00:00:30Z", "body": body}).encode(),
             json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(),
             json.dumps(drifted_pr).encode(),
         ]
@@ -581,12 +746,13 @@ class RuntimeReceiptTest(unittest.TestCase):
         with mock.patch.object(self.receipt, "run_gh", side_effect=outputs) as run_gh:
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "not the exact open")
         self.assertEqual(1, run_gh.call_count)
-        drift_pr = {"headRefOid": "f" * 40, "state": "OPEN", "url": fixture["pull_request"]["url"], "statusCheckRollup": []}
+        drift_pr = {**self.t12_pr_metadata(), "headRefOid": "f" * 40, "state": "OPEN", "url": fixture["pull_request"]["url"], "statusCheckRollup": []}
         outputs = [json.dumps({"state": "OPEN", "url": fixture["task"]["url"]}).encode(), json.dumps(drift_pr).encode()]
         with mock.patch.object(self.receipt, "run_gh", side_effect=outputs) as run_gh:
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "head drifted")
         self.assertEqual(2, run_gh.call_count)
         good_pr = {
+            **self.t12_pr_metadata(),
             "headRefOid": "a" * 40, "state": "OPEN", "url": fixture["pull_request"]["url"],
             "statusCheckRollup": [{"name": check["context"], "conclusion": "SUCCESS", "detailsUrl": check["url"]} for check in fixture["checks"]],
         }
@@ -599,6 +765,7 @@ class RuntimeReceiptTest(unittest.TestCase):
         fixture = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
         body = self.receipt.render_comment(fixture)
         pr_state = {
+            **self.t12_pr_metadata(),
             "headRefOid": "a" * 40,
             "state": "OPEN",
             "url": fixture["pull_request"]["url"],
@@ -612,8 +779,8 @@ class RuntimeReceiptTest(unittest.TestCase):
             json.dumps(pr_state).encode(),
             json.dumps({"tree": {"sha": "b" * 40}}).encode(),
             b"[]",
-            b"https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-987\n",
-            json.dumps({"body": body + "\ndrift"}).encode(),
+            b"https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987\n",
+            json.dumps({"html_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-987", "created_at": "2026-08-28T00:00:30Z", "body": body + "\ndrift"}).encode(),
         ]
         with mock.patch.object(self.receipt, "run_gh", side_effect=outputs):
             self.assert_receipt_error(lambda: self.receipt.apply_comment(fixture, body), "read-back differs")
@@ -924,7 +1091,7 @@ class RuntimeReceiptTest(unittest.TestCase):
                 self.assertNotEqual(0, rejected.returncode)
                 self.assertNotIn(b"Traceback", rejected.stdout + rejected.stderr)
 
-    def test_lifecycle_receipt_dry_run_is_closed_canonical_and_dual_target(self):
+    def test_lifecycle_completion_dry_run_is_closed_canonical_and_single_target(self):
         fixture = self.lifecycle_fixture()
         current = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
         fixture["destroy"].update({
@@ -932,6 +1099,7 @@ class RuntimeReceiptTest(unittest.TestCase):
             "destroy_completed_at": (current - datetime.timedelta(seconds=120)).isoformat().replace("+00:00", "Z"),
             "profile_absence_observed_at": (current - datetime.timedelta(seconds=60)).isoformat().replace("+00:00", "Z"),
             "runtime_data_absence_observed_at": current.isoformat().replace("+00:00", "Z"),
+            "tracked_process_absence_observed_at": current.isoformat().replace("+00:00", "Z"),
         })
         validated = self.receipt.validate_lifecycle_receipt(
             copy.deepcopy(fixture), now=current
@@ -946,12 +1114,10 @@ class RuntimeReceiptTest(unittest.TestCase):
             ),
             validated["runtime_receipt"]["request_sha256"],
         )
-        issue_body = self.receipt.render_lifecycle_comment(validated, "issue")
-        pr_body = self.receipt.render_lifecycle_comment(validated, "pr")
-        self.assertIn("target=issue", issue_body)
-        self.assertIn("target=pr", pr_body)
-        self.assertIn("final-destroy evidence", issue_body)
-        self.assertNotRegex(issue_body + pr_body, r"/Users/|/var/folders/|/tmp/")
+        body = self.receipt.render_lifecycle_comment(validated)
+        self.assertIn("t12-colima-lifecycle-completion", body)
+        self.assertIn("lifecycle-completion evidence", body)
+        self.assertNotRegex(body, r"/Users/|/var/folders/|/tmp/")
         result = subprocess.run(
             [sys.executable, "-I", str(SCRIPT), "--lifecycle-dry-run"], cwd=ROOT,
             input=self.receipt.canonical_bytes(fixture), stdout=subprocess.PIPE,
@@ -959,9 +1125,33 @@ class RuntimeReceiptTest(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual("t11-colima-lifecycle-receipt-dry-run/v1", payload["schema"])
-        self.assertEqual(issue_body, payload["issue_body"])
-        self.assertEqual(pr_body, payload["pr_body"])
+        self.assertEqual("t12-colima-lifecycle-completion-dry-run/v1", payload["schema"])
+        self.assertEqual(25, payload["target_issue"])
+        self.assertEqual(body, payload["body"])
+        self.assertNotIn("pr_body", payload)
+
+    def test_lifecycle_completion_requires_all_absence_lanes_and_one_task_target(self):
+        fixture = self.lifecycle_fixture()
+        fixture["destroy"].update({
+            "tracked_process_absence_readback": "absent",
+            "tracked_process_absence_observed_at": "2026-08-28T00:04:30Z",
+        })
+        lifecycle = self.receipt.validate_lifecycle_receipt(
+            fixture, now=self.fixture_now()
+        )
+        body = self.receipt.render_lifecycle_comment(lifecycle)
+        self.assertIn("lifecycle-completion", body)
+        self.assertIn("Tracked-process absence read-back", body)
+        self.assertNotIn("Target copy", body)
+        self.assertEqual(25, lifecycle["task"]["issue"])
+
+        missing = copy.deepcopy(fixture)
+        missing["destroy"].pop("tracked_process_absence_readback")
+        self.assert_receipt_error(
+            lambda: self.receipt.validate_lifecycle_receipt(
+                missing, now=self.fixture_now()
+            )
+        )
 
     def test_lifecycle_receipt_rejects_forgery_scope_and_destroy_drift(self):
         mutations = (
@@ -995,6 +1185,7 @@ class RuntimeReceiptTest(unittest.TestCase):
             lambda value: value["destroy"].__setitem__("destroy_completed_at", "2099-01-01T00:00:00Z"),
             lambda value: value["destroy"].__setitem__("profile_absence_observed_at", "2099-01-01T00:00:00Z"),
             lambda value: value["destroy"].__setitem__("runtime_data_absence_observed_at", "2099-01-01T00:00:00Z"),
+            lambda value: value["destroy"].__setitem__("tracked_process_absence_observed_at", "2099-01-01T00:00:00Z"),
         )
         for mutation in future_mutations:
             fixture = self.lifecycle_fixture()
@@ -1019,9 +1210,31 @@ class RuntimeReceiptTest(unittest.TestCase):
         at_limit = self.lifecycle_fixture()
         validated = self.receipt.validate_lifecycle_receipt(
             at_limit,
-            now=datetime.datetime(2026, 8, 28, 1, 4, tzinfo=datetime.timezone.utc),
+            now=datetime.datetime(2026, 8, 28, 1, 3, tzinfo=datetime.timezone.utc),
         )
-        self.assertEqual("t11-colima-lifecycle-receipt/v1", validated["schema"])
+        self.assertEqual("t12-colima-lifecycle-completion/v1", validated["schema"])
+
+        absence_fields = (
+            "profile_absence_observed_at",
+            "runtime_data_absence_observed_at",
+            "tracked_process_absence_observed_at",
+        )
+        for stale_field in absence_fields:
+            one_stale = self.lifecycle_fixture()
+            one_stale["destroy"].update({
+                field: "2026-08-28T01:03:30Z" for field in absence_fields
+            })
+            one_stale["destroy"][stale_field] = "2026-08-28T00:03:00Z"
+            with self.subTest(stale_field=stale_field):
+                self.assert_receipt_error(
+                    lambda value=one_stale: self.receipt.validate_lifecycle_receipt(
+                        value,
+                        now=datetime.datetime(
+                            2026, 8, 28, 1, 4, tzinfo=datetime.timezone.utc
+                        ),
+                    ),
+                    "stale",
+                )
 
     def test_lifecycle_receipt_rejects_private_raw_or_secret_material(self):
         for key, value in (
@@ -1090,77 +1303,127 @@ class RuntimeReceiptTest(unittest.TestCase):
                 "canonical",
             )
 
-    def test_lifecycle_markers_are_target_stable_idempotent_and_conflict_closed(self):
+    def test_lifecycle_completion_is_single_task_comment_idempotent_and_conflict_closed(self):
         lifecycle = self.receipt.validate_lifecycle_receipt(
             self.lifecycle_fixture(), now=self.fixture_now()
         )
-        for target, url in (
-            ("issue", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-901"),
-            ("pr", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-902"),
+        url = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-901"
+        body = self.receipt.render_lifecycle_comment(lifecycle)
+        comments = [{"html_url": url, "body": body}]
+        with mock.patch.object(
+            self.receipt, "lifecycle_existing_comments", return_value=comments
         ):
-            body = self.receipt.render_lifecycle_comment(lifecycle, target)
-            comments = [{"html_url": url, "body": body}]
-            with self.subTest(target=target), mock.patch.object(
-                self.receipt, "lifecycle_existing_comments", return_value=comments
-            ):
-                self.assertEqual(
-                    url,
-                    self.receipt.preflight_existing_lifecycle_receipt(
-                        lifecycle, target, body
-                    ),
-                )
-                conflict = copy.deepcopy(comments)
-                conflict[0]["body"] += "\ndrift"
-                with mock.patch.object(
-                    self.receipt, "lifecycle_existing_comments", return_value=conflict
-                ):
-                    self.assert_receipt_error(
-                        lambda: self.receipt.preflight_existing_lifecycle_receipt(
-                            lifecycle, target, body
-                        ),
-                        "conflicts",
-                    )
+            self.assertEqual(
+                url,
+                self.receipt.preflight_existing_lifecycle_receipt(lifecycle, body),
+            )
+        conflict = copy.deepcopy(comments)
+        conflict[0]["body"] += "\ndrift"
+        with mock.patch.object(
+            self.receipt, "lifecycle_existing_comments", return_value=conflict
+        ):
+            self.assert_receipt_error(
+                lambda: self.receipt.preflight_existing_lifecycle_receipt(
+                    lifecycle, body
+                ),
+                "conflicts",
+            )
 
-    def test_lifecycle_apply_posts_both_targets_and_reverifies(self):
+    def test_lifecycle_apply_posts_one_task_comment_and_reverifies(self):
         lifecycle = self.receipt.validate_lifecycle_receipt(
             self.lifecycle_fixture(), now=self.fixture_now()
         )
-        issue_body = self.receipt.render_lifecycle_comment(lifecycle, "issue")
-        pr_body = self.receipt.render_lifecycle_comment(lifecycle, "pr")
-        targets = [
-            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-901", False, False),
-            ("https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-902", True, False),
-        ]
+        body = self.receipt.render_lifecycle_comment(lifecycle)
+        target = (
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-901",
+            "2026-08-28T00:04:30Z", False, False,
+        )
         with mock.patch.object(self.receipt, "verify_external_head") as verify_head, \
              mock.patch.object(self.receipt, "verify_linked_runtime_receipt") as verify_linked, \
-             mock.patch.object(self.receipt, "apply_one_lifecycle_comment", side_effect=targets) as apply_one:
-            result = self.receipt.apply_lifecycle_comments(lifecycle, issue_body, pr_body)
+             mock.patch.object(self.receipt, "apply_one_lifecycle_comment", return_value=target) as apply_one:
+            result = self.receipt.apply_lifecycle_comments(lifecycle, body)
         self.assertEqual("pass", result["status"])
-        self.assertEqual(3, verify_head.call_count)
-        self.assertEqual(3, verify_linked.call_count)
-        self.assertEqual(["issue", "pr"], [call.args[1] for call in apply_one.call_args_list])
-        self.assertEqual({"issue": False, "pr": True}, result["idempotent_targets"])
+        self.assertEqual(2, verify_head.call_count)
+        self.assertEqual(2, verify_linked.call_count)
+        apply_one.assert_called_once_with(lifecycle, body)
+        self.assertFalse(result["idempotent"])
+        self.assertNotIn("pr_comment_url", result)
 
-    def test_lifecycle_target_post_uses_body_file_and_exact_readback(self):
+    def test_lifecycle_post_uses_issue_body_file_and_exact_post_absence_readback(self):
         lifecycle = self.receipt.validate_lifecycle_receipt(
             self.lifecycle_fixture(), now=self.fixture_now()
         )
-        for target, url, command in (
-            ("issue", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-901", "issue"),
-            ("pr", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24#issuecomment-902", "pr"),
+        url = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-901"
+        body = self.receipt.render_lifecycle_comment(lifecycle)
+        posted_at = "2026-08-28T00:04:30Z"
+        with mock.patch.object(
+            self.receipt, "preflight_existing_lifecycle_receipt", return_value=None
+        ), mock.patch.object(
+            self.receipt, "run_gh", return_value=(url + "\n").encode()
+        ) as run_gh, mock.patch.object(
+            self.receipt, "gh_json",
+            return_value={"html_url": url, "created_at": posted_at, "body": body},
         ):
-            body = self.receipt.render_lifecycle_comment(lifecycle, target)
-            with self.subTest(target=target), \
-                 mock.patch.object(self.receipt, "preflight_existing_lifecycle_receipt", return_value=None), \
-                 mock.patch.object(self.receipt, "run_gh", return_value=(url + "\n").encode()) as run_gh, \
-                 mock.patch.object(self.receipt, "gh_json", return_value={"html_url": url, "body": body}):
-                observed = self.receipt.apply_one_lifecycle_comment(
-                    lifecycle, target, body
-                )
-            self.assertEqual((url, False, False), observed)
-            self.assertEqual(command, run_gh.call_args.args[0][0])
-            self.assertIn("--body-file", run_gh.call_args.args[0])
-            self.assertEqual(body.encode("utf-8"), run_gh.call_args.args[1])
+            observed = self.receipt.apply_one_lifecycle_comment(lifecycle, body)
+        self.assertEqual((url, posted_at, False, False), observed)
+        self.assertEqual("issue", run_gh.call_args.args[0][0])
+        self.assertIn("--body-file", run_gh.call_args.args[0])
+        self.assertEqual(body.encode("utf-8"), run_gh.call_args.args[1])
+
+    def test_lifecycle_completion_uncertain_post_reconciles_once_and_requires_post_absence_time(self):
+        lifecycle = self.receipt.validate_lifecycle_receipt(
+            self.lifecycle_fixture(), now=self.fixture_now()
+        )
+        body = self.receipt.render_lifecycle_comment(lifecycle)
+        url = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-901"
+        posted_at = "2026-08-28T00:04:30Z"
+        with mock.patch.object(
+            self.receipt, "preflight_existing_lifecycle_receipt",
+            side_effect=[None, url],
+        ), mock.patch.object(
+            self.receipt, "run_gh", side_effect=self.receipt.ReceiptError("uncertain")
+        ) as run_gh, mock.patch.object(
+            self.receipt, "gh_json",
+            return_value={"html_url": url, "created_at": posted_at, "body": body},
+        ):
+            self.assertEqual(
+                (url, posted_at, True, True),
+                self.receipt.apply_one_lifecycle_comment(lifecycle, body),
+            )
+        self.assertEqual(1, run_gh.call_count)
+
+        with mock.patch.object(
+            self.receipt, "preflight_existing_lifecycle_receipt", return_value=None
+        ), mock.patch.object(
+            self.receipt, "run_gh", return_value=(url + "\n").encode()
+        ), mock.patch.object(
+            self.receipt, "gh_json",
+            return_value={
+                "html_url": url,
+                "created_at": "2026-08-28T00:04:00Z",
+                "body": body,
+            },
+        ):
+            self.assert_receipt_error(
+                lambda: self.receipt.apply_one_lifecycle_comment(lifecycle, body),
+                "predates",
+            )
+
+        other = {
+            "html_url": url,
+            "body": "<!-- t12-colima-lifecycle-completion attempt=ATTEMPT-fedcba9876543210 lifecycle_sha256={} -->".format(
+                "f" * 64
+            ),
+        }
+        with mock.patch.object(
+            self.receipt, "lifecycle_existing_comments", return_value=[other]
+        ):
+            self.assert_receipt_error(
+                lambda: self.receipt.preflight_existing_lifecycle_receipt(
+                    lifecycle, body
+                ),
+                "different attempt",
+            )
 
     def test_lifecycle_apply_capability_gate_precedes_input_and_github(self):
         with mock.patch.object(

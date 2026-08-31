@@ -5,8 +5,9 @@ Offline validation checks shape and internal consistency only; it does not prove
 GitHub object existence, authorship, edit history, chronology, labels, or live ritual state.
 Do not grant authority to a GitHub Projects board, fabricate historical ritual records,
 or claim full/runtime parity for K10 or K11. Their current repository status is limited
-to the minimal/partial offline T11 slice; opaque references do not prove validity,
-freshness, live execution, or acceptance.
+to the accepted minimal/partial offline T11 slice. T12 live evidence is external GitHub
+state and must be exact-head bound; opaque references do not prove validity, freshness,
+live execution, or acceptance.
 Opaque runtime references are bounded linkage only. Only the locator grammar is parsed.
 The referenced target is neither resolved nor dereferenced, and the value proves neither
 target validity nor target freshness; it provides no evidence of implementation, execution,

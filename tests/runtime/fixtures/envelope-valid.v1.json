@@ -2,8 +2,8 @@
   "schema": "task-execution-envelope/v1",
   "task": {
     "repository": "mochan-tk/agentic-dev-kit-for-codex",
-    "issue": 23,
-    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+    "issue": 25,
+    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
   },
   "attempt_id": "ATTEMPT-0123456789abcdef",
   "harness": {
