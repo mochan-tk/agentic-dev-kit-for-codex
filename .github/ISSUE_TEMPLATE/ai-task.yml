@@ -164,15 +164,15 @@ body:
     id: task_execution_envelope_ref
     attributes:
       label: "Task execution envelope reference (optional and opaque)"
-      description: "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K10 evidence."
-      placeholder: "Leave blank unless a later contract supplies an opaque reference."
+      description: "Optional linkage only. Supply the field-specific opaque-ref/v1 value required by the machine contract. Only the locator grammar is parsed. The referenced target is neither resolved nor dereferenced, and the value proves neither target validity nor target freshness; it provides no evidence of implementation, execution, or acceptance."
+      placeholder: "Use opaque-ref/v1 with this field's required kind, sha256, and 64 lowercase hex characters, or leave blank."
     validations:
       required: false
   - type: input
     id: loop_event_ref
     attributes:
       label: "Loop event reference (optional and opaque)"
-      description: "Optional opaque reference only; it is not parsed, dereferenced, or accepted as K11 evidence."
-      placeholder: "Leave blank unless a later contract supplies an opaque reference."
+      description: "Optional linkage only. Supply the field-specific opaque-ref/v1 value required by the machine contract. Only the locator grammar is parsed. The referenced target is neither resolved nor dereferenced, and the value proves neither target validity nor target freshness; it provides no evidence of implementation, execution, or acceptance."
+      placeholder: "Use opaque-ref/v1 with this field's required kind, sha256, and 64 lowercase hex characters, or leave blank."
     validations:
       required: false

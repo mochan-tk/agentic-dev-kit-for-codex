@@ -1,0 +1,4 @@
+{"schema":"loop-event/v1","attempt_id":"ATTEMPT-0123456789abcdef","sequence":1,"kind":"worker-started","source":"codex-exec-adapter","state":"running","payload_digest":"4594c43be9860dac529b17e9ae87d7132f9abdfd940cd931bc268221da5bace3"}
+{"schema":"loop-event/v1","attempt_id":"ATTEMPT-0123456789abcdef","sequence":2,"kind":"worker-started","source":"codex-exec-adapter","state":"running","payload_digest":"e94c7a2fef81a27a135bf59fd9dd380140a4e4213773346d1e610294a6d3ae10"}
+{"schema":"loop-event/v1","attempt_id":"ATTEMPT-0123456789abcdef","sequence":3,"kind":"worker-message","source":"codex-exec-adapter","state":"running","payload_digest":"226aeff96251177d35e99566c2b12ab9ad253f05dca14273dd0e802a7ba806ea"}
+{"schema":"loop-event/v1","attempt_id":"ATTEMPT-0123456789abcdef","sequence":4,"kind":"worker-terminal","source":"codex-exec-adapter","state":"completed","payload_digest":"9ef2abd00ef77d1a8cc863625e0502ae6e06777d6174f86ce2db39c7a5da97b4"}

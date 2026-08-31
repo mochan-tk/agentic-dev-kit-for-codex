@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/agreements/runtime/execution-result.v1.schema.json",
+  "title": "execution-result/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "attempt_id", "status", "authority", "worker", "events", "final_response", "git", "verifier", "digests", "privacy"],
+  "properties": {
+    "schema": {"const": "execution-result/v1"},
+    "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},
+    "status": {"enum": ["pass", "fail", "interrupted", "UNKNOWN", "UNCHECKABLE"]},
+    "authority": {"const": "adapter-authored"},
+    "worker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["logical_invocations", "exit_code", "timed_out", "signal", "stdout_bytes", "stderr_bytes"],
+      "properties": {
+        "logical_invocations": {"const": 1},
+        "exit_code": {"type": ["integer", "null"]},
+        "timed_out": {"type": "boolean"},
+        "signal": {"type": ["integer", "null"]},
+        "stdout_bytes": {"type": "integer", "minimum": 0},
+        "stderr_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "events": {
+      "type": "object", "additionalProperties": false,
+      "required": ["count", "terminal_count", "terminal_state", "canonical_sha256"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0, "maximum": 8192},
+        "terminal_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "terminal_state": {"enum": ["completed", "interrupted", "failed", "missing", "multiple", "unknown"]},
+        "canonical_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "final_response": {
+      "type": "object", "additionalProperties": false,
+      "required": ["present", "valid", "sha256", "outcome"],
+      "properties": {
+        "present": {"type": "boolean"}, "valid": {"type": "boolean"},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "outcome": {"type": ["string", "null"], "enum": ["completed", "blocked", "failed", null]}
+      }
+    },
+    "git": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pre_head", "post_head", "pre_tree", "post_tree", "worktree_tree", "changed_paths", "owned_paths_only", "expected_bytes", "other_changes"],
+      "properties": {
+        "pre_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "post_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "pre_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "post_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "worktree_tree": {"const": "ceb8f052e9f801dd1a7093dc2e6c408bf998508c"},
+        "changed_paths": {"type": "array", "maxItems": 1, "uniqueItems": true, "items": {"const": "work-item.txt"}},
+        "owned_paths_only": {"type": "boolean"}, "expected_bytes": {"type": "boolean"}, "other_changes": {"type": "boolean"}
+      }
+    },
+    "verifier": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fresh_process", "read_only", "status", "record_sha256"],
+      "properties": {
+        "fresh_process": {"const": true}, "read_only": {"const": true},
+        "status": {"enum": ["pass", "fail", "UNKNOWN", "UNCHECKABLE"]},
+        "record_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "digests": {
+      "type": "object", "additionalProperties": false,
+      "required": ["envelope_sha256", "runtime_profile_sha256"],
+      "properties": {
+        "envelope_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "runtime_profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["raw_jsonl_retained", "raw_reasoning_retained", "raw_stderr_retained", "private_paths_retained"],
+      "properties": {
+        "raw_jsonl_retained": {"const": false}, "raw_reasoning_retained": {"const": false},
+        "raw_stderr_retained": {"const": false}, "private_paths_retained": {"const": false}
+      }
+    }
+  }
+}

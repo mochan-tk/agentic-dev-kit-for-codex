@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -19,9 +20,40 @@ from typing import Any, Iterable, Mapping
 ROOT_MANIFEST = ".github/governance/phase-task-ownership.v1.json"
 CONFORMANCE_MANIFEST = "tests/conformance/manifest.json"
 COVERAGE = "tests/conformance/coverage.json"
+CONFORMANCE_RESULTS = "tests/conformance/results.json"
+LEDGER_CONTRACT = ".github/governance/ledger-contracts.v1.json"
 CI_WORKFLOW = ".github/workflows/ci.yml"
 ACCEPTED_PHASE0_COMMIT = "32615344ad4f0310948bc59d234a84718741788a"
 ACCEPTED_PHASE0_TREE = "33259721ec9f378fa67392ef8e1c7645db1321f9"
+ACCEPTED_PHASE1_COMMIT = "36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2"
+ACCEPTED_PHASE1_TREE = "1c1f46ad20dd289a713663c84eaf1dbb62840deb"
+PHASE2_EPIC = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22"
+T11_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+T12_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
+T11_BRANCH = "codex/phase-2-minimal-execution-slice"
+HISTORICAL_PHASE1_CHECKER = ".github/scripts/check-phase1-acceptance.py"
+HISTORICAL_PHASE1_CHECKER_BLOB = "9e8cccbc824efbb11756ac72c5e1e5ec8726ef4d"
+HISTORICAL_PHASE1_CHECKER_SHA256 = (
+    "fd0bee66f857601b352cee62eb0f71f2a7f33b507bdb31c5f84e80cbfd64a9de"
+)
+FROZEN_PHASE1_WRAPPER = ".github/scripts/check-phase1-accepted-snapshot.py"
+FROZEN_PHASE1_WRAPPER_SHA256 = (
+    "fbbe99b079708db62aeb4674b30640433536c251d75751b4b7d7cee27e2cbc10"
+)
+FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
+RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
+RUNTIME_CONTRACT_CHECKER_SHA256 = (
+    "9e782f44ac240c5323effa03ffa85b3c62515074e969c6afdcabd6a5a90bd69f"
+)
+RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
+RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
+RUNTIME_ADAPTER_SHA256 = (
+    "ade066a4efda3d16d4a69e30e484510339a88cd7b087a03b5a8fd3309f7086de"
+)
+RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
+RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
+    "881ba721357305af66232949d4fd8ef49dcb0d641a094810511cc3b3d4bbe815"
+)
 TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 REVIEWED_INVARIANT_DIGEST = (
     "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6"
@@ -30,6 +62,9 @@ HIERARCHY_AGREEMENT_PATH = (
     "docs/agreements/adr/ADR-0005-issue-graph-authority.md"
 )
 REPOSITORY_COMPLETION_PATH = "docs/agreements/repository-completion.md"
+KNOWN_LIMITATIONS_PATH = "docs/known-limitations.md"
+RUNTIME_ADR_PATH = "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md"
+RUNTIME_AGREEMENT_PATH = "docs/agreements/runtime/minimal-codex-execution-loop.md"
 HIERARCHY_AGREEMENT_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
@@ -66,6 +101,11 @@ FORBIDDEN_LIVE_AUTHORITY_MARKERS = (
     "A GitHub Projects board is authoritative.",
     "Project Record -> Epic issue -> Task issue -> PR -> commits, checks, and evidence is canonical.",
     "Phase 1 completion completes the repository.",
+)
+FORBIDDEN_T11_LIVE_SUCCESS_MARKERS = (
+    "runtime-profile `match` was achieved",
+    "a successful real Codex worker",
+    "runtime receipt was applied",
 )
 EXPECTED_INVARIANT_IDS = [f"I{number:02d}" for number in range(1, 14)]
 ALLOWED_MODES = {"100644", "100755"}
@@ -123,6 +163,50 @@ DIRECT_COMMAND = re.compile(
 )
 GOVERNED_FILE = re.compile(r"^(?:check-|check_|test-|test_).+\.(?:py|sh)$")
 DISCOVERABLE_CONFORMANCE_TEST = re.compile(r"^test_[A-Za-z0-9_]+\.py$")
+EXPECTED_T11_PATHS = (
+    ".codex/agents/task_supervisor.toml",
+    ".codex/agents/task_verifier.toml",
+    ".codex/agents/task_worker.toml",
+    ".github/ISSUE_TEMPLATE/ai-task.yml",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/governance/codex-runtime-profile.v1.json",
+    ".github/governance/ledger-contracts.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-ledger-templates.py",
+    FROZEN_PHASE1_WRAPPER,
+    ".github/scripts/check-repository-policy.py",
+    ".github/scripts/check-runtime-contracts.py",
+    ".github/scripts/codex-exec-adapter.py",
+    ".github/scripts/post-runtime-receipt.py",
+    ".github/workflows/ci.yml",
+    "README.md",
+    "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
+    "docs/agreements/runtime/codex-final-response.v1.schema.json",
+    "docs/agreements/runtime/execution-result.v1.schema.json",
+    "docs/agreements/runtime/loop-event.v1.schema.json",
+    "docs/agreements/runtime/minimal-codex-execution-loop.md",
+    "docs/agreements/runtime/runtime-profile.v1.schema.json",
+    "docs/agreements/runtime/runtime-receipt.v1.schema.json",
+    "docs/agreements/runtime/task-execution-envelope.v1.schema.json",
+    "docs/known-limitations.md",
+    "tests/conformance/phase1-accepted-snapshot.v1.json",
+    "tests/conformance/test_ledger_templates.py",
+    "tests/conformance/test_phase1_acceptance.py",
+    "tests/conformance/test_phase1_accepted_snapshot.py",
+    "tests/conformance/test_repository_policy.py",
+    "tests/conformance/test_runtime_receipt.py",
+    "tests/conformance/test_runtime_vertical_slice.py",
+    "tests/runtime/fixtures/codex-final-response-valid.v1.json",
+    "tests/runtime/fixtures/codex-jsonl-interrupted.jsonl",
+    "tests/runtime/fixtures/codex-jsonl-valid.jsonl",
+    "tests/runtime/fixtures/envelope-valid.v1.json",
+    "tests/runtime/fixtures/execution-result-valid.v1.json",
+    "tests/runtime/fixtures/fake-codex.py",
+    "tests/runtime/fixtures/loop-events-valid.v1.jsonl",
+    "tests/runtime/fixtures/representative-task.v1.json",
+    "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+    "tests/runtime/fixtures/runtime-receipt-valid.v1.json",
+)
 
 
 def reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -402,6 +486,12 @@ def validate_registry_reachability(
             continue
         if GOVERNED_FILE.fullmatch(name) is None:
             continue
+        if relative == HISTORICAL_PHASE1_CHECKER:
+            # The exact accepted T10 checker is intentionally historical. Its
+            # bytes and sole reachability through the frozen snapshot wrapper
+            # are validated separately; registering it against live HEAD would
+            # reintroduce the Phase 1/T10 live-state lock.
+            continue
         is_conformance = (
             relative.startswith("tests/conformance/")
             and name.startswith("test_")
@@ -437,6 +527,8 @@ def validate_execution_root_surfaces(paths: set[str], errors: list[str]) -> None
         ".github/scripts/check-workflow-permissions.sh",
         ".github/scripts/conformance-catalog.py",
         ".github/scripts/install-ci-tools.py",
+        ".github/scripts/codex-exec-adapter.py",
+        ".github/scripts/post-runtime-receipt.py",
         ".github/scripts/tests/lib.sh",
     }
     scripts_root = PurePosixPath(".github/scripts")
@@ -497,14 +589,14 @@ def validate_manifest(
         "ownership phase",
         errors,
     )
-    if phase.get("id") != "phase-1":
-        errors.append("ownership phase.id must be phase-1")
-    if phase.get("epic") != "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2":
-        errors.append("ownership phase.epic must reference Epic issue 2")
-    if phase.get("base_commit") != ACCEPTED_PHASE0_COMMIT:
-        errors.append("ownership phase base_commit is stale or unsupported")
-    if phase.get("base_tree") != ACCEPTED_PHASE0_TREE:
-        errors.append("ownership phase base_tree is stale or unsupported")
+    if phase.get("id") != "phase-2":
+        errors.append("ownership phase.id must be phase-2")
+    if phase.get("epic") != PHASE2_EPIC:
+        errors.append("ownership phase.epic must reference Epic issue 22")
+    if phase.get("base_commit") != ACCEPTED_PHASE1_COMMIT:
+        errors.append("ownership phase base_commit must be the accepted Phase 1 merge")
+    if phase.get("base_tree") != ACCEPTED_PHASE1_TREE:
+        errors.append("ownership phase base_tree must be the accepted Phase 1 tree")
     if phase.get("release_blocked") is not True:
         errors.append("ownership phase release_blocked must remain true")
 
@@ -772,12 +864,65 @@ def validate_manifest(
         errors.append(f"duplicate ownership task ID(s): {', '.join(duplicates)}")
     if len(active_branches) != len(set(active_branches)):
         errors.append("active ownership tasks must not share a branch")
-    if not any(isinstance(task, dict) and task.get("state") == "active" for task in tasks):
-        errors.append("ownership manifest must contain at least one active task")
+    active_tasks = [
+        task
+        for task in tasks
+        if isinstance(task, dict) and task.get("state") == "active"
+    ]
+    if len(active_tasks) != 1:
+        errors.append("ownership manifest must contain exactly one active Task")
     if ROOT_MANIFEST not in ownership:
         errors.append("ownership manifest must own its own path")
     validate_path_collisions(manifest_paths, "ownership manifest", errors)
     return modes, policy
+
+
+def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None:
+    """Pin the live Phase 2 work order without weakening generic schema tests."""
+
+    tasks_value = payload.get("tasks")
+    tasks = tasks_value if isinstance(tasks_value, list) else []
+    task_by_id = {
+        task.get("id"): task
+        for task in tasks
+        if isinstance(task, dict) and isinstance(task.get("id"), str)
+    }
+    t10 = task_by_id.get("T10")
+    if not isinstance(t10, dict) or t10.get("state") != "accepted":
+        errors.append("ownership T10 must remain accepted in Phase 2")
+    t11 = task_by_id.get("T11")
+    if not isinstance(t11, dict):
+        errors.append("ownership manifest is missing T11")
+        return
+    if t11.get("state") != "active":
+        errors.append("ownership T11 must be the active Task")
+    if t11.get("record") != T11_RECORD:
+        errors.append("ownership T11 must reference Issue 23")
+    if t11.get("branch") != T11_BRANCH:
+        errors.append("ownership T11 branch drifted")
+    if t11.get("base_commit") != ACCEPTED_PHASE1_COMMIT:
+        errors.append("ownership T11 base_commit drifted")
+    if t11.get("base_tree") != ACCEPTED_PHASE1_TREE:
+        errors.append("ownership T11 base_tree drifted")
+    if t11.get("path_transitions") != []:
+        errors.append("ownership T11 path_transitions must remain empty")
+    entries = t11.get("owned_paths")
+    actual_paths = (
+        tuple(
+            entry.get("path")
+            for entry in entries
+            if isinstance(entry, dict)
+        )
+        if isinstance(entries, list)
+        else ()
+    )
+    if actual_paths != EXPECTED_T11_PATHS:
+        errors.append("ownership T11 must declare exactly the reviewed 42 paths")
+    if not isinstance(entries, list) or any(
+        not isinstance(entry, dict) or entry.get("mode") != "100644"
+        for entry in entries
+    ):
+        errors.append("ownership T11 paths must all use mode 100644")
 
 
 def validate_git_anchor(
@@ -1077,6 +1222,669 @@ def current_regular_bytes(root: Path, relative: str) -> bytes | None:
         return (root / relative).read_bytes()
     except OSError:
         return None
+
+
+def git_blob_object_id(payload: bytes) -> str:
+    header = f"blob {len(payload)}\0".encode("ascii")
+    return hashlib.sha1(header + payload).hexdigest()
+
+
+def validate_historical_phase1_checker_boundary(
+    root: Path,
+    payload: dict[str, Any],
+    policy: dict[str, Any],
+    errors: list[str],
+) -> None:
+    """Allow exactly one historical checker omission behind its frozen wrapper."""
+
+    tasks = payload.get("tasks")
+    usable_tasks = (
+        [task for task in tasks if isinstance(task, dict)]
+        if isinstance(tasks, list)
+        else []
+    )
+    t10 = next((task for task in usable_tasks if task.get("id") == "T10"), None)
+    t11 = next((task for task in usable_tasks if task.get("id") == "T11"), None)
+    if t10 is None or t10.get("state") != "accepted":
+        errors.append("historical Phase 1 checker exception requires accepted T10")
+    if t11 is None or t11.get("state") != "active":
+        errors.append("historical Phase 1 checker exception requires active T11")
+
+    def owns(task: dict[str, Any] | None, relative: str) -> bool:
+        entries = task.get("owned_paths") if isinstance(task, dict) else None
+        return isinstance(entries, list) and any(
+            isinstance(entry, dict)
+            and entry.get("path") == relative
+            and entry.get("mode") == "100644"
+            for entry in entries
+        )
+
+    if not owns(t10, HISTORICAL_PHASE1_CHECKER):
+        errors.append("accepted T10 must retain the historical Phase 1 checker")
+    if not owns(t11, FROZEN_PHASE1_WRAPPER):
+        errors.append("active T11 must own the frozen Phase 1 wrapper")
+
+    commands = policy.get("required_quality_commands")
+    if not isinstance(commands, list):
+        return
+    historical_command = f"python3 -I {HISTORICAL_PHASE1_CHECKER}"
+    if historical_command in commands:
+        errors.append("historical Phase 1 checker must not run against live HEAD")
+    if commands.count(FROZEN_PHASE1_COMMAND) != 1:
+        errors.append("frozen Phase 1 wrapper must be registered exactly once")
+    if commands.count(RUNTIME_CONTRACT_COMMAND) != 1:
+        errors.append("runtime contract checker must be registered exactly once")
+
+    historical_bytes = current_regular_bytes(root, HISTORICAL_PHASE1_CHECKER)
+    if historical_bytes is None:
+        errors.append("historical Phase 1 checker is missing or unsafe")
+    else:
+        if hashlib.sha256(historical_bytes).hexdigest() != HISTORICAL_PHASE1_CHECKER_SHA256:
+            errors.append("historical Phase 1 checker digest drifted")
+        if git_blob_object_id(historical_bytes) != HISTORICAL_PHASE1_CHECKER_BLOB:
+            errors.append("historical Phase 1 checker blob drifted")
+
+    wrapper_bytes = current_regular_bytes(root, FROZEN_PHASE1_WRAPPER)
+    if wrapper_bytes is None:
+        errors.append("frozen Phase 1 wrapper is missing or unsafe")
+        return
+    if hashlib.sha256(wrapper_bytes).hexdigest() != FROZEN_PHASE1_WRAPPER_SHA256:
+        errors.append("frozen Phase 1 wrapper digest drifted")
+    try:
+        wrapper = wrapper_bytes.decode("utf-8", errors="strict")
+    except UnicodeError:
+        errors.append("frozen Phase 1 wrapper is not UTF-8")
+        return
+    for marker in (
+        ACCEPTED_PHASE1_COMMIT,
+        ACCEPTED_PHASE1_TREE,
+        HISTORICAL_PHASE1_CHECKER,
+        HISTORICAL_PHASE1_CHECKER_BLOB,
+        HISTORICAL_PHASE1_CHECKER_SHA256,
+    ):
+        if marker not in wrapper:
+            errors.append(
+                "frozen Phase 1 wrapper is not tied to the exact accepted checker evidence"
+            )
+            break
+
+
+def ast_qualified_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        prefix = ast_qualified_name(node.value)
+        return f"{prefix}.{node.attr}" if prefix else node.attr
+    return ""
+
+
+def parse_governed_python(
+    root: Path, relative: str, label: str, errors: list[str]
+) -> tuple[bytes, ast.Module] | None:
+    payload = current_regular_bytes(root, relative)
+    if payload is None:
+        errors.append(f"{label} is missing or unsafe")
+        return None
+    try:
+        text = payload.decode("utf-8", errors="strict")
+        tree = ast.parse(text, filename=relative)
+    except (UnicodeError, SyntaxError, ValueError):
+        errors.append(f"{label} is not valid bounded UTF-8 Python")
+        return None
+    return payload, tree
+
+
+def validate_python_imports(
+    tree: ast.Module,
+    *,
+    direct: set[str],
+    from_imports: dict[str, set[str]],
+    label: str,
+    errors: list[str],
+) -> None:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name not in direct or alias.asname is not None:
+                    errors.append(f"{label} has an unreviewed import: {alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            allowed = from_imports.get(module, set())
+            if (
+                node.level != 0
+                or not allowed
+                or any(alias.name not in allowed or alias.asname is not None for alias in node.names)
+            ):
+                rendered = module or "<relative>"
+                errors.append(f"{label} has an unreviewed from-import: {rendered}")
+
+
+def dangerous_runtime_call(name: str) -> bool:
+    if not name:
+        return True
+    if name in {"__import__", "eval", "exec", "compile"}:
+        return True
+    if name.startswith(
+        (
+            "subprocess.",
+            "socket.",
+            "urllib.",
+            "http.",
+            "ftplib.",
+            "smtplib.",
+            "webbrowser.",
+            "asyncio.create_subprocess",
+        )
+    ):
+        return True
+    if name.startswith("importlib.") and name not in {
+        "importlib.util.spec_from_file_location",
+        "importlib.util.module_from_spec",
+    }:
+        return True
+    if name.startswith("os."):
+        operation = name.removeprefix("os.").split(".", 1)[0]
+        if operation in {"system", "popen", "fork"} or operation.startswith(
+            ("exec", "spawn", "posix_spawn")
+        ):
+            return True
+    return False
+
+
+def canonical_main_guard(node: ast.AST) -> bool:
+    if not isinstance(node, ast.If) or node.orelse or len(node.body) != 1:
+        return False
+    test = node.test
+    if not (
+        isinstance(test, ast.Compare)
+        and isinstance(test.left, ast.Name)
+        and test.left.id == "__name__"
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], ast.Eq)
+        and len(test.comparators) == 1
+        and isinstance(test.comparators[0], ast.Constant)
+        and test.comparators[0].value == "__main__"
+    ):
+        return False
+    statement = node.body[0]
+    if not isinstance(statement, ast.Raise) or not isinstance(statement.exc, ast.Call):
+        return False
+    outer = statement.exc
+    return (
+        ast_qualified_name(outer.func) == "SystemExit"
+        and not outer.keywords
+        and len(outer.args) == 1
+        and isinstance(outer.args[0], ast.Call)
+        and ast_qualified_name(outer.args[0].func) == "main"
+        and not outer.args[0].args
+        and not outer.args[0].keywords
+    )
+
+
+def definition_has_eager_call(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    eager_nodes: list[ast.AST] = [
+        *node.decorator_list,
+        *node.args.defaults,
+        *(value for value in node.args.kw_defaults if value is not None),
+    ]
+    if node.returns is not None:
+        eager_nodes.append(node.returns)
+    eager_nodes.extend(
+        argument.annotation
+        for argument in [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+        if argument.annotation is not None
+    )
+    if node.args.vararg is not None and node.args.vararg.annotation is not None:
+        eager_nodes.append(node.args.vararg.annotation)
+    if node.args.kwarg is not None and node.args.kwarg.annotation is not None:
+        eager_nodes.append(node.args.kwarg.annotation)
+    return any(
+        isinstance(candidate, ast.Call)
+        for eager in eager_nodes
+        for candidate in ast.walk(eager)
+    )
+
+
+def validate_import_time_structure(
+    tree: ast.Module, label: str, errors: list[str]
+) -> None:
+    """Reject import-time behavior in adapter/actuator modules."""
+
+    def validate_ctypes_structure(node: ast.ClassDef) -> bool:
+        """Allow only the reviewed fixed Darwin kernel-identity record."""
+
+        if (
+            node.name != "_DarwinProcBSDInfo"
+            or node.decorator_list
+            or node.keywords
+            or len(node.bases) != 1
+            or ast_qualified_name(node.bases[0]) != "ctypes.Structure"
+            or len(node.body) != 1
+            or not isinstance(node.body[0], ast.Assign)
+            or len(node.body[0].targets) != 1
+            or not isinstance(node.body[0].targets[0], ast.Name)
+            or node.body[0].targets[0].id != "_fields_"
+            or not isinstance(node.body[0].value, ast.List)
+        ):
+            return False
+        allowed_scalars = {
+            "ctypes.c_char",
+            "ctypes.c_int32",
+            "ctypes.c_uint32",
+            "ctypes.c_uint64",
+        }
+        names: list[str] = []
+        for field in node.body[0].value.elts:
+            if (
+                not isinstance(field, ast.Tuple)
+                or len(field.elts) != 2
+                or not isinstance(field.elts[0], ast.Constant)
+                or not isinstance(field.elts[0].value, str)
+            ):
+                return False
+            names.append(field.elts[0].value)
+            field_type = field.elts[1]
+            if ast_qualified_name(field_type) in allowed_scalars:
+                continue
+            if not (
+                isinstance(field_type, ast.BinOp)
+                and isinstance(field_type.op, ast.Mult)
+                and ast_qualified_name(field_type.left) == "ctypes.c_char"
+                and isinstance(field_type.right, ast.Constant)
+                and type(field_type.right.value) is int
+                and field_type.right.value in {16, 32}
+            ):
+                return False
+        return bool(names) and len(names) == len(set(names))
+
+    def validate_class(node: ast.ClassDef) -> bool:
+        if validate_ctypes_structure(node):
+            return True
+        if (
+            node.decorator_list
+            or node.keywords
+            or any(
+                not isinstance(base, ast.Name)
+                or base.id not in {"Exception", "NamedTuple"}
+                for base in node.bases
+            )
+        ):
+            return False
+        for statement in node.body:
+            if isinstance(statement, ast.Expr) and isinstance(
+                statement.value, ast.Constant
+            ) and isinstance(statement.value.value, str):
+                continue
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if definition_has_eager_call(statement):
+                    return False
+                continue
+            if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.Pass)):
+                if any(isinstance(item, ast.Call) for item in ast.walk(statement)):
+                    return False
+                continue
+            return False
+        return True
+
+    for index, statement in enumerate(tree.body):
+        if (
+            index == 0
+            and isinstance(statement, ast.Expr)
+            and isinstance(statement.value, ast.Constant)
+            and isinstance(statement.value.value, str)
+        ):
+            continue
+        if isinstance(statement, (ast.Import, ast.ImportFrom)):
+            continue
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if definition_has_eager_call(statement):
+                errors.append(f"{label} contains import-time function metadata execution")
+            continue
+        if isinstance(statement, ast.ClassDef):
+            if not validate_class(statement):
+                errors.append(f"{label} contains import-time class execution")
+            continue
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            calls = [item for item in ast.walk(statement) if isinstance(item, ast.Call)]
+            if any(ast_qualified_name(call.func) != "re.compile" for call in calls):
+                errors.append(f"{label} contains unreviewed import-time assignment execution")
+            continue
+        if canonical_main_guard(statement):
+            continue
+        errors.append(f"{label} contains unreviewed import-time executable syntax")
+
+
+def validate_adapter_native_structure(
+    tree: ast.Module, label: str, errors: list[str]
+) -> None:
+    """Pin native library loads used by capability probes to reviewed constants."""
+
+    observed: list[str | None] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or ast_qualified_name(node.func) != "ctypes.CDLL":
+            continue
+        if (
+            len(node.args) != 1
+            or not isinstance(node.args[0], ast.Constant)
+            or len(node.keywords) != 1
+            or node.keywords[0].arg != "use_errno"
+            or not isinstance(node.keywords[0].value, ast.Constant)
+            or node.keywords[0].value.value is not True
+        ):
+            errors.append(f"{label} contains an unreviewed native library load")
+            continue
+        value = node.args[0].value
+        if value is not None and not isinstance(value, str):
+            errors.append(f"{label} contains an unreviewed native library load")
+            continue
+        observed.append(value)
+    expected: list[str | None] = [
+        None,
+        "/usr/lib/libSystem.B.dylib",
+        "/usr/lib/libproc.dylib",
+        "/usr/lib/libproc.dylib",
+    ]
+    if sorted(observed, key=lambda value: "" if value is None else value) != sorted(
+        expected, key=lambda value: "" if value is None else value
+    ):
+        errors.append(f"{label} native capability-probe libraries drifted")
+
+
+def validate_reachable_module_calls(
+    tree: ast.Module,
+    entrypoints: set[str],
+    forbidden_local_calls: set[str],
+    label: str,
+    errors: list[str],
+) -> None:
+    functions = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    pending = list(entrypoints)
+    observed: set[str] = set()
+    while pending:
+        function_name = pending.pop()
+        if function_name in observed:
+            continue
+        function = functions.get(function_name)
+        if function is None:
+            errors.append(f"{label} is missing reviewed offline entrypoint {function_name}")
+            continue
+        observed.add(function_name)
+        for node in ast.walk(function):
+            if isinstance(node, ast.Attribute):
+                qualified = ast_qualified_name(node)
+                if dangerous_runtime_call(qualified):
+                    errors.append(f"{label} reachable code references actuator {qualified}")
+            if not isinstance(node, ast.Call):
+                continue
+            qualified = ast_qualified_name(node.func)
+            if dangerous_runtime_call(qualified) or qualified in forbidden_local_calls:
+                errors.append(f"{label} reachable code invokes actuator {qualified or '<dynamic>'}")
+            if qualified in functions:
+                pending.append(qualified)
+
+
+def validate_offline_runtime_checker_boundary(
+    root: Path, errors: list[str]
+) -> None:
+    """Prove that required CI reaches validation only, never a live actuator."""
+
+    parsed = parse_governed_python(
+        root, RUNTIME_CONTRACT_CHECKER, "offline runtime checker", errors
+    )
+    if parsed is None:
+        return
+    checker_bytes, checker_tree = parsed
+    if hashlib.sha256(checker_bytes).hexdigest() != RUNTIME_CONTRACT_CHECKER_SHA256:
+        errors.append("offline runtime checker digest drifted")
+    validate_python_imports(
+        checker_tree,
+        direct={
+            "ast",
+            "datetime",
+            "hashlib",
+            "importlib.util",
+            "json",
+            "math",
+            "os",
+            "re",
+            "stat",
+            "sys",
+        },
+        from_imports={
+            "__future__": {"annotations"},
+            "pathlib": {"Path"},
+            "typing": {"Any", "Dict", "Iterable", "List", "Mapping", "Tuple"},
+        },
+        label="offline runtime checker",
+        errors=errors,
+    )
+    allowed_runtime_attributes = {
+        "adapter.APPROVED_NETWORK_DENIAL_ERRNOS",
+        "adapter.APPROVED_APPARMOR_PACKAGE_VERSION",
+        "adapter.APPROVED_BWRAP_BINARY_SHA256",
+        "adapter.APPROVED_BWRAP_PACKAGE_VERSION",
+        "adapter.APPROVED_BWRAP_PROFILE_SHA256",
+        "adapter.APPROVED_BWRAP_VERSION_OUTPUT",
+        "adapter.APPROVED_GIT_BINARY_SHA256",
+        "adapter.APPROVED_GIT_PACKAGE_VERSION",
+        "adapter.APPROVED_GIT_VERSION_OUTPUT",
+        "adapter.ProcessResult",
+        "adapter.NETWORK_SANDBOX_REASON_CODES",
+        "adapter.REQUIRED_OVERRIDES",
+        "adapter.SHELL_ENVIRONMENT_REASON_CODES",
+        "adapter.REQUIRED_OVERRIDES.items",
+        "adapter.STAGE_A1_BWRAP_SMOKE_ARGV",
+        "adapter.STAGE_A1_CONTROLLER_ARGV",
+        "adapter.STAGE_A1_CONTROLLER_ARGV_SHA256",
+        "adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV",
+        "adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256",
+        "adapter.build_live_argv",
+        "adapter.doctor_diagnostic_health",
+        "adapter.expected_git_bootstrap_evidence",
+        "adapter.not_run_git_bootstrap_evidence",
+        "adapter.parse_jsonl",
+        "adapter.runtime_configuration_intent",
+        "adapter.stage_a1_git_clone_contract",
+        "adapter.stage_a1_git_clone_contract_sha256",
+        "adapter.toml_literal",
+        "adapter.validate_runtime_argv_policy",
+        "adapter.validate_envelope",
+        "adapter.validate_execution_result",
+        "adapter.validate_final_response",
+        "adapter.validate_runtime_profile",
+        "adapter.validate_verifier_record",
+    }
+    for node in ast.walk(checker_tree):
+        if isinstance(node, ast.Attribute):
+            qualified = ast_qualified_name(node)
+            if qualified.startswith(("adapter.", "receipt.")) and qualified not in allowed_runtime_attributes:
+                errors.append(
+                    f"offline runtime checker references unreviewed runtime callable {qualified}"
+                )
+        if not isinstance(node, ast.Call):
+            continue
+        qualified = ast_qualified_name(node.func)
+        if dangerous_runtime_call(qualified):
+            errors.append(
+                f"offline runtime checker invokes a process, network, or dynamic actuator: "
+                f"{qualified or '<dynamic>'}"
+            )
+    import_calls = []
+    for node in ast.walk(checker_tree):
+        if not isinstance(node, ast.Call) or ast_qualified_name(node.func) != "import_script":
+            continue
+        if (
+            len(node.args) == 4
+            and isinstance(node.args[1], ast.Constant)
+            and isinstance(node.args[1].value, str)
+            and isinstance(node.args[2], ast.Constant)
+            and isinstance(node.args[2].value, str)
+        ):
+            import_calls.append((node.args[1].value, node.args[2].value))
+        else:
+            import_calls.append(("<dynamic>", "<dynamic>"))
+    if sorted(import_calls) != sorted(
+        [
+            (RUNTIME_ADAPTER, "t11_runtime_adapter"),
+        ]
+    ):
+        errors.append("offline runtime checker dynamic imports drifted")
+
+    imported_specs = (
+        (
+            RUNTIME_ADAPTER,
+            RUNTIME_ADAPTER_SHA256,
+            {
+                "validate_envelope",
+                "validate_execution_result",
+                "validate_runtime_profile",
+                "validate_verifier_record",
+                "validate_final_response",
+                "parse_jsonl",
+                "build_live_argv",
+                "doctor_diagnostic_health",
+                "runtime_configuration_intent",
+                "toml_literal",
+                "validate_runtime_argv_policy",
+            },
+            {
+                "descriptor_xattr_inventory",
+                "execution_root_inventory",
+                "execute_slice",
+                "_ensure_private_child",
+                "_open_absolute_directory_nofollow",
+                "_read_identity_value",
+                "_darwin_process_info",
+                "_darwin_process_table_snapshot",
+                "_linux_process_table_snapshot",
+                "_xattr_name_blob",
+                "_xattr_value",
+                "auth_class",
+                "bounded_capture",
+                "cli_profile",
+                "run_bounded_process",
+                "run_git",
+                "run_fresh_verifier",
+                "observe_colima_provider_evidence",
+                "observe_runtime_profile",
+                "prepare_colima_runtime_layout",
+                "process_table_snapshot",
+                "probe_config_and_shell_environment",
+                "probe_runtime_configuration",
+                "probe_runtime_evidence",
+                "materialize_reviewed_rules_profile",
+                "network_sandbox_behavior_probe",
+                "runtime_configuration_argv",
+                "shell_environment_probe",
+                "validate_execution_root_transition",
+                "cli_run",
+                "cli_verify",
+                "main",
+            },
+        ),
+    )
+    adapter_direct_imports = {
+        "argparse",
+        "contextlib",
+        "ctypes",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "os",
+        "re",
+        "signal",
+        "socket",
+        "stat",
+        "subprocess",
+        "sys",
+        "tempfile",
+        "threading",
+        "time",
+        "unicodedata",
+    }
+    adapter_from_imports = {
+        "__future__": {"annotations"},
+        "pathlib": {"Path"},
+        "typing": {
+            "Any",
+            "Dict",
+            "Iterable",
+            "List",
+            "Mapping",
+            "NamedTuple",
+            "Optional",
+            "Sequence",
+            "Tuple",
+        },
+    }
+    for relative, expected_digest, entrypoints, forbidden in imported_specs:
+        module = parse_governed_python(root, relative, relative, errors)
+        if module is None:
+            continue
+        payload, tree = module
+        if hashlib.sha256(payload).hexdigest() != expected_digest:
+            errors.append(f"{relative} runtime import digest drifted")
+        validate_python_imports(
+            tree,
+            direct=adapter_direct_imports,
+            from_imports=adapter_from_imports,
+            label=relative,
+            errors=errors,
+        )
+        validate_import_time_structure(tree, relative, errors)
+        validate_adapter_native_structure(tree, relative, errors)
+        validate_reachable_module_calls(tree, entrypoints, forbidden, relative, errors)
+
+    # The receipt tool is an explicit actuator. Required CI may parse and hash
+    # its source, but it must never import the module or make any of its
+    # validation helpers (which intentionally load the adapter) reachable.
+    receipt_module = parse_governed_python(
+        root,
+        RUNTIME_RECEIPT_ACTUATOR,
+        RUNTIME_RECEIPT_ACTUATOR,
+        errors,
+    )
+    if receipt_module is not None:
+        receipt_payload, receipt_tree = receipt_module
+        if hashlib.sha256(receipt_payload).hexdigest() != RUNTIME_RECEIPT_ACTUATOR_SHA256:
+            errors.append(f"{RUNTIME_RECEIPT_ACTUATOR} runtime import digest drifted")
+        validate_python_imports(
+            receipt_tree,
+            direct={
+                "argparse",
+                "datetime",
+                "hashlib",
+                "importlib.util",
+                "json",
+                "math",
+                "os",
+                "re",
+                "stat",
+                "subprocess",
+                "sys",
+            },
+            from_imports={
+                "__future__": {"annotations"},
+                "pathlib": {"Path"},
+                "typing": {
+                    "Any",
+                    "Dict",
+                    "List",
+                    "Mapping",
+                    "Optional",
+                    "Sequence",
+                    "Tuple",
+                },
+            },
+            label=RUNTIME_RECEIPT_ACTUATOR,
+            errors=errors,
+        )
+        validate_import_time_structure(receipt_tree, RUNTIME_RECEIPT_ACTUATOR, errors)
 
 
 def validate_accepted_transition_evidence(
@@ -1570,6 +2378,145 @@ def validate_required_markers(
         errors.append(diagnostic)
 
 
+def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
+    """Keep the offline T11 frontier bound to canonical non-release state."""
+
+    contract = read_json(root / LEDGER_CONTRACT, errors, "ledger contract")
+    frontier = contract.get("runtime_frontier")
+    if not isinstance(frontier, dict):
+        errors.append("ledger runtime_frontier must be an object")
+        frontier = {}
+    exact_keys(
+        frontier,
+        {
+            "agreement",
+            "acceptance_mapping",
+            "status",
+            "deferred_task",
+            "stage_a2",
+            "canonical_release_boundary",
+        },
+        "ledger runtime_frontier",
+        errors,
+    )
+    expected_mapping = {
+        "AC-01-through-AC-12": "applicable-offline-static-boundary",
+        "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+        "AC-14": "unchanged",
+        "AC-15": "owner-merge-gate-offline-harness",
+    }
+    if frontier.get("acceptance_mapping") != expected_mapping:
+        errors.append("T11 agreement-v2 acceptance mapping drifted")
+    expected_status = {
+        "runtime_harness": "minimal-offline-implemented",
+        "live_codex_execution": "deferred-to-T12",
+        "sandbox_compatibility": "unresolved-non-success",
+        "runtime_receipt_apply": "deferred-to-T12",
+        "phase_2": "incomplete",
+        "repository": "incomplete",
+        "release_blocked": True,
+    }
+    if frontier.get("status") != expected_status:
+        errors.append("T11 agreement-v2 runtime status drifted or overclaims live evidence")
+    expected_deferred = {
+        "id": "T12",
+        "issue": T12_RECORD,
+        "state": "open-planning-only-inactive",
+        "blocked_by": [T11_RECORD, "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"],
+    }
+    if frontier.get("deferred_task") != expected_deferred:
+        errors.append("T11 agreement-v2 must retain the exact planning-only T12 URL")
+
+    stage_a2 = frontier.get("stage_a2")
+    expected_stage_a2 = {
+        "classification": "bounded-non-success",
+        "aggregate_status": "UNCHECKABLE",
+        "provider_isolation_status": "pass",
+        "mount_boundary_status": "pass",
+        "process_cleanup_status": "pass",
+        "config_status": "pass",
+        "shell_environment_status": "fail",
+        "shell_environment_reason_code": "process-nonzero",
+        "codex_sandbox_network_status": "UNCHECKABLE",
+        "codex_sandbox_network_reason_code": "process-nonzero",
+        "auth_status": "unavailable",
+        "device_auth_performed": False,
+        "model_invoked": False,
+        "real_codex_worker_success_count": 0,
+        "runtime_receipt_dry_run_count": 0,
+        "runtime_receipt_apply_count": 0,
+        "evidence_issue_url": (
+            T11_RECORD + "#issuecomment-5472529555"
+        ),
+        "evidence_pull_request_url": (
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
+            "#issuecomment-5472529704"
+        ),
+        "evidence_body_sha256": (
+            "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
+        ),
+    }
+    if stage_a2 != expected_stage_a2:
+        errors.append("Stage A.2 must remain exact bounded non-success evidence")
+
+    expected_release = {
+        "scenario_count": 136,
+        "scenario_state": "not-run",
+        "release_result_count": 0,
+        "release_results": [],
+        "release_blocked": True,
+    }
+    if frontier.get("canonical_release_boundary") != expected_release:
+        errors.append("T11 runtime frontier release boundary drifted")
+
+    coverage = read_json(root / COVERAGE, errors, "conformance coverage")
+    entries = coverage.get("entries")
+    identifiers = (
+        [entry.get("scenario") for entry in entries if isinstance(entry, dict)]
+        if isinstance(entries, list)
+        else []
+    )
+    if (
+        coverage.get("scenario_count") != 136
+        or not isinstance(entries, list)
+        or len(entries) != 136
+        or len(identifiers) != 136
+        or any(not isinstance(identifier, str) for identifier in identifiers)
+        or len(
+            {
+                identifier
+                for identifier in identifiers
+                if isinstance(identifier, str)
+            }
+        )
+        != 136
+        or any(entry.get("verification_state") != "not-run" for entry in entries)
+    ):
+        errors.append("T11 deferral requires all 136 canonical scenarios to remain not-run")
+
+    manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
+    catalog = manifest.get("scenario_catalog")
+    result_store = catalog.get("result_store") if isinstance(catalog, dict) else None
+    if (
+        not isinstance(catalog, dict)
+        or catalog.get("total") != 136
+        or catalog.get("verification_state") != "not-run"
+        or not isinstance(result_store, dict)
+        or result_store.get("result_count") != 0
+        or manifest.get("results") != []
+        or manifest.get("release_blocked") is not True
+    ):
+        errors.append("T11 deferral requires the manifest release sentinel to remain blocked")
+
+    results = read_json(root / CONFORMANCE_RESULTS, errors, "conformance results")
+    if (
+        results.get("result_count") != 0
+        or results.get("results") != []
+        or results.get("release_blocked") is not True
+    ):
+        errors.append("T11 deferral requires empty release-level results")
+
+
 def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
     manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
 
@@ -1723,8 +2670,29 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         "repository completion definition",
         errors,
     )
+    limitations = policy_text(
+        root,
+        KNOWN_LIMITATIONS_PATH,
+        "known limitations",
+        errors,
+    )
+    runtime_adr = policy_text(
+        root,
+        RUNTIME_ADR_PATH,
+        "T11 runtime ADR",
+        errors,
+    )
+    runtime_agreement = policy_text(
+        root,
+        RUNTIME_AGREEMENT_PATH,
+        "T11 runtime agreement",
+        errors,
+    )
     agents_markers = " ".join(agents.split()) if agents is not None else None
     readme_markers = " ".join(readme.split()) if readme is not None else None
+    limitation_markers = (
+        " ".join(limitations.split()) if limitations is not None else None
+    )
 
     option_b_markers = (CANONICAL_HIERARCHY, PROJECTS_PROJECTION)
     validate_required_markers(
@@ -1740,6 +2708,27 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         errors,
     )
     validate_required_markers(
+        limitation_markers,
+        (
+            "deterministic offline harness",
+            "runtime_harness = minimal-offline-implemented",
+            "live_codex_execution = deferred-to-T12",
+            "sandbox_compatibility = unresolved-non-success",
+            "runtime_receipt_apply = deferred-to-T12",
+            "Issue #25",
+            "Stage A.2",
+            "bounded non-success",
+            "codex-cli 0.150.0-alpha.8",
+            "unsupported-client",
+            "required CI cannot run real Codex",
+            "does not claim a completed live representative Task",
+            "release-level conformance result set is empty",
+            "`release_blocked` remains `true`",
+        ),
+        "Phase 2 bounded runtime limitations are missing from docs/known-limitations.md",
+        errors,
+    )
+    validate_required_markers(
         readme_markers,
         option_b_markers
         + (
@@ -1752,13 +2741,55 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
             "Issue #12",
             "Epic #2",
             "post-merge receipt",
+            "Issue #23",
+            "deterministic offline execution harness",
+            "runtime_harness = minimal-offline-implemented",
+            "live_codex_execution = deferred-to-T12",
+            "sandbox_compatibility = unresolved-non-success",
+            "runtime_receipt_apply = deferred-to-T12",
+            "Issue #25",
+            "Stage A.1 and Stage A.2 remain bounded non-success evidence",
+            "alpha snapshot remains `unsupported-client`",
+            "unsupported-client",
+            "No successful real Codex worker or applied runtime receipt",
             "not installable",
             "not a parity release",
             "`release_blocked` remains `true`",
         ),
-        "Option B hierarchy or current-status markers are missing from README.md",
+        "Option B hierarchy or Phase 2 current-status markers are missing from README.md",
         errors,
     )
+    runtime_status_markers = (
+        "runtime_harness",
+        "minimal-offline-implemented",
+        "live_codex_execution",
+        "deferred-to-T12",
+        "sandbox_compatibility",
+        "unresolved-non-success",
+        "runtime_receipt_apply",
+        T12_RECORD,
+        "Stage A.2",
+        "Phase 2",
+        "incomplete",
+        "release_blocked",
+        "true",
+    )
+    for label, text in (
+        ("README.md", readme),
+        (KNOWN_LIMITATIONS_PATH, limitations),
+        (RUNTIME_ADR_PATH, runtime_adr),
+        (RUNTIME_AGREEMENT_PATH, runtime_agreement),
+    ):
+        validate_required_markers(
+            text,
+            runtime_status_markers,
+            f"T11 agreement-v2 status markers are missing from {label}",
+            errors,
+        )
+        if text is not None and any(
+            marker in text for marker in FORBIDDEN_T11_LIVE_SUCCESS_MARKERS
+        ):
+            errors.append(f"{label} contains a forbidden T11 live-success claim")
     validate_required_markers(
         agents_markers,
         (
@@ -2115,6 +3146,19 @@ def validate_workflows(root: Path, policy: dict[str, Any], errors: list[str]) ->
         return
     if "Run Phase 0 conformance tests" in text:
         errors.append("ci workflow contains stale Phase 0 conformance step label")
+    forbidden_runtime_ci_markers = (
+        ".github/scripts/codex-exec-adapter.py",
+        ".github/scripts/post-runtime-receipt.py",
+        "run-live",
+        "--apply",
+        "codex exec",
+    )
+    for marker in forbidden_runtime_ci_markers:
+        if marker in text:
+            errors.append(
+                "required CI must not invoke real Codex, live adapter mode, or "
+                f"the receipt actuator: {marker}"
+            )
     if not text.startswith(CI_PREAMBLE):
         errors.append(
             "ci trigger/preamble must enable pull_request and push to main with empty permissions"
@@ -2170,6 +3214,7 @@ def validate_repository(
     errors: list[str] = []
     payload = read_json(root / ROOT_MANIFEST, errors, "ownership manifest")
     expected_modes, policy = validate_manifest(payload, errors)
+    validate_phase2_frontier(payload, errors)
 
     index_entries = git_index_entries(root) if verify_git else None
     tree_entries = git_tree_entries(root) if verify_git else None
@@ -2226,8 +3271,11 @@ def validate_repository(
             root, payload, os.environ if environment is None else environment, errors
         )
     validate_invariants(root, policy, errors)
+    validate_t11_agreement_v2(root, errors)
     validate_hierarchy_and_completion(root, errors)
     validate_workflows(root, policy, errors)
+    validate_historical_phase1_checker_boundary(root, payload, policy, errors)
+    validate_offline_runtime_checker_boundary(root, errors)
     validate_execution_root_surfaces(paths, errors)
     validate_registry_reachability(paths, policy, errors)
     validate_text_policy(root, paths, errors)
@@ -2244,7 +3292,8 @@ def main() -> int:
         return 1
     print(
         "repository-policy: OK — versioned Task ownership covers every live path; "
-        "Phase 1 base evidence, I01-I13, release blocker, Actions, permissions, "
+        "frozen Phase 1 evidence, Phase 2 live policy, I01-I13, release blocker, "
+        "Actions, permissions, "
         "and required CI jobs are consistent"
     )
     return 0

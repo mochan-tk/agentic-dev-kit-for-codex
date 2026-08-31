@@ -1,7 +1,7 @@
 # Known limitations
 
 Observed and documentation-derived statements are current through
-`2026-08-26`. Phase 0 is complete. This tree satisfies the **Phase 1
+`2026-08-31`. Phase 0 is complete. This tree satisfies the **Phase 1
 portable-core implementation gate**. Its committed status is a creation-time
 snapshot. The current durable owner-acceptance outcome is external GitHub state
 authoritative in Issue #12 and Epic #2; a later post-merge outcome is not
@@ -9,19 +9,198 @@ embedded in this tree.
 The overall repository implementation remains incomplete, the repository is
 not installable, and it is not a parity release. `release_blocked` remains `true`.
 
-## The portable core is not the operating harness
+## The deterministic offline harness is not a live Codex runtime
 
-Phase 1 now contains the Option B agreement, frozen/live policy split,
+Phase 1 contains the Option B agreement, frozen/live policy split,
 conformance catalog, pinned CI/toolchain policy, Epic/Task/PR ledger templates,
 connector-neutral context contracts, and all eight repository Skills. These
 are static repository contracts and accepted external-state receipts, not a
 universal runtime control plane.
 
-The six custom agents, hooks, execution envelope, loop-event schema, CLI
-adapter, installer/upgrade, live Task ritual, consent feedback transport,
-runtime probes, and adopter migration are not implemented. A constitution,
-Skill, schema, manifest, or green generic CI run does not make those controls
-active and does not prove an individual conformance scenario.
+Phase 2 T11 adds three static role definitions, minimal envelope/event/final-
+response/result/profile/receipt contracts, a deterministic Python controller,
+bounded process and Git verification, an offline fake process, and an
+append-only Task-receipt actuator. Together these provide the T11 deterministic
+offline harness, with `runtime_harness = minimal-offline-implemented`. The
+static TOML files do not prove native named-agent selection or identity, and
+required CI cannot run real Codex, enter live mode, or apply a receipt.
+
+The approved agreement-v2 boundary records
+`live_codex_execution = deferred-to-T12`,
+`sandbox_compatibility = unresolved-non-success`, and
+`runtime_receipt_apply = deferred-to-T12`. T12 is the open, planning-only
+[Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25)
+and remains inactive and blocked by T11 / PR #24. Phase 2 and the repository
+remain incomplete, and `release_blocked = true`.
+
+The Task-start observation found `codex-cli 0.150.0-alpha.8`. That prerelease
+is `unsupported-client` under the approved live gate. Consequently this tree
+does not claim a completed live representative Task, a successful live runtime
+profile, or a posted runtime receipt. The later Stage A.2 attempt remained
+bounded non-success evidence: the aggregate profile was `UNCHECKABLE`, the
+shell-environment lane failed with `process-nonzero`, and sandbox/network was
+`UNCHECKABLE` with `process-nonzero`. It performed no device authentication,
+model invocation, live worker, runtime-receipt dry-run, or receipt application.
+Live qualification and those actions now belong only to T12.
+
+The qualification design uses a new exact-head attempt-only Colima Linux VM using
+VZ and native `aarch64`, not the everyday host Mac. The historical task-start
+profile predates that decision, so its provider lane remains `not-run` with
+non-claiming sentinels rather than fabricated Colima/VM evidence. A live
+`match` requires official stable `codex-cli 0.150.1`, the approved archive and
+extracted-binary digests, exact public head/tree, a clean guest clone, passing
+independent configuration, shell, sandbox/network, authentication, and
+best-effort process-cleanup lanes, and a closed mount inventory. Colima's one
+unavoidable attempt-only provider-cache mount must be read-only; any other
+shared mount blocks the run. Provider evidence is adapter/owner-authored, not
+a Codex-authenticated attestation.
+
+The approved outer-containment claim is deliberately narrower than escaped-
+descendant kernel containment. It consists of the fresh disposable Colima VM,
+absence of host-sensitive or unapproved mounts, exact PR head/tree, a
+dedicated private `CODEX_HOME`, exact destruction, and profile-absence
+read-back. PID/start-token tracking provides best-effort cleanup evidence; it
+does not prove kernel-enforced containment. Full escaped-descendant process-
+lifetime containment is deferred to T12.
+
+Stage A.1 remains a bounded non-success attempt; only its narrow Git and
+bubblewrap prerequisites were qualified. Stage A.2 freezes those inputs and
+does not widen that containment claim. The adapter/owner-authored evidence is
+successful only on Ubuntu 24.04 `noble`, Linux `aarch64`, with AppArmor and
+its unprivileged-user-namespace restriction active. A fixed shell-free
+controller installs exact Ubuntu package versions for `git`, `bubblewrap`,
+`apparmor`, and `apparmor-profiles`. Before cloning, it verifies
+`git=1:2.43.0-1ubuntu7.3`, `/usr/bin/git` version
+`git version 2.43.0`, and executable SHA-256
+`aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942`,
+then clones the exact public PR head/tree onto the VM private disk without a
+host-repository mount. The closed pre-clone `repository.git_bootstrap` input is
+re-observed after clone and before the adapter's first repository Git command;
+it is owner/controller-authored evidence, not a Codex attestation or independent
+proof of pre-clone chronology. A separate exact head/tree-derived clone-contract
+digest is recomputed, and every provider Git operation revalidates and uses the
+fixed root-owned `/usr/bin/git` rather than re-resolving PATH. The clone
+contract also binds a static shell-free `python3 -I` exec wrapper restricted to
+`/usr/bin/git` and private process umask `0077`; this projects tracked
+non-executable files as `0600` and prevents the guest SSH default umask from
+making governed fixed inputs group-writable. Provider-bound Stage A/live
+evidence requires exact `0600`; ordinary offline/checker reads may also accept
+`0644`. Both projections are single-link and non-writable outside the owner,
+Git tree mode `100644` stays canonical, and repository JSON mode checks are not weakened. It also
+verifies the system bwrap binary/version/help
+digest, installs and loads the packaged official `bwrap-userns-restrict`
+profile, requires its source-defined `bwrap` and `unpriv_bwrap` profiles in
+enforce mode rather than a transient stacked execution label, and runs the
+exact non-root smoke test
+`/usr/bin/bwrap --unshare-user --unshare-net --ro-bind / / /bin/true`.
+Raw stderr is discarded and non-success is reduced to a fixed reason code.
+Codex shell-environment and sandbox/network probes remain blocked until that
+smoke passes. T11 does not use legacy Landlock as a fallback and does not
+globally disable the AppArmor restriction.
+
+The pre-clone controller must replace, rather than inherit, its environment.
+The static wrapper accepts reviewed fixed Git/locale/path values plus one
+absolute private-VM home path and rejects every extra controller key. The home
+must be empty, current-uid, mode `0700`, opened no-follow, and binding-stable;
+Git receives its inherited descriptor projection. Global Git config is
+`/dev/null`, and system config/attributes are disabled. The fresh-image
+`/usr/bin/python3` interpreter is a provider-side pre-clone TCB; its binary is
+not independently pinned by T11.
+
+Provider isolation, mount boundary, process cleanup, Codex sandbox/network,
+shell environment, configuration, and authentication are independent evidence
+lanes. A shell, configuration, authentication, or sandbox/network failure does
+not make an already observed provider-isolation fact `UNCHECKABLE`; each lane
+retains its own result and can still block the aggregate profile where required.
+
+Stage A.2 makes the remaining shell/network failure modes diagnosable without
+retaining raw observations. Shell evidence stores only a fixed reason, counts,
+and the SHA-256 of canonical sorted unexpected key names. The exact Linux
+debug-sandbox allowlist is the configured environment plus
+`CODEX_SANDBOX_NETWORK_DISABLED`, based on official Codex 0.150.1 source
+commit `90854393966b21e9ebfd21b122334eb09a20c93d`; the marker must equal `1`.
+Network evidence requires a reachable, accepted, closed unsandboxed control,
+different hashed parent/sandbox network namespaces, the exact marker, a
+denied actual connect using one of five reviewed errno names, and bounded
+cleanup/reap. Missing namespace/control proof, socket-creation failure,
+arbitrary errno, successful sandbox connection, malformed output, or cleanup
+failure remains non-success. No raw namespace identity, environment value,
+stdout, stderr, or private path is durable.
+
+The closed control-plane record also requires pre-create profile/runtime-data
+absence, no reuse of an existing VM, container, volume, default profile, or
+additional disk, unchanged activation context, and private-VM-disk placement
+for the clone and runtime root. Its digest covers normalized safe fields only;
+raw paths and provider configuration remain local transport.
+
+The offline actuator tests enforce that receipt application would happen before
+the disposable VM is destroyed. The
+receipt therefore records only the destruction obligation and does not claim
+destroy completion or profile absence. Those outcomes require a later
+append-only read-back after the attempt. Until that record exists, destruction
+evidence is incomplete rather than implicitly successful.
+The current separate lifecycle actuator is fixture-tested against Issue #23
+and PR #24; it was not applied. T12 must bind its own exact Task and PR targets
+before any live actuation. The tested contract binds an already-posted runtime
+receipt and its GitHub creation time, exact PR head/tree/checks, destroy
+chronology, and both profile/runtime-data absence read-backs. It regenerates the exact
+canonical runtime-receipt body from the original validated native request;
+caller-authored marker/body text is not proof. Every lifecycle timestamp is
+bounded to at most 300 seconds of future skew and the latest absence read-back
+must be no more than 3600 seconds old at validation. A runtime receipt by
+itself does not prove teardown. T11 proves only deterministic fixture-based
+validation, dry-run, zero-write, idempotency, conflict, and read-back behavior;
+no runtime receipt has been applied. T12 owns any later exact-head application.
+Under that deferred contract, only an exact same-attempt receipt is idempotent,
+while a different attempt is a closed conflict rather than a second receipt.
+
+`codex doctor --json` is treated only as a redacted diagnostic support report.
+It does not expose or attest the exact T11 override set. The documented config
+keys and their stable digest are adapter-authored intent evidence with
+`effective_configuration_proven=false`; separate behavior probes and exact
+worker-argv validation are still required. Live argv does not use
+`--ignore-rules` or a `--dangerously-bypass-*` flag. Only allowlisted doctor
+check IDs, categories, and statuses may be retained. Warning/failure blocks
+only for a T11-required auth, config, runtime, or sandbox check; unrelated
+advisory warnings produce `pass-with-advisory-warning`. Raw report details are
+not durable evidence.
+
+Official 0.150.1 `codex login status` writes successful ChatGPT status to
+stderr. The bounded auth probe therefore exact-matches `Logged in using
+ChatGPT` as `signed-in-client`, exact-matches only the documented API-key
+success form as `api-key`, maps a nonzero exit to `unavailable`, and maps an
+otherwise unknown zero-exit result to `unknown`. Raw stderr, credentials, and
+private paths are never retained. The no-model sandbox probe uses official
+0.150.1 Option B with the exact slice `codex <reviewed-runtime-overrides>
+sandbox --permission-profile :read-only -C <synthetic-root> -- <probe-argv>`.
+The managed `:read-only` profile provides a read-only filesystem and restricted
+network, and T11 requires the explicit `--` delimiter. State flags mixed with
+Option B, `-C` without a permission profile, an omitted delimiter, bypass
+arguments, and unsupported or conflicting arguments are rejected.
+
+Exact-worker-argv failures expose only a fixed `stage` and `reason_code`.
+Allowed stages are `load-envelope`, `load-static-role`,
+`environment-contract`, `build-argv`, `argv-policy`, `schema-binding`, and
+`filesystem-binding`; raw argv, exception text, and private paths are not
+recorded.
+
+The single Stage A.2 attempt finished fail-closed and its VM, runtime data, and
+tracked processes were removed with absence read-back. It is not rewritten as
+pass. T11 performs no Stage A.3. The approved
+[agreement-v2 decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734)
+accepts only the deterministic offline harness and supersedes T11 AC-13 by
+deferring it to T12. Stage B requires a new review and a different fresh VM
+before device authentication can be enabled temporarily. Only a complete T12
+profile `match` may permit exactly one live worker and the subsequent receipt
+dry-run/apply/read-back. Stage A.1 qualification and the Stage A.2 non-success
+record are prerequisite evidence, not a live run or a live runtime receipt.
+
+The final six-role topology, native runtime routing, hooks, recovery,
+installer/upgrade, live generalized Task ritual, consent feedback transport,
+cross-surface runtime probes, and adopter migration remain incomplete. A
+constitution, Skill, schema, manifest, static role file, or green offline CI
+run does not make those controls active and does not prove an individual
+conformance scenario.
 
 The release-level conformance result set is empty and `release_blocked` is
 true. The Phase 1 scorecard inventories 136 scenarios, all `not-run`, with zero
@@ -102,17 +281,19 @@ stricter target policy, not native behavior.
 References: [Build Skills](https://learn.chatgpt.com/docs/build-skills) and
 [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-## Machine-readable execution is not deterministic execution
+## The bounded adapter does not make model execution deterministic
 
 `codex exec --json` emits JSONL events, but model behavior is not deterministic.
 `--output-schema` constrains the final model response; it does not define or
-validate the full JSONL event stream. No exhaustive versioned event schema was
-found in official documentation.
+validate the full JSONL event stream. No exhaustive versioned upstream event
+schema was found in official documentation.
 
-The later adapter must pin the Codex CLI version, preserve safe raw unknown
-events, normalize only recognized fields, and treat interrupted streams as
-incomplete. Resume IDs are opaque until a named-client probe verifies Task
-binding and compatibility.
+The T11 adapter therefore normalizes only bounded recognized semantics and
+treats unknown, malformed, conflicting, interrupted, excessive, or
+inconsistent streams as non-success. Its offline tests use a fake process and
+synthetic repositories. They do not prove that the currently installed alpha
+client can safely execute the live profile. Resume behavior remains outside
+the T11 slice and unverified.
 
 Reference: [Official non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode).
 

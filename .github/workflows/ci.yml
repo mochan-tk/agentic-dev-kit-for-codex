@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: Validate Phase 0 contracts
         run: python3 -I .github/scripts/check-phase0-contracts.py
-      - name: Validate live repository policy
+      - name: Validate Phase 2 live repository policy
         run: python3 -I .github/scripts/check-repository-policy.py
       - name: Validate portable context contracts
         run: python3 -I .github/scripts/check-portable-contracts.py
@@ -30,8 +30,10 @@ jobs:
         run: python3 -I .github/scripts/check-ledger-templates.py
       - name: Validate repository Skills
         run: python3 -I .github/scripts/check-skills.py
-      - name: Validate Phase 1 acceptance package
-        run: python3 -I .github/scripts/check-phase1-acceptance.py
+      - name: Validate frozen Phase 1 accepted snapshot
+        run: python3 -I .github/scripts/check-phase1-accepted-snapshot.py
+      - name: Validate minimal runtime contracts offline
+        run: python3 -I .github/scripts/check-runtime-contracts.py
       - name: Install and verify pinned CI tools
         run: python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination "$RUNNER_TEMP/agentic-ci-tools" --check-repository
       - name: Validate conformance catalog synchronization

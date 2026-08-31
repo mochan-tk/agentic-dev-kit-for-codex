@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/agreements/runtime/loop-event.v1.schema.json",
+  "title": "loop-event/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "attempt_id", "sequence", "kind", "source", "state", "payload_digest"],
+  "properties": {
+    "schema": {"const": "loop-event/v1"},
+    "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},
+    "sequence": {"type": "integer", "minimum": 1, "maximum": 8192},
+    "kind": {"enum": ["worker-started", "worker-message", "worker-terminal", "worker-interrupted", "worker-error"]},
+    "source": {"const": "codex-exec-adapter"},
+    "state": {"enum": ["running", "completed", "interrupted", "failed", "unknown-terminal"]},
+    "payload_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

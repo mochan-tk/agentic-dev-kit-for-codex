@@ -1,0 +1,53 @@
+{
+  "schema": "execution-result/v1",
+  "attempt_id": "ATTEMPT-0123456789abcdef",
+  "status": "pass",
+  "authority": "adapter-authored",
+  "worker": {
+    "logical_invocations": 1,
+    "exit_code": 0,
+    "timed_out": false,
+    "signal": null,
+    "stdout_bytes": 467,
+    "stderr_bytes": 0
+  },
+  "events": {
+    "count": 4,
+    "terminal_count": 1,
+    "terminal_state": "completed",
+    "canonical_sha256": "956a7bcc869855fd9cd1c2dd473cbfe9fff4f5b346ed2af0ee5a2031f389afe9"
+  },
+  "final_response": {
+    "present": true,
+    "valid": true,
+    "sha256": "5c322737b2022303b278b44f1ed299ce4e75912f0458b0196ad87c9465bbf398",
+    "outcome": "completed"
+  },
+  "git": {
+    "pre_head": "7ee649272da3355a06a4b3a11271a3f0cbe8ed56",
+    "post_head": "7ee649272da3355a06a4b3a11271a3f0cbe8ed56",
+    "pre_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
+    "post_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
+    "worktree_tree": "ceb8f052e9f801dd1a7093dc2e6c408bf998508c",
+    "changed_paths": ["work-item.txt"],
+    "owned_paths_only": true,
+    "expected_bytes": true,
+    "other_changes": false
+  },
+  "verifier": {
+    "fresh_process": true,
+    "read_only": true,
+    "status": "pass",
+    "record_sha256": "eadf6a4de1854f600255940213aebc966ecfe5185d48a9f34c83db3e2ce0af12"
+  },
+  "digests": {
+    "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
+    "runtime_profile_sha256": "9b1b51131c124f507cc35565afc57af61cf51a9e9e2958e89ec73faa656802ca"
+  },
+  "privacy": {
+    "raw_jsonl_retained": false,
+    "raw_reasoning_retained": false,
+    "raw_stderr_retained": false,
+    "private_paths_retained": false
+  }
+}

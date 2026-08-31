@@ -1,0 +1,665 @@
+{
+  "schema": "phase1-accepted-snapshot/v1",
+  "accepted_commit": "36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2",
+  "accepted_tree": "1c1f46ad20dd289a713663c84eaf1dbb62840deb",
+  "accepted_parents": [
+    "509362e6e12cf0160e58853b0d6c0b6871aa895c",
+    "68107c68383dbd2fd046f4c643c2e362e9a176ea"
+  ],
+  "path_count": 92,
+  "total_bytes": 1561147,
+  "historical_checker": {
+    "path": ".github/scripts/check-phase1-acceptance.py",
+    "mode": "100644",
+    "blob": "9e8cccbc824efbb11756ac72c5e1e5ec8726ef4d",
+    "sha256": "fd0bee66f857601b352cee62eb0f71f2a7f33b507bdb31c5f84e80cbfd64a9de",
+    "size": 67121
+  },
+  "files": [
+    {
+      "path": ".agents/skills/context-collection/SKILL.md",
+      "mode": "100644",
+      "blob": "80d7ca850b4de4563b01d7bf15cbe1bbb9580d2a",
+      "sha256": "7f949b5495c6ed3b37a5eb63dfe92a5c870309deff8a17220463d572579e824b",
+      "size": 3521
+    },
+    {
+      "path": ".agents/skills/context-collection/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "e26e923ab06d667baf044e667029cecbf10869b1",
+      "sha256": "23af4506d093d236ad4afe72a1b6560a4d2fddb1ca2392424c0d77904e7009f4",
+      "size": 265
+    },
+    {
+      "path": ".agents/skills/context-distillation/SKILL.md",
+      "mode": "100644",
+      "blob": "b807ffd1eae50809d89b5cbf91c1ee2f9b66c797",
+      "sha256": "f47de3faa056116e0dc8b98eb73682d2108fedfeaec6b767779d53f04d5f98a5",
+      "size": 4252
+    },
+    {
+      "path": ".agents/skills/context-distillation/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "8e878e5e9e8973da1290f90130a330c926d403ed",
+      "sha256": "38d160d9ced831eef9d159e6ea0fe15b0be681df36750701b91cb30179d11018",
+      "size": 280
+    },
+    {
+      "path": ".agents/skills/plan-management/SKILL.md",
+      "mode": "100644",
+      "blob": "faa10d6136f53ecd3d943fb8c1efb1f940ccaa2b",
+      "sha256": "6f801133e165396302048fb040af4eb2e97c66a3f981e559346454af94b07aa0",
+      "size": 2972
+    },
+    {
+      "path": ".agents/skills/plan-management/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "e86e3463ec817781f122e4adcc9bfde4355b49a6",
+      "sha256": "a78f60067fc74eae6b1abfb64709536b871920f66771ce38498f10ebc646a61d",
+      "size": 258
+    },
+    {
+      "path": ".agents/skills/plan-management/references/issue-graph-procedure.md",
+      "mode": "100644",
+      "blob": "858279cb0b5ca2816adc80208bcc1f015125d972",
+      "sha256": "98f5d496c30a1430ee799ade2ce9dfd350eac7356215ef1c4f2ef2febded32ad",
+      "size": 2381
+    },
+    {
+      "path": ".agents/skills/project-onboarding/SKILL.md",
+      "mode": "100644",
+      "blob": "fe43bef24b2e6d3139656e4e1130ab20eb94ab82",
+      "sha256": "9956ce9e09c822bbe1fab9fb2602958ef0f5c82802c088e1f5064da248b31fb4",
+      "size": 4985
+    },
+    {
+      "path": ".agents/skills/project-onboarding/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "b7ee2050bcbfa0766c9c71332a812f2106c1909b",
+      "sha256": "0dfc1ddb56dd06faa09931aff688071bea283ea1805c747f74902ceb2f1faeb6",
+      "size": 270
+    },
+    {
+      "path": ".agents/skills/project-onboarding/references/onboarding-procedure.md",
+      "mode": "100644",
+      "blob": "2a75b19db2daf3a24ff92b28fae91263dda46a43",
+      "sha256": "a29315afc5c8be772e677073f9801256cdc0c6eb99443eaa379b4ff887f42a29",
+      "size": 7153
+    },
+    {
+      "path": ".agents/skills/retro/SKILL.md",
+      "mode": "100644",
+      "blob": "d7c0cd608a23ba7df6e859b5d32adca2ab228582",
+      "sha256": "70f960c4b0a5f61fe0bc3179cc6fbd4145954386713320a663821d0411ad4a04",
+      "size": 3656
+    },
+    {
+      "path": ".agents/skills/retro/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "8ea90f23f62e0152d6b806541e74889f8b453028",
+      "sha256": "25e01b5c922d45a83ef300a38a2538e4075f1ff2c4cde2610abbd43d419c4258",
+      "size": 282
+    },
+    {
+      "path": ".agents/skills/session-orchestration/SKILL.md",
+      "mode": "100644",
+      "blob": "674d4a881c951ae3e1f77ed17802ce4ac9f9926a",
+      "sha256": "32a437e1bb035ec2a86a9c2a70966f1d943f0e78f0205150b773fb3ae461f7b8",
+      "size": 2865
+    },
+    {
+      "path": ".agents/skills/session-orchestration/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "0c800f235c2db3a25efb85991a49857ddd17a63b",
+      "sha256": "f69a1838627fca6fa41a8ee98ff7532de2dcaa71961dcfa07687cf0fd490a1c7",
+      "size": 275
+    },
+    {
+      "path": ".agents/skills/session-orchestration/references/orchestration-protocols.md",
+      "mode": "100644",
+      "blob": "07284b6a62a42a755cb08012a65c7ccd9756ee26",
+      "sha256": "1e64a8352a04308474c6b3031d18704a56a6026487c1ecb61c0dde9b5043bfcc",
+      "size": 3924
+    },
+    {
+      "path": ".agents/skills/task-routing/SKILL.md",
+      "mode": "100644",
+      "blob": "1dad7ea6451d5117b2626cf930c9c6bc506ce32f",
+      "sha256": "bdb089f1d8bddcc2e944d4ee3dda5e112ab5060a22d6b699071ee2f9047559cf",
+      "size": 3166
+    },
+    {
+      "path": ".agents/skills/task-routing/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "49d816fb3e8e4b43dfa859352015c4479a2eba1d",
+      "sha256": "8e4116592b9e797b5ff735018200ef8eba26f3fba3a643c7713e9658c0363f87",
+      "size": 270
+    },
+    {
+      "path": ".agents/skills/verification/SKILL.md",
+      "mode": "100644",
+      "blob": "747dad3a8f9c5829b6e092976056a9f249f73de4",
+      "sha256": "aa02482f8b0c5de3472c841e6ae1d8043656b518ee4523adba8a8bb895cd53a5",
+      "size": 3590
+    },
+    {
+      "path": ".agents/skills/verification/agents/openai.yaml",
+      "mode": "100644",
+      "blob": "cd1ec27ab7914c30694444a3a1511054f428abcd",
+      "sha256": "6e456e430d7655c27011b0e440f48fb27bfd33b760c14f0e0fc4ad9c91b384b3",
+      "size": 262
+    },
+    {
+      "path": ".gitattributes",
+      "mode": "100644",
+      "blob": "5a93eedaf4b158b37e1343c223e60f77650ca81e",
+      "sha256": "8726ecc3445fcec57aab475aa7dc7ee4cb2f7bafc23c182f304600289af7eab6",
+      "size": 324
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "mode": "100644",
+      "blob": "6db8be468065eb3f7ee8cbb60fa81f0642f2c8b4",
+      "sha256": "69693795e16c2ed36786c0c572620d56eb63187dd846cdc6daf3f8ed6ce45062",
+      "size": 5822
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/epic.yml",
+      "mode": "100644",
+      "blob": "3279942d6406f58743f45204cb8cd6fb109b2ad8",
+      "sha256": "b3847253be0c933cf15646a3f88915a8818eb171cf3af4fe6a521b3980d8bb45",
+      "size": 2915
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "mode": "100644",
+      "blob": "5f836d39749c087a51c4071fe72aee9e4869aa84",
+      "sha256": "8f6e2caaa28f0655ada8871d20fc5a1859c1217f1a2d259329dbd443086f10a1",
+      "size": 2852
+    },
+    {
+      "path": ".github/connectors/README.md",
+      "mode": "100644",
+      "blob": "5efaf5ba227aa10f8fab18f52e3e36fa6f495aed",
+      "sha256": "24430131bc2d21376a28bbc41da533e9712d0b47274e317789e63a161c414461",
+      "size": 1690
+    },
+    {
+      "path": ".github/connectors/connector-contract.v1.json",
+      "mode": "100644",
+      "blob": "96d4ebdea501ff4cb1f78f6b09ed8122ae3f3b24",
+      "sha256": "26eccbdcc02659455b14e9cb73c2b0c2f5d59b88f69fb00d45150274ad18d312",
+      "size": 1300
+    },
+    {
+      "path": ".github/governance/ci-tools.lock.v1.json",
+      "mode": "100644",
+      "blob": "e65b8633e6d26231ba4131bad948ea3c22d596ea",
+      "sha256": "127c05a7703c7123dd3a559c9cae022e36788d73376ad14ecf2f84c8a56e7d34",
+      "size": 1789
+    },
+    {
+      "path": ".github/governance/ledger-contracts.v1.json",
+      "mode": "100644",
+      "blob": "9539b7b049eceddcc82896e625c7aeee7b7e2bfc",
+      "sha256": "ab0e8c87a5b6636892a754098a222ce41985e4967c0f1df45b76ff94f304e447",
+      "size": 19467
+    },
+    {
+      "path": ".github/governance/phase-task-ownership.v1.json",
+      "mode": "100644",
+      "blob": "3fb751daed283f6c5c13e13036d03fcc0168bc03",
+      "sha256": "7735aeccc264263518ab1583608e09f43334e094657868d46b48c29db12e176b",
+      "size": 12265
+    },
+    {
+      "path": ".github/scripts/check-action-pins.sh",
+      "mode": "100644",
+      "blob": "903bc4a72f67a3a3f9327de2974c7e5f020fc401",
+      "sha256": "fde1f79e8a95c016cfd1afbde3c4d0ff6d9a74ce064241cfc8322da511fd5683",
+      "size": 1701
+    },
+    {
+      "path": ".github/scripts/check-ledger-templates.py",
+      "mode": "100644",
+      "blob": "3ff08f506340c81d2cd42b7b810b8311f3768270",
+      "sha256": "9389807557338423af94ab4e241718710120b9764b01685ea32447c67822ed8a",
+      "size": 82189
+    },
+    {
+      "path": ".github/scripts/check-phase0-contracts.py",
+      "mode": "100644",
+      "blob": "caeffb4e0a976a96b9cc2aab8a125de279581dbc",
+      "sha256": "67cc5bdb11d3d2a87436b34b50be2d7f13cc1845abf6f4b81ae0edd704489aec",
+      "size": 36141
+    },
+    {
+      "path": ".github/scripts/check-phase1-acceptance.py",
+      "mode": "100644",
+      "blob": "9e8cccbc824efbb11756ac72c5e1e5ec8726ef4d",
+      "sha256": "fd0bee66f857601b352cee62eb0f71f2a7f33b507bdb31c5f84e80cbfd64a9de",
+      "size": 67121
+    },
+    {
+      "path": ".github/scripts/check-portable-contracts.py",
+      "mode": "100644",
+      "blob": "668a4d915648ddedc7ab7d25fe4ea07b9231e28d",
+      "sha256": "321746988daf0ee6857198590f17072125218286fdd44238e48835a19606b013",
+      "size": 59285
+    },
+    {
+      "path": ".github/scripts/check-repository-policy.py",
+      "mode": "100644",
+      "blob": "bb8ede55be360f9aac3edb9a5d288da2ab49e822",
+      "sha256": "94f54598b83a30b17993853f46dc56d22155add0036f18c02d07ceb776b84e4f",
+      "size": 91070
+    },
+    {
+      "path": ".github/scripts/check-skills.py",
+      "mode": "100644",
+      "blob": "eaa5dfd14655a25d55baa93231241fee63e776f8",
+      "sha256": "d91ae8c82e4de61cb1d0af816c50f21b1d5c15a115421eeb26243163b29ee5d7",
+      "size": 64947
+    },
+    {
+      "path": ".github/scripts/check-workflow-permissions.sh",
+      "mode": "100644",
+      "blob": "68b5d7b8c310aa3862381ded0c712242d4c8e435",
+      "sha256": "790a2a529b87eaa9cc3bb9f377cc4fbc4b8896b7f9c5c07f38a9af3ab1932322",
+      "size": 10112
+    },
+    {
+      "path": ".github/scripts/conformance-catalog.py",
+      "mode": "100644",
+      "blob": "a8b76f6b2747f85a6ddd0e109b4af0a00532051d",
+      "sha256": "a07228aca11144ef43930000a3a1deef242b96a86ead218333369e340a37e9c7",
+      "size": 83222
+    },
+    {
+      "path": ".github/scripts/install-ci-tools.py",
+      "mode": "100644",
+      "blob": "209b991b1b33c52e46b681a29674c0af3e8b3351",
+      "sha256": "168f81ce0f62e16a57e1265ada8dea7f81c44a6d5fddf86f6129f3d1e3fc520b",
+      "size": 54055
+    },
+    {
+      "path": ".github/scripts/tests/lib.sh",
+      "mode": "100644",
+      "blob": "51892639e43ac2e104b2f7c23efa2b52df776dec",
+      "sha256": "9897ce0054cee59a9300019f5dd34cc69700a8447653eebc11e775ed3a4c7143",
+      "size": 1090
+    },
+    {
+      "path": ".github/scripts/tests/test-action-pins.sh",
+      "mode": "100644",
+      "blob": "6baa5fe146fc0aae74c011269cb83feb2b3e3de5",
+      "sha256": "7c4535473912d2b351f0d78d3f190d2dbd253497a5e96d5726ca9f40db219d85",
+      "size": 3071
+    },
+    {
+      "path": ".github/scripts/tests/test-workflow-permissions.sh",
+      "mode": "100644",
+      "blob": "35404f814bda581521164628b2317f20373cd99e",
+      "sha256": "806f13b2fb988c8c283d27c98f90582608e946fd406c217b7b97aeff89511ff2",
+      "size": 9118
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "blob": "1f3cc7e0c932cfb14c0086b3b0acd23485048af8",
+      "sha256": "1a433a602e7aa461c1908f6e488186e51fa7ee79ce7650ad1522945a8c2d3056",
+      "size": 2470
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "blob": "4970eb66bdfec2c3fb6270ec23ecba6d6cc5681a",
+      "sha256": "a3350390f9b66d858db155fc63c4bbb8c57502c42f4442af6e8bb1d761a8ee7d",
+      "size": 327
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "blob": "f6814588d8bafac140342a8c75b28c8a22babcbb",
+      "sha256": "86751d8aea8245da7286f0d5c57bf49f3b0027f1a86b5089fb183c344abe55fc",
+      "size": 8537
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "blob": "746b0d8d979fac8e7c16526552d1fe2aa3330832",
+      "sha256": "2e296907bf220de10cdabb84fd4244082adb8f935b4a5f04686c63aebd800610",
+      "size": 1081
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "blob": "21cd131baf0df3f7a0010ed034c47d2eb5a6d9fa",
+      "sha256": "a752646dd5817d01125ae4d527fc6fb4236a519198ca9d2a351829f39ea71d8f",
+      "size": 6702
+    },
+    {
+      "path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md",
+      "mode": "100644",
+      "blob": "6929c3373735f3377a078fefebc1c3f6a6f5fd98",
+      "sha256": "9a2fd667caffda8f1d20b195a05dbb885392273e4c87e110f913490e4c9561d2",
+      "size": 5510
+    },
+    {
+      "path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md",
+      "mode": "100644",
+      "blob": "4c4fbb72f04f5f33dd26c4bc856c7c307863323e",
+      "sha256": "2b33ba6b6b51cf3d88e35c6f8722bec7ba1406aabd0eed4e6657af9a96293b75",
+      "size": 4726
+    },
+    {
+      "path": "docs/agreements/adr/ADR-0006-conformance-catalog-provenance.md",
+      "mode": "100644",
+      "blob": "a6d63222adba28d393a02e1c58a647a9bbc823d4",
+      "sha256": "f5e33b9f7f36c23582a9450d1c3529316e24b82fc44a89a192a2be2511693907",
+      "size": 8419
+    },
+    {
+      "path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md",
+      "mode": "100644",
+      "blob": "e31f334aad6c1bf22e2851cd769f4c7bae42f6d6",
+      "sha256": "41b7b1855d5ba07672be4bcb1da2976a91d23bbd7163d365500c6acc6a275c9f",
+      "size": 4363
+    },
+    {
+      "path": "docs/agreements/decisions/DEC-0001.json",
+      "mode": "100644",
+      "blob": "19910567a2851efcbc6f6d0099017aec8ae9cc73",
+      "sha256": "4fdf24ebb4bd4e8c7b17e7dc56bae49c7ad45fd22b5bd2534f36f51c1f64d945",
+      "size": 749
+    },
+    {
+      "path": "docs/agreements/portable-context-contract.md",
+      "mode": "100644",
+      "blob": "75f516b4604bd397949b73f249de407af302371a",
+      "sha256": "b5193257a9bc520c704ed806481cdbc9beb184cc13fd6c1b543fb72fd4801589",
+      "size": 7071
+    },
+    {
+      "path": "docs/agreements/portable-context-contract.v1.json",
+      "mode": "100644",
+      "blob": "17129d7f8c793466b3f3ba5897c7f937df765103",
+      "sha256": "7a4bae4193cc80829a791606b4048ec5bc0f6a6f284718160ea05da49e590d0d",
+      "size": 5422
+    },
+    {
+      "path": "docs/agreements/repository-completion.md",
+      "mode": "100644",
+      "blob": "9f208f2fd43d0d1a1b1a33ffaf30db3d5340d2d0",
+      "sha256": "c1cf6dbb1efd0438f1387b33416743433fb94bf376a4c0fa9ecf76a8da3f880d",
+      "size": 3633
+    },
+    {
+      "path": "docs/agreements/requirements/REQ-0001.json",
+      "mode": "100644",
+      "blob": "81145aa33c3e6fd4eb006ed856c61d17068bb360",
+      "sha256": "448922c5f173b3c7b7ca75a04366ebcddbf54c5594adec75e4e0cd2e6066521e",
+      "size": 856
+    },
+    {
+      "path": "docs/agreements/skill-parity.v1.json",
+      "mode": "100644",
+      "blob": "067b4c19ac5ea020bc1d8211cd6e98f185d47338",
+      "sha256": "5afdf968f021d81b370bcdc3955ecf8a4155b670fe903596bd7c71b0727d54df",
+      "size": 49966
+    },
+    {
+      "path": "docs/conformance/catalog.md",
+      "mode": "100644",
+      "blob": "011f15305fa62102f62dc2e6d5870cd23b882735",
+      "sha256": "78d67c5114c1a7c9d6d05819ecba29f5c46d7b2cf9d580b1680c8290515b47bf",
+      "size": 27094
+    },
+    {
+      "path": "docs/conformance/phase-1-scorecard.md",
+      "mode": "100644",
+      "blob": "434b50011f5f5932686f200b7d11a1c1005c717a",
+      "sha256": "81f4abd54438c589bb9f6213b035fe9c9793fc5b523c38045baa2df3e64600ee",
+      "size": 18152
+    },
+    {
+      "path": "docs/context/README.md",
+      "mode": "100644",
+      "blob": "67e0cc3e911e0689273c8aeca6033a1276637586",
+      "sha256": "aea59dc90f55cec1b6e3250600af52deab7f860287d72c6634829740ecc53b7c",
+      "size": 1633
+    },
+    {
+      "path": "docs/context/pins/PIN-0001.context-pin.v1.json",
+      "mode": "100644",
+      "blob": "54fbfb5747187fd233dfd103c9bbd10f2d3baf73",
+      "sha256": "52fd6bfbe19fb2362491365abd2d5ae3da558b395fe52dc54e88f790845f879e",
+      "size": 1568
+    },
+    {
+      "path": "docs/context/pins/PIN-0002.context-pin.v1.json",
+      "mode": "100644",
+      "blob": "9312815edfb369970465bac298d1cfbd4d5e4723",
+      "sha256": "b10b18d19049c2c60d62c4eab91eecbc7bc422d873f68bcade6adbb36f9409eb",
+      "size": 1568
+    },
+    {
+      "path": "docs/known-limitations.md",
+      "mode": "100644",
+      "blob": "01c263f6dac3783619fbb4e670b1a04b3bff864d",
+      "sha256": "005fd66408d1da9a56a4ed633500dd717265121df1ca3b19c45d8dfbb47bbb74",
+      "size": 8694
+    },
+    {
+      "path": "docs/planning/phase-0-orientation.md",
+      "mode": "100644",
+      "blob": "3125bb544f4b471af9f829952e42d4a823bf8606",
+      "sha256": "31f9b94fe8fdd71d747b647a2580a981f6502a3f007e736160f036ac7e4b1b0a",
+      "size": 21285
+    },
+    {
+      "path": "docs/planning/phase-1-acceptance.md",
+      "mode": "100644",
+      "blob": "9b729fc33ca01082df82bb77a27ac3ef9c5fcafd",
+      "sha256": "e9942210b1db631978e9e6d2e17287baa0486459a7b147c14ea60fc70144c7ad",
+      "size": 12425
+    },
+    {
+      "path": "tests/conformance/catalog.json",
+      "mode": "100644",
+      "blob": "ad8c27d60de117c0f012b91c49bc8741dd3c93ec",
+      "sha256": "418bf8aa01674dc0c78cc615ad8e278ed06df1a952bb4670ec42e3bdd7dacc3d",
+      "size": 81139
+    },
+    {
+      "path": "tests/conformance/catalog.schema.json",
+      "mode": "100644",
+      "blob": "1b715aaf687252cda9863f42c2ad765011f0d4e9",
+      "sha256": "3bb3b4f7f09d5079d6b3e7c303aaae4f4a25c2dd36927e0aec4ad7a737e0834f",
+      "size": 4162
+    },
+    {
+      "path": "tests/conformance/coverage.json",
+      "mode": "100644",
+      "blob": "1f75acfaf122519ea4ee0d246c623a233dfc4924",
+      "sha256": "e52fe6f3e73248b69114261d137aa775e9ce021b44602a78c8d10f8bfd327808",
+      "size": 16060
+    },
+    {
+      "path": "tests/conformance/coverage.schema.json",
+      "mode": "100644",
+      "blob": "715d96ce766fb8977134cca5b732aa654588ba92",
+      "sha256": "ed6b4e278fccbd0ac54383bd207d8f94870e86f7f5c4171b3cf62e71b5977367",
+      "size": 4558
+    },
+    {
+      "path": "tests/conformance/manifest.json",
+      "mode": "100644",
+      "blob": "b769ba53dd96d179406478fd753c726e6ae80b26",
+      "sha256": "aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be",
+      "size": 6628
+    },
+    {
+      "path": "tests/conformance/phase0-snapshot.json",
+      "mode": "100644",
+      "blob": "02290c423021a9b8d1a220d45b7c487b50977d70",
+      "sha256": "5bbcc07297222f196adc1263f56b78e2f01bf729f65b1a68f2ea34d928d02b7e",
+      "size": 4014
+    },
+    {
+      "path": "tests/conformance/results.json",
+      "mode": "100644",
+      "blob": "9b72f600eb383a26c00df21d8a43c5aed1a05772",
+      "sha256": "1316a58941f3c8aa6eab86132e27d879722934f117e8527089225c8cf69449fb",
+      "size": 253
+    },
+    {
+      "path": "tests/conformance/results.schema.json",
+      "mode": "100644",
+      "blob": "fc3e6640623e2516197a48f306789f945901596c",
+      "sha256": "5466fb66ee8e98fb71ac630682f43b09c4ea9e69804112e9c1a3fa2321759a9a",
+      "size": 3602
+    },
+    {
+      "path": "tests/conformance/results/phase-1.json",
+      "mode": "100644",
+      "blob": "13347929da21517f0668be1fdd5966f3fb5507b5",
+      "sha256": "bc199e2f27d6348d56000ef5be10acb33f719c917e80f8b496bcaafe15dc60c1",
+      "size": 61378
+    },
+    {
+      "path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md",
+      "mode": "100644",
+      "blob": "d6be6132163d4428572daa64f7fd3a6f56b904c0",
+      "sha256": "21d12a287f536188355e75a9d563d4da329eb934f3ce7836db48b62bfd10faa0",
+      "size": 26387
+    },
+    {
+      "path": "tests/conformance/source/manifest.json",
+      "mode": "100644",
+      "blob": "59ee470641aca175d0fc48583e2a7a1da074c2ce",
+      "sha256": "c73427839b34d0cd8215fb8fe81ea22c6c9a88759acc17ef29d604dd2c6036f0",
+      "size": 1982
+    },
+    {
+      "path": "tests/conformance/test_ci_toolchain.py",
+      "mode": "100644",
+      "blob": "a94971c24c33122698cfda73ff668996a13175e9",
+      "sha256": "df81b579476bec3ff867c49246100855007de14a96c62c4d85066fe84b15ae38",
+      "size": 74420
+    },
+    {
+      "path": "tests/conformance/test_conformance_catalog.py",
+      "mode": "100644",
+      "blob": "df9624cb09c01383b1495b9ff0cfa6c975600507",
+      "sha256": "c816b62f094a44f51b7897052473d333cbdb4652a91654443ed4b775285772aa",
+      "size": 71425
+    },
+    {
+      "path": "tests/conformance/test_ledger_templates.py",
+      "mode": "100644",
+      "blob": "64938615363437f99553a8f3e4853e7528aaebee",
+      "sha256": "494d448510ef108eaf7b9fca55b550913088489c0e59435488b990ccc3d3ebee",
+      "size": 53371
+    },
+    {
+      "path": "tests/conformance/test_phase0_contracts.py",
+      "mode": "100644",
+      "blob": "a4cc0c109694bb20344b6bf7b276c4364e837bad",
+      "sha256": "139173c4788f8b94405edc3e6758617c7ef84b086b2698153109c29f4cab8050",
+      "size": 17730
+    },
+    {
+      "path": "tests/conformance/test_phase1_acceptance.py",
+      "mode": "100644",
+      "blob": "04e77b5a2786ea0af698390d1390711f71dbf904",
+      "sha256": "ab10335dcb24b22094c8e67f5a88192d3a920167d433a0148f0b5e6a14c6ed89",
+      "size": 27197
+    },
+    {
+      "path": "tests/conformance/test_portable_contracts.py",
+      "mode": "100644",
+      "blob": "7c85ecff085dde8062111b37490697232da2b1c8",
+      "sha256": "63189af53d29d532dc7a0b587acb7e559c1352b9b94266afb4a95bbf675ff478",
+      "size": 42931
+    },
+    {
+      "path": "tests/conformance/test_repository_policy.py",
+      "mode": "100644",
+      "blob": "ac9e9a2e2c8a48490d392667c5bb995c974a45e8",
+      "sha256": "15739861b6c94ca2ba29b3713b3063ef90c5f2f5407d087c9f3daca76cc7e013",
+      "size": 118964
+    },
+    {
+      "path": "tests/conformance/test_skills.py",
+      "mode": "100644",
+      "blob": "a40959ad15b96c30a29a3a37a2ec9e9fea675537",
+      "sha256": "5d53ccfc79635099614ef7750b3ab4fd9c3ff0d1c8f086df09b9b055e7bd55b7",
+      "size": 49867
+    },
+    {
+      "path": "tests/contracts/fixtures/connector-valid.v1.json",
+      "mode": "100644",
+      "blob": "96d4ebdea501ff4cb1f78f6b09ed8122ae3f3b24",
+      "sha256": "26eccbdcc02659455b14e9cb73c2b0c2f5d59b88f69fb00d45150274ad18d312",
+      "size": 1300
+    },
+    {
+      "path": "tests/contracts/fixtures/context-pin-valid.v1.json",
+      "mode": "100644",
+      "blob": "9312815edfb369970465bac298d1cfbd4d5e4723",
+      "sha256": "b10b18d19049c2c60d62c4eab91eecbc7bc422d873f68bcade6adbb36f9409eb",
+      "size": 1568
+    },
+    {
+      "path": "tests/contracts/fixtures/decisions-valid.v1.json",
+      "mode": "100644",
+      "blob": "93dc732181d853d27d0da6ecb1e065f21413d2c2",
+      "sha256": "cd6d82809c098447123764bee60192c74f405a6eef84e965cbc242ea4795dd2f",
+      "size": 1339
+    },
+    {
+      "path": "tests/contracts/fixtures/requirements-valid.v1.json",
+      "mode": "100644",
+      "blob": "db5cd410b21593913255e64f65a2a3b36990e2d0",
+      "sha256": "cf630b3fba44a44af1953bd12c8d06a438a3ff0220aa587f33834733022ee0ac",
+      "size": 1512
+    },
+    {
+      "path": "tests/ledger/fixtures/epic-rendered.md",
+      "mode": "100644",
+      "blob": "0a02db10ef418e6e589a8a27686acb2ab3d4ccde",
+      "sha256": "63ffd4d33ed09e2e3bebedaf2fd73cc193b7c3d7052aa42d9312be22f1bd48c1",
+      "size": 2137
+    },
+    {
+      "path": "tests/ledger/fixtures/ledger-valid.v1.json",
+      "mode": "100644",
+      "blob": "21936bc901f145dcb7aa4f2ec4eb67f9e90dd13e",
+      "sha256": "172f109a0459202788e3ae2df81d27a3ee83b315ede9b9ad462b2ae242d609bb",
+      "size": 17642
+    },
+    {
+      "path": "tests/ledger/fixtures/pull-request-rendered.md",
+      "mode": "100644",
+      "blob": "183fcec1bc9898737651eb4dce65dd69bdb600aa",
+      "sha256": "0e67420c77d0a5900058c27c9643fee59a83cc7d8fec1871ae36be80e200d15d",
+      "size": 2032
+    },
+    {
+      "path": "tests/ledger/fixtures/task-rendered.md",
+      "mode": "100644",
+      "blob": "617d85bbd67ecc4a8ae55285f0ab6aa4e6903ffe",
+      "sha256": "e6c4bdf6e7f4bda7591d78770e0ecb00eeb817dc3dde1dae8932404c1837c8a7",
+      "size": 2994
+    },
+    {
+      "path": "tests/skills/fixtures/source-manifest.v1.json",
+      "mode": "100644",
+      "blob": "0fb3f6338549305cd6dfdd50bf219e196491e2ce",
+      "sha256": "5b1b97d85867bdcb5fc36592a9ecb89a9e2907454adf512d8a87951f788cf16f",
+      "size": 6131
+    }
+  ],
+  "manifest_sha256": "3224df675f8cd8af175e58ffd72db4502d399f5d0499ed20c62af004cbbc917a"
+}

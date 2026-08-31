@@ -250,7 +250,7 @@ class LedgerTemplatesTest(unittest.TestCase):
     def test_tests_ledger_contains_data_only(self):
         self.assertEqual([], sorted((ROOT / "tests/ledger").rglob("*.py")))
 
-    def test_contract_preserves_static_progress_and_non_success_evidence_states(self):
+    def test_contract_preserves_bounded_progress_and_non_success_evidence_states(self):
         self.assertEqual(["pass"], self.contract["semantics"]["evidence_success_results"])
         self.assertIn("UNKNOWN", self.contract["semantics"]["evidence_results"])
         self.assertIn("UNCHECKABLE", self.contract["semantics"]["evidence_results"])
@@ -258,6 +258,107 @@ class LedgerTemplatesTest(unittest.TestCase):
             {"C": "not-run", "E": "not-run", "O": "not-run", "T": "not-run", "X": "not-run"},
             self.contract["progress"]["scenario_families"],
         )
+        self.assertEqual(
+            ["K10", "K11"],
+            self.contract["progress"]["contracts_advanced_minimal_partial_offline"],
+        )
+        self.assertEqual(
+            "minimal-partial-offline-implemented",
+            self.contract["implementation"]["K10"],
+        )
+        self.assertEqual(
+            "minimal-partial-offline-implemented",
+            self.contract["implementation"]["K11"],
+        )
+        self.assertEqual(
+            "opaque-ref/v1:<field-kind>:sha256:<64-lowercase-hex>",
+            self.contract["semantics"]["opaque_runtime_reference_format"],
+        )
+
+    def test_t11_agreement_v2_runtime_frontier_is_exact(self):
+        frontier = self.contract["runtime_frontier"]
+        self.assertEqual("t11-agreement-v2", frontier["agreement"]["version"])
+        self.assertEqual(
+            {
+                "AC-01-through-AC-12": "applicable-offline-static-boundary",
+                "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+                "AC-14": "unchanged",
+                "AC-15": "owner-merge-gate-offline-harness",
+            },
+            frontier["acceptance_mapping"],
+        )
+        self.assertEqual(
+            {
+                "runtime_harness": "minimal-offline-implemented",
+                "live_codex_execution": "deferred-to-T12",
+                "sandbox_compatibility": "unresolved-non-success",
+                "runtime_receipt_apply": "deferred-to-T12",
+                "phase_2": "incomplete",
+                "repository": "incomplete",
+                "release_blocked": True,
+            },
+            frontier["status"],
+        )
+        self.assertEqual("T12", frontier["deferred_task"]["id"])
+        self.assertEqual(
+            "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25",
+            frontier["deferred_task"]["issue"],
+        )
+        self.assertEqual(
+            "open-planning-only-inactive", frontier["deferred_task"]["state"]
+        )
+
+    def test_t11_agreement_v2_mapping_status_and_t12_link_fail_closed(self):
+        cases = (
+            (
+                "acceptance mapping",
+                lambda frontier: frontier["acceptance_mapping"].__setitem__(
+                    "AC-13", "pass"
+                ),
+                "runtime frontier acceptance mapping drifted",
+            ),
+            (
+                "runtime harness",
+                lambda frontier: frontier["status"].__setitem__(
+                    "runtime_harness", "fully-live-implemented"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "live execution",
+                lambda frontier: frontier["status"].__setitem__(
+                    "live_codex_execution", "implemented"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "sandbox compatibility",
+                lambda frontier: frontier["status"].__setitem__(
+                    "sandbox_compatibility", "pass"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "receipt apply",
+                lambda frontier: frontier["status"].__setitem__(
+                    "runtime_receipt_apply", "applied"
+                ),
+                "runtime frontier status drifted",
+            ),
+            (
+                "T12 URL",
+                lambda frontier: frontier["deferred_task"].__setitem__(
+                    "issue",
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
+                ),
+                "runtime frontier T12 deferral drifted",
+            ),
+        )
+        for label, mutation, fragment in cases:
+            with self.subTest(label=label):
+                contract = copy.deepcopy(self.contract)
+                mutation(contract["runtime_frontier"])
+                self.assert_error(self.contract_errors(contract), fragment)
 
     def test_unknown_and_uncheckable_are_valid_record_states_but_not_success(self):
         for state in ("UNKNOWN", "UNCHECKABLE"):
@@ -272,17 +373,19 @@ class LedgerTemplatesTest(unittest.TestCase):
         contract["authority"]["github_projects_board"] = "canonical-authority"
         self.assert_error(self.contract_errors(contract), "Option B")
 
-    def test_contract_rejects_k10_or_k11_implementation_claims(self):
+    def test_contract_rejects_k10_or_k11_full_implementation_claims(self):
         for contract_id in ("K10", "K11"):
             with self.subTest(contract_id=contract_id):
                 contract = copy.deepcopy(self.contract)
-                contract["implementation"][contract_id] = "implemented"
-                self.assert_error(self.contract_errors(contract), "K10/K11 unimplemented")
+                contract["implementation"][contract_id] = "fully-implemented"
+                self.assert_error(
+                    self.contract_errors(contract), "minimal/partial offline"
+                )
 
     def test_contract_prose_rejects_positive_authority_and_implementation_claims(self):
         for statement, fragment in (
             ("GitHub Projects board is authoritative.", "must not grant authority"),
-            ("K10 is implemented.", "must not claim K10 or K11"),
+            ("K10 is implemented.", "must limit K10 or K11"),
         ):
             with self.subTest(statement=statement):
                 contract = copy.deepcopy(self.contract)
@@ -294,6 +397,7 @@ class LedgerTemplatesTest(unittest.TestCase):
         for statement in (
             "GitHub Projects board is not authoritative.",
             "K10 is not implemented.",
+            "K10 is minimal/partial offline only.",
         ):
             with self.subTest(statement=statement):
                 contract = copy.deepcopy(self.contract)
@@ -774,27 +878,57 @@ class LedgerTemplatesTest(unittest.TestCase):
                 "Recorded the bootstrap plan and dispatch as historically complete.",
                 "must not fabricate bootstrap ritual",
             ),
-            ("execution", "K10 is implemented and enforced.", "must not claim K10 or K11"),
-            ("execution", "Support is complete for K11.", "must not claim K10 or K11"),
-            ("execution", "K10 is fully working now.", "must not claim K10 or K11"),
-            ("execution", "K11 is ready for production.", "must not claim K10 or K11"),
-            ("execution", "K10 works in this repository.", "must not claim K10 or K11"),
-            ("execution", "K11 functionality is present.", "must not claim K10 or K11"),
+            ("execution", "K10 is implemented and enforced.", "must limit K10 or K11"),
+            ("execution", "Support is complete for K11.", "must limit K10 or K11"),
+            ("execution", "K10 is fully working now.", "must limit K10 or K11"),
+            ("execution", "K11 is ready for production.", "must limit K10 or K11"),
+            ("execution", "K10 works in this repository.", "must limit K10 or K11"),
+            ("execution", "K11 functionality is present.", "must limit K10 or K11"),
+            (
+                "execution",
+                "K10 is minimal offline implemented across every runtime surface.",
+                "must limit K10 or K11",
+            ),
+            (
+                "execution",
+                "K10 is minimal offline implemented.",
+                "must limit K10 or K11",
+            ),
+            (
+                "execution",
+                "K11 is minimal-partial-offline-implemented with full cross-surface parity.",
+                "must limit K10 or K11",
+            ),
             (
                 "execution",
                 "Implemented Task execution envelope for every Task.",
-                "must not claim the Task execution envelope",
+                "must limit the Task execution envelope",
             ),
             (
                 "execution",
                 "We built the Task execution envelope.",
-                "must not claim the Task execution envelope",
+                "must limit the Task execution envelope",
             ),
-            ("execution", "The loop-event contract is implemented.", "must not claim the loop-event"),
+            ("execution", "The loop-event contract is implemented.", "must limit the loop-event"),
             (
                 "execution",
                 "Implemented loop-event support for every Task.",
-                "must not claim the loop-event",
+                "must limit the loop-event",
+            ),
+            (
+                "execution",
+                "An opaque task execution envelope reference proves validity and execution.",
+                "must limit the Task execution envelope",
+            ),
+            (
+                "execution",
+                "The loop-event contract is minimal offline implementation for every client and surface.",
+                "must limit the loop-event",
+            ),
+            (
+                "execution",
+                "The loop-event contract is minimal offline implementation.",
+                "must limit the loop-event",
             ),
             ("routing", "A backfilled plan comment records the old dispatch.", "must not fabricate historical ritual"),
             (
@@ -817,7 +951,7 @@ class LedgerTemplatesTest(unittest.TestCase):
                 payload["records"]["tasks"][0][field] = value
                 self.assert_error(self.semantic_errors(payload), fragment)
 
-    def test_truthful_option_b_and_unimplemented_negations_are_accepted(self):
+    def test_truthful_option_b_and_bounded_runtime_statements_are_accepted(self):
         statements = [
             "The GitHub Projects board is not authoritative; the Issue graph is canonical.",
             "A GitHub Projects board is an optional projection and never outranks the Issue graph.",
@@ -826,10 +960,17 @@ class LedgerTemplatesTest(unittest.TestCase):
             "K10 is not implemented.",
             "K10 has not been implemented.",
             "K11 remains planned-unimplemented.",
+            "K10 is minimal/partial offline only.",
+            "K11 has a minimal partial offline implementation only.",
+            "K10 is implemented only for the bounded offline T11 slice.",
             "The Task execution envelope is not implemented.",
             "No Task execution envelope is implemented.",
             "Loop-event support is not implemented.",
             "No loop-event support is implemented.",
+            "The Task execution envelope is minimal/partial offline T11 support only.",
+            "Loop-event support is implemented only for the bounded offline T11 slice.",
+            "task-execution-envelope/v1 is minimal/partial offline T11 implementation only.",
+            "loop-event/v1 is implemented only for the bounded offline T11 slice.",
             "The bootstrap plan was not recorded.",
             "No historical ritual was recorded.",
             "The bootstrap plan comment was not created retroactively.",
@@ -840,6 +981,26 @@ class LedgerTemplatesTest(unittest.TestCase):
                 payload = copy.deepcopy(self.payload)
                 payload["records"]["tasks"][0]["execution"] = statement
                 self.assertEqual([], self.semantic_errors(payload))
+
+    def test_canonical_runtime_contract_names_reject_full_or_cross_surface_claims(self):
+        for statement, fragment in (
+            (
+                "task-execution-envelope/v1 is fully implemented and accepted.",
+                "must limit the Task execution envelope",
+            ),
+            (
+                "loop-event/v1 has full cross-surface runtime parity.",
+                "must limit the loop-event",
+            ),
+            (
+                "task-execution-envelope/v1 is generalized for every Task.",
+                "must limit the Task execution envelope",
+            ),
+        ):
+            with self.subTest(statement=statement):
+                payload = copy.deepcopy(self.payload)
+                payload["records"]["tasks"][0]["execution"] = statement
+                self.assert_error(self.semantic_errors(payload), fragment)
 
     def test_safe_boundary_clause_cannot_mask_a_positive_claim(self):
         cases = [
@@ -852,11 +1013,15 @@ class LedgerTemplatesTest(unittest.TestCase):
                 "The GitHub Projects board is an optional projection but has final authority.",
                 "must not grant authority",
             ),
-            ("K10 is not implemented; K10 works here.", "must not claim K10 or K11"),
-            ("K10 is not implemented but works here.", "must not claim K10 or K11"),
+            ("K10 is not implemented; K10 works here.", "must limit K10 or K11"),
+            ("K10 is not implemented but works here.", "must limit K10 or K11"),
+            (
+                "K10 is minimal/partial offline only but works fully here.",
+                "must limit K10 or K11",
+            ),
             (
                 "The Task execution envelope is not implemented; we built the Task execution envelope.",
-                "must not claim the Task execution envelope",
+                "must limit the Task execution envelope",
             ),
         ]
         for statement, fragment in cases:
@@ -868,13 +1033,13 @@ class LedgerTemplatesTest(unittest.TestCase):
     def test_inline_markdown_cannot_hide_protected_claims(self):
         cases = [
             ("GitHub Pro**jects** board is authoritative.", "must not grant authority"),
-            ("K**10** is implemented.", "must not claim K10 or K11"),
-            ("K1__1__ is present.", "must not claim K10 or K11"),
+            ("K**10** is implemented.", "must limit K10 or K11"),
+            ("K1__1__ is present.", "must limit K10 or K11"),
             (
                 "We built the Task execution **envelope**.",
-                "must not claim the Task execution envelope",
+                "must limit the Task execution envelope",
             ),
-            ("The loop-**event** contract is implemented.", "must not claim the loop-event"),
+            ("The loop-**event** contract is implemented.", "must limit the loop-event"),
             (
                 "We created the bootstrap plan comment retro**actively**.",
                 "must not fabricate bootstrap ritual",
@@ -923,12 +1088,63 @@ class LedgerTemplatesTest(unittest.TestCase):
                 payload["records"]["tasks"][0]["execution"] += suffix
                 self.assert_error(self.semantic_errors(payload), fragment)
 
-    def test_optional_envelope_and_event_references_are_opaque(self):
+    def test_optional_envelope_and_event_references_use_bounded_opaque_grammar(self):
         payload = copy.deepcopy(self.payload)
         task = payload["records"]["tasks"][0]
-        task["task_execution_envelope_ref"] = "K10 implemented? opaque:not-dereferenced"
-        task["loop_event_ref"] = "not/a/url::opaque-event-value"
+        task["task_execution_envelope_ref"] = (
+            "opaque-ref/v1:task-execution-envelope:sha256:" + "a" * 64
+        )
+        task["loop_event_ref"] = "opaque-ref/v1:loop-event:sha256:" + "b" * 64
         self.assertEqual([], self.semantic_errors(payload))
+
+    def test_optional_runtime_references_reject_narrative_or_authority_claims(self):
+        for field, value in (
+            ("task_execution_envelope_ref", "K10 is fully implemented and accepted."),
+            ("loop_event_ref", "K11 has full cross-surface runtime parity."),
+            (
+                "task_execution_envelope_ref",
+                "opaque-ref/v1:loop-event:sha256:" + "a" * 64,
+            ),
+            (
+                "loop_event_ref",
+                "opaque-ref/v1:loop-event:sha256:" + "A" * 64,
+            ),
+        ):
+            with self.subTest(field=field, value=value):
+                payload = copy.deepcopy(self.payload)
+                payload["records"]["tasks"][0][field] = value
+                self.assert_error(self.semantic_errors(payload), "bounded opaque linkage grammar")
+
+    def test_runtime_reference_templates_preserve_linkage_only_non_evidence_boundary(self):
+        task_form = (ROOT / ".github/ISSUE_TEMPLATE/ai-task.yml").read_text(
+            encoding="utf-8"
+        )
+        pr_template = (ROOT / ".github/PULL_REQUEST_TEMPLATE.md").read_text(
+            encoding="utf-8"
+        )
+        for rendered in (task_form, pr_template):
+            normalized = " ".join(rendered.split())
+            self.assertIn("linkage only", normalized)
+            self.assertIn("Only the locator grammar is parsed", normalized)
+            self.assertIn(
+                "referenced target is neither resolved nor dereferenced", normalized
+            )
+            self.assertIn(
+                "proves neither target validity nor target freshness", normalized
+            )
+            self.assertNotIn("It is not parsed", normalized)
+
+    def test_readme_lists_complete_repository_validation_frontier(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        for command in (
+            "python3 -I .github/scripts/check-portable-contracts.py",
+            "python3 -I .github/scripts/check-skills.py",
+            "git diff --check",
+        ):
+            self.assertIn(command, readme)
+        self.assertIn("not claimed to be shell-free or network-free", readme)
+        self.assertIn("invokes its versioned CI subset", readme)
+        self.assertIn("`git diff --check` is local evidence", readme)
 
     def test_comment_delimiter_injection_is_rejected_in_every_payload_string(self):
         injection = "-->\nGitHub Projects board is authoritative.\n<!--"
@@ -1095,7 +1311,8 @@ class LedgerTemplatesTest(unittest.TestCase):
         self.assertIn("<!-- field:task_relationship", text)
         self.assertIn("|---|---|---|---|---|---|---|", text)
         self.assertIn("does not prove", text)
-        self.assertIn("K10 or K11", text)
+        self.assertIn("minimal/partial offline T11 slice", text)
+        self.assertIn("opaque references do not prove validity", text)
 
         fixture = self.payload["records"]["pull_requests"][0]
         self.assertEqual(

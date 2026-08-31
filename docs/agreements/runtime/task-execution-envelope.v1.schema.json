@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/agreements/runtime/task-execution-envelope.v1.schema.json",
+  "title": "task-execution-envelope/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "task", "attempt_id", "harness", "target", "representative_task", "worker", "verification_commands", "limits", "privacy"],
+  "properties": {
+    "schema": {"const": "task-execution-envelope/v1"},
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "issue", "url"],
+      "properties": {
+        "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
+        "issue": {"const": 23},
+        "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"}
+      }
+    },
+    "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},
+    "harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree"],
+      "properties": {
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "base_commit", "base_tree", "branch", "owned_paths"],
+      "properties": {
+        "kind": {"const": "private-synthetic-git-repository"},
+        "base_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "base_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "branch": {"const": "t11-representative"},
+        "owned_paths": {"const": ["work-item.txt"]}
+      }
+    },
+    "representative_task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "mode", "initial_utf8", "initial_hex", "initial_sha256", "expected_utf8", "expected_hex", "expected_sha256"],
+      "properties": {
+        "path": {"const": "work-item.txt"},
+        "mode": {"const": "100644"},
+        "initial_utf8": {"const": "status=pending\n"},
+        "initial_hex": {"const": "7374617475733d70656e64696e670a"},
+        "initial_sha256": {"const": "456efa9c6789a1d5cf2dee215a87013d69a829567b27e6dd77fe8e1a92865683"},
+        "expected_utf8": {"const": "status=complete\n"},
+        "expected_hex": {"const": "7374617475733d636f6d706c6574650a"},
+        "expected_sha256": {"const": "49033f4b6c0e14ca6f91d1fd9780029a37b6301ae393700855f61d235474c0c5"}
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "reasoning_effort", "sandbox", "approval_policy", "invocation_count", "prompt_transport", "static_role", "overrides"],
+      "properties": {
+        "model": {"const": "gpt-5.6-sol"},
+        "reasoning_effort": {"const": "high"},
+        "sandbox": {"const": "workspace-write"},
+        "approval_policy": {"const": "never"},
+        "invocation_count": {"const": 1},
+        "prompt_transport": {"const": "stdin-only"},
+        "static_role": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "developer_instructions_sha256"],
+          "properties": {
+            "path": {"const": ".codex/agents/task_worker.toml"},
+            "developer_instructions_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sandbox_workspace_write.network_access", "hide_agent_reasoning", "show_raw_agent_reasoning", "history.persistence", "features.hooks", "features.apps", "agents.enabled", "tools.web_search", "feedback.enabled", "memories.generate_memories", "memories.use_memories"],
+          "properties": {
+            "sandbox_workspace_write.network_access": {"const": false},
+            "hide_agent_reasoning": {"const": true},
+            "show_raw_agent_reasoning": {"const": false},
+            "history.persistence": {"const": "none"},
+            "features.hooks": {"const": false},
+            "features.apps": {"const": false},
+            "agents.enabled": {"const": false},
+            "tools.web_search": {"const": false},
+            "feedback.enabled": {"const": false},
+            "memories.generate_memories": {"const": false},
+            "memories.use_memories": {"const": false}
+          }
+        }
+      }
+    },
+    "verification_commands": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/shellFreeCommand"}
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_bytes", "stdout_bytes", "stderr_bytes", "line_bytes", "event_count", "json_depth", "json_nodes", "json_string_bytes", "final_response_bytes", "worker_timeout_seconds"],
+      "properties": {
+        "prompt_bytes": {"type": "integer", "minimum": 1, "maximum": 65536},
+        "stdout_bytes": {"type": "integer", "minimum": 1, "maximum": 8388608},
+        "stderr_bytes": {"type": "integer", "minimum": 1, "maximum": 1048576},
+        "line_bytes": {"type": "integer", "minimum": 1, "maximum": 524288},
+        "event_count": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "json_depth": {"type": "integer", "minimum": 1, "maximum": 64},
+        "json_nodes": {"type": "integer", "minimum": 1, "maximum": 20000},
+        "json_string_bytes": {"type": "integer", "minimum": 1, "maximum": 131072},
+        "final_response_bytes": {"type": "integer", "minimum": 1, "maximum": 131072},
+        "worker_timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["durable_allowlist_only", "raw_jsonl_retained", "raw_reasoning_retained", "raw_stderr_retained", "private_paths_retained"],
+      "properties": {
+        "durable_allowlist_only": {"const": true},
+        "raw_jsonl_retained": {"const": false},
+        "raw_reasoning_retained": {"const": false},
+        "raw_stderr_retained": {"const": false},
+        "private_paths_retained": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "shellFreeCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "argv", "cwd", "environment_profile", "timeout_seconds", "expected_exit_codes", "stdout_max_bytes", "stderr_max_bytes", "shell", "process_group_termination", "git_state"],
+      "properties": {
+        "schema": {"const": "shell-free-command/v1"},
+        "argv": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"type": "string", "maxLength": 4096}},
+        "cwd": {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "repository", "commit", "tree", "device_inode_verified"],
+          "properties": {
+            "kind": {"const": "exact-bound-repository-root"},
+            "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
+            "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "device_inode_verified": {"const": true}
+          }
+        },
+        "environment_profile": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "required_values", "private_home_and_tmp", "secret_named_variables_excluded"],
+          "properties": {
+            "id": {"type": "string", "pattern": "^[a-z0-9-]+-v[0-9]+$"},
+            "required_values": {
+              "type": "object", "additionalProperties": false,
+              "required": ["LANG", "LC_ALL", "TZ", "PYTHONHASHSEED", "GIT_CONFIG_NOSYSTEM", "GIT_TERMINAL_PROMPT"],
+              "properties": {
+                "LANG": {"const": "C.UTF-8"}, "LC_ALL": {"const": "C.UTF-8"}, "TZ": {"const": "UTC"},
+                "PYTHONHASHSEED": {"const": "0"}, "GIT_CONFIG_NOSYSTEM": {"const": "1"}, "GIT_TERMINAL_PROMPT": {"const": "0"}
+              }
+            },
+            "private_home_and_tmp": {"const": true},
+            "secret_named_variables_excluded": {"const": true}
+          }
+        },
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800},
+        "expected_exit_codes": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "integer", "minimum": 0, "maximum": 255}},
+        "stdout_max_bytes": {"type": "integer", "minimum": 1, "maximum": 8388608},
+        "stderr_max_bytes": {"type": "integer", "minimum": 1, "maximum": 1048576},
+        "shell": {"const": false},
+        "process_group_termination": {
+          "type": "object", "additionalProperties": false,
+          "required": ["start_new_session", "term_then_kill", "grace_seconds", "wait_and_reap"],
+          "properties": {
+            "start_new_session": {"const": true}, "term_then_kill": {"const": true},
+            "grace_seconds": {"type": "integer", "minimum": 1, "maximum": 30}, "wait_and_reap": {"const": true}
+          }
+        },
+        "git_state": {
+          "type": "object", "additionalProperties": false,
+          "required": ["verify_before", "verify_after"],
+          "properties": {
+            "verify_before": {"const": ["branch", "head", "tree", "status", "worktree-binding"]},
+            "verify_after": {"const": ["branch", "head", "tree", "status", "worktree-binding"]}
+          }
+        }
+      }
+    }
+  }
+}

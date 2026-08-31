@@ -1,0 +1,4 @@
+{"id":"e1","type":"thread.started","thread_id":"fixture-thread"}
+{"id":"e2","type":"turn.started"}
+{"id":"e3","type":"item.completed","item":{"type":"agent_message","text":"{\"schema\":\"codex-final-response/v1\",\"attempt_id\":\"ATTEMPT-0123456789abcdef\",\"outcome\":\"completed\",\"summary\":\"Updated the sole owned representative file.\",\"changed_paths\":[\"work-item.txt\"]}"}}
+{"id":"e4","type":"turn.completed","usage":{"input_tokens":10,"output_tokens":5}}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/agreements/runtime/codex-final-response.v1.schema.json",
+  "title": "codex-final-response/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "attempt_id", "outcome", "summary", "changed_paths"],
+  "properties": {
+    "schema": {"const": "codex-final-response/v1"},
+    "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},
+    "outcome": {"enum": ["completed", "blocked", "failed"]},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "changed_paths": {
+      "type": "array",
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^work-item\\.txt$"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"outcome": {"const": "completed"}}},
+      "then": {"properties": {"changed_paths": {"const": ["work-item.txt"]}}},
+      "else": {"properties": {"changed_paths": {"maxItems": 0}}}
+    }
+  ]
+}
