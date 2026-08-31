@@ -1,7 +1,10 @@
 import copy
+import contextlib
 import datetime
 import errno
+import hashlib
 import importlib.util
+import io
 import json
 import os
 import signal
@@ -13,6 +16,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
+
+import jsonschema
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +49,14 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             callback()
         if token:
             self.assertIn(token, str(raised.exception))
+
+    def assert_draft_2020_valid(self, schema, instance):
+        jsonschema.Draft202012Validator.check_schema(schema)
+        self.assertTrue(jsonschema.Draft202012Validator(schema).is_valid(instance))
+
+    def assert_draft_2020_invalid(self, schema, instance):
+        jsonschema.Draft202012Validator.check_schema(schema)
+        self.assertFalse(jsonschema.Draft202012Validator(schema).is_valid(instance))
 
     def minimal_process_environment(self, root, behavior=None):
         home = root / "home"
@@ -77,7 +90,10 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     "rules_bypass_absent": True,
                     "dynamic_task_data_stdin_only": True,
                 },
-                "network_sandbox_behavior": {"status": "pass"},
+                "shell_environment_behavior": self.adapter.shell_environment_evidence(
+                    "pass", "none"
+                ),
+                "network_sandbox_behavior": self.passing_network_evidence(),
                 "bubblewrap_prerequisite": self.passing_stage_a1_prerequisite(),
                 "lane_statuses": {
                     "provider_isolation_status": "not-run",
@@ -90,6 +106,20 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 },
             },
         }
+
+    def passing_network_evidence(self):
+        return self.adapter.network_sandbox_evidence(
+            "pass", "none",
+            control_accepted=True,
+            control_closed=True,
+            parent_namespace_sha256="1" * 64,
+            sandbox_namespace_sha256="2" * 64,
+            marker_status="exact-1",
+            connect_status="denied",
+            connect_errno="EPERM",
+            process_cleanup_status="pass",
+            process_reaped=True,
+        )
 
     def passing_stage_a1_prerequisite(self):
         controller_argv = [list(argv) for argv in self.adapter.STAGE_A1_CONTROLLER_ARGV]
@@ -1476,9 +1506,11 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     0, None, False, False, False, b"{}\n", 0, True,
                 ),
             ), mock.patch.object(
-                self.adapter, "shell_environment_probe", return_value="pass",
+                self.adapter, "shell_environment_probe",
+                return_value=self.adapter.shell_environment_evidence("pass", "none"),
             ) as shell_probe, mock.patch.object(
-                self.adapter, "network_sandbox_behavior_probe", return_value="pass",
+                self.adapter, "network_sandbox_behavior_probe",
+                return_value=self.passing_network_evidence(),
             ) as network_probe, mock.patch.object(
                 self.adapter, "process_cleanup_probe", return_value="pass",
             ):
@@ -2062,6 +2094,11 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 profile["client"]["release_class"] = "stable"
             profile["capabilities"]["documented_config_keys_probe"] = "UNCHECKABLE"
             profile["capabilities"]["shell_environment_probe"] = "UNCHECKABLE"
+            profile["evidence"]["shell_environment_behavior"] = (
+                self.adapter.shell_environment_evidence(
+                    "UNCHECKABLE", "observation-uncheckable"
+                )
+            )
             profile["evidence"]["lane_statuses"]["config_status"] = "UNCHECKABLE"
             profile["evidence"]["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
             self.adapter.validate_runtime_profile(profile)
@@ -2208,7 +2245,21 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 ("pass", "probe-only-match"), ("fail", "profile-drift"),
             ):
                 probe = self.passing_runtime_probe()
-                probe["evidence"]["network_sandbox_behavior"]["status"] = network_status
+                if network_status == "fail":
+                    probe["evidence"]["network_sandbox_behavior"] = (
+                        self.adapter.network_sandbox_evidence(
+                            "fail", "network-marker-missing",
+                            control_accepted=True,
+                            control_closed=True,
+                            parent_namespace_sha256="1" * 64,
+                            sandbox_namespace_sha256="2" * 64,
+                            marker_status="missing",
+                            connect_status="denied",
+                            connect_errno="EPERM",
+                            process_cleanup_status="pass",
+                            process_reaped=True,
+                        )
+                    )
                 probe["evidence"]["lane_statuses"]["codex_sandbox_network_status"] = network_status
                 with self.subTest(network_status=network_status), \
                      mock.patch.object(self.adapter, "prepare_colima_runtime_layout", return_value=layout), \
@@ -2647,7 +2698,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     "sandbox probe argv",
                 )
 
-    def test_shell_environment_probe_requires_exact_sandbox_network_marker(self):
+    def test_shell_environment_probe_has_closed_reason_codes_and_safe_metrics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             home = root / "home"
@@ -2661,96 +2712,526 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             configured = required["shell_environment_policy.set"]
             self.assertNotIn("CODEX_SANDBOX_NETWORK_DISABLED", configured)
 
-            def result_with(extra):
-                entries = dict(configured)
-                entries.update(extra)
-                payload = b"\0".join(
+            def payload(entries):
+                return b"\0".join(
                     (name + "=" + value).encode("utf-8")
-                    for name, value in sorted(entries.items())
+                    for name, value in entries
                 ) + b"\0"
+
+            valid_entries = sorted(configured.items()) + [
+                ("CODEX_SANDBOX_NETWORK_DISABLED", "1"),
+            ]
+
+            def result_with(entries=valid_entries, **overrides):
                 return self.adapter.ProcessResult(
-                    0, None, False, False, False, payload, 0, True,
+                    overrides.get("exit_code", 0), None,
+                    overrides.get("timed_out", False),
+                    overrides.get("stdout_overflow", False),
+                    overrides.get("stderr_overflow", False),
+                    payload(entries), 0, overrides.get("reaped", True),
                 )
 
-            cases = (
-                ({"CODEX_SANDBOX_NETWORK_DISABLED": "1"}, "pass"),
-                ({}, "fail"),
-                ({"CODEX_SANDBOX_NETWORK_DISABLED": "0"}, "fail"),
-                ({"CODEX_SANDBOX_NETWORK_DISABLED": "true"}, "fail"),
-                ({
-                    "CODEX_SANDBOX_NETWORK_DISABLED": "1",
-                    "T11_UNKNOWN_AUTOMATIC": "1",
-                }, "fail"),
-            )
-            for extra, expected in cases:
-                with self.subTest(extra=extra), mock.patch.object(
-                    self.adapter, "bounded_capture", return_value=result_with(extra),
+            cases = [
+                ("none", "pass", result_with()),
+                ("process-nonzero", "fail", result_with(exit_code=7)),
+                ("process-timeout", "UNCHECKABLE", result_with(timed_out=True)),
+                ("output-overflow", "UNCHECKABLE", result_with(stdout_overflow=True)),
+                ("process-not-reaped", "UNCHECKABLE", result_with(reaped=False)),
+                ("malformed-env-output", "fail", self.adapter.ProcessResult(
+                    0, None, False, False, False, b"NO-EQUALS\0", 0, True,
+                )),
+                ("duplicate-env-key", "fail", result_with(valid_entries + [valid_entries[0]])),
+                ("required-value-missing", "fail", result_with(valid_entries[1:])),
+                ("required-value-mismatch", "fail", result_with([
+                    (name, "wrong" if name == valid_entries[0][0] else value)
+                    for name, value in valid_entries
+                ])),
+                ("forbidden-sentinel-survived", "fail", result_with(
+                    valid_entries + [("T11_FORBIDDEN_SENTINEL", "must-not-survive")],
+                )),
+                ("network-marker-missing", "fail", result_with(valid_entries[:-1])),
+                ("network-marker-mismatch", "fail", result_with(
+                    valid_entries[:-1] + [("CODEX_SANDBOX_NETWORK_DISABLED", "0")],
+                )),
+                ("unexpected-key-set", "fail", result_with(
+                    valid_entries + [("T11_UNKNOWN_AUTOMATIC", "1")],
+                )),
+                ("secret-shaped-key", "fail", result_with(
+                    valid_entries + [("T11_ACCESS_TOKEN", "redacted")],
+                )),
+            ]
+            observed_reasons = set()
+            for reason, status, process_result in cases:
+                with self.subTest(reason=reason), mock.patch.object(
+                    self.adapter, "bounded_capture", return_value=process_result,
                 ) as capture:
-                    self.assertEqual(
-                        expected,
-                        self.adapter.shell_environment_probe(
-                            Path("/reviewed/codex"), root, environment, required,
-                        ),
+                    evidence = self.adapter.shell_environment_probe(
+                        Path("/reviewed/codex"), root, environment, required,
                     )
+                    self.assertEqual(status, evidence["status"])
+                    self.assertEqual(reason, evidence["reason_code"])
+                    self.assertEqual(
+                        {
+                            "schema", "authority", "status", "reason_code",
+                            "unexpected_key_count",
+                            "unexpected_key_names_sha256", "secret_shaped_key_count",
+                        },
+                        set(evidence),
+                    )
+                    observed_reasons.add(reason)
                     self.assertEqual(
                         "must-be-overridden",
                         capture.call_args.args[2]["CODEX_SANDBOX_NETWORK_DISABLED"],
                     )
 
-    def test_network_sandbox_child_handles_socket_creation_and_connect_denial(self):
-        class ChildSocket:
-            def __init__(self, connect_error=None):
-                self.connect_error = connect_error
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, _kind, _value, _traceback):
-                return False
-
-            def settimeout(self, _seconds):
-                pass
-
-            def connect(self, _address):
-                if self.connect_error is not None:
-                    raise self.connect_error
-
-        original_import = __import__
-
-        def run_child(factory):
-            fake_socket = SimpleNamespace(socket=factory)
-
-            def import_module(name, *args, **kwargs):
-                if name == "socket":
-                    return fake_socket
-                return original_import(name, *args, **kwargs)
-
-            with mock.patch.object(sys, "argv", ["network-probe", "9"]), \
-                 mock.patch("builtins.__import__", side_effect=import_module), \
-                 self.assertRaises(SystemExit) as raised:
-                exec(
-                    self.adapter.NETWORK_SANDBOX_PROBE_SCRIPT,
-                    {"__builtins__": __builtins__},
+            unknown_result = cases[-2][2]
+            with mock.patch.object(
+                self.adapter, "bounded_capture", return_value=unknown_result,
+            ):
+                evidence = self.adapter.shell_environment_probe(
+                    Path("/reviewed/codex"), root, environment, required,
                 )
-            return raised.exception.code
+            self.assertEqual(1, evidence["unexpected_key_count"])
+            self.assertEqual(0, evidence["secret_shaped_key_count"])
+            self.assertEqual(
+                hashlib.sha256(self.adapter.canonical_bytes([
+                    "T11_UNKNOWN_AUTOMATIC",
+                ])).hexdigest(),
+                evidence["unexpected_key_names_sha256"],
+            )
+            self.assertNotIn("T11_UNKNOWN_AUTOMATIC", json.dumps(evidence))
 
-        def denied_creation():
-            raise OSError(errno.EPERM, "sandbox denied socket creation")
+            with mock.patch.object(
+                self.adapter, "sandbox_probe_argv",
+                side_effect=self.adapter.ContractError("private observation failure"),
+            ):
+                evidence = self.adapter.shell_environment_probe(
+                    Path("/reviewed/codex"), root, environment, required,
+                )
+            self.assertEqual("UNCHECKABLE", evidence["status"])
+            self.assertEqual("observation-uncheckable", evidence["reason_code"])
+            observed_reasons.add("observation-uncheckable")
+            self.assertEqual(
+                set(self.adapter.SHELL_ENVIRONMENT_REASON_CODES) - {"not-run"},
+                observed_reasons,
+            )
 
-        def exhausted_creation():
-            raise OSError(errno.EMFILE, "unrelated resource exhaustion")
+            private_stderr = b"/Users/alice/private/auth.json"
+            nonzero_with_stderr = self.adapter.ProcessResult(
+                7, None, False, False, False, b"", len(private_stderr), True,
+                private_stderr,
+            )
+            evidence = self.adapter.classify_shell_environment_result(
+                nonzero_with_stderr, configured,
+            )
+            self.assertEqual("process-nonzero", evidence["reason_code"])
+            self.assertNotIn("alice", json.dumps(evidence))
+            signaled_with_stderr = self.adapter.ProcessResult(
+                None, signal.SIGTERM, False, False, False, b"",
+                len(private_stderr), True, private_stderr,
+            )
+            evidence = self.adapter.classify_shell_environment_result(
+                signaled_with_stderr, configured,
+            )
+            self.assertEqual("process-nonzero", evidence["reason_code"])
+            self.assertNotIn("alice", json.dumps(evidence))
 
-        self.assertEqual(0, run_child(denied_creation))
-        self.assertEqual(43, run_child(exhausted_creation))
-        self.assertEqual(0, run_child(
-            lambda: ChildSocket(connect_error=OSError(errno.EPERM, "denied")),
-        ))
-        self.assertEqual(42, run_child(ChildSocket))
-        self.assertEqual(43, run_child(
-            lambda: ChildSocket(connect_error=OSError(errno.EMFILE, "unrelated")),
-        ))
+    def test_shell_environment_parser_bounds_are_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home = root / "home"
+            tmp = root / "tmp"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            environment = self.adapter.minimal_environment(
+                Path(sys.executable).resolve(), home, tmp,
+            )
+            configured = self.adapter.reviewed_runtime_configuration(
+                environment,
+            )["shell_environment_policy.set"]
+            base_entries = sorted(configured.items()) + [
+                ("CODEX_SANDBOX_NETWORK_DISABLED", "1"),
+            ]
 
-    def test_network_sandbox_probe_preserves_closed_result_mapping(self):
+            def payload(entries):
+                return b"\0".join(
+                    (name + "=" + value).encode("utf-8")
+                    for name, value in entries
+                ) + b"\0"
+
+            def classify(raw):
+                return self.adapter.classify_shell_environment_result(
+                    self.adapter.ProcessResult(
+                        0, None, False, False, False, raw, 0, True,
+                    ),
+                    configured,
+                )
+
+            extra_count = (
+                self.adapter.MAX_SHELL_ENVIRONMENT_ENTRIES - len(base_entries)
+            )
+            at_entry_limit = base_entries + [
+                ("T11_EXTRA_{:03d}".format(index), "1")
+                for index in range(extra_count)
+            ]
+            evidence = classify(payload(at_entry_limit))
+            self.assertEqual("unexpected-key-set", evidence["reason_code"])
+            self.assertEqual(extra_count, evidence["unexpected_key_count"])
+            over_entry_limit = at_entry_limit + [("T11_EXTRA_OVER", "1")]
+            self.assertEqual(
+                "malformed-env-output",
+                classify(payload(over_entry_limit))["reason_code"],
+            )
+
+            at_name_limit = "N" + "A" * (
+                self.adapter.MAX_SHELL_ENVIRONMENT_NAME_BYTES - 1
+            )
+            self.assertEqual(
+                "unexpected-key-set",
+                classify(payload(base_entries + [(at_name_limit, "1")]))[
+                    "reason_code"
+                ],
+            )
+            over_name_limit = at_name_limit + "A"
+            self.assertEqual(
+                "malformed-env-output",
+                classify(payload(base_entries + [(over_name_limit, "1")]))[
+                    "reason_code"
+                ],
+            )
+
+            at_value_limit = "x" * self.adapter.MAX_SHELL_ENVIRONMENT_VALUE_BYTES
+            self.assertEqual(
+                "unexpected-key-set",
+                classify(payload(base_entries + [("T11_EXTRA_VALUE", at_value_limit)]))[
+                    "reason_code"
+                ],
+            )
+            self.assertEqual(
+                "malformed-env-output",
+                classify(payload(base_entries + [(
+                    "T11_EXTRA_VALUE", at_value_limit + "x",
+                )]))["reason_code"],
+            )
+
+            malformed = (
+                payload(base_entries)[:-1],
+                payload(base_entries)[:-1] + b"\0\0",
+                b"\xff=1\0",
+                b"BAD-NAME=1\0",
+            )
+            for raw in malformed:
+                with self.subTest(raw=raw[:32]):
+                    self.assertEqual(
+                        "malformed-env-output", classify(raw)["reason_code"],
+                    )
+
+    def test_shell_environment_semantics_reject_status_and_count_contradictions(self):
+        valid = self.adapter.shell_environment_evidence("pass", "none")
+        mutations = []
+        wrong_status = copy.deepcopy(valid)
+        wrong_status["status"] = "fail"
+        mutations.append(wrong_status)
+        wrong_count = self.adapter.shell_environment_evidence(
+            "fail", "secret-shaped-key", ["T11_ACCESS_TOKEN"], 1,
+        )
+        wrong_count["secret_shaped_key_count"] = 2
+        mutations.append(wrong_count)
+        for candidate in mutations:
+            with self.subTest(candidate=candidate):
+                self.assert_contract_error(
+                    lambda value=candidate: self.adapter.validate_shell_environment_evidence(value),
+                )
+                errors = []
+                self.checker.validate_shell_environment_evidence(
+                    candidate, "mutated-shell", errors,
+                )
+                self.assertTrue(errors)
+
+        schema = json.loads((
+            ROOT / "docs/agreements/runtime/runtime-profile.v1.schema.json"
+        ).read_text(encoding="utf-8"))
+        shell_schema = schema["properties"]["evidence"]["properties"][
+            "shell_environment_behavior"
+        ]
+        unexpected = self.adapter.shell_environment_evidence(
+            "fail", "unexpected-key-set", ["T11_UNKNOWN_AUTOMATIC"], 0,
+        )
+        secret = self.adapter.shell_environment_evidence(
+            "fail", "secret-shaped-key", ["T11_ACCESS_TOKEN"], 1,
+        )
+        self.assert_draft_2020_valid(shell_schema, unexpected)
+        self.assert_draft_2020_valid(shell_schema, secret)
+        for candidate in (
+            {**unexpected, "unexpected_key_count": 0},
+            {**unexpected, "unexpected_key_names_sha256": "0" * 64},
+            {**secret, "secret_shaped_key_count": 0},
+            {**secret, "unexpected_key_names_sha256": "0" * 64},
+        ):
+            with self.subTest(draft_candidate=candidate):
+                self.assert_draft_2020_invalid(shell_schema, candidate)
+        shell_schema["allOf"].pop()
+        errors = []
+        self.checker.validate_runtime_profile_schema(schema, errors)
+        self.assertTrue(errors)
+
+    def test_network_child_namespace_failure_is_bounded_and_classified(self):
+        def execute_child(readlink_effect):
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            patcher = (
+                mock.patch("os.readlink", side_effect=readlink_effect)
+                if isinstance(readlink_effect, BaseException)
+                else mock.patch("os.readlink", return_value=readlink_effect)
+            )
+            with patcher, mock.patch(
+                "socket.socket", side_effect=OSError(errno.EPERM, "private")
+            ), mock.patch.object(sys, "argv", ["network-probe", "43123"]), \
+                 contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exec(compile(
+                    self.adapter.NETWORK_SANDBOX_PROBE_SCRIPT,
+                    "<network-sandbox-probe>", "exec",
+                ), {})
+            self.assertEqual("", stderr.getvalue())
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual("0" * 64, payload["sandbox_network_namespace_sha256"])
+            result = self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes(payload), 0, True,
+            )
+            evidence = self.adapter.classify_network_sandbox_result(
+                "accepted-and-closed", "1" * 64, result,
+            )
+            self.assertEqual("UNCHECKABLE", evidence["status"])
+            self.assertEqual("sandbox-netns-unavailable", evidence["reason_code"])
+            self.assertEqual("pass", evidence["process_cleanup_status"])
+            self.assertTrue(evidence["process_reaped"])
+            self.assertNotIn("private", json.dumps(evidence))
+
+        execute_child(OSError(errno.ENOENT, "private namespace path"))
+        execute_child("mnt:[123]")
+
+    def test_network_sandbox_probe_binds_control_namespace_marker_and_denial(self):
+        parent_namespace = "1" * 64
+        sandbox_namespace = "2" * 64
+
+        def result(namespace=sandbox_namespace, marker="exact-1", connection="denied", denial="EPERM", **overrides):
+            payload = self.adapter.canonical_bytes({
+                "sandbox_network_namespace_sha256": namespace,
+                "network_marker_status": marker,
+                "sandbox_connection_status": connection,
+                "denial_errno": denial,
+            })
+            return self.adapter.ProcessResult(
+                overrides.get("exit_code", 0), None,
+                overrides.get("timed_out", False),
+                overrides.get("stdout_overflow", False),
+                overrides.get("stderr_overflow", False),
+                payload, 0, overrides.get("reaped", True),
+            )
+
+        passing_errnos = ("EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED")
+        for denial in passing_errnos:
+            with self.subTest(denial=denial):
+                evidence = self.adapter.classify_network_sandbox_result(
+                    "accepted-and-closed", parent_namespace, result(denial=denial),
+                )
+                self.assertEqual("pass", evidence["status"])
+                self.assertEqual("none", evidence["reason_code"])
+                self.assertTrue(evidence["unsandboxed_control_accepted"])
+                self.assertTrue(evidence["unsandboxed_control_closed"])
+                self.assertTrue(evidence["netns_different"])
+                self.assertEqual("exact-1", evidence["network_marker_status"])
+                self.assertEqual("denied", evidence["sandbox_connect_status"])
+                self.assertEqual(denial, evidence["sandbox_connect_errno"])
+                self.assertEqual("pass", evidence["process_cleanup_status"])
+                self.assertTrue(evidence["process_reaped"])
+                self.assertFalse(evidence["raw_stdout_recorded"])
+                self.assertFalse(evidence["raw_stderr_recorded"])
+
+        cases = (
+            ("parent-netns-unavailable", "UNCHECKABLE", "0" * 64, result()),
+            ("netns-not-separated", "fail", parent_namespace, result(namespace=parent_namespace)),
+            ("network-marker-missing", "fail", parent_namespace, result(marker="missing")),
+            ("network-marker-mismatch", "fail", parent_namespace, result(marker="mismatch")),
+            ("sandbox-connection-succeeded", "fail", parent_namespace, result(connection="succeeded", denial="none")),
+            ("unapproved-denial-errno", "UNCHECKABLE", parent_namespace, result(denial="unapproved")),
+            ("process-nonzero", "UNCHECKABLE", parent_namespace, result(exit_code=7)),
+            ("process-timeout", "UNCHECKABLE", parent_namespace, result(timed_out=True)),
+            ("output-overflow", "UNCHECKABLE", parent_namespace, result(stdout_overflow=True)),
+            ("process-not-reaped", "UNCHECKABLE", parent_namespace, result(reaped=False)),
+        )
+        for reason, status, parent, process_result in cases:
+            with self.subTest(reason=reason):
+                evidence = self.adapter.classify_network_sandbox_result(
+                    "accepted-and-closed", parent, process_result,
+                )
+                self.assertEqual(status, evidence["status"])
+                self.assertEqual(reason, evidence["reason_code"])
+                self.assertNotIn("/proc/", json.dumps(evidence))
+
+        for reason, process_result, expected_cleanup, expected_reaped in (
+            ("process-timeout", result(timed_out=True, reaped=True), "pass", True),
+            ("process-timeout", result(timed_out=True, reaped=False), "UNCHECKABLE", False),
+            ("output-overflow", result(stdout_overflow=True, reaped=True), "pass", True),
+            ("output-overflow", result(stdout_overflow=True, reaped=False), "UNCHECKABLE", False),
+        ):
+            with self.subTest(reason=reason, reaped=expected_reaped):
+                evidence = self.adapter.classify_network_sandbox_result(
+                    "accepted-and-closed", parent_namespace, process_result,
+                )
+                self.assertEqual(reason, evidence["reason_code"])
+                self.assertEqual(expected_cleanup, evidence["process_cleanup_status"])
+                self.assertIs(expected_reaped, evidence["process_reaped"])
+
+        private_stderr = b"/Users/alice/private/runtime.err"
+        nonzero_with_stderr = self.adapter.ProcessResult(
+            9, None, False, False, False, b"", len(private_stderr), True,
+            private_stderr,
+        )
+        evidence = self.adapter.classify_network_sandbox_result(
+            "accepted-and-closed", parent_namespace, nonzero_with_stderr,
+        )
+        self.assertEqual("process-nonzero", evidence["reason_code"])
+        self.assertEqual("UNCHECKABLE", evidence["status"])
+        self.assertEqual("pass", evidence["process_cleanup_status"])
+        self.assertTrue(evidence["process_reaped"])
+        self.assertNotIn("alice", json.dumps(evidence))
+        signaled_with_stderr = self.adapter.ProcessResult(
+            None, signal.SIGTERM, False, False, False, b"",
+            len(private_stderr), True, private_stderr,
+        )
+        evidence = self.adapter.classify_network_sandbox_result(
+            "accepted-and-closed", parent_namespace, signaled_with_stderr,
+        )
+        self.assertEqual("process-nonzero", evidence["reason_code"])
+        self.assertEqual("UNCHECKABLE", evidence["status"])
+        self.assertEqual("pass", evidence["process_cleanup_status"])
+        self.assertNotIn("alice", json.dumps(evidence))
+
+    def test_network_sandbox_semantics_reject_contradictory_records(self):
+        valid = self.passing_network_evidence()
+        mutations = []
+        for field, replacement in (
+            ("status", "fail"),
+            ("unsandboxed_control_closed", False),
+            ("netns_different", False),
+            ("sandbox_connect_errno", "none"),
+            ("process_reaped", False),
+        ):
+            candidate = copy.deepcopy(valid)
+            candidate[field] = replacement
+            mutations.append(candidate)
+        marker = self.adapter.network_sandbox_evidence(
+            "fail", "network-marker-missing",
+            control_accepted=True, control_closed=True,
+            parent_namespace_sha256="1" * 64,
+            sandbox_namespace_sha256="2" * 64,
+            marker_status="missing", connect_status="denied",
+            connect_errno="EPERM", process_cleanup_status="pass",
+            process_reaped=True,
+        )
+        marker["network_marker_status"] = "exact-1"
+        mutations.append(marker)
+        timeout = self.adapter.network_sandbox_evidence(
+            "UNCHECKABLE", "process-timeout",
+            control_accepted=True, control_closed=True,
+            parent_namespace_sha256="1" * 64,
+            process_cleanup_status="pass", process_reaped=True,
+        )
+        self.adapter.validate_network_sandbox_evidence(timeout)
+        timeout_unreaped = copy.deepcopy(timeout)
+        timeout_unreaped["process_cleanup_status"] = "UNCHECKABLE"
+        timeout_unreaped["process_reaped"] = False
+        self.adapter.validate_network_sandbox_evidence(timeout_unreaped)
+        timeout_not_run = copy.deepcopy(timeout)
+        timeout_not_run["process_cleanup_status"] = "not-run"
+        timeout_not_run["process_reaped"] = False
+        mutations.append(timeout_not_run)
+        overflow = copy.deepcopy(timeout)
+        overflow["reason_code"] = "output-overflow"
+        self.adapter.validate_network_sandbox_evidence(overflow)
+        overflow_unreaped = copy.deepcopy(overflow)
+        overflow_unreaped["process_cleanup_status"] = "UNCHECKABLE"
+        overflow_unreaped["process_reaped"] = False
+        self.adapter.validate_network_sandbox_evidence(overflow_unreaped)
+        overflow_not_run = copy.deepcopy(overflow)
+        overflow_not_run["process_cleanup_status"] = "not-run"
+        overflow_not_run["process_reaped"] = False
+        mutations.append(overflow_not_run)
+        for candidate in mutations:
+            with self.subTest(candidate=candidate):
+                self.assert_contract_error(
+                    lambda value=candidate: self.adapter.validate_network_sandbox_evidence(value),
+                )
+                errors = []
+                self.checker.validate_network_sandbox_evidence(
+                    candidate, "mutated-network", errors,
+                )
+                self.assertTrue(errors)
+
+        schema = json.loads((
+            ROOT / "docs/agreements/runtime/runtime-profile.v1.schema.json"
+        ).read_text(encoding="utf-8"))
+        network_schema = schema["properties"]["evidence"]["properties"][
+            "network_sandbox_behavior"
+        ]
+        marker_valid = self.adapter.network_sandbox_evidence(
+            "fail", "network-marker-missing",
+            control_accepted=True, control_closed=True,
+            parent_namespace_sha256="1" * 64,
+            sandbox_namespace_sha256="2" * 64,
+            marker_status="missing", connect_status="denied",
+            connect_errno="EPERM", process_cleanup_status="pass",
+            process_reaped=True,
+        )
+        marker_bad_connection = copy.deepcopy(marker_valid)
+        marker_bad_connection["sandbox_connect_status"] = "succeeded"
+        netns_valid = self.adapter.network_sandbox_evidence(
+            "fail", "netns-not-separated",
+            control_accepted=True, control_closed=True,
+            parent_namespace_sha256="1" * 64,
+            sandbox_namespace_sha256="1" * 64,
+            marker_status="exact-1", connect_status="denied",
+            connect_errno="EPERM", process_cleanup_status="pass",
+            process_reaped=True,
+        )
+        netns_unobserved = copy.deepcopy(netns_valid)
+        netns_unobserved["network_marker_status"] = "not-run"
+        netns_unobserved["sandbox_connect_status"] = "not-run"
+        netns_unobserved["sandbox_connect_errno"] = "not-run"
+        for candidate in (
+            marker_valid, netns_valid, timeout, timeout_unreaped,
+            overflow, overflow_unreaped,
+        ):
+            with self.subTest(draft_valid=candidate["reason_code"]):
+                self.assert_draft_2020_valid(network_schema, candidate)
+        for candidate in (
+            marker_bad_connection, netns_unobserved, timeout_not_run,
+            overflow_not_run,
+        ):
+            with self.subTest(draft_invalid=candidate["reason_code"]):
+                self.assert_draft_2020_invalid(network_schema, candidate)
+        network_schema["allOf"].pop()
+        errors = []
+        self.checker.validate_runtime_profile_schema(schema, errors)
+        self.assertTrue(errors)
+
+    def test_runtime_checker_reason_and_errno_registries_match_adapter(self):
+        self.assertEqual(
+            tuple(self.adapter.SHELL_ENVIRONMENT_REASON_CODES),
+            tuple(self.checker.SHELL_ENVIRONMENT_REASON_CODES),
+        )
+        self.assertEqual(
+            tuple(self.adapter.NETWORK_SANDBOX_REASON_CODES),
+            tuple(self.checker.NETWORK_SANDBOX_REASON_CODES),
+        )
+        self.assertEqual(
+            tuple(self.adapter.APPROVED_NETWORK_DENIAL_ERRNOS),
+            tuple(self.checker.APPROVED_NETWORK_DENIAL_ERRNOS),
+        )
+
+    def test_network_sandbox_probe_control_must_connect_accept_and_close(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             home = root / "home"
@@ -2765,36 +3246,70 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             listener.getsockname.return_value = ("127.0.0.1", 43123)
             connection = mock.MagicMock()
             connection.__enter__.return_value = connection
-            for exit_code, expected in (
-                (0, "pass"), (42, "fail"), (43, "UNCHECKABLE"),
-                (1, "UNCHECKABLE"),
+            connection.getsockname.return_value = ("127.0.0.1", 54321)
+            accepted = mock.MagicMock()
+            listener.accept.return_value = (accepted, ("127.0.0.1", 54321))
+            child = self.adapter.ProcessResult(
+                0, None, False, False, False,
+                self.adapter.canonical_bytes({
+                    "sandbox_network_namespace_sha256": "2" * 64,
+                    "network_marker_status": "exact-1",
+                    "sandbox_connection_status": "denied",
+                    "denial_errno": "EPERM",
+                }), 0, True,
+            )
+            with mock.patch.object(
+                self.adapter.socket, "socket", return_value=listener,
+            ), mock.patch.object(
+                self.adapter.socket, "create_connection", return_value=connection,
+            ), mock.patch.object(
+                self.adapter, "_network_namespace_sha256", return_value="1" * 64,
+            ), mock.patch.object(
+                self.adapter, "bounded_capture", return_value=child,
             ):
-                result = self.adapter.ProcessResult(
-                    exit_code, None, False, False, False, b"", 0, True,
+                evidence = self.adapter.network_sandbox_behavior_probe(
+                    Path("/reviewed/codex"), root, environment,
                 )
-                with self.subTest(exit_code=exit_code), \
-                     mock.patch.object(self.adapter.socket, "socket", return_value=listener), \
-                     mock.patch.object(
-                         self.adapter.socket, "create_connection", return_value=connection,
-                     ), mock.patch.object(
-                         self.adapter, "bounded_capture", return_value=result,
-                     ):
-                    self.assertEqual(
-                        expected,
-                        self.adapter.network_sandbox_behavior_probe(
-                            Path("/reviewed/codex"), root, environment,
-                        ),
-                    )
+            self.assertEqual("pass", evidence["status"])
+            listener.accept.assert_called_once_with()
+            accepted.close.assert_called_once_with()
+            connection.close.assert_called_once_with()
 
             with mock.patch.object(
                 self.adapter.socket, "socket", side_effect=OSError("control unavailable"),
+            ), mock.patch.object(
+                self.adapter, "_network_namespace_sha256", return_value="1" * 64,
             ):
-                self.assertEqual(
-                    "UNCHECKABLE",
-                    self.adapter.network_sandbox_behavior_probe(
-                        Path("/reviewed/codex"), root, environment,
-                    ),
+                evidence = self.adapter.network_sandbox_behavior_probe(
+                    Path("/reviewed/codex"), root, environment,
                 )
+            self.assertEqual("UNCHECKABLE", evidence["status"])
+            self.assertEqual("control-unavailable", evidence["reason_code"])
+
+            mismatch_listener = mock.MagicMock()
+            mismatch_listener.getsockname.return_value = ("127.0.0.1", 43123)
+            mismatch_client = mock.MagicMock()
+            mismatch_client.getsockname.return_value = ("127.0.0.1", 54321)
+            mismatch_accepted = mock.MagicMock()
+            mismatch_listener.accept.return_value = (
+                mismatch_accepted, ("127.0.0.1", 54322),
+            )
+            with mock.patch.object(
+                self.adapter.socket, "socket", return_value=mismatch_listener,
+            ), mock.patch.object(
+                self.adapter.socket, "create_connection",
+                return_value=mismatch_client,
+            ), mock.patch.object(
+                self.adapter, "_network_namespace_sha256", return_value="1" * 64,
+            ), mock.patch.object(self.adapter, "bounded_capture") as capture:
+                evidence = self.adapter.network_sandbox_behavior_probe(
+                    Path("/reviewed/codex"), root, environment,
+                )
+            self.assertEqual("UNCHECKABLE", evidence["status"])
+            self.assertEqual("control-peer-mismatch", evidence["reason_code"])
+            capture.assert_not_called()
+            mismatch_accepted.close.assert_called_once_with()
+            mismatch_client.close.assert_called_once_with()
 
     def test_worker_argv_failure_is_fixed_stage_and_reason_only(self):
         private_projection = self.adapter.exact_worker_argv_evidence(
@@ -3138,8 +3653,8 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             expected = self.adapter.reviewed_runtime_configuration(environment)
             report = self.real_doctor_report_fixture("fail")
 
-            def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15):
-                del stdin_bytes, timeout
+            def capture(argv, _cwd, _env, stdin_bytes=b"", timeout=15, **_limits):
+                del stdin_bytes, timeout, _limits
                 calls.append(list(argv))
                 if "doctor" in argv:
                     return self.adapter.ProcessResult(1, None, False, False, False, self.adapter.canonical_bytes(report), 0, True)
@@ -3153,7 +3668,12 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     return self.adapter.ProcessResult(0, None, False, False, False, payload, 0, True)
                 return self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)
 
-            with mock.patch.object(self.adapter, "bounded_capture", side_effect=capture):
+            with mock.patch.object(
+                self.adapter, "bounded_capture", side_effect=capture,
+            ), mock.patch.object(
+                self.adapter, "network_sandbox_behavior_probe",
+                return_value=self.passing_network_evidence(),
+            ):
                 probe = self.adapter.probe_runtime_evidence(
                     Path(sys.executable).resolve(), work, environment, ROOT,
                     prerequisite_evidence=self.passing_stage_a1_prerequisite(),

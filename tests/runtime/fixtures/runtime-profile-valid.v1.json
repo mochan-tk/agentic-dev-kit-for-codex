@@ -34,9 +34,12 @@
       "schema": "t11-runtime-configuration-intent/v1",
       "authority": "adapter-authored",
       "effective_configuration_proven": false,
-      "configuration_sha256": "dfea7207aa1326de479dba57c0d8c68a308e245d0c2def5c4ce5ca5bd040247e",
+      "configuration_sha256": "17be962b3def2ca516a67792e3a1916732afef1dfdb1c627ecae7ae798ddc584",
       "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
-      "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]
+      "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
+      "reviewed_codex_source_commit": "90854393966b21e9ebfd21b122334eb09a20c93d",
+      "reviewed_codex_source_blobs": {"debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79", "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e", "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c"},
+      "reviewed_codex_injected_keys_sha256": "8ef011e3681e8a597c368d97b2dcc36e9a4c75ec9260d11a2fd5c05f26129ea6"
     },
     "diagnostic_health": {
       "classification": "diagnostic-only",
@@ -56,7 +59,8 @@
       "rules_bypass_absent": true,
       "dynamic_task_data_stdin_only": true
     },
-    "network_sandbox_behavior": {"status": "pass"},
+    "shell_environment_behavior": {"schema": "t11-shell-environment-evidence/v1", "authority": "adapter-authored", "status": "pass", "reason_code": "none", "unexpected_key_count": 0, "unexpected_key_names_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570", "secret_shaped_key_count": 0},
+    "network_sandbox_behavior": {"schema": "t11-network-sandbox-evidence/v1", "authority": "adapter-authored", "status": "pass", "reason_code": "none", "unsandboxed_control_accepted": true, "unsandboxed_control_closed": true, "parent_netns_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "sandbox_netns_sha256": "2222222222222222222222222222222222222222222222222222222222222222", "netns_different": true, "network_marker_status": "exact-1", "sandbox_connect_status": "denied", "sandbox_connect_errno": "EPERM", "process_cleanup_status": "pass", "process_reaped": true, "raw_stdout_recorded": false, "raw_stderr_recorded": false},
     "bubblewrap_prerequisite": {
       "schema": "t11-bubblewrap-prerequisite-evidence/v1",
       "authority": "adapter/owner-authored",

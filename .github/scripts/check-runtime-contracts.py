@@ -91,6 +91,42 @@ EXPECTED_FIXED_ENVIRONMENT = {
     "GIT_TERMINAL_PROMPT": "0",
     "GIT_OPTIONAL_LOCKS": "0",
 }
+OFFICIAL_CODEX_0150_SOURCE_COMMIT = "90854393966b21e9ebfd21b122334eb09a20c93d"
+OFFICIAL_CODEX_0150_SOURCE_BLOBS = {
+    "debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79",
+    "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c",
+    "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e",
+}
+REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS = ["CODEX_SANDBOX_NETWORK_DISABLED"]
+SHELL_ENVIRONMENT_REASON_CODES = (
+    "none", "not-run", "process-nonzero", "process-timeout",
+    "output-overflow", "process-not-reaped", "malformed-env-output",
+    "duplicate-env-key", "required-value-missing", "required-value-mismatch",
+    "forbidden-sentinel-survived", "network-marker-missing",
+    "network-marker-mismatch", "unexpected-key-set", "secret-shaped-key",
+    "observation-uncheckable",
+)
+SHELL_ENVIRONMENT_UNCHECKABLE_REASONS = {
+    "process-timeout", "output-overflow", "process-not-reaped",
+    "observation-uncheckable",
+}
+NETWORK_SANDBOX_REASON_CODES = (
+    "none", "not-run", "control-unavailable", "control-not-accepted",
+    "control-peer-mismatch", "control-not-closed", "parent-netns-unavailable",
+    "sandbox-netns-unavailable", "netns-not-separated",
+    "network-marker-missing", "network-marker-mismatch",
+    "sandbox-connection-succeeded", "socket-creation-unavailable",
+    "unapproved-denial-errno", "process-nonzero", "process-timeout",
+    "output-overflow", "process-not-reaped", "malformed-probe-output",
+    "observation-uncheckable",
+)
+NETWORK_SANDBOX_FAIL_REASONS = {
+    "netns-not-separated", "network-marker-missing",
+    "network-marker-mismatch", "sandbox-connection-succeeded",
+}
+APPROVED_NETWORK_DENIAL_ERRNOS = (
+    "EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED",
+)
 REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
 REVIEWED_RULES_BYTES = (
     b"# T11 reviewed empty execpolicy profile. Platform policy remains authoritative.\n"
@@ -290,6 +326,7 @@ def expected_runtime_configuration_intent() -> Dict[str, Any]:
             "inherit": "none",
             "required_names": EXPECTED_SHELL_ENVIRONMENT_NAMES,
             "fixed_values": EXPECTED_FIXED_ENVIRONMENT,
+            "reviewed_codex_injected_keys": REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS,
         },
         "overrides": EXPECTED_RUNTIME_OVERRIDES,
         "execpolicy": {
@@ -304,6 +341,11 @@ def expected_runtime_configuration_intent() -> Dict[str, Any]:
         "configuration_sha256": sha256(canonical_bytes(static_configuration)),
         "rules_profile_sha256": rules_digest,
         "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
+        "reviewed_codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
+        "reviewed_codex_source_blobs": OFFICIAL_CODEX_0150_SOURCE_BLOBS,
+        "reviewed_codex_injected_keys_sha256": sha256(canonical_bytes(
+            REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS
+        )),
     }
 
 
@@ -960,7 +1002,8 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
         "additionalProperties": False,
         "required": [
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
-            "network_sandbox_behavior", "bubblewrap_prerequisite",
+            "shell_environment_behavior", "network_sandbox_behavior",
+            "bubblewrap_prerequisite",
             "containment_provider", "lane_statuses",
         ],
         "properties": {
@@ -971,6 +1014,8 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                     "schema", "authority", "effective_configuration_proven",
                     "configuration_sha256", "rules_profile_sha256",
                     "dynamic_environment_values_excluded",
+                    "reviewed_codex_source_commit", "reviewed_codex_source_blobs",
+                    "reviewed_codex_injected_keys_sha256",
                 ],
                 "properties": {
                     "schema": {"const": "t11-runtime-configuration-intent/v1"},
@@ -980,6 +1025,15 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                     "rules_profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
                     "dynamic_environment_values_excluded": {
                         "const": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]
+                    },
+                    "reviewed_codex_source_commit": {
+                        "const": OFFICIAL_CODEX_0150_SOURCE_COMMIT
+                    },
+                    "reviewed_codex_source_blobs": {
+                        "const": OFFICIAL_CODEX_0150_SOURCE_BLOBS
+                    },
+                    "reviewed_codex_injected_keys_sha256": {
+                        "type": "string", "pattern": "^[0-9a-f]{64}$"
                     },
                 },
             },
@@ -1034,13 +1088,340 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
                     }},
                 }],
             },
+            "shell_environment_behavior": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "schema", "authority", "status", "reason_code",
+                    "unexpected_key_count", "unexpected_key_names_sha256",
+                    "secret_shaped_key_count",
+                ],
+                "properties": {
+                    "schema": {"const": "t11-shell-environment-evidence/v1"},
+                    "authority": {"const": "adapter-authored"},
+                    "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "reason_code": {"enum": list(SHELL_ENVIRONMENT_REASON_CODES)},
+                    "unexpected_key_count": {"type": "integer", "minimum": 0, "maximum": 64},
+                    "unexpected_key_names_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "secret_shaped_key_count": {"type": "integer", "minimum": 0, "maximum": 64},
+                },
+                "allOf": [
+                    {
+                        "if": {"properties": {"reason_code": {"const": "none"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "status": {"const": "pass"},
+                            "unexpected_key_count": {"const": 0},
+                            "unexpected_key_names_sha256": {"const": sha256(canonical_bytes([]))},
+                            "secret_shaped_key_count": {"const": 0},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "not-run"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "status": {"const": "not-run"},
+                            "unexpected_key_count": {"const": 0},
+                            "unexpected_key_names_sha256": {"const": ZERO_SHA256},
+                            "secret_shaped_key_count": {"const": 0},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": sorted(SHELL_ENVIRONMENT_UNCHECKABLE_REASONS)}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "status": {"const": "UNCHECKABLE"},
+                            "unexpected_key_count": {"const": 0},
+                            "unexpected_key_names_sha256": {"const": ZERO_SHA256},
+                            "secret_shaped_key_count": {"const": 0},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": [
+                            reason for reason in SHELL_ENVIRONMENT_REASON_CODES
+                            if reason not in {"none", "not-run", *SHELL_ENVIRONMENT_UNCHECKABLE_REASONS}
+                        ]}}, "required": ["reason_code"]},
+                        "then": {"properties": {"status": {"const": "fail"}}},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "unexpected-key-set"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unexpected_key_count": {"minimum": 1},
+                            "unexpected_key_names_sha256": {"not": {"enum": [
+                                ZERO_SHA256, sha256(canonical_bytes([])),
+                            ]}},
+                            "secret_shaped_key_count": {"const": 0},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "secret-shaped-key"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unexpected_key_count": {"minimum": 1},
+                            "unexpected_key_names_sha256": {"not": {"enum": [
+                                ZERO_SHA256, sha256(canonical_bytes([])),
+                            ]}},
+                            "secret_shaped_key_count": {"minimum": 1},
+                        }},
+                    },
+                ],
+            },
             "network_sandbox_behavior": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["status"],
+                "required": [
+                    "schema", "authority", "status", "reason_code",
+                    "unsandboxed_control_accepted", "unsandboxed_control_closed",
+                    "parent_netns_sha256", "sandbox_netns_sha256", "netns_different",
+                    "network_marker_status", "sandbox_connect_status",
+                    "sandbox_connect_errno", "process_cleanup_status", "process_reaped",
+                    "raw_stdout_recorded", "raw_stderr_recorded",
+                ],
                 "properties": {
-                    "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}
+                    "schema": {"const": "t11-network-sandbox-evidence/v1"},
+                    "authority": {"const": "adapter-authored"},
+                    "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+                    "reason_code": {"enum": list(NETWORK_SANDBOX_REASON_CODES)},
+                    "unsandboxed_control_accepted": {"type": "boolean"},
+                    "unsandboxed_control_closed": {"type": "boolean"},
+                    "parent_netns_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "sandbox_netns_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "netns_different": {"type": "boolean"},
+                    "network_marker_status": {"enum": ["exact-1", "missing", "mismatch", "not-run", "UNCHECKABLE"]},
+                    "sandbox_connect_status": {"enum": ["denied", "succeeded", "not-run", "UNCHECKABLE"]},
+                    "sandbox_connect_errno": {"enum": [*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "not-run", "unapproved"]},
+                    "process_cleanup_status": {"enum": ["pass", "not-run", "UNCHECKABLE"]},
+                    "process_reaped": {"type": "boolean"},
+                    "raw_stdout_recorded": {"const": False},
+                    "raw_stderr_recorded": {"const": False},
                 },
+                "allOf": [
+                    {
+                        "if": {"properties": {"reason_code": {"const": "none"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "status": {"const": "pass"},
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": True},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "netns_different": {"const": True},
+                            "network_marker_status": {"const": "exact-1"},
+                            "sandbox_connect_status": {"const": "denied"},
+                            "sandbox_connect_errno": {"enum": list(APPROVED_NETWORK_DENIAL_ERRNOS)},
+                            "process_cleanup_status": {"const": "pass"},
+                            "process_reaped": {"const": True},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "not-run"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "status": {"const": "not-run"},
+                            "unsandboxed_control_accepted": {"const": False},
+                            "unsandboxed_control_closed": {"const": False},
+                            "parent_netns_sha256": {"const": ZERO_SHA256},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "not-run"},
+                            "sandbox_connect_status": {"const": "not-run"},
+                            "sandbox_connect_errno": {"const": "not-run"},
+                            "process_cleanup_status": {"const": "not-run"},
+                            "process_reaped": {"const": False},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": sorted(NETWORK_SANDBOX_FAIL_REASONS)}}, "required": ["reason_code"]},
+                        "then": {"properties": {"status": {"const": "fail"}}},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": [
+                            reason for reason in NETWORK_SANDBOX_REASON_CODES
+                            if reason not in {"none", "not-run", *NETWORK_SANDBOX_FAIL_REASONS}
+                        ]}}, "required": ["reason_code"]},
+                        "then": {"properties": {"status": {"const": "UNCHECKABLE"}}},
+                    },
+                    {
+                        "if": {"properties": {"process_cleanup_status": {"const": "not-run"}}, "required": ["process_cleanup_status"]},
+                        "then": {"properties": {
+                            "reason_code": {"const": "not-run"},
+                            "process_reaped": {"const": False},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"sandbox_connect_status": {"const": "succeeded"}}, "required": ["sandbox_connect_status"]},
+                        "then": {"properties": {"sandbox_connect_errno": {"const": "none"}}},
+                    },
+                    {
+                        "if": {"properties": {"sandbox_connect_status": {"const": "denied"}}, "required": ["sandbox_connect_status"]},
+                        "then": {"properties": {"sandbox_connect_errno": {"enum": [
+                            *APPROVED_NETWORK_DENIAL_ERRNOS, "unapproved",
+                        ]}}},
+                    },
+                    {
+                        "if": {"properties": {"sandbox_connect_status": {"const": "UNCHECKABLE"}}, "required": ["sandbox_connect_status"]},
+                        "then": {"properties": {"sandbox_connect_errno": {"const": "unapproved"}}},
+                    },
+                    {
+                        "if": {"properties": {"sandbox_connect_status": {"const": "not-run"}}, "required": ["sandbox_connect_status"]},
+                        "then": {"properties": {"sandbox_connect_errno": {"const": "not-run"}}},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": [
+                            "control-unavailable", "control-not-accepted",
+                            "control-peer-mismatch",
+                        ]}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": False},
+                            "unsandboxed_control_closed": {"const": False},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                            "process_cleanup_status": {"const": "UNCHECKABLE"},
+                            "process_reaped": {"const": False},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "control-not-closed"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": False},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                            "process_cleanup_status": {"const": "UNCHECKABLE"},
+                            "process_reaped": {"const": False},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "parent-netns-unavailable"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": False},
+                            "unsandboxed_control_closed": {"const": False},
+                            "parent_netns_sha256": {"const": ZERO_SHA256},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                            "process_cleanup_status": {"const": "UNCHECKABLE"},
+                            "process_reaped": {"const": False},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": [
+                            "sandbox-netns-unavailable", "process-nonzero",
+                            "malformed-probe-output",
+                        ]}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": True},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                            "process_cleanup_status": {"const": "pass"},
+                            "process_reaped": {"const": True},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": [
+                            "process-timeout", "output-overflow",
+                        ]}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": True},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                        }, "oneOf": [
+                            {"properties": {"process_cleanup_status": {"const": "pass"}, "process_reaped": {"const": True}}},
+                            {"properties": {"process_cleanup_status": {"const": "UNCHECKABLE"}, "process_reaped": {"const": False}}},
+                        ]},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "process-not-reaped"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": True},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"const": ZERO_SHA256},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                            "process_cleanup_status": {"const": "UNCHECKABLE"},
+                            "process_reaped": {"const": False},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "netns-not-separated"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": True},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "netns_different": {"const": False},
+                            "network_marker_status": {"enum": ["exact-1", "missing", "mismatch"]},
+                            "sandbox_connect_status": {"enum": ["denied", "succeeded", "UNCHECKABLE"]},
+                            "process_cleanup_status": {"const": "pass"},
+                            "process_reaped": {"const": True},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"enum": [
+                            "network-marker-missing", "network-marker-mismatch",
+                            "sandbox-connection-succeeded", "socket-creation-unavailable",
+                            "unapproved-denial-errno",
+                        ]}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "unsandboxed_control_accepted": {"const": True},
+                            "unsandboxed_control_closed": {"const": True},
+                            "parent_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "sandbox_netns_sha256": {"not": {"const": ZERO_SHA256}},
+                            "netns_different": {"const": True},
+                            "process_cleanup_status": {"const": "pass"},
+                            "process_reaped": {"const": True},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "network-marker-missing"}}, "required": ["reason_code"]},
+                        "then": {"properties": {"network_marker_status": {"const": "missing"}}},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "network-marker-mismatch"}}, "required": ["reason_code"]},
+                        "then": {"properties": {"network_marker_status": {"const": "mismatch"}}},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "sandbox-connection-succeeded"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "network_marker_status": {"const": "exact-1"},
+                            "sandbox_connect_status": {"const": "succeeded"},
+                            "sandbox_connect_errno": {"const": "none"},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "socket-creation-unavailable"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "network_marker_status": {"const": "exact-1"},
+                            "sandbox_connect_status": {"const": "UNCHECKABLE"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                        }},
+                    },
+                    {
+                        "if": {"properties": {"reason_code": {"const": "unapproved-denial-errno"}}, "required": ["reason_code"]},
+                        "then": {"properties": {
+                            "network_marker_status": {"const": "exact-1"},
+                            "sandbox_connect_status": {"const": "denied"},
+                            "sandbox_connect_errno": {"const": "unapproved"},
+                        }},
+                    },
+                ],
             },
             "bubblewrap_prerequisite": expected_stage_a1_prerequisite_schema(),
             "containment_provider": expected_containment_provider_schema(),
@@ -1494,10 +1875,245 @@ def validate_stage_a1_prerequisite(value: Any, profile_status: Any, label: str, 
         errors.append(label + ": matching profile requires passing Stage A.1 prerequisite")
 
 
+def validate_shell_environment_evidence(
+    value: Any, label: str, errors: List[str]
+) -> Any:
+    expected_keys = {
+        "schema", "authority", "status", "reason_code",
+        "unexpected_key_count", "unexpected_key_names_sha256",
+        "secret_shaped_key_count",
+    }
+    if not isinstance(value, dict) or set(value) != expected_keys:
+        errors.append(label + ": shell environment evidence shape drifted")
+        return None
+    reason = value.get("reason_code")
+    expected_status = (
+        "pass" if reason == "none" else
+        "not-run" if reason == "not-run" else
+        "UNCHECKABLE" if reason in SHELL_ENVIRONMENT_UNCHECKABLE_REASONS else
+        "fail" if reason in SHELL_ENVIRONMENT_REASON_CODES else None
+    )
+    count = value.get("unexpected_key_count")
+    secret_count = value.get("secret_shaped_key_count")
+    digest = value.get("unexpected_key_names_sha256")
+    if (
+        value.get("schema") != "t11-shell-environment-evidence/v1"
+        or value.get("authority") != "adapter-authored"
+        or value.get("status") != expected_status
+        or not isinstance(count, int) or isinstance(count, bool) or not 0 <= count <= 64
+        or not isinstance(secret_count, int) or isinstance(secret_count, bool)
+        or not 0 <= secret_count <= count
+        or not isinstance(digest, str) or SHA.fullmatch(digest) is None
+    ):
+        errors.append(label + ": shell environment evidence is invalid")
+        return value.get("status")
+    empty_digest = sha256(canonical_bytes([]))
+    if value.get("status") in {"not-run", "UNCHECKABLE"} and (
+        count != 0 or secret_count != 0 or digest != ZERO_SHA256
+    ):
+        errors.append(label + ": unobserved shell environment contains claims")
+    if value.get("status") in {"pass", "fail"} and count == 0 and digest != empty_digest:
+        errors.append(label + ": empty shell environment key digest drifted")
+    if count > 0 and digest in {ZERO_SHA256, empty_digest}:
+        errors.append(label + ": non-empty shell environment key digest is invalid")
+    if reason == "unexpected-key-set" and (count < 1 or secret_count != 0):
+        errors.append(label + ": unexpected shell key classification is invalid")
+    if reason == "secret-shaped-key" and secret_count < 1:
+        errors.append(label + ": secret-shaped shell key classification is invalid")
+    if value.get("status") == "pass" and (count != 0 or secret_count != 0):
+        errors.append(label + ": passing shell environment contains unexpected keys")
+    return value.get("status")
+
+
+def validate_network_sandbox_evidence(
+    value: Any, label: str, errors: List[str]
+) -> Any:
+    expected_keys = {
+        "schema", "authority", "status", "reason_code",
+        "unsandboxed_control_accepted", "unsandboxed_control_closed",
+        "parent_netns_sha256", "sandbox_netns_sha256", "netns_different",
+        "network_marker_status", "sandbox_connect_status",
+        "sandbox_connect_errno", "process_cleanup_status", "process_reaped",
+        "raw_stdout_recorded", "raw_stderr_recorded",
+    }
+    if not isinstance(value, dict) or set(value) != expected_keys:
+        errors.append(label + ": network/sandbox behavior evidence shape drifted")
+        return None
+    reason = value.get("reason_code")
+    expected_status = (
+        "pass" if reason == "none" else
+        "not-run" if reason == "not-run" else
+        "fail" if reason in NETWORK_SANDBOX_FAIL_REASONS else
+        "UNCHECKABLE" if reason in NETWORK_SANDBOX_REASON_CODES else None
+    )
+    parent = value.get("parent_netns_sha256")
+    sandbox = value.get("sandbox_netns_sha256")
+    derived_different = (
+        isinstance(parent, str) and isinstance(sandbox, str)
+        and parent != ZERO_SHA256 and sandbox != ZERO_SHA256 and parent != sandbox
+    )
+    if (
+        value.get("schema") != "t11-network-sandbox-evidence/v1"
+        or value.get("authority") != "adapter-authored"
+        or value.get("status") != expected_status
+        or not isinstance(parent, str) or SHA.fullmatch(parent) is None
+        or not isinstance(sandbox, str) or SHA.fullmatch(sandbox) is None
+        or value.get("netns_different") is not derived_different
+        or value.get("network_marker_status") not in {"exact-1", "missing", "mismatch", "not-run", "UNCHECKABLE"}
+        or value.get("sandbox_connect_status") not in {"denied", "succeeded", "not-run", "UNCHECKABLE"}
+        or value.get("sandbox_connect_errno") not in {*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "not-run", "unapproved"}
+        or value.get("process_cleanup_status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
+        or any(type(value.get(field)) is not bool for field in (
+            "unsandboxed_control_accepted", "unsandboxed_control_closed",
+            "netns_different", "process_reaped", "raw_stdout_recorded",
+            "raw_stderr_recorded",
+        ))
+        or value.get("raw_stdout_recorded") is not False
+        or value.get("raw_stderr_recorded") is not False
+    ):
+        errors.append(label + ": network/sandbox behavior evidence is invalid")
+        return value.get("status")
+    if value.get("unsandboxed_control_closed") and not value.get("unsandboxed_control_accepted"):
+        errors.append(label + ": network control close lacks acceptance")
+    cleanup_pair = (
+        value.get("process_cleanup_status"), value.get("process_reaped"),
+    )
+    if cleanup_pair not in {
+        ("pass", True), ("UNCHECKABLE", False), ("not-run", False),
+    }:
+        errors.append(label + ": network cleanup/reap facts are contradictory")
+    if cleanup_pair == ("not-run", False) and reason != "not-run":
+        errors.append(label + ": network cleanup not-run is reserved for not-run evidence")
+    marker = value.get("network_marker_status")
+    connection = value.get("sandbox_connect_status")
+    denial = value.get("sandbox_connect_errno")
+    if (
+        (connection == "succeeded" and denial != "none")
+        or (
+            connection == "denied"
+            and denial not in {*APPROVED_NETWORK_DENIAL_ERRNOS, "unapproved"}
+        )
+        or (connection == "UNCHECKABLE" and denial != "unapproved")
+        or (connection == "not-run" and denial != "not-run")
+    ):
+        errors.append(label + ": network connection/errno facts are contradictory")
+
+    parent_known = parent != ZERO_SHA256
+    sandbox_known = sandbox != ZERO_SHA256
+    control = (
+        value.get("unsandboxed_control_accepted"),
+        value.get("unsandboxed_control_closed"),
+    )
+    unobserved_child = (
+        not sandbox_known
+        and value.get("netns_different") is False
+        and marker == "UNCHECKABLE"
+        and connection == "UNCHECKABLE"
+        and denial == "unapproved"
+    )
+    if reason == "not-run":
+        expected = {
+            "unsandboxed_control_accepted": False,
+            "unsandboxed_control_closed": False,
+            "parent_netns_sha256": ZERO_SHA256,
+            "sandbox_netns_sha256": ZERO_SHA256,
+            "netns_different": False,
+            "network_marker_status": "not-run",
+            "sandbox_connect_status": "not-run",
+            "sandbox_connect_errno": "not-run",
+            "process_cleanup_status": "not-run",
+            "process_reaped": False,
+        }
+        if any(value.get(key) != expected_value for key, expected_value in expected.items()):
+            errors.append(label + ": not-run network/sandbox evidence contains claims")
+    elif reason == "parent-netns-unavailable":
+        if control != (False, False) or parent_known or not unobserved_child or cleanup_pair != ("UNCHECKABLE", False):
+            errors.append(label + ": parent namespace failure facts are contradictory")
+    elif reason in {
+        "control-unavailable", "control-not-accepted", "control-peer-mismatch",
+    }:
+        if control != (False, False) or not parent_known or not unobserved_child or cleanup_pair != ("UNCHECKABLE", False):
+            errors.append(label + ": control failure facts are contradictory")
+    elif reason == "control-not-closed":
+        if control != (True, False) or not parent_known or not unobserved_child or cleanup_pair != ("UNCHECKABLE", False):
+            errors.append(label + ": control close failure facts are contradictory")
+    elif reason == "observation-uncheckable":
+        pre_observation = (
+            control == (False, False) and not parent_known
+            and cleanup_pair == ("UNCHECKABLE", False)
+        )
+        post_control = (
+            control == (True, True) and parent_known
+            and cleanup_pair in {("UNCHECKABLE", False), ("pass", True)}
+        )
+        if not unobserved_child or not (pre_observation or post_control):
+            errors.append(label + ": uncheckable observation facts are contradictory")
+    elif reason in {
+        "sandbox-netns-unavailable", "process-nonzero", "process-timeout",
+        "output-overflow", "process-not-reaped", "malformed-probe-output",
+    }:
+        if control != (True, True) or not parent_known or not unobserved_child:
+            errors.append(label + ": post-spawn network failure facts are contradictory")
+        if reason in {
+            "sandbox-netns-unavailable", "process-nonzero",
+            "malformed-probe-output",
+        } and cleanup_pair != ("pass", True):
+            errors.append(label + ": reaped network failure lost cleanup evidence")
+        if reason == "process-not-reaped" and cleanup_pair != ("UNCHECKABLE", False):
+            errors.append(label + ": unreaped network failure claims cleanup")
+        if reason in {"process-timeout", "output-overflow"} and cleanup_pair not in {
+            ("pass", True), ("UNCHECKABLE", False),
+        }:
+            errors.append(label + ": bounded network failure cleanup facts are invalid")
+    elif reason in NETWORK_SANDBOX_REASON_CODES:
+        if control != (True, True) or not parent_known or not sandbox_known or cleanup_pair != ("pass", True):
+            errors.append(label + ": observed network result facts are incomplete")
+        if (
+            marker not in {"exact-1", "missing", "mismatch"}
+            or connection not in {"denied", "succeeded", "UNCHECKABLE"}
+        ):
+            errors.append(label + ": observed network classifications are invalid")
+        if reason == "none" and not (
+            value.get("netns_different")
+            and marker == "exact-1"
+            and connection == "denied"
+            and denial in APPROVED_NETWORK_DENIAL_ERRNOS
+        ):
+            errors.append(label + ": passing network/sandbox proof is incomplete")
+        if reason == "netns-not-separated" and value.get("netns_different"):
+            errors.append(label + ": network namespace equality reason drifted")
+        if reason in {
+            "network-marker-missing", "network-marker-mismatch",
+            "sandbox-connection-succeeded", "socket-creation-unavailable",
+            "unapproved-denial-errno",
+        } and not value.get("netns_different"):
+            errors.append(label + ": network failure lacks namespace separation")
+        expected_marker = {
+            "network-marker-missing": "missing",
+            "network-marker-mismatch": "mismatch",
+        }.get(reason)
+        if expected_marker is not None and marker != expected_marker:
+            errors.append(label + ": network marker reason/fact drifted")
+        if reason in {
+            "sandbox-connection-succeeded", "socket-creation-unavailable",
+            "unapproved-denial-errno",
+        } and marker != "exact-1":
+            errors.append(label + ": network connection reason lacks exact marker")
+        expected_connection = {
+            "sandbox-connection-succeeded": ("succeeded", "none"),
+            "socket-creation-unavailable": ("UNCHECKABLE", "unapproved"),
+            "unapproved-denial-errno": ("denied", "unapproved"),
+        }.get(reason)
+        if expected_connection is not None and (connection, denial) != expected_connection:
+            errors.append(label + ": network connection reason/fact drifted")
+    return value.get("status")
+
+
 def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[str]) -> None:
     if not isinstance(value, dict) or set(value) != {
         "configuration_intent", "diagnostic_health", "exact_worker_argv",
-        "network_sandbox_behavior", "bubblewrap_prerequisite",
+        "shell_environment_behavior", "network_sandbox_behavior",
+        "bubblewrap_prerequisite",
         "containment_provider", "lane_statuses",
     }:
         errors.append(label + ": separated runtime evidence lanes drifted")
@@ -1555,13 +2171,10 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
         or (worker_argv.get("status") in {"fail", "UNCHECKABLE"} and worker_argv.get("reason_code") in {"none", "not-run"})
     ):
         errors.append(label + ": exact worker argv evidence is invalid")
+    shell = value.get("shell_environment_behavior")
+    shell_status = validate_shell_environment_evidence(shell, label, errors)
     network = value.get("network_sandbox_behavior")
-    if (
-        not isinstance(network, dict)
-        or set(network) != {"status"}
-        or network.get("status") not in {"pass", "fail", "not-run", "UNCHECKABLE"}
-    ):
-        errors.append(label + ": network/sandbox behavior evidence is invalid")
+    network_status = validate_network_sandbox_evidence(network, label, errors)
     validate_stage_a1_prerequisite(
         value.get("bubblewrap_prerequisite"), status, label, errors
     )
@@ -1579,10 +2192,10 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
     provider = value.get("containment_provider", {})
     if lanes.get("provider_isolation_status") != provider.get("status"):
         errors.append(label + ": provider isolation lane does not match provider evidence")
-    if lanes.get("codex_sandbox_network_status") != (
-        network.get("status") if isinstance(network, dict) else None
-    ):
+    if lanes.get("codex_sandbox_network_status") != network_status:
         errors.append(label + ": sandbox/network lane does not match network evidence")
+    if lanes.get("shell_environment_status") != shell_status:
+        errors.append(label + ": shell environment lane does not match shell evidence")
     if lanes.get("mount_boundary_status") == "pass":
         mount_claims = {
             "host_mount_count": 1,
@@ -1649,7 +2262,10 @@ def validate_profile_lane_bindings(profile: Any, label: str, errors: List[str]) 
             evidence.get("network_sandbox_behavior", {}).get("status")
             if isinstance(evidence.get("network_sandbox_behavior"), dict) else None
         ),
-        "shell_environment_status": capabilities.get("shell_environment_probe"),
+        "shell_environment_status": (
+            evidence.get("shell_environment_behavior", {}).get("status")
+            if isinstance(evidence.get("shell_environment_behavior"), dict) else None
+        ),
         "config_status": (
             "not-run" if capabilities.get("documented_config_keys_probe") == "not-proven"
             else capabilities.get("documented_config_keys_probe")
@@ -1659,6 +2275,8 @@ def validate_profile_lane_bindings(profile: Any, label: str, errors: List[str]) 
     for key, expected in expected_bindings.items():
         if lanes.get(key) != expected:
             errors.append(label + ": independent lane binding drifted: " + key)
+    if capabilities.get("shell_environment_probe") != lanes.get("shell_environment_status"):
+        errors.append(label + ": shell capability does not match shell evidence lane")
     status = profile.get("status")
     if status == "match" and (
         profile.get("live_run_allowed") is not True
@@ -2049,7 +2667,8 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
             errors.append(label + ": match does not require passing " + key)
     evidence_properties = then_properties.get("evidence", {}).get("properties", {})
     for key in (
-        "exact_worker_argv", "network_sandbox_behavior",
+        "exact_worker_argv", "shell_environment_behavior",
+        "network_sandbox_behavior",
         "bubblewrap_prerequisite", "containment_provider",
     ):
         if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
@@ -2114,6 +2733,12 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
                 "enum": ["pass", "pass-with-advisory-warning"]
             }
             or probe_evidence.get("bubblewrap_prerequisite", {}).get(
+                "properties", {}
+            ).get("status") != {"const": "pass"}
+            or probe_evidence.get("shell_environment_behavior", {}).get(
+                "properties", {}
+            ).get("status") != {"const": "pass"}
+            or probe_evidence.get("network_sandbox_behavior", {}).get(
                 "properties", {}
             ).get("status") != {"const": "pass"}
             or any(probe_lanes.get(key) != {"const": "pass"} for key in LANE_STATUS_KEYS[:-1])
@@ -2248,6 +2873,18 @@ def validate_repository(root: Path) -> List[str]:
     adapter = import_script(root, ".github/scripts/codex-exec-adapter.py", "t11_runtime_adapter", errors)
     if adapter is not None:
         try:
+            if tuple(adapter.SHELL_ENVIRONMENT_REASON_CODES) != SHELL_ENVIRONMENT_REASON_CODES:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: shell reason-code registry drifted from checker"
+                )
+            if tuple(adapter.NETWORK_SANDBOX_REASON_CODES) != NETWORK_SANDBOX_REASON_CODES:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: network reason-code registry drifted from checker"
+                )
+            if tuple(adapter.APPROVED_NETWORK_DENIAL_ERRNOS) != APPROVED_NETWORK_DENIAL_ERRNOS:
+                errors.append(
+                    ".github/scripts/codex-exec-adapter.py: approved network errno registry drifted from checker"
+                )
             envelope = fixtures["tests/runtime/fixtures/envelope-valid.v1.json"]
             fixture_profile = fixtures["tests/runtime/fixtures/runtime-profile-valid.v1.json"]
             validate_runtime_override_mapping(

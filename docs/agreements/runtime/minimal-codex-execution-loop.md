@@ -149,9 +149,9 @@ authorization in its own dedicated private `CODEX_HOME`; credential values,
 device codes, and authentication files never enter artifacts or durable
 output.
 
-### Stage A.1 Git and bubblewrap prerequisites
+### Qualified Stage A.1 Git and bubblewrap prerequisites
 
-The current bounded attempt qualifies the documented Git and bubblewrap
+The accepted Stage A.1 attempt qualified the documented Git and bubblewrap
 prerequisites inside a fresh disposable Colima VM before any Codex shell-
 environment or sandbox/network probe. The provider controller uses fixed argv
 arrays with `shell=false`; package installation is never delegated to a model.
@@ -260,6 +260,38 @@ not merge evidence lanes: `provider_isolation_status`,
 `codex_sandbox_network_status`, `shell_environment_status`, `config_status`,
 and `auth_status` remain independent observations.
 
+### Stage A.2 shell and network classification
+
+Stage A.2 freezes the qualified Stage A.1 package, AppArmor profile, direct
+bubblewrap smoke, guest sysctl, and Codex 0.150.1 inputs. It changes only the
+probe classification and then runs one fresh unauthenticated, no-model Colima
+attempt.
+
+The shell probe records a closed `t11-shell-environment-evidence/v1` object.
+Its status is paired with a fixed reason code. Unexpected environment data is
+reduced to a count, SHA-256 of the canonical sorted key-name set, and a
+secret-shaped-key count; names, values, stdout, stderr, argv, and private paths
+are not durable. Required configured values remain exact, the forbidden
+sentinel must be absent, and `CODEX_SANDBOX_NETWORK_DISABLED` must equal `1`.
+Official Codex 0.150.1 source at commit
+`90854393966b21e9ebfd21b122334eb09a20c93d` establishes that this debug-sandbox
+path adds only that network marker. `PWD`, `SHLVL`, `_`, proxy keys, and Darwin
+compatibility variables are therefore not allowlisted on the Linux aarch64
+probe.
+
+The network probe records a closed `t11-network-sandbox-evidence/v1` object.
+Before sandbox execution, a loopback control connection must succeed, be
+accepted, and have both accepted endpoints closed. Parent and sandbox network
+namespace identities are hashed independently and must differ. The sandbox
+child must observe the exact network marker, attempt an actual `connect(2)` to
+the still-listening control endpoint, and be reaped under the bounded process
+contract. Only `EPERM`, `EACCES`, `ENETUNREACH`, `EHOSTUNREACH`, or
+`ECONNREFUSED` is accepted, and only when the control, namespace, marker, and
+cleanup evidence also passes. Successful connection is failure; missing
+namespace/control evidence, socket-creation failure, arbitrary errno, timeout,
+overflow, malformed output, or incomplete reap is non-success. Durable output
+contains only normalized states, fixed reasons, and non-private digests.
+
 Before worker invocation, descriptor-aware checks require the worktree root and
 `work-item.txt` to keep their directory/file bindings. The only permitted
 worktree entry is a non-symlink regular file named `work-item.txt`, mode
@@ -365,22 +397,25 @@ repositories, schemas, and deterministic tests. It has no Codex authentication,
 network, model spend, live mode, or GitHub write. Live execution and receipt
 `--apply` require separate explicit modes and all T11 gates.
 
-The next live-path attempt is Stage A.1 only. It uses a fresh unauthenticated
-Colima VM, performs no device authentication or model invocation, qualifies
-Git before the private-disk clone, and then qualifies bubblewrap. Only after
-the direct smoke passes may it run the Codex shell-environment and sandbox/
-network probes. It does not start a live worker or run a runtime-receipt dry-
-run/application.
+The next live-path attempt is Stage A.2 only. It uses one fresh
+unauthenticated Colima VM, performs no device authentication or model
+invocation, re-verifies the frozen qualified Stage A.1 prerequisites, and runs
+only the Codex shell-environment and sandbox/network probes. It does not start
+a live worker or run a runtime-receipt dry-run/application.
 
-Device-code authentication remains disabled throughout Stage A.1. Stage A.1
+Device-code authentication remains disabled throughout Stage A.2. Stage A.2
 appends only closed, allowlisted probe evidence to Issue #23 and PR
 #24. That evidence binds the exact head/tree/checks, no-auth/no-model facts,
-prerequisite outcome, separate lane statuses, and destruction/absence
+qualified-prerequisite binding, classified shell/network records, separate
+lane statuses, and destruction/absence
 read-back without a live result bundle or runtime-receipt claim. The VM is
 destroyed, profile/runtime-data/process absence is read back, and the attempt
-stops for owner judgment. A successful Stage A.1 record is not a runtime
+stops for owner judgment. A successful Stage A.2 record is not a runtime
 `match`, live Task evidence, a live runtime receipt, or authority to start
-Stage B; it cannot consume the exactly-once Stage B receipt marker.
+Stage B; it cannot consume the exactly-once Stage B receipt marker. If this
+single Stage A.2 attempt is non-success, T11 performs no Stage A.3; the owner
+must replan acceptance of the offline runnable harness separately and move
+live compatibility and receipt proof to a subsequent bounded Task.
 
 Stage B requires that later review and uses a different fresh Colima VM. Only
 for that attempt may device-code authentication be enabled temporarily. The

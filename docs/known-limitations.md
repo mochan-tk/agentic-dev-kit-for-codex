@@ -51,8 +51,9 @@ read-back. PID/start-token tracking provides best-effort cleanup evidence; it
 does not prove kernel-enforced containment. Full escaped-descendant process-
 lifetime containment is deferred to T12.
 
-The current Stage A.1 attempt adds narrow Git and bubblewrap prerequisites; it
-does not widen that containment claim. The adapter/owner-authored evidence is
+The accepted Stage A.1 attempt qualified narrow Git and bubblewrap
+prerequisites; Stage A.2 freezes those inputs and does not widen that
+containment claim. The adapter/owner-authored evidence is
 successful only on Ubuntu 24.04 `noble`, Linux `aarch64`, with AppArmor and
 its unprivileged-user-namespace restriction active. A fixed shell-free
 controller installs exact Ubuntu package versions for `git`, `bubblewrap`,
@@ -99,6 +100,20 @@ shell environment, configuration, and authentication are independent evidence
 lanes. A shell, configuration, authentication, or sandbox/network failure does
 not make an already observed provider-isolation fact `UNCHECKABLE`; each lane
 retains its own result and can still block the aggregate profile where required.
+
+Stage A.2 makes the remaining shell/network failure modes diagnosable without
+retaining raw observations. Shell evidence stores only a fixed reason, counts,
+and the SHA-256 of canonical sorted unexpected key names. The exact Linux
+debug-sandbox allowlist is the configured environment plus
+`CODEX_SANDBOX_NETWORK_DISABLED`, based on official Codex 0.150.1 source
+commit `90854393966b21e9ebfd21b122334eb09a20c93d`; the marker must equal `1`.
+Network evidence requires a reachable, accepted, closed unsandboxed control,
+different hashed parent/sandbox network namespaces, the exact marker, a
+denied actual connect using one of five reviewed errno names, and bounded
+cleanup/reap. Missing namespace/control proof, socket-creation failure,
+arbitrary errno, successful sandbox connection, malformed output, or cleanup
+failure remains non-success. No raw namespace identity, environment value,
+stdout, stderr, or private path is durable.
 
 The closed control-plane record also requires pre-create profile/runtime-data
 absence, no reuse of an existing VM, container, volume, default profile, or
@@ -152,14 +167,16 @@ Allowed stages are `load-envelope`, `load-static-role`,
 `filesystem-binding`; raw argv, exception text, and private paths are not
 recorded.
 
-The next attempt must stop after Stage A.1: a fresh unauthenticated Colima VM,
-no device authentication, no model invocation, Git qualification before the
-private-disk clone, bubblewrap qualification, and, only after its smoke
-passes, Codex shell-environment and sandbox/network probe evidence. Device-
-code authentication remains disabled, no live worker starts, and no runtime-
-receipt dry-run/application is performed. After append-only allowlisted probe
-evidence, the VM is destroyed and
-profile/runtime-data/process absence is read back. Stage B
+The next attempt must stop after one Stage A.2 run: a fresh unauthenticated
+Colima VM, no device authentication, no model invocation, exact re-verification
+of the frozen qualified Stage A.1 prerequisites, and classified Codex shell-
+environment and sandbox/network probe evidence. Device-code authentication
+remains disabled, no live worker starts, and no runtime-receipt dry-run/
+application is performed. After append-only allowlisted probe evidence, the VM
+is destroyed and profile/runtime-data/process absence is read back. If Stage
+A.2 is non-success, T11 performs no Stage A.3 and instead proposes a replan
+that accepts the offline harness separately and moves live compatibility and
+receipt proof to a subsequent bounded Task. Stage B
 requires a new review and a different fresh VM before device authentication
 can be enabled temporarily. Only a complete Stage B profile `match` can
 permit exactly one live worker. Stage A.1 success is prerequisite evidence,

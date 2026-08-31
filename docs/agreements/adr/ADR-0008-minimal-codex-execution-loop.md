@@ -189,7 +189,9 @@ the smoke argv alone has SHA-256
 
 Raw stderr is discarded and failure is reduced to a fixed reason code. Codex
 shell-environment and sandbox/network probes are not invoked unless this
-direct smoke passes. The prerequisite is distinct gate evidence: it does not
+direct smoke passes. Stage A.1 is now qualified and frozen for T11; Stage A.2
+does not alter its package, AppArmor, sysctl, smoke, or Codex-version inputs.
+The prerequisite is distinct gate evidence: it does not
 overwrite provider isolation, mount boundary, process cleanup, Codex
 sandbox/network, shell environment, configuration, or authentication status.
 
@@ -203,6 +205,19 @@ sandbox/network, shell environment, configuration, or authentication status.
 - The shell environment begins empty and adds only the verified executable
   path, private HOME/TMPDIR, locale/timezone, and deterministic Git/Python
   values. No credential, proxy, or unrelated host value is copied.
+- Shell observation uses a closed status/reason record. It stores only the
+  unexpected-key count, canonical sorted key-name digest, and secret-shaped
+  count. Official Codex 0.150.1 source commit
+  `90854393966b21e9ebfd21b122334eb09a20c93d` supports only
+  `CODEX_SANDBOX_NETWORK_DISABLED` as an injected key on this Linux debug-
+  sandbox path; the marker must equal `1` and the forbidden sentinel must be
+  absent.
+- Network evidence requires an accepted-and-closed unsandboxed control
+  connection, different hashed parent/sandbox network namespaces, the exact
+  marker, a denied sandboxed `connect(2)`, and bounded process reap. Only
+  `EPERM`, `EACCES`, `ENETUNREACH`, `EHOSTUNREACH`, and `ECONNREFUSED` are
+  accepted under all gates. Raw namespace IDs, stdout, stderr, and environment
+  output are never durable.
 - Unexpected project config, hooks, agents, Skills, AGENTS guidance, MCP data,
   symlinks, or extra files prevent invocation.
 - Durable records contain allowlisted digests and outcomes, never raw JSONL,
@@ -249,21 +264,23 @@ sandbox/network, shell environment, configuration, or authentication status.
   timestamps have a 300-second maximum future skew, and the latest absence
   observation must be no more than 3600 seconds old at validation.
 
-The next attempt is deliberately limited to Stage A.1. It provisions a fresh
-unauthenticated Colima VM, qualifies Git before the private-disk clone,
-performs the bubblewrap qualification above, and runs Codex shell-environment
-and sandbox/network probes only after the direct bubblewrap smoke passes. It
+The next attempt is deliberately limited to one Stage A.2 run. It provisions
+a fresh unauthenticated Colima VM, re-verifies the frozen qualified Stage A.1
+inputs, and runs only the classified Codex shell-environment and sandbox/
+network probes. It
 performs no device authentication, model invocation, live worker, or
 runtime-receipt dry-run/application. Its closed,
 allowlisted probe evidence is appended to Issue #23 and PR #24, after which
 the VM is destroyed and profile, runtime data, and process absence are read
-back. Stage A.1 then stops for owner judgment; it grants no authority to start
-Stage B.
+back. Stage A.2 then stops for owner judgment; it grants no authority to start
+Stage B. A non-successful Stage A.2 does not authorize Stage A.3 in T11; it
+requires an agreement replan separating offline-harness acceptance from later
+live compatibility and receipt proof.
 
 Stage B requires that later review and a separate fresh VM; only then may
 device-code authentication be enabled temporarily. A Stage B worker remains
 blocked unless exact auth classification and the complete runtime profile are
-`match`. Stage A.1 success is prerequisite evidence, not live-execution or
+`match`. Stage A.2 success is probe-only evidence, not live-execution or
 runtime-receipt evidence, and cannot consume or impersonate the one later
 Stage B receipt.
 
@@ -273,7 +290,7 @@ The three `.codex/agents/*.toml` files are K09-partial static role guidance.
 T11 does not prove named-agent runtime selection, authenticated role identity,
 full K09 parity, hooks, a generalized Task ritual, installation, upgrade,
 feedback transport, full escaped-descendant process-lifetime containment, or
-release readiness. Offline fixtures and Stage A.1 probe-only evidence do not
+release readiness. Offline fixtures and Stage A.1/A.2 probe-only evidence do not
 constitute a live Codex run. Only an exact-head supported-profile Stage B run
 and read-back receipt can supply T11 live evidence; owner merge remains the
 acceptance gate.

@@ -105,18 +105,87 @@ SHELL_ENVIRONMENT_NAMES = (
 DYNAMIC_ENVIRONMENT_NAMES = ("CODEX_HOME", "HOME", "PATH", "TMPDIR")
 SANDBOX_NETWORK_MARKER = "CODEX_SANDBOX_NETWORK_DISABLED"
 SANDBOX_NETWORK_MARKER_VALUE = b"1"
-# Official 0.150.1 Linux restricted-network seccomp returns EPERM for the
-# denied AF_INET socket/connect syscalls.  Other OSError values are not proof
-# of sandbox enforcement and remain UNCHECKABLE through exit 43.
+OFFICIAL_CODEX_0150_SOURCE_COMMIT = "90854393966b21e9ebfd21b122334eb09a20c93d"
+OFFICIAL_CODEX_0150_SOURCE_BLOBS = {
+    "debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79",
+    "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c",
+    "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e",
+}
+REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS = (SANDBOX_NETWORK_MARKER,)
+SHELL_ENVIRONMENT_REASON_CODES = (
+    "none", "not-run", "process-nonzero", "process-timeout",
+    "output-overflow", "process-not-reaped", "malformed-env-output",
+    "duplicate-env-key", "required-value-missing", "required-value-mismatch",
+    "forbidden-sentinel-survived", "network-marker-missing",
+    "network-marker-mismatch", "unexpected-key-set", "secret-shaped-key",
+    "observation-uncheckable",
+)
+SHELL_ENVIRONMENT_UNCHECKABLE_REASONS = (
+    "process-timeout", "output-overflow", "process-not-reaped",
+    "observation-uncheckable",
+)
+MAX_SHELL_ENVIRONMENT_ENTRIES = 64
+MAX_SHELL_ENVIRONMENT_NAME_BYTES = 128
+MAX_SHELL_ENVIRONMENT_VALUE_BYTES = 8_192
+NETWORK_SANDBOX_REASON_CODES = (
+    "none", "not-run", "control-unavailable", "control-not-accepted",
+    "control-peer-mismatch", "control-not-closed", "parent-netns-unavailable",
+    "sandbox-netns-unavailable", "netns-not-separated",
+    "network-marker-missing", "network-marker-mismatch",
+    "sandbox-connection-succeeded", "socket-creation-unavailable",
+    "unapproved-denial-errno", "process-nonzero", "process-timeout",
+    "output-overflow", "process-not-reaped", "malformed-probe-output",
+    "observation-uncheckable",
+)
+NETWORK_SANDBOX_FAIL_REASONS = (
+    "netns-not-separated", "network-marker-missing",
+    "network-marker-mismatch", "sandbox-connection-succeeded",
+)
+NETWORK_SANDBOX_UNCHECKABLE_REASONS = (
+    "control-unavailable", "control-not-accepted", "control-peer-mismatch",
+    "control-not-closed", "parent-netns-unavailable",
+    "sandbox-netns-unavailable", "socket-creation-unavailable",
+    "unapproved-denial-errno", "process-nonzero", "process-timeout",
+    "output-overflow", "process-not-reaped", "malformed-probe-output",
+    "observation-uncheckable",
+)
+APPROVED_NETWORK_DENIAL_ERRNOS = (
+    "EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED",
+)
+# The child emits only normalized classifications and a digest of its network
+# namespace identity. Socket-creation failure is not accepted as a connection
+# result; only an actual connect(2) denial can satisfy the Stage A.2 contract.
 NETWORK_SANDBOX_PROBE_SCRIPT = (
-    "import errno,socket,sys\n"
+    "import errno,hashlib,json,os,re,socket,sys\n"
+    "identity='0'*64\n"
     "try:\n"
-    " with socket.socket() as sock:\n"
+    " raw_identity=os.readlink('/proc/self/ns/net')\n"
+    " if re.fullmatch(r'net:\\[[0-9]+\\]',raw_identity):\n"
+    "  identity=hashlib.sha256(raw_identity.encode('ascii')).hexdigest()\n"
+    "except (OSError,UnicodeError):\n"
+    " pass\n"
+    "marker=os.environ.get('CODEX_SANDBOX_NETWORK_DISABLED')\n"
+    "marker_status='exact-1' if marker=='1' else ('missing' if marker is None else 'mismatch')\n"
+    "connection='UNCHECKABLE'\n"
+    "denial='unapproved'\n"
+    "try:\n"
+    " sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
+    "except OSError:\n"
+    " pass\n"
+    "else:\n"
+    " try:\n"
     "  sock.settimeout(2)\n"
     "  sock.connect(('127.0.0.1',int(sys.argv[1])))\n"
-    "except OSError as error:\n"
-    " raise SystemExit(0 if error.errno == errno.EPERM else 43)\n"
-    "raise SystemExit(42)\n"
+    " except OSError as error:\n"
+    "  connection='denied'\n"
+    "  denial=errno.errorcode.get(error.errno,'unapproved')\n"
+    " else:\n"
+    "  connection='succeeded'\n"
+    "  denial='none'\n"
+    " finally:\n"
+    "  sock.close()\n"
+    "payload={'sandbox_network_namespace_sha256':identity,'network_marker_status':marker_status,'sandbox_connection_status':connection,'denial_errno':denial}\n"
+    "sys.stdout.write(json.dumps(payload,sort_keys=True,separators=(',',':'))+'\\n')\n"
 )
 REVIEWED_RULES_RELATIVE_PATH = "rules/t11-reviewed.rules"
 REVIEWED_RULES_BYTES = (
@@ -379,6 +448,9 @@ def runtime_configuration_intent() -> Dict[str, Any]:
             "inherit": "none",
             "required_names": list(SHELL_ENVIRONMENT_NAMES),
             "fixed_values": {**REQUIRED_ENV_VALUES, "GIT_OPTIONAL_LOCKS": "0"},
+            "reviewed_codex_injected_keys": list(
+                REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS
+            ),
         },
         "overrides": dict(REQUIRED_OVERRIDES),
         "execpolicy": {
@@ -393,6 +465,11 @@ def runtime_configuration_intent() -> Dict[str, Any]:
         "configuration_sha256": sha256_bytes(canonical_bytes(static_configuration)),
         "rules_profile_sha256": sha256_bytes(REVIEWED_RULES_BYTES),
         "dynamic_environment_values_excluded": list(DYNAMIC_ENVIRONMENT_NAMES),
+        "reviewed_codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
+        "reviewed_codex_source_blobs": dict(OFFICIAL_CODEX_0150_SOURCE_BLOBS),
+        "reviewed_codex_injected_keys_sha256": sha256_bytes(canonical_bytes(
+            list(REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS)
+        )),
     }
 
 
@@ -2475,6 +2552,250 @@ def colima_provider_input_from_profile(profile: Mapping[str, Any]) -> Dict[str, 
     return value
 
 
+def validate_shell_environment_evidence(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ContractError("shell environment evidence must be an object")
+    exact_keys(
+        value,
+        (
+            "schema", "authority", "status", "reason_code",
+            "unexpected_key_count", "unexpected_key_names_sha256",
+            "secret_shaped_key_count",
+        ),
+        "shell environment evidence",
+    )
+    if (
+        value["schema"] != "t11-shell-environment-evidence/v1"
+        or value["authority"] != "adapter-authored"
+        or value["reason_code"] not in SHELL_ENVIRONMENT_REASON_CODES
+    ):
+        raise ContractError("shell environment evidence identity is invalid")
+    expected_status = (
+        "pass" if value["reason_code"] == "none" else
+        "not-run" if value["reason_code"] == "not-run" else
+        "UNCHECKABLE" if value["reason_code"] in SHELL_ENVIRONMENT_UNCHECKABLE_REASONS else
+        "fail"
+    )
+    if value["status"] != expected_status:
+        raise ContractError("shell environment evidence status/reason drifted")
+    count = value["unexpected_key_count"]
+    secret_count = value["secret_shaped_key_count"]
+    digest = value["unexpected_key_names_sha256"]
+    if (
+        not isinstance(count, int) or isinstance(count, bool)
+        or not 0 <= count <= MAX_SHELL_ENVIRONMENT_ENTRIES
+        or not isinstance(secret_count, int) or isinstance(secret_count, bool)
+        or not 0 <= secret_count <= count
+        or not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None
+    ):
+        raise ContractError("shell environment evidence summary is invalid")
+    empty_digest = sha256_bytes(canonical_bytes([]))
+    if value["status"] in ("not-run", "UNCHECKABLE"):
+        if (count, secret_count, digest) != (0, 0, "0" * 64):
+            raise ContractError("unobserved shell environment contains claims")
+    elif count == 0 and digest != empty_digest:
+        raise ContractError("empty shell environment summary digest drifted")
+    elif count > 0 and digest in ("0" * 64, empty_digest):
+        raise ContractError("non-empty shell environment summary digest is invalid")
+    if value["reason_code"] == "unexpected-key-set" and (count < 1 or secret_count != 0):
+        raise ContractError("unexpected shell key classification is invalid")
+    if value["reason_code"] == "secret-shaped-key" and secret_count < 1:
+        raise ContractError("secret-shaped shell key classification is invalid")
+    if value["status"] == "pass" and (count != 0 or secret_count != 0):
+        raise ContractError("passing shell environment contains unexpected keys")
+    return value
+
+
+def validate_network_sandbox_evidence(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ContractError("network sandbox evidence must be an object")
+    exact_keys(
+        value,
+        (
+            "schema", "authority", "status", "reason_code",
+            "unsandboxed_control_accepted", "unsandboxed_control_closed",
+            "parent_netns_sha256", "sandbox_netns_sha256", "netns_different",
+            "network_marker_status", "sandbox_connect_status",
+            "sandbox_connect_errno", "process_cleanup_status", "process_reaped",
+            "raw_stdout_recorded", "raw_stderr_recorded",
+        ),
+        "network sandbox evidence",
+    )
+    if (
+        value["schema"] != "t11-network-sandbox-evidence/v1"
+        or value["authority"] != "adapter-authored"
+        or value["reason_code"] not in NETWORK_SANDBOX_REASON_CODES
+        or value["status"] not in RUNTIME_LANE_STATES
+    ):
+        raise ContractError("network sandbox evidence identity is invalid")
+    expected_status = (
+        "pass" if value["reason_code"] == "none" else
+        "not-run" if value["reason_code"] == "not-run" else
+        "fail" if value["reason_code"] in NETWORK_SANDBOX_FAIL_REASONS else
+        "UNCHECKABLE"
+    )
+    if value["status"] != expected_status:
+        raise ContractError("network sandbox evidence status/reason drifted")
+    for field in (
+        "unsandboxed_control_accepted", "unsandboxed_control_closed",
+        "netns_different", "process_reaped", "raw_stdout_recorded",
+        "raw_stderr_recorded",
+    ):
+        require_bool(value[field], "network sandbox " + field)
+    if value["raw_stdout_recorded"] is not False or value["raw_stderr_recorded"] is not False:
+        raise ContractError("raw network probe output must not be recorded")
+    for field in ("parent_netns_sha256", "sandbox_netns_sha256"):
+        require_string(value[field], "network namespace digest", SHA256_RE)
+    derived_different = (
+        value["parent_netns_sha256"] != "0" * 64
+        and value["sandbox_netns_sha256"] != "0" * 64
+        and value["parent_netns_sha256"] != value["sandbox_netns_sha256"]
+    )
+    if value["netns_different"] is not derived_different:
+        raise ContractError("network namespace comparison drifted")
+    if value["network_marker_status"] not in ("exact-1", "missing", "mismatch", "not-run", "UNCHECKABLE"):
+        raise ContractError("network marker classification is invalid")
+    if value["sandbox_connect_status"] not in ("denied", "succeeded", "not-run", "UNCHECKABLE"):
+        raise ContractError("sandbox connection classification is invalid")
+    if value["sandbox_connect_errno"] not in (*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "not-run", "unapproved"):
+        raise ContractError("sandbox denial classification is invalid")
+    if value["process_cleanup_status"] not in RUNTIME_LANE_STATES:
+        raise ContractError("network probe cleanup classification is invalid")
+    cleanup_pair = (value["process_cleanup_status"], value["process_reaped"])
+    if cleanup_pair not in {
+        ("pass", True), ("UNCHECKABLE", False), ("not-run", False),
+    }:
+        raise ContractError("network cleanup/reap facts are contradictory")
+    if value["unsandboxed_control_closed"] and not value["unsandboxed_control_accepted"]:
+        raise ContractError("network control close claim lacks acceptance")
+    marker = value["network_marker_status"]
+    connection = value["sandbox_connect_status"]
+    denial = value["sandbox_connect_errno"]
+    if (
+        (connection == "succeeded" and denial != "none")
+        or (
+            connection == "denied"
+            and denial not in (*APPROVED_NETWORK_DENIAL_ERRNOS, "unapproved")
+        )
+        or (connection == "UNCHECKABLE" and denial != "unapproved")
+        or (connection == "not-run" and denial != "not-run")
+    ):
+        raise ContractError("network connection/errno facts are contradictory")
+
+    zero = "0" * 64
+    parent_known = value["parent_netns_sha256"] != zero
+    sandbox_known = value["sandbox_netns_sha256"] != zero
+    control = (
+        value["unsandboxed_control_accepted"],
+        value["unsandboxed_control_closed"],
+    )
+    unobserved_child = (
+        not sandbox_known
+        and not value["netns_different"]
+        and marker == "UNCHECKABLE"
+        and connection == "UNCHECKABLE"
+        and denial == "unapproved"
+    )
+    reason = value["reason_code"]
+    if cleanup_pair == ("not-run", False) and reason != "not-run":
+        raise ContractError("network cleanup not-run is reserved for not-run evidence")
+    if reason == "not-run":
+        expected = {
+            "unsandboxed_control_accepted": False,
+            "unsandboxed_control_closed": False,
+            "parent_netns_sha256": zero,
+            "sandbox_netns_sha256": zero,
+            "netns_different": False,
+            "network_marker_status": "not-run",
+            "sandbox_connect_status": "not-run",
+            "sandbox_connect_errno": "not-run",
+            "process_cleanup_status": "not-run",
+            "process_reaped": False,
+        }
+        if any(value[key] != expected_value for key, expected_value in expected.items()):
+            raise ContractError("not-run network sandbox evidence contains claims")
+    elif reason == "parent-netns-unavailable":
+        if control != (False, False) or parent_known or not unobserved_child or cleanup_pair != ("UNCHECKABLE", False):
+            raise ContractError("parent namespace failure facts are contradictory")
+    elif reason in {
+        "control-unavailable", "control-not-accepted", "control-peer-mismatch",
+    }:
+        if control != (False, False) or not parent_known or not unobserved_child or cleanup_pair != ("UNCHECKABLE", False):
+            raise ContractError("control failure facts are contradictory")
+    elif reason == "control-not-closed":
+        if control != (True, False) or not parent_known or not unobserved_child or cleanup_pair != ("UNCHECKABLE", False):
+            raise ContractError("control close failure facts are contradictory")
+    elif reason == "observation-uncheckable":
+        pre_observation = (
+            control == (False, False) and not parent_known
+            and cleanup_pair == ("UNCHECKABLE", False)
+        )
+        post_control = (
+            control == (True, True) and parent_known
+            and cleanup_pair in {("UNCHECKABLE", False), ("pass", True)}
+        )
+        if not unobserved_child or not (pre_observation or post_control):
+            raise ContractError("uncheckable observation facts are contradictory")
+    elif reason in {
+        "sandbox-netns-unavailable", "process-nonzero", "process-timeout",
+        "output-overflow", "process-not-reaped", "malformed-probe-output",
+    }:
+        if control != (True, True) or not parent_known or not unobserved_child:
+            raise ContractError("post-spawn network failure facts are contradictory")
+        if reason in {
+            "sandbox-netns-unavailable", "process-nonzero",
+            "malformed-probe-output",
+        } and cleanup_pair != ("pass", True):
+            raise ContractError("reaped network failure lost cleanup evidence")
+        if reason == "process-not-reaped" and cleanup_pair != ("UNCHECKABLE", False):
+            raise ContractError("unreaped network failure claims cleanup")
+        if reason in {"process-timeout", "output-overflow"} and cleanup_pair not in {
+            ("pass", True), ("UNCHECKABLE", False),
+        }:
+            raise ContractError("bounded network failure cleanup facts are invalid")
+    else:
+        if control != (True, True) or not parent_known or not sandbox_known or cleanup_pair != ("pass", True):
+            raise ContractError("observed network result facts are incomplete")
+        if (
+            marker not in ("exact-1", "missing", "mismatch")
+            or connection not in ("denied", "succeeded", "UNCHECKABLE")
+        ):
+            raise ContractError("observed network classifications are invalid")
+        if reason == "none" and not (
+            value["netns_different"] and marker == "exact-1"
+            and connection == "denied"
+            and denial in APPROVED_NETWORK_DENIAL_ERRNOS
+        ):
+            raise ContractError("passing network sandbox evidence is incomplete")
+        if reason == "netns-not-separated" and value["netns_different"]:
+            raise ContractError("network namespace equality reason drifted")
+        if reason in {
+            "network-marker-missing", "network-marker-mismatch",
+            "sandbox-connection-succeeded", "socket-creation-unavailable",
+            "unapproved-denial-errno",
+        } and not value["netns_different"]:
+            raise ContractError("network failure lacks namespace separation")
+        expected_marker = {
+            "network-marker-missing": "missing",
+            "network-marker-mismatch": "mismatch",
+        }.get(reason)
+        if expected_marker is not None and marker != expected_marker:
+            raise ContractError("network marker reason/fact drifted")
+        if reason in {
+            "sandbox-connection-succeeded", "socket-creation-unavailable",
+            "unapproved-denial-errno",
+        } and marker != "exact-1":
+            raise ContractError("network connection reason lacks exact marker")
+        expected_connection = {
+            "sandbox-connection-succeeded": ("succeeded", "none"),
+            "socket-creation-unavailable": ("UNCHECKABLE", "unapproved"),
+            "unapproved-denial-errno": ("denied", "unapproved"),
+        }.get(reason)
+        if expected_connection is not None and (connection, denial) != expected_connection:
+            raise ContractError("network connection reason/fact drifted")
+    return value
+
+
 def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[str, Any]:
     if not isinstance(profile, dict):
         raise ContractError("runtime profile must be an object")
@@ -2528,7 +2849,8 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         evidence,
         (
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
-            "network_sandbox_behavior", "bubblewrap_prerequisite",
+            "shell_environment_behavior", "network_sandbox_behavior",
+            "bubblewrap_prerequisite",
             "lane_statuses", "containment_provider",
         ),
         "runtime evidence",
@@ -2609,12 +2931,12 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     }
     if worker_argv_evidence["status"] in ("fail", "UNCHECKABLE") and failure_pairs.get(worker_argv_evidence["reason_code"]) != worker_argv_evidence["stage"]:
         raise ContractError("runtime worker argv failure stage/reason pair is invalid")
-    network_evidence = evidence["network_sandbox_behavior"]
-    if not isinstance(network_evidence, dict):
-        raise ContractError("runtime network/sandbox evidence must be an object")
-    exact_keys(network_evidence, ("status",), "runtime network/sandbox evidence")
-    if network_evidence["status"] not in ("pass", "fail", "not-run", "UNCHECKABLE"):
-        raise ContractError("runtime network/sandbox status is invalid")
+    shell_evidence = validate_shell_environment_evidence(
+        evidence["shell_environment_behavior"]
+    )
+    network_evidence = validate_network_sandbox_evidence(
+        evidence["network_sandbox_behavior"]
+    )
     prerequisite_evidence = validate_stage_a1_prerequisite_evidence(
         evidence["bubblewrap_prerequisite"]
     )
@@ -2638,7 +2960,10 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         raise ContractError("process-cleanup lane and capability disagree")
     if lanes["codex_sandbox_network_status"] != network_evidence["status"]:
         raise ContractError("sandbox/network lane and evidence disagree")
-    if lanes["shell_environment_status"] != caps["shell_environment_probe"]:
+    if (
+        lanes["shell_environment_status"] != caps["shell_environment_probe"]
+        or lanes["shell_environment_status"] != shell_evidence["status"]
+    ):
         raise ContractError("shell-environment lane and capability disagree")
     if (
         caps["documented_config_keys_probe"] == "pass"
@@ -5194,80 +5519,403 @@ def process_cleanup_probe(root: Path, env: Mapping[str, str]) -> str:
     return "pass" if result.exit_code == 0 else "fail"
 
 
+def shell_environment_evidence(
+    status: str,
+    reason_code: str,
+    unexpected_names: Sequence[str] = (),
+    secret_shaped_key_count: int = 0,
+) -> Dict[str, Any]:
+    """Build the bounded shell observation record without names or values."""
+    if reason_code not in SHELL_ENVIRONMENT_REASON_CODES:
+        raise ContractError("shell environment reason code is invalid")
+    expected_status = (
+        "pass" if reason_code == "none" else
+        "not-run" if reason_code == "not-run" else
+        "UNCHECKABLE" if reason_code in SHELL_ENVIRONMENT_UNCHECKABLE_REASONS else
+        "fail"
+    )
+    if status != expected_status:
+        raise ContractError("shell environment status/reason pair is invalid")
+    names = sorted(unexpected_names)
+    if (
+        len(names) > MAX_SHELL_ENVIRONMENT_ENTRIES
+        or len(names) != len(set(names))
+        or not isinstance(secret_shaped_key_count, int)
+        or isinstance(secret_shaped_key_count, bool)
+        or not 0 <= secret_shaped_key_count <= len(names)
+    ):
+        raise ContractError("shell environment summary is invalid")
+    digest = (
+        sha256_bytes(canonical_bytes(names))
+        if status in ("pass", "fail") else "0" * 64
+    )
+    return {
+        "schema": "t11-shell-environment-evidence/v1",
+        "authority": "adapter-authored",
+        "status": status,
+        "reason_code": reason_code,
+        "unexpected_key_count": len(names) if status in ("pass", "fail") else 0,
+        "unexpected_key_names_sha256": digest,
+        "secret_shaped_key_count": (
+            secret_shaped_key_count if status in ("pass", "fail") else 0
+        ),
+    }
+
+
+def classify_shell_environment_result(
+    result: ProcessResult,
+    set_values: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Classify one bounded ``env -0`` result without retaining its bytes."""
+    empty_uncheckable = lambda reason: shell_environment_evidence(
+        "UNCHECKABLE", reason
+    )
+    if result.timed_out:
+        return empty_uncheckable("process-timeout")
+    if result.stdout_overflow or result.stderr_overflow:
+        return empty_uncheckable("output-overflow")
+    if not result.reaped:
+        return empty_uncheckable("process-not-reaped")
+    if result.exit_code != 0 or result.signal_number is not None:
+        return shell_environment_evidence("fail", "process-nonzero")
+    if result.stderr_size:
+        return empty_uncheckable("observation-uncheckable")
+    if not result.stdout.endswith(b"\0"):
+        return shell_environment_evidence("fail", "malformed-env-output")
+    entries = result.stdout.split(b"\0")
+    if entries[-1] != b"" or any(entry == b"" for entry in entries[:-1]):
+        return shell_environment_evidence("fail", "malformed-env-output")
+    entries = entries[:-1]
+    if len(entries) > MAX_SHELL_ENVIRONMENT_ENTRIES:
+        return shell_environment_evidence("fail", "malformed-env-output")
+    parsed: Dict[str, bytes] = {}
+    for entry in entries:
+        if b"=" not in entry:
+            return shell_environment_evidence("fail", "malformed-env-output")
+        name, value = entry.split(b"=", 1)
+        if (
+            not 1 <= len(name) <= MAX_SHELL_ENVIRONMENT_NAME_BYTES
+            or len(value) > MAX_SHELL_ENVIRONMENT_VALUE_BYTES
+        ):
+            return shell_environment_evidence("fail", "malformed-env-output")
+        try:
+            key = name.decode("ascii", errors="strict")
+        except UnicodeDecodeError:
+            return shell_environment_evidence("fail", "malformed-env-output")
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key) is None:
+            return shell_environment_evidence("fail", "malformed-env-output")
+        if key in parsed:
+            return shell_environment_evidence("fail", "duplicate-env-key")
+        parsed[key] = value
+    required_bytes: Dict[str, bytes] = {}
+    for key, value in set_values.items():
+        if (
+            not isinstance(key, str) or not isinstance(value, str)
+            or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key) is None
+        ):
+            return empty_uncheckable("observation-uncheckable")
+        required_bytes[key] = value.encode("utf-8")
+    reviewed = set(REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS)
+    unexpected = sorted(set(parsed) - set(required_bytes) - reviewed)
+    secret_count = sum(1 for name in unexpected if SECRET_NAME_RE.search(name))
+    def failed(reason: str) -> Dict[str, Any]:
+        return shell_environment_evidence("fail", reason, unexpected, secret_count)
+    if "T11_FORBIDDEN_SENTINEL" in parsed:
+        return failed("forbidden-sentinel-survived")
+    if secret_count:
+        return failed("secret-shaped-key")
+    if any(key not in parsed for key in required_bytes):
+        return failed("required-value-missing")
+    if any(parsed[key] != value for key, value in required_bytes.items()):
+        return failed("required-value-mismatch")
+    if SANDBOX_NETWORK_MARKER not in parsed:
+        return failed("network-marker-missing")
+    if parsed[SANDBOX_NETWORK_MARKER] != SANDBOX_NETWORK_MARKER_VALUE:
+        return failed("network-marker-mismatch")
+    if unexpected:
+        return failed("unexpected-key-set")
+    return shell_environment_evidence("pass", "none", unexpected, secret_count)
+
+
 def shell_environment_probe(
     binary: Path,
     root: Path,
     env: Mapping[str, str],
     required: Mapping[str, Any],
-) -> str:
-    probe_env = dict(env)
-    probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
-    probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
-    set_values = dict(required["shell_environment_policy.set"])
-    env_program = Path("/usr/bin/env")
-    if not env_program.is_file():
-        return "UNCHECKABLE"
-    argv = sandbox_probe_argv(binary, env, [str(env_program), "-0"], root)
-    result = bounded_capture(argv, root, probe_env)
-    if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped:
-        return "UNCHECKABLE"
-    if result.exit_code != 0:
-        return "fail"
-    entries = result.stdout.split(b"\0")
-    parsed: Dict[str, bytes] = {}
-    for entry in entries:
-        if not entry:
-            continue
-        if b"=" not in entry:
-            return "fail"
-        name, value = entry.split(b"=", 1)
-        try:
-            key = name.decode("ascii")
-        except UnicodeDecodeError:
-            return "fail"
-        parsed[key] = value
-    if any(parsed.get(name) != value.encode("utf-8") for name, value in set_values.items()) or "T11_FORBIDDEN_SENTINEL" in parsed:
-        return "fail"
-    if parsed.get(SANDBOX_NETWORK_MARKER) != SANDBOX_NETWORK_MARKER_VALUE:
-        return "fail"
-    permitted_automatic = {
-        "PWD", "SHLVL", "_", "__CF_USER_TEXT_ENCODING",
-        SANDBOX_NETWORK_MARKER,
-    }
-    if set(parsed) - set(set_values) - permitted_automatic or any(SECRET_NAME_RE.search(name) for name in parsed):
-        return "fail"
-    return "pass"
-
-
-def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, str]) -> str:
-    """Prove that a sandboxed direct loopback connect is denied."""
+) -> Dict[str, Any]:
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-            listener.bind(("127.0.0.1", 0))
-            listener.listen(2)
-            port = listener.getsockname()[1]
-            # Establish the control condition: the endpoint is reachable before
-            # the sandbox is applied, so a later denial is behavior evidence.
-            with socket.create_connection(("127.0.0.1", port), timeout=2):
-                pass
-            argv = sandbox_probe_argv(
-                binary, env,
-                [
-                    str(Path(sys.executable).resolve()), "-I", "-c",
-                    NETWORK_SANDBOX_PROBE_SCRIPT, str(port),
-                ],
-                root,
-            )
-            result = bounded_capture(argv, root, env)
+        probe_env = dict(env)
+        probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
+        probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        set_values = dict(required["shell_environment_policy.set"])
+        env_program = Path("/usr/bin/env")
+        info = os.stat(str(env_program), follow_symlinks=False)
+        if not stat.S_ISREG(info.st_mode):
+            raise ContractError("environment probe executable is invalid")
+        argv = sandbox_probe_argv(binary, env, [str(env_program), "-0"], root)
+        result = bounded_capture(
+            argv, root, probe_env, timeout=15,
+            stdout_limit=65_536, stderr_limit=4_096,
+        )
+        return classify_shell_environment_result(result, set_values)
+    except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
+        return shell_environment_evidence(
+            "UNCHECKABLE", "observation-uncheckable"
+        )
+
+
+def network_sandbox_evidence(
+    status: str,
+    reason_code: str,
+    *,
+    control_accepted: bool = False,
+    control_closed: bool = False,
+    parent_namespace_sha256: str = "0" * 64,
+    sandbox_namespace_sha256: str = "0" * 64,
+    marker_status: str = "UNCHECKABLE",
+    connect_status: str = "UNCHECKABLE",
+    connect_errno: str = "unapproved",
+    process_cleanup_status: str = "UNCHECKABLE",
+    process_reaped: bool = False,
+) -> Dict[str, Any]:
+    if reason_code not in NETWORK_SANDBOX_REASON_CODES:
+        raise ContractError("network sandbox reason code is invalid")
+    expected_status = (
+        "pass" if reason_code == "none" else
+        "not-run" if reason_code == "not-run" else
+        "fail" if reason_code in NETWORK_SANDBOX_FAIL_REASONS else
+        "UNCHECKABLE"
+    )
+    if status != expected_status:
+        raise ContractError("network sandbox status/reason pair is invalid")
+    for digest in (parent_namespace_sha256, sandbox_namespace_sha256):
+        if SHA256_RE.fullmatch(digest) is None:
+            raise ContractError("network namespace digest is invalid")
+    return {
+        "schema": "t11-network-sandbox-evidence/v1",
+        "authority": "adapter-authored",
+        "status": status,
+        "reason_code": reason_code,
+        "unsandboxed_control_accepted": control_accepted,
+        "unsandboxed_control_closed": control_closed,
+        "parent_netns_sha256": parent_namespace_sha256,
+        "sandbox_netns_sha256": sandbox_namespace_sha256,
+        "netns_different": (
+            parent_namespace_sha256 != "0" * 64
+            and sandbox_namespace_sha256 != "0" * 64
+            and parent_namespace_sha256 != sandbox_namespace_sha256
+        ),
+        "network_marker_status": marker_status,
+        "sandbox_connect_status": connect_status,
+        "sandbox_connect_errno": connect_errno,
+        "process_cleanup_status": process_cleanup_status,
+        "process_reaped": process_reaped,
+        "raw_stdout_recorded": False,
+        "raw_stderr_recorded": False,
+    }
+
+
+def classify_network_sandbox_result(
+    control_status: str,
+    parent_namespace_sha256: str,
+    result: ProcessResult,
+) -> Dict[str, Any]:
+    common = {
+        "control_accepted": control_status == "accepted-and-closed",
+        "control_closed": control_status == "accepted-and-closed",
+        "parent_namespace_sha256": parent_namespace_sha256,
+    }
+    def uncheckable(reason: str, **extra: Any) -> Dict[str, Any]:
+        return network_sandbox_evidence(
+            "UNCHECKABLE", reason, **common, **extra
+        )
+    if control_status != "accepted-and-closed":
+        return uncheckable(
+            "control-not-closed" if control_status == "accepted" else
+            "control-not-accepted" if control_status == "connected" else
+            "control-unavailable"
+        )
+    if parent_namespace_sha256 == "0" * 64:
+        return uncheckable("parent-netns-unavailable")
+    cleanup = {
+        "process_cleanup_status": "pass" if result.reaped else "UNCHECKABLE",
+        "process_reaped": result.reaped,
+    }
+    if result.timed_out:
+        return uncheckable("process-timeout", **cleanup)
+    if result.stdout_overflow or result.stderr_overflow:
+        return uncheckable("output-overflow", **cleanup)
+    if not result.reaped:
+        return uncheckable("process-not-reaped", **cleanup)
+    if result.exit_code != 0 or result.signal_number is not None:
+        return uncheckable("process-nonzero", **cleanup)
+    if result.stderr_size:
+        return uncheckable("observation-uncheckable", **cleanup)
+    try:
+        child = decode_json_object(
+            result.stdout, "network sandbox observation",
+            {"json_depth": 3, "json_nodes": 16, "json_string_bytes": 128},
+        )
+        exact_keys(
+            child,
+            (
+                "sandbox_network_namespace_sha256", "network_marker_status",
+                "sandbox_connection_status", "denial_errno",
+            ),
+            "network sandbox observation",
+        )
+    except (ContractError, UnicodeError, ValueError, TypeError):
+        return uncheckable("malformed-probe-output", **cleanup)
+    sandbox_namespace = child["sandbox_network_namespace_sha256"]
+    marker = child["network_marker_status"]
+    connection = child["sandbox_connection_status"]
+    denial = child["denial_errno"]
+    if not isinstance(sandbox_namespace, str) or SHA256_RE.fullmatch(sandbox_namespace) is None or sandbox_namespace == "0" * 64:
+        return uncheckable("sandbox-netns-unavailable", **cleanup)
+    if (
+        marker not in ("exact-1", "missing", "mismatch")
+        or connection not in ("denied", "succeeded", "UNCHECKABLE")
+        or denial not in (*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "unapproved")
+        or (connection == "succeeded" and denial != "none")
+        or (
+            connection == "denied"
+            and denial not in (*APPROVED_NETWORK_DENIAL_ERRNOS, "unapproved")
+        )
+        or (connection == "UNCHECKABLE" and denial != "unapproved")
+    ):
+        return uncheckable("malformed-probe-output", **cleanup)
+    observed = {
+        **common,
+        "sandbox_namespace_sha256": sandbox_namespace,
+        "marker_status": marker if marker in ("exact-1", "missing", "mismatch") else "UNCHECKABLE",
+        "connect_status": connection if connection in ("denied", "succeeded", "UNCHECKABLE") else "UNCHECKABLE",
+        "connect_errno": denial if denial in (*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "unapproved") else "unapproved",
+        **cleanup,
+    }
+    if sandbox_namespace == parent_namespace_sha256:
+        return network_sandbox_evidence("fail", "netns-not-separated", **observed)
+    if marker == "missing":
+        return network_sandbox_evidence("fail", "network-marker-missing", **observed)
+    if marker != "exact-1":
+        return network_sandbox_evidence("fail", "network-marker-mismatch", **observed)
+    if connection == "succeeded":
+        return network_sandbox_evidence("fail", "sandbox-connection-succeeded", **observed)
+    if connection == "UNCHECKABLE":
+        return uncheckable(
+            "socket-creation-unavailable",
+            sandbox_namespace_sha256=sandbox_namespace,
+            marker_status=observed["marker_status"],
+            connect_status=observed["connect_status"],
+            connect_errno=observed["connect_errno"],
+            **cleanup,
+        )
+    if connection != "denied" or denial not in APPROVED_NETWORK_DENIAL_ERRNOS:
+        return uncheckable(
+            "unapproved-denial-errno",
+            sandbox_namespace_sha256=sandbox_namespace,
+            marker_status=observed["marker_status"],
+            connect_status=observed["connect_status"],
+            connect_errno=observed["connect_errno"],
+            **cleanup,
+        )
+    return network_sandbox_evidence("pass", "none", **observed)
+
+
+def _network_namespace_sha256() -> str:
+    identity = os.readlink("/proc/self/ns/net")
+    if re.fullmatch(r"net:\[[0-9]+\]", identity) is None:
+        raise ContractError("network namespace identity is malformed")
+    return sha256_bytes(identity.encode("ascii"))
+
+
+def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
+    """Bind control acceptance, namespace separation, marker, and denial."""
+    try:
+        parent_namespace_sha256 = _network_namespace_sha256()
+    except (ContractError, OSError, UnicodeError):
+        return network_sandbox_evidence(
+            "UNCHECKABLE", "parent-netns-unavailable"
+        )
+    listener: Optional[socket.socket] = None
+    client: Optional[socket.socket] = None
+    accepted: Optional[socket.socket] = None
+    try:
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.settimeout(2)
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(2)
+        port = listener.getsockname()[1]
+        client = socket.create_connection(("127.0.0.1", port), timeout=2)
+        controller_peer = client.getsockname()
     except OSError:
-        return "UNCHECKABLE"
-    if result.timed_out or result.stdout_overflow or result.stderr_overflow or not result.reaped:
-        return "UNCHECKABLE"
-    if result.exit_code == 0:
-        return "pass"
-    if result.exit_code == 42:
-        return "fail"
-    return "UNCHECKABLE"
+        for item in (client, listener):
+            if item is not None:
+                with contextlib.suppress(OSError):
+                    item.close()
+        return network_sandbox_evidence(
+            "UNCHECKABLE", "control-unavailable",
+            parent_namespace_sha256=parent_namespace_sha256,
+        )
+    try:
+        accepted, accepted_peer = listener.accept()
+    except OSError:
+        for item in (client, listener):
+            if item is not None:
+                with contextlib.suppress(OSError):
+                    item.close()
+        return network_sandbox_evidence(
+            "UNCHECKABLE", "control-not-accepted",
+            parent_namespace_sha256=parent_namespace_sha256,
+        )
+    if accepted_peer != controller_peer:
+        for item in (accepted, client, listener):
+            with contextlib.suppress(OSError):
+                item.close()
+        return network_sandbox_evidence(
+            "UNCHECKABLE", "control-peer-mismatch",
+            parent_namespace_sha256=parent_namespace_sha256,
+        )
+    close_ok = True
+    for item in (accepted, client):
+        try:
+            item.close()
+        except OSError:
+            close_ok = False
+    if not close_ok:
+        with contextlib.suppress(OSError):
+            listener.close()
+        return network_sandbox_evidence(
+            "UNCHECKABLE", "control-not-closed",
+            control_accepted=True,
+            parent_namespace_sha256=parent_namespace_sha256,
+        )
+    try:
+        probe_env = dict(env)
+        probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        argv = sandbox_probe_argv(
+            binary, env,
+            [
+                str(Path(sys.executable).resolve()), "-I", "-c",
+                NETWORK_SANDBOX_PROBE_SCRIPT, str(port),
+            ],
+            root,
+        )
+        result = bounded_capture(
+            argv, root, probe_env, timeout=15,
+            stdout_limit=4_096, stderr_limit=4_096,
+        )
+    except (ContractError, OSError, subprocess.SubprocessError, ValueError):
+        return network_sandbox_evidence(
+            "UNCHECKABLE", "observation-uncheckable",
+            control_accepted=True, control_closed=True,
+            parent_namespace_sha256=parent_namespace_sha256,
+        )
+    finally:
+        with contextlib.suppress(OSError):
+            listener.close()
+    return classify_network_sandbox_result(
+        "accepted-and-closed", parent_namespace_sha256, result,
+    )
 
 
 def probe_runtime_evidence(
@@ -5320,21 +5968,33 @@ def probe_runtime_evidence(
     )
     prerequisite_pass = prerequisite["status"] == "pass"
     if not prerequisite_pass:
-        shell_status = "not-run"
+        shell_evidence = shell_environment_evidence("not-run", "not-run")
     elif required is None:
-        shell_status = "UNCHECKABLE"
+        shell_evidence = shell_environment_evidence(
+            "UNCHECKABLE", "observation-uncheckable"
+        )
     else:
         try:
-            shell_status = shell_environment_probe(binary, root, env, required)
+            shell_evidence = shell_environment_probe(binary, root, env, required)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-            shell_status = "UNCHECKABLE"
+            shell_evidence = shell_environment_evidence(
+                "UNCHECKABLE", "observation-uncheckable"
+            )
     if not prerequisite_pass:
-        network_status = "not-run"
+        network_evidence = network_sandbox_evidence(
+            "not-run", "not-run", marker_status="not-run",
+            connect_status="not-run", connect_errno="not-run",
+            process_cleanup_status="not-run",
+        )
     else:
         try:
-            network_status = network_sandbox_behavior_probe(binary, root, env)
+            network_evidence = network_sandbox_behavior_probe(binary, root, env)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-            network_status = "UNCHECKABLE"
+            network_evidence = network_sandbox_evidence(
+                "UNCHECKABLE", "observation-uncheckable"
+            )
+    shell_status = shell_evidence["status"]
+    network_status = network_evidence["status"]
     cleanup_status = process_cleanup_probe(root, env)
     config_status = "pass" if (
         config_key_status == "pass"
@@ -5352,7 +6012,8 @@ def probe_runtime_evidence(
             "configuration_intent": intent,
             "diagnostic_health": diagnostic,
             "exact_worker_argv": worker_evidence,
-            "network_sandbox_behavior": {"status": network_status},
+            "shell_environment_behavior": shell_evidence,
+            "network_sandbox_behavior": network_evidence,
             "bubblewrap_prerequisite": prerequisite,
             "lane_statuses": {
                 "provider_isolation_status": "not-run",
@@ -5391,7 +6052,14 @@ def not_run_runtime_evidence() -> Dict[str, Any]:
             "rules_bypass_absent": False,
             "dynamic_task_data_stdin_only": False,
         },
-        "network_sandbox_behavior": {"status": "not-run"},
+        "shell_environment_behavior": shell_environment_evidence(
+            "not-run", "not-run"
+        ),
+        "network_sandbox_behavior": network_sandbox_evidence(
+            "not-run", "not-run", marker_status="not-run",
+            connect_status="not-run", connect_errno="not-run",
+            process_cleanup_status="not-run",
+        ),
         "bubblewrap_prerequisite": not_run_stage_a1_prerequisite_evidence(),
         "lane_statuses": {
             "provider_isolation_status": "not-run",
@@ -5544,6 +6212,9 @@ def observe_colima_provider_evidence(
 
 def _unavailable_runtime_profile(model: str, reasoning: str, probe_only: bool = False) -> Dict[str, Any]:
     evidence = not_run_runtime_evidence()
+    evidence["shell_environment_behavior"] = shell_environment_evidence(
+        "UNCHECKABLE", "observation-uncheckable"
+    )
     evidence["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
     evidence["lane_statuses"]["config_status"] = "UNCHECKABLE"
     return {
@@ -5635,7 +6306,12 @@ def _observe_runtime_profile_bound_inner(
             ):
                 uncheckable["lane_statuses"][lane] = "UNCHECKABLE"
             uncheckable["diagnostic_health"]["status"] = "UNCHECKABLE"
-            uncheckable["network_sandbox_behavior"]["status"] = "UNCHECKABLE"
+            uncheckable["shell_environment_behavior"] = shell_environment_evidence(
+                "UNCHECKABLE", "observation-uncheckable"
+            )
+            uncheckable["network_sandbox_behavior"] = network_sandbox_evidence(
+                "UNCHECKABLE", "observation-uncheckable"
+            )
             probe = {
                 "documented_config_keys_probe": "UNCHECKABLE",
                 "shell_environment_probe": "UNCHECKABLE",

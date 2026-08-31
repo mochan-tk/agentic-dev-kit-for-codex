@@ -70,19 +70,22 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "network_sandbox_behavior", "bubblewrap_prerequisite", "containment_provider", "lane_statuses"],
+      "required": ["configuration_intent", "diagnostic_health", "exact_worker_argv", "shell_environment_behavior", "network_sandbox_behavior", "bubblewrap_prerequisite", "containment_provider", "lane_statuses"],
       "properties": {
         "configuration_intent": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["schema", "authority", "effective_configuration_proven", "configuration_sha256", "rules_profile_sha256", "dynamic_environment_values_excluded"],
+          "required": ["schema", "authority", "effective_configuration_proven", "configuration_sha256", "rules_profile_sha256", "dynamic_environment_values_excluded", "reviewed_codex_source_commit", "reviewed_codex_source_blobs", "reviewed_codex_injected_keys_sha256"],
           "properties": {
             "schema": {"const": "t11-runtime-configuration-intent/v1"},
             "authority": {"const": "adapter-authored"},
             "effective_configuration_proven": {"const": false},
             "configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "rules_profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-            "dynamic_environment_values_excluded": {"const": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]}
+            "dynamic_environment_values_excluded": {"const": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"]},
+            "reviewed_codex_source_commit": {"const": "90854393966b21e9ebfd21b122334eb09a20c93d"},
+            "reviewed_codex_source_blobs": {"const": {"debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79", "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e", "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c"}},
+            "reviewed_codex_injected_keys_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
           }
         },
         "diagnostic_health": {
@@ -123,11 +126,74 @@
             "then": {"properties": {"reason_code": {"const": "none"}, "rules_bypass_absent": {"const": true}, "dynamic_task_data_stdin_only": {"const": true}}}
           }]
         },
+        "shell_environment_behavior": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "authority", "status", "reason_code", "unexpected_key_count", "unexpected_key_names_sha256", "secret_shaped_key_count"],
+          "properties": {
+            "schema": {"const": "t11-shell-environment-evidence/v1"},
+            "authority": {"const": "adapter-authored"},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "reason_code": {"enum": ["none", "not-run", "process-nonzero", "process-timeout", "output-overflow", "process-not-reaped", "malformed-env-output", "duplicate-env-key", "required-value-missing", "required-value-mismatch", "forbidden-sentinel-survived", "network-marker-missing", "network-marker-mismatch", "unexpected-key-set", "secret-shaped-key", "observation-uncheckable"]},
+            "unexpected_key_count": {"type": "integer", "minimum": 0, "maximum": 64},
+            "unexpected_key_names_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "secret_shaped_key_count": {"type": "integer", "minimum": 0, "maximum": 64}
+          },
+          "allOf": [
+            {"if": {"properties": {"reason_code": {"const": "none"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "pass"}, "unexpected_key_count": {"const": 0}, "unexpected_key_names_sha256": {"const": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"}, "secret_shaped_key_count": {"const": 0}}}},
+            {"if": {"properties": {"reason_code": {"const": "not-run"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "not-run"}, "unexpected_key_count": {"const": 0}, "unexpected_key_names_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "secret_shaped_key_count": {"const": 0}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["observation-uncheckable", "output-overflow", "process-not-reaped", "process-timeout"]}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "UNCHECKABLE"}, "unexpected_key_count": {"const": 0}, "unexpected_key_names_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "secret_shaped_key_count": {"const": 0}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["process-nonzero", "malformed-env-output", "duplicate-env-key", "required-value-missing", "required-value-mismatch", "forbidden-sentinel-survived", "network-marker-missing", "network-marker-mismatch", "unexpected-key-set", "secret-shaped-key"]}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "fail"}}}},
+            {"if": {"properties": {"reason_code": {"const": "unexpected-key-set"}}, "required": ["reason_code"]}, "then": {"properties": {"unexpected_key_count": {"minimum": 1}, "unexpected_key_names_sha256": {"not": {"enum": ["0000000000000000000000000000000000000000000000000000000000000000", "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"]}}, "secret_shaped_key_count": {"const": 0}}}},
+            {"if": {"properties": {"reason_code": {"const": "secret-shaped-key"}}, "required": ["reason_code"]}, "then": {"properties": {"unexpected_key_count": {"minimum": 1}, "unexpected_key_names_sha256": {"not": {"enum": ["0000000000000000000000000000000000000000000000000000000000000000", "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"]}}, "secret_shaped_key_count": {"minimum": 1}}}}
+          ]
+        },
         "network_sandbox_behavior": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status"],
-          "properties": {"status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]}}
+          "required": ["schema", "authority", "status", "reason_code", "unsandboxed_control_accepted", "unsandboxed_control_closed", "parent_netns_sha256", "sandbox_netns_sha256", "netns_different", "network_marker_status", "sandbox_connect_status", "sandbox_connect_errno", "process_cleanup_status", "process_reaped", "raw_stdout_recorded", "raw_stderr_recorded"],
+          "properties": {
+            "schema": {"const": "t11-network-sandbox-evidence/v1"},
+            "authority": {"const": "adapter-authored"},
+            "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+            "reason_code": {"enum": ["none", "not-run", "control-unavailable", "control-not-accepted", "control-peer-mismatch", "control-not-closed", "parent-netns-unavailable", "sandbox-netns-unavailable", "netns-not-separated", "network-marker-missing", "network-marker-mismatch", "sandbox-connection-succeeded", "socket-creation-unavailable", "unapproved-denial-errno", "process-nonzero", "process-timeout", "output-overflow", "process-not-reaped", "malformed-probe-output", "observation-uncheckable"]},
+            "unsandboxed_control_accepted": {"type": "boolean"},
+            "unsandboxed_control_closed": {"type": "boolean"},
+            "parent_netns_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "sandbox_netns_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "netns_different": {"type": "boolean"},
+            "network_marker_status": {"enum": ["exact-1", "missing", "mismatch", "not-run", "UNCHECKABLE"]},
+            "sandbox_connect_status": {"enum": ["denied", "succeeded", "not-run", "UNCHECKABLE"]},
+            "sandbox_connect_errno": {"enum": ["EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED", "none", "not-run", "unapproved"]},
+            "process_cleanup_status": {"enum": ["pass", "not-run", "UNCHECKABLE"]},
+            "process_reaped": {"type": "boolean"},
+            "raw_stdout_recorded": {"const": false},
+            "raw_stderr_recorded": {"const": false}
+          },
+          "allOf": [
+            {"if": {"properties": {"reason_code": {"const": "none"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "pass"}, "unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": true}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "netns_different": {"const": true}, "network_marker_status": {"const": "exact-1"}, "sandbox_connect_status": {"const": "denied"}, "sandbox_connect_errno": {"enum": ["EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED"]}, "process_cleanup_status": {"const": "pass"}, "process_reaped": {"const": true}}}},
+            {"if": {"properties": {"reason_code": {"const": "not-run"}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "not-run"}, "unsandboxed_control_accepted": {"const": false}, "unsandboxed_control_closed": {"const": false}, "parent_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "not-run"}, "sandbox_connect_status": {"const": "not-run"}, "sandbox_connect_errno": {"const": "not-run"}, "process_cleanup_status": {"const": "not-run"}, "process_reaped": {"const": false}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["netns-not-separated", "network-marker-mismatch", "network-marker-missing", "sandbox-connection-succeeded"]}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "fail"}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["control-unavailable", "control-not-accepted", "control-peer-mismatch", "control-not-closed", "parent-netns-unavailable", "sandbox-netns-unavailable", "socket-creation-unavailable", "unapproved-denial-errno", "process-nonzero", "process-timeout", "output-overflow", "process-not-reaped", "malformed-probe-output", "observation-uncheckable"]}}, "required": ["reason_code"]}, "then": {"properties": {"status": {"const": "UNCHECKABLE"}}}},
+            {"if": {"properties": {"process_cleanup_status": {"const": "not-run"}}, "required": ["process_cleanup_status"]}, "then": {"properties": {"reason_code": {"const": "not-run"}, "process_reaped": {"const": false}}}},
+            {"if": {"properties": {"sandbox_connect_status": {"const": "succeeded"}}, "required": ["sandbox_connect_status"]}, "then": {"properties": {"sandbox_connect_errno": {"const": "none"}}}},
+            {"if": {"properties": {"sandbox_connect_status": {"const": "denied"}}, "required": ["sandbox_connect_status"]}, "then": {"properties": {"sandbox_connect_errno": {"enum": ["EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED", "unapproved"]}}}},
+            {"if": {"properties": {"sandbox_connect_status": {"const": "UNCHECKABLE"}}, "required": ["sandbox_connect_status"]}, "then": {"properties": {"sandbox_connect_errno": {"const": "unapproved"}}}},
+            {"if": {"properties": {"sandbox_connect_status": {"const": "not-run"}}, "required": ["sandbox_connect_status"]}, "then": {"properties": {"sandbox_connect_errno": {"const": "not-run"}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["control-unavailable", "control-not-accepted", "control-peer-mismatch"]}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": false}, "unsandboxed_control_closed": {"const": false}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "UNCHECKABLE"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}, "process_cleanup_status": {"const": "UNCHECKABLE"}, "process_reaped": {"const": false}}}},
+            {"if": {"properties": {"reason_code": {"const": "control-not-closed"}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": false}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "UNCHECKABLE"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}, "process_cleanup_status": {"const": "UNCHECKABLE"}, "process_reaped": {"const": false}}}},
+            {"if": {"properties": {"reason_code": {"const": "parent-netns-unavailable"}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": false}, "unsandboxed_control_closed": {"const": false}, "parent_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "UNCHECKABLE"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}, "process_cleanup_status": {"const": "UNCHECKABLE"}, "process_reaped": {"const": false}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["sandbox-netns-unavailable", "process-nonzero", "malformed-probe-output"]}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": true}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "UNCHECKABLE"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}, "process_cleanup_status": {"const": "pass"}, "process_reaped": {"const": true}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["process-timeout", "output-overflow"]}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": true}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "UNCHECKABLE"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}}, "oneOf": [{"properties": {"process_cleanup_status": {"const": "pass"}, "process_reaped": {"const": true}}}, {"properties": {"process_cleanup_status": {"const": "UNCHECKABLE"}, "process_reaped": {"const": false}}}]}},
+            {"if": {"properties": {"reason_code": {"const": "process-not-reaped"}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": true}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}, "netns_different": {"const": false}, "network_marker_status": {"const": "UNCHECKABLE"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}, "process_cleanup_status": {"const": "UNCHECKABLE"}, "process_reaped": {"const": false}}}},
+            {"if": {"properties": {"reason_code": {"const": "netns-not-separated"}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": true}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "netns_different": {"const": false}, "network_marker_status": {"enum": ["exact-1", "missing", "mismatch"]}, "sandbox_connect_status": {"enum": ["denied", "succeeded", "UNCHECKABLE"]}, "process_cleanup_status": {"const": "pass"}, "process_reaped": {"const": true}}}},
+            {"if": {"properties": {"reason_code": {"enum": ["network-marker-missing", "network-marker-mismatch", "sandbox-connection-succeeded", "socket-creation-unavailable", "unapproved-denial-errno"]}}, "required": ["reason_code"]}, "then": {"properties": {"unsandboxed_control_accepted": {"const": true}, "unsandboxed_control_closed": {"const": true}, "parent_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "sandbox_netns_sha256": {"not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}}, "netns_different": {"const": true}, "process_cleanup_status": {"const": "pass"}, "process_reaped": {"const": true}}}},
+            {"if": {"properties": {"reason_code": {"const": "network-marker-missing"}}, "required": ["reason_code"]}, "then": {"properties": {"network_marker_status": {"const": "missing"}}}},
+            {"if": {"properties": {"reason_code": {"const": "network-marker-mismatch"}}, "required": ["reason_code"]}, "then": {"properties": {"network_marker_status": {"const": "mismatch"}}}},
+            {"if": {"properties": {"reason_code": {"const": "sandbox-connection-succeeded"}}, "required": ["reason_code"]}, "then": {"properties": {"network_marker_status": {"const": "exact-1"}, "sandbox_connect_status": {"const": "succeeded"}, "sandbox_connect_errno": {"const": "none"}}}},
+            {"if": {"properties": {"reason_code": {"const": "socket-creation-unavailable"}}, "required": ["reason_code"]}, "then": {"properties": {"network_marker_status": {"const": "exact-1"}, "sandbox_connect_status": {"const": "UNCHECKABLE"}, "sandbox_connect_errno": {"const": "unapproved"}}}},
+            {"if": {"properties": {"reason_code": {"const": "unapproved-denial-errno"}}, "required": ["reason_code"]}, "then": {"properties": {"network_marker_status": {"const": "exact-1"}, "sandbox_connect_status": {"const": "denied"}, "sandbox_connect_errno": {"const": "unapproved"}}}}
+          ]
         },
         "bubblewrap_prerequisite": {
           "type": "object",
@@ -497,6 +563,7 @@
             "properties": {
               "diagnostic_health": {"properties": {"status": {"enum": ["pass", "pass-with-advisory-warning"]}}},
               "exact_worker_argv": {"properties": {"status": {"const": "pass"}}},
+              "shell_environment_behavior": {"properties": {"status": {"const": "pass"}}},
               "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}},
               "bubblewrap_prerequisite": {"properties": {"status": {"const": "pass"}}},
               "containment_provider": {"properties": {"status": {"const": "pass"}}},
@@ -516,7 +583,7 @@
           "platform": {"properties": {"os": {"const": "Linux"}, "architecture": {"const": "aarch64"}}},
           "capabilities": {"properties": {"exec_json": {"const": true}, "ephemeral": {"const": true}, "strict_config": {"const": true}, "ignore_user_config": {"const": true}, "workspace_write": {"const": true}, "approval_never": {"const": true}, "documented_config_keys_probe": {"const": "pass"}, "shell_environment_probe": {"const": "pass"}, "process_cleanup_probe": {"const": "pass"}, "model": {"const": true}, "reasoning": {"const": true}, "sandbox": {"const": true}, "approval": {"const": true}, "overrides": {"const": true}}},
           "auth": {"properties": {"class": {"const": "unavailable"}}},
-          "evidence": {"properties": {"diagnostic_health": {"properties": {"status": {"enum": ["pass", "pass-with-advisory-warning"]}}}, "exact_worker_argv": {"properties": {"status": {"const": "pass"}}}, "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}}, "bubblewrap_prerequisite": {"properties": {"status": {"const": "pass"}}}, "containment_provider": {"properties": {"status": {"const": "pass"}}}, "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "unavailable"}}}}},
+          "evidence": {"properties": {"diagnostic_health": {"properties": {"status": {"enum": ["pass", "pass-with-advisory-warning"]}}}, "exact_worker_argv": {"properties": {"status": {"const": "pass"}}}, "shell_environment_behavior": {"properties": {"status": {"const": "pass"}}}, "network_sandbox_behavior": {"properties": {"status": {"const": "pass"}}}, "bubblewrap_prerequisite": {"properties": {"status": {"const": "pass"}}}, "containment_provider": {"properties": {"status": {"const": "pass"}}}, "lane_statuses": {"properties": {"provider_isolation_status": {"const": "pass"}, "mount_boundary_status": {"const": "pass"}, "process_cleanup_status": {"const": "pass"}, "codex_sandbox_network_status": {"const": "pass"}, "shell_environment_status": {"const": "pass"}, "config_status": {"const": "pass"}, "auth_status": {"const": "unavailable"}}}}},
           "live_run_allowed": {"const": false}
         }
       }
