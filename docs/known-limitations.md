@@ -11,6 +11,30 @@ not installable, and it is not a parity release. `release_blocked` remains `true
 
 ## The deterministic offline harness is not a live Codex runtime
 
+The 2026-09-05 T12 bounded remediation establishes one static launch defect:
+official Codex 0.150.1 source rejects `--strict-config` for `sandbox` before
+dispatch. The shared shell/network sandbox argv now omits only that flag;
+doctor and live worker strict configuration, reviewed overrides and intent
+digest, Option B, environment, network/provider/image isolation, and qualified
+AppArmor/bubblewrap inputs are unchanged. The sandbox loader itself uses
+`strict_config=false`, so successful local argv tests are not a claim of
+strict sandbox config loading or actual CLI acceptance. Prior discarded
+stderr remains unknown; this may not be the only runtime failure.
+
+Optional unauthenticated `profile --probe-only --launch-diagnostics` adds
+safe exit/signal/stage/reason facts in a separate adapter-authored wrapper,
+not in the closed runtime profile. It temporarily analyzes at most 4096
+stderr bytes in memory from each existing shell/network process and discards
+them; it exports no raw stderr, exception text, private paths, environment
+values, or credentials. No extra process or weakened gate is introduced.
+Offline fixtures do not prove real Codex compatibility. Both T12 Stage A
+attempts remain non-success, with the last outcome and cleanup preserved in
+[Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5549927615).
+The attempt allowance is exhausted: no third VM or renamed diagnostic retry
+is authorized. Any future bounded measurement needs a new owner replan;
+Stage B, authentication, model/worker execution, receipt application, and
+merge remain blocked by the unchanged T12 live acceptance conditions.
+
 Phase 1 contains the Option B agreement, frozen/live policy split,
 conformance catalog, pinned CI/toolchain policy, Epic/Task/PR ledger templates,
 connector-neutral context contracts, and all eight repository Skills. These

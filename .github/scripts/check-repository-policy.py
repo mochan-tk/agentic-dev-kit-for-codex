@@ -50,12 +50,12 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "a8914787fc69f6670b78ff8b6c1a71844473b54cb64b2e911bfba04409e06c56"
+    "16b236db40262832ae12067fa26d04e0d12e1cc54159b3315b3b470262f47531"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "d59a7b2913af170f939f9e73e5afdfad039ade44208830e0383b6c3dc2fd8236"
+    "d93099cba6ffc799a6a79f1c943bf8dd694610a792e747855e4ceba0fcc25118"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
@@ -1543,6 +1543,38 @@ def validate_import_time_structure(
     def validate_class(node: ast.ClassDef) -> bool:
         if validate_ctypes_structure(node):
             return True
+        if node.name == "ProcessSpawnError":
+            def inert_exception(candidate: ast.ClassDef, name: str, base: str, doc: str) -> bool:
+                return (
+                    candidate.name == name and not candidate.decorator_list
+                    and not candidate.keywords and len(candidate.bases) == 1
+                    and isinstance(candidate.bases[0], ast.Name)
+                    and candidate.bases[0].id == base and len(candidate.body) == 1
+                    and isinstance(candidate.body[0], ast.Expr)
+                    and isinstance(candidate.body[0].value, ast.Constant)
+                    and candidate.body[0].value.value == doc
+                )
+            bases = [item for item in tree.body if isinstance(item, ast.ClassDef) and item.name == "ContractError"]
+            spawns = [item for item in tree.body if isinstance(item, ast.ClassDef) and item.name == "ProcessSpawnError"]
+            if (
+                label != RUNTIME_ADAPTER or len(bases) != 1 or len(spawns) != 1
+                or tree.body.index(bases[0]) >= tree.body.index(node)
+                or not inert_exception(bases[0], "ContractError", "Exception", "A bounded, user-safe contract failure.")
+                or not inert_exception(node, "ProcessSpawnError", "ContractError", "A fixed safe failure raised only at the direct Popen boundary.")
+            ):
+                return False
+            # A custom __init_subclass__, alias, or overwritten builtin could
+            # execute when the subclass is created, even with an inert body.
+            protected = {"Exception", "ContractError"}
+            for item in ast.walk(tree):
+                if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and item.name in protected and item is not bases[0]:
+                    return False
+                if isinstance(item, (ast.Import, ast.ImportFrom)) and any((alias.asname or alias.name.split(".")[0]) in protected for alias in item.names):
+                    return False
+                targets = item.targets if isinstance(item, ast.Assign) else [item.target] if isinstance(item, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)) else []
+                if any(isinstance(part, ast.Name) and part.id in protected for target in targets for part in ast.walk(target)):
+                    return False
+            return True
         if (
             node.decorator_list
             or node.keywords
@@ -1657,6 +1689,8 @@ def validate_reachable_module_calls(
             continue
         observed.add(function_name)
         for node in ast.walk(function):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in forbidden_local_calls:
+                errors.append(f"{label} reachable code references actuator {node.id}")
             if isinstance(node, ast.Attribute):
                 qualified = ast_qualified_name(node)
                 if dangerous_runtime_call(qualified):
@@ -1715,10 +1749,13 @@ def validate_offline_runtime_checker_boundary(
         "adapter.APPROVED_GIT_BINARY_SHA256",
         "adapter.APPROVED_GIT_PACKAGE_VERSION",
         "adapter.APPROVED_GIT_VERSION_OUTPUT",
+        "adapter.ContractError",
+        "adapter.LAUNCH_DIAGNOSTIC_STDERR_LIMIT",
         "adapter.ProcessResult",
         "adapter.NETWORK_SANDBOX_REASON_CODES",
         "adapter.REQUIRED_OVERRIDES",
         "adapter.SHELL_ENVIRONMENT_REASON_CODES",
+        "adapter.SHELL_ENVIRONMENT_NAMES",
         "adapter.REQUIRED_OVERRIDES.items",
         "adapter.STAGE_A1_BWRAP_SMOKE_ARGV",
         "adapter.STAGE_A1_CONTROLLER_ARGV",
@@ -1728,11 +1765,15 @@ def validate_offline_runtime_checker_boundary(
         "adapter.T11_ACCEPTED_PUBLIC_BRANCH",
         "adapter.T12_PUBLIC_BRANCH",
         "adapter.build_live_argv",
+        "adapter.classify_sandbox_launch",
         "adapter.doctor_diagnostic_health",
         "adapter.expected_git_bootstrap_evidence",
         "adapter.not_run_git_bootstrap_evidence",
         "adapter.parse_jsonl",
+        "adapter.launch_diagnostic_record",
+        "adapter.runtime_configuration_argv",
         "adapter.runtime_configuration_intent",
+        "adapter.sandbox_probe_argv",
         "adapter.stage_a1_git_clone_contract",
         "adapter.stage_a1_git_clone_contract_sha256",
         "adapter.toml_literal",
@@ -1741,7 +1782,10 @@ def validate_offline_runtime_checker_boundary(
         "adapter.validate_execution_result",
         "adapter.validate_final_response",
         "adapter.validate_runtime_profile",
+        "adapter.validate_launch_diagnostics_wrapper",
+        "adapter.validate_sandbox_probe_argv",
         "adapter.validate_verifier_record",
+        "adapter._unavailable_runtime_profile",
     }
     for node in ast.walk(checker_tree):
         if isinstance(node, ast.Attribute):
@@ -1793,6 +1837,13 @@ def validate_offline_runtime_checker_boundary(
                 "build_live_argv",
                 "doctor_diagnostic_health",
                 "runtime_configuration_intent",
+                "runtime_configuration_argv",
+                "sandbox_probe_argv",
+                "validate_sandbox_probe_argv",
+                "classify_sandbox_launch",
+                "launch_diagnostic_record",
+                "validate_launch_diagnostics_wrapper",
+                "_unavailable_runtime_profile",
                 "toml_literal",
                 "validate_runtime_argv_policy",
             },
@@ -1809,6 +1860,7 @@ def validate_offline_runtime_checker_boundary(
                 "_xattr_name_blob",
                 "_xattr_value",
                 "auth_class",
+                "_capture_sandbox_probe",
                 "bounded_capture",
                 "cli_profile",
                 "run_bounded_process",
@@ -1823,7 +1875,6 @@ def validate_offline_runtime_checker_boundary(
                 "probe_runtime_evidence",
                 "materialize_reviewed_rules_profile",
                 "network_sandbox_behavior_probe",
-                "runtime_configuration_argv",
                 "shell_environment_probe",
                 "validate_execution_root_transition",
                 "cli_run",

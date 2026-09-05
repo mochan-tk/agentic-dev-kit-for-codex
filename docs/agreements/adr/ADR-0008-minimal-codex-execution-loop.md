@@ -229,6 +229,53 @@ sandbox/network, shell environment, configuration, or authentication status.
 
 ## Security and privacy consequences
 
+### T12 bounded sandbox-launch remediation (2026-09-05)
+
+The [bounded owner plan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5550009263)
+authorizes offline investigation and safety-preserving remediation only. Both
+T12 Stage A attempts remain non-success; the retry allowance is exhausted.
+No third attempt, renamed diagnostic VM, authentication, model, live worker,
+receipt application, Stage B, or merge is authorized by this correction.
+
+Static review of official Codex 0.150.1 source commit
+`90854393966b21e9ebfd21b122334eb09a20c93d`, `codex-rs/cli/src/main.rs`
+blob `455682e14248c73e76adc72cce97b6c1bff46402`, established a sufficient
+shared launch incompatibility: the CLI rejects `--strict-config` for `sandbox`
+before dispatch. Its `debug_sandbox` loader intentionally uses
+`strict_config=false`. Only the sandbox configuration argv omits that flag;
+doctor and the live worker retain strict configuration. All reviewed `-c`
+overrides, environment values, Option B, configuration-intent digest, image
+binding, provider isolation, network policy, pinned client, and qualified
+AppArmor/bubblewrap prerequisites are unchanged.
+
+This source-proven defect does not recover the prior discarded stderr or
+prove it was the sole failure. Self-validation, synthetic processes, and green
+offline CI do not prove real CLI acceptance or resolved sandbox compatibility.
+
+Optional `profile --probe-only --launch-diagnostics` emits a separate
+adapter-authored `t12-sandbox-launch-diagnostics/v1` transport wrapper around
+the unchanged, closed `runtime-profile/v1`. It requires the approved provider
+and an exact unavailable-auth classification before diagnostic capture. The
+existing auth observation is reused, and each shell/network lane still
+launches at most its one existing process. Only these unauthenticated,
+no-model probes may transiently capture at most 4096 stderr bytes in memory.
+The adapter immediately classifies/discards them before the existing lane
+classifiers; raw stderr, exception text, argv, private paths, and environment
+values never enter either record. Diagnostic status, fixed stage/reason,
+numeric exit code, and numeric signal are supplemental facts, not a new
+runtime gate or authenticated attestation. Unknown stderr stays unclassified
+non-success. Timeout, overflow, signal, spawn failure, and incomplete reap
+remain distinct; only a failure at the actual process-spawn boundary is
+called a spawn failure. Existing profile statuses and lane semantics remain
+unchanged, and no launch classification promotes a profile or lane.
+
+Any future minimal measurement needs a separate owner replan against the
+exhausted attempt allowance. The proposed measurement is the existing exact
+unauthenticated profile command plus `--launch-diagnostics`, preserving all
+provider/prerequisite gates and one process per shell/network lane. It would
+distinguish pre-dispatch rejection from unclassified process failure using
+only the safe wrapper. No such command is executed by this remediation.
+
 - The worker has `workspace-write`, approval `never`, network disabled, no
   additional writable roots, ephemeral history, hooks/apps/agents/web search/
   feedback/memory disabled, strict config, and ignored user config. Its argv

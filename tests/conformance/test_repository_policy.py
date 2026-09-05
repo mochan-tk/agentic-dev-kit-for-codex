@@ -1912,6 +1912,81 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assert_rejected(errors, "runtime import digest drifted")
         self.assert_rejected(errors, "import-time class execution")
 
+    def test_runtime_spawn_exception_requires_exact_inert_class_and_base(self):
+        safe = (
+            'class ContractError(Exception):\n'
+            '    """A bounded, user-safe contract failure."""\n\n'
+            'class ProcessSpawnError(ContractError):\n'
+            '    """A fixed safe failure raised only at the direct Popen boundary."""\n'
+        )
+        errors = []
+        self.checker.validate_import_time_structure(
+            self.checker.ast.parse(safe), self.checker.RUNTIME_ADAPTER, errors,
+        )
+        self.assertEqual([], errors)
+        mutations = (
+            safe.replace("ProcessSpawnError(ContractError)", "AnotherError(ContractError)"),
+            safe.replace("ProcessSpawnError(ContractError)", "ProcessSpawnError(resolve_base())"),
+            safe.replace("ProcessSpawnError(ContractError)", "ProcessSpawnError(ContractError, metaclass=Meta)"),
+            safe + "\nclass ProcessSpawnError(ContractError):\n    payload = dangerous()\n",
+            safe.replace("class ProcessSpawnError", "@decorate\nclass ProcessSpawnError"),
+            safe.replace('    """A fixed safe failure raised only at the direct Popen boundary."""', "    payload = dangerous()"),
+            safe.replace('    """A fixed safe failure raised only at the direct Popen boundary."""', "    def run(self):\n        pass"),
+            safe.replace('    """A bounded, user-safe contract failure."""', "    def __init_subclass__(cls):\n        dangerous()"),
+            safe.replace("class ProcessSpawnError", "ContractError = OtherBase\nclass ProcessSpawnError"),
+            safe.replace("class ProcessSpawnError", "ContractError.__init_subclass__ = dangerous\nclass ProcessSpawnError"),
+            "Exception = OtherBase\n" + safe,
+        )
+        for source in mutations:
+            with self.subTest(source=source):
+                errors = []
+                self.checker.validate_import_time_structure(
+                    self.checker.ast.parse(source), self.checker.RUNTIME_ADAPTER, errors,
+                )
+                self.assert_rejected(errors, "import-time class execution")
+
+    def test_sandbox_diagnostic_pure_entrypoints_cannot_reach_runtime_actuators(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_ADAPTER
+        original = path.read_text(encoding="utf-8")
+        entrypoints = (
+            "sandbox_probe_argv", "validate_sandbox_probe_argv",
+            "runtime_configuration_argv", "classify_sandbox_launch",
+            "launch_diagnostic_record", "validate_launch_diagnostics_wrapper",
+            "_unavailable_runtime_profile",
+        )
+        mutations = [(name, "_capture_sandbox_probe()") for name in entrypoints]
+        mutations.extend(("runtime_configuration_argv", helper + "()") for helper in (
+            "bounded_capture", "auth_class", "observe_runtime_profile",
+            "probe_runtime_evidence", "execute_slice", "run_bounded_process",
+            "main", "subprocess.run",
+        ))
+        mutations.append(("classify_sandbox_launch", "hidden = bounded_capture\nhidden()"))
+        for entrypoint, injected in mutations:
+            with self.subTest(entrypoint=entrypoint, injected=injected):
+                tree = self.checker.ast.parse(original)
+                function = next(node for node in tree.body if isinstance(node, self.checker.ast.FunctionDef) and node.name == entrypoint)
+                function.body[0:0] = self.checker.ast.parse(injected).body
+                path.write_text(self.checker.ast.unparse(tree), encoding="utf-8")
+                errors = []
+                self.checker.validate_offline_runtime_checker_boundary(fixture, errors)
+                self.assert_rejected(errors, "runtime import digest drifted")
+                self.assertTrue(any("reachable code" in error and "actuator" in error for error in errors))
+
+    def test_spawn_exception_allowance_does_not_extend_to_other_module(self):
+        source = (
+            'class ContractError(Exception):\n'
+            '    """A bounded, user-safe contract failure."""\n\n'
+            'class ProcessSpawnError(ContractError):\n'
+            '    """A fixed safe failure raised only at the direct Popen boundary."""\n'
+        )
+        errors = []
+        self.checker.validate_import_time_structure(
+            self.checker.ast.parse(source), self.checker.RUNTIME_RECEIPT_ACTUATOR, errors,
+        )
+        self.assert_rejected(errors, "import-time class execution")
+
     def test_runtime_checker_and_imports_are_exact(self):
         for relative, expected in (
             (

@@ -3204,6 +3204,10 @@ class ProcessResult(NamedTuple):
     stderr: bytes = b""
 
 
+class ProcessSpawnError(ContractError):
+    """A fixed safe failure raised only at the direct Popen boundary."""
+
+
 def parse_linux_process_stat(data: bytes) -> Optional[Tuple[int, int, int, str]]:
     """Return PID, PPID, process group, and immutable start-time token."""
     try:
@@ -3507,16 +3511,19 @@ def run_bounded_process(
         raise ContractError("process stdin exceeds its limit")
     if any(SECRET_NAME_RE.search(name) for name in env):
         raise ContractError("minimal environment contains a forbidden secret-like name")
-    process = subprocess.Popen(
-        list(argv),
-        cwd=str(cwd),
-        env=dict(env),
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=False,
-        start_new_session=True,
-    )
+    try:
+        process = subprocess.Popen(
+            list(argv),
+            cwd=str(cwd),
+            env=dict(env),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            start_new_session=True,
+        )
+    except OSError:
+        raise ProcessSpawnError("bounded process could not start") from None
     tracker = DescendantTracker(process.pid, env)
     try:
         tracker.start()
@@ -3537,11 +3544,11 @@ def run_bounded_process(
 
     def drain(stream, name: str, limit: int) -> None:
         while True:
-            chunk = stream.read(65_536)
+            chunk = stream.read(min(65_536, max(limit, 1)))
             if not chunk:
                 return
             sizes[name] += len(chunk)
-            remaining = max(0, limit + 1 - len(buffers[name]))
+            remaining = max(0, limit - len(buffers[name]))
             if remaining:
                 buffers[name].extend(chunk[:remaining])
             if sizes[name] > limit:
@@ -5247,6 +5254,138 @@ def auth_class(binary: Path, cwd: Path, env: Mapping[str, str]) -> str:
     return classification
 
 
+LAUNCH_DIAGNOSTIC_STDERR_LIMIT = 4096
+LAUNCH_DIAGNOSTIC_SCHEMA = "t12-sandbox-launch-diagnostics/v1"
+# Closed, adapter-authored classifications, never exception/stderr text.
+LAUNCH_DIAGNOSTIC_CLASSES = {
+    "not-run": ("not-run", "not-run"),
+    "none": ("pass", "process-execution"),
+    "unsupported-strict-config": ("fail", "cli-dispatch"),
+    "process-nonzero": ("fail", "unclassified"),
+    "unrecognized-stderr": ("fail", "unclassified"),
+    "process-signal": ("fail", "process-execution"),
+    "process-timeout": ("UNCHECKABLE", "process-execution"),
+    "output-overflow": ("UNCHECKABLE", "process-execution"),
+    "process-not-reaped": ("UNCHECKABLE", "process-cleanup"),
+    "process-spawn-failed": ("UNCHECKABLE", "process-spawn"),
+    "argv-policy-failed": ("UNCHECKABLE", "argv-policy"),
+    "probe-preflight-uncheckable": ("UNCHECKABLE", "probe-preflight"),
+    "process-observation-uncheckable": ("UNCHECKABLE", "unclassified"),
+}
+# Exact pinned-source diagnostic, not captured historical runtime output.
+STRICT_SANDBOX_REJECTION = b"Error: `--strict-config` is not supported for `codex sandbox`\n"
+
+
+def launch_diagnostic_record(
+    reason_code: str = "not-run", *, exit_code: Optional[int] = None,
+    signal_number: Optional[int] = None,
+) -> Dict[str, Any]:
+    if reason_code not in LAUNCH_DIAGNOSTIC_CLASSES:
+        raise ContractError("sandbox launch diagnostic reason is invalid")
+    for value, low, high in ((exit_code, 0, 255), (signal_number, 1, 64)):
+        if value is not None and (type(value) is not int or not low <= value <= high):
+            raise ContractError("sandbox launch diagnostic number is invalid")
+    if exit_code is not None and signal_number is not None:
+        raise ContractError("sandbox launch diagnostic exit/signal conflict")
+    status_value, stage = LAUNCH_DIAGNOSTIC_CLASSES[reason_code]
+    return {
+        "status": status_value, "stage": stage, "reason_code": reason_code,
+        "exit_code": exit_code, "signal": signal_number,
+    }
+
+
+def classify_sandbox_launch(result: ProcessResult) -> Dict[str, Any]:
+    """Examine at most 4096 transient bytes; export only enums/numbers."""
+    exit_code, signum = result.exit_code, result.signal_number
+    if (
+        (exit_code is not None and (type(exit_code) is not int or not 0 <= exit_code <= 255))
+        or (signum is not None and (type(signum) is not int or not 1 <= signum <= 64))
+        or (exit_code is not None and signum is not None)
+    ):
+        return launch_diagnostic_record("process-observation-uncheckable")
+    numbers = {"exit_code": exit_code, "signal_number": signum}
+    if not result.reaped:
+        reason = "process-not-reaped"
+    elif result.timed_out:
+        reason = "process-timeout"
+    elif (
+        result.stdout_overflow or result.stderr_overflow
+        or result.stderr_size > LAUNCH_DIAGNOSTIC_STDERR_LIMIT
+        or len(result.stderr) > LAUNCH_DIAGNOSTIC_STDERR_LIMIT
+    ):
+        reason = "output-overflow"
+    elif signum is not None:
+        reason = "process-signal"
+    elif exit_code is None or len(result.stderr) != result.stderr_size:
+        reason = "process-observation-uncheckable"
+    elif exit_code != 0 and result.stderr == STRICT_SANDBOX_REJECTION:
+        reason = "unsupported-strict-config"
+    elif result.stderr:
+        reason = "unrecognized-stderr"
+    elif exit_code != 0:
+        reason = "process-nonzero"
+    else:
+        reason = "none"
+    return launch_diagnostic_record(reason, **numbers)
+
+
+def validate_launch_diagnostics_wrapper(value: Any) -> Dict[str, Any]:
+    """Separate transport: never broaden runtime-profile/v1's closed shape."""
+    exact_keys(value, ("schema", "authority", "runtime_profile", "launch_diagnostics"), "launch diagnostics wrapper")
+    if value["schema"] != LAUNCH_DIAGNOSTIC_SCHEMA or value["authority"] != "adapter-authored":
+        raise ContractError("launch diagnostics wrapper identity is invalid")
+    profile = validate_runtime_profile(value["runtime_profile"])
+    if (
+        profile["scope"] != "exact-head-probe-only-sensor"
+        or profile["auth"]["class"] != "unavailable"
+        or profile["live_run_allowed"] is not False
+    ):
+        raise ContractError("launch diagnostics requires unauthenticated probe-only evidence")
+    lanes = value["launch_diagnostics"]
+    exact_keys(lanes, ("shell", "network"), "launch diagnostic lanes")
+    for lane in lanes.values():
+        exact_keys(lane, ("status", "stage", "reason_code", "exit_code", "signal"), "launch diagnostic lane")
+        if lane != launch_diagnostic_record(
+            lane["reason_code"], exit_code=lane["exit_code"], signal_number=lane["signal"],
+        ):
+            raise ContractError("launch diagnostic classification is inconsistent")
+        reason = lane["reason_code"]
+        if (
+            (reason == "none" and (lane["exit_code"] != 0 or lane["signal"] is not None))
+            or (reason in ("unsupported-strict-config", "process-nonzero") and (lane["exit_code"] in (None, 0) or lane["signal"] is not None))
+            or (reason == "process-signal" and lane["signal"] is None)
+            or (reason in ("not-run", "process-spawn-failed", "argv-policy-failed", "probe-preflight-uncheckable") and (lane["exit_code"] is not None or lane["signal"] is not None))
+        ):
+            raise ContractError("launch diagnostic numeric facts conflict with classification")
+    return value
+
+
+def _capture_sandbox_probe(
+    argv: Sequence[str], root: Path, env: Mapping[str, str], stdout_limit: int,
+    diagnostics: Optional[Dict[str, Any]], lane: str,
+) -> ProcessResult:
+    """No extra invocation; scrub transient stderr before existing classifiers."""
+    options = {"capture_stderr": True} if diagnostics is not None else {}
+    try:
+        result = bounded_capture(
+            argv, root, env, timeout=15, stdout_limit=stdout_limit,
+            stderr_limit=LAUNCH_DIAGNOSTIC_STDERR_LIMIT, **options,
+        )
+    except ProcessSpawnError:
+        if diagnostics is not None:
+            diagnostics[lane] = launch_diagnostic_record("process-spawn-failed")
+        raise
+    except (ContractError, OSError, subprocess.SubprocessError):
+        if diagnostics is not None:
+            diagnostics[lane] = launch_diagnostic_record("process-observation-uncheckable")
+        raise
+    if diagnostics is not None:
+        diagnostics[lane] = classify_sandbox_launch(result)
+    # No retained stderr reaches the existing lane or runtime-profile record.
+    result = result._replace(stderr=b"")
+    return result
+
+
 def sandbox_probe_argv(
     binary: Path,
     env: Mapping[str, str],
@@ -5261,7 +5400,7 @@ def sandbox_probe_argv(
         root = Path(home_value).parent
     if not root.is_absolute() or not command_argv:
         raise ContractError("sandbox probe argv root or command is invalid")
-    argv = runtime_configuration_argv(binary, env) + [
+    argv = runtime_configuration_argv(binary, env, surface="sandbox") + [
         "sandbox", "--permission-profile", ":read-only",
         "-C", str(root), "--", *list(command_argv),
     ]
@@ -5275,6 +5414,8 @@ def validate_sandbox_probe_argv(argv: Sequence[str]) -> None:
     if argv.count("sandbox") != 1:
         raise ContractError("sandbox probe argv must contain one sandbox subcommand")
     index = argv.index("sandbox")
+    if "--strict-config" in argv[:index]:
+        raise ContractError("sandbox probe argv has unsupported strict configuration")
     tail = list(argv[index:])
     if len(tail) < 7 or tail[:4] != [
         "sandbox", "--permission-profile", ":read-only", "-C",
@@ -5308,12 +5449,17 @@ def reviewed_runtime_configuration(env: Mapping[str, str]) -> Dict[str, Any]:
     }
 
 
-def runtime_configuration_argv(binary: Path, env: Mapping[str, str]) -> List[str]:
+def runtime_configuration_argv(
+    binary: Path, env: Mapping[str, str], *, surface: str = "doctor",
+) -> List[str]:
     values = reviewed_runtime_configuration(env)
-    # doctor and sandbox accept the global strict/config flags, but
-    # --ignore-user-config is an exec-specific option. The private CODEX_HOME
-    # contains no config.toml, so these no-model probes do not need that bypass.
-    argv = [str(binary), "--strict-config"]
+    if surface not in ("doctor", "sandbox"):
+        raise ContractError("runtime configuration surface is unsupported")
+    # Official 0.150.1 cli/src/main.rs rejects strict_config + Sandbox before
+    # dispatch; debug_sandbox intentionally builds strict_config=false. Doctor
+    # and the separately built live exec argv retain strict configuration.
+    # Every reviewed -c value and the configuration-intent digest is unchanged.
+    argv = [str(binary)] + (["--strict-config"] if surface == "doctor" else [])
     for key in ("approval_policy", "model_reasoning_effort"):
         argv.extend(["-c", "{}={}".format(key, toml_literal(values[key]))])
     argv.extend(["-c", 'shell_environment_policy.inherit="none"'])
@@ -5665,7 +5811,10 @@ def shell_environment_probe(
     root: Path,
     env: Mapping[str, str],
     required: Mapping[str, Any],
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    if launch_diagnostics is not None:
+        launch_diagnostics["shell"] = launch_diagnostic_record("probe-preflight-uncheckable")
     try:
         probe_env = dict(env)
         probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
@@ -5675,10 +5824,11 @@ def shell_environment_probe(
         info = os.stat(str(env_program), follow_symlinks=False)
         if not stat.S_ISREG(info.st_mode):
             raise ContractError("environment probe executable is invalid")
+        if launch_diagnostics is not None:
+            launch_diagnostics["shell"] = launch_diagnostic_record("argv-policy-failed")
         argv = sandbox_probe_argv(binary, env, [str(env_program), "-0"], root)
-        result = bounded_capture(
-            argv, root, probe_env, timeout=15,
-            stdout_limit=65_536, stderr_limit=4_096,
+        result = _capture_sandbox_probe(
+            argv, root, probe_env, 65_536, launch_diagnostics, "shell",
         )
         return classify_shell_environment_result(result, set_values)
     except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
@@ -5851,8 +6001,13 @@ def _network_namespace_sha256() -> str:
     return sha256_bytes(identity.encode("ascii"))
 
 
-def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
+def network_sandbox_behavior_probe(
+    binary: Path, root: Path, env: Mapping[str, str],
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Bind control acceptance, namespace separation, marker, and denial."""
+    if launch_diagnostics is not None:
+        launch_diagnostics["network"] = launch_diagnostic_record("probe-preflight-uncheckable")
     try:
         parent_namespace_sha256 = _network_namespace_sha256()
     except (ContractError, OSError, UnicodeError):
@@ -5915,6 +6070,8 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
     try:
         probe_env = dict(env)
         probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        if launch_diagnostics is not None:
+            launch_diagnostics["network"] = launch_diagnostic_record("argv-policy-failed")
         argv = sandbox_probe_argv(
             binary, env,
             [
@@ -5923,9 +6080,8 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
             ],
             root,
         )
-        result = bounded_capture(
-            argv, root, probe_env, timeout=15,
-            stdout_limit=4_096, stderr_limit=4_096,
+        result = _capture_sandbox_probe(
+            argv, root, probe_env, 4_096, launch_diagnostics, "network",
         )
     except (ContractError, OSError, subprocess.SubprocessError, ValueError):
         return network_sandbox_evidence(
@@ -5949,8 +6105,12 @@ def probe_runtime_evidence(
     auth_required: bool = True,
     prerequisite_evidence: Optional[Mapping[str, Any]] = None,
     require_private_projection: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Collect bounded independent lanes; no lane claims effective config."""
+    if launch_diagnostics is not None and auth_required:
+        raise ContractError("launch diagnostics is unavailable to authenticated probes")
+    diagnostic_options = {"launch_diagnostics": launch_diagnostics} if launch_diagnostics is not None else {}
     prerequisite = validate_stage_a1_prerequisite_evidence(
         dict(prerequisite_evidence)
         if prerequisite_evidence is not None
@@ -5998,7 +6158,7 @@ def probe_runtime_evidence(
         )
     else:
         try:
-            shell_evidence = shell_environment_probe(binary, root, env, required)
+            shell_evidence = shell_environment_probe(binary, root, env, required, **diagnostic_options)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             shell_evidence = shell_environment_evidence(
                 "UNCHECKABLE", "observation-uncheckable"
@@ -6011,7 +6171,7 @@ def probe_runtime_evidence(
         )
     else:
         try:
-            network_evidence = network_sandbox_behavior_probe(binary, root, env)
+            network_evidence = network_sandbox_behavior_probe(binary, root, env, **diagnostic_options)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             network_evidence = network_sandbox_evidence(
                 "UNCHECKABLE", "observation-uncheckable"
@@ -6265,11 +6425,12 @@ def _observe_runtime_profile_bound(
     provider_input: Optional[Mapping[str, Any]],
     layout: Optional[ColimaRuntimeLayout],
     probe_only: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     try:
         return _observe_runtime_profile_bound_inner(
             repository_root, model, reasoning, binary, work, env,
-            provider_input, layout, probe_only,
+            provider_input, layout, probe_only, launch_diagnostics,
         )
     except ProfileProbeError:
         raise
@@ -6289,7 +6450,19 @@ def _observe_runtime_profile_bound_inner(
     provider_input: Optional[Mapping[str, Any]],
     layout: Optional[ColimaRuntimeLayout],
     probe_only: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    # Diagnostics is strictly supplemental unauthenticated Stage A transport.
+    # Authenticate nothing: the existing bounded status sensor is read-only.
+    # Establish absence before capturing any sandbox stderr, and reuse that
+    # one auth observation below rather than invoking another auth process.
+    diagnostic_auth = None
+    if launch_diagnostics is not None:
+        if not probe_only or provider_input is None or layout is None:
+            raise ContractError("launch diagnostics requires the approved probe-only provider")
+        diagnostic_auth = auth_class(binary, work, env)
+        if diagnostic_auth != "unavailable":
+            raise ContractError("launch diagnostics requires unavailable authentication")
     try:
         version_result = bounded_capture([str(binary), "--version"], work, env)
         help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
@@ -6316,10 +6489,12 @@ def _observe_runtime_profile_bound_inner(
     if release_class == "stable":
         try:
             prerequisite = observe_stage_a1_prerequisite(work, env)
+            diagnostic_options = {"launch_diagnostics": launch_diagnostics} if launch_diagnostics is not None else {}
             probe = probe_runtime_evidence(
                 binary, work, env, repository_root, auth_required=not probe_only,
                 prerequisite_evidence=prerequisite,
                 require_private_projection=provider_input is not None,
+                **diagnostic_options,
             )
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             uncheckable = not_run_runtime_evidence()
@@ -6362,7 +6537,9 @@ def _observe_runtime_profile_bound_inner(
     else:
         config_probe, shell_probe = "not-proven", "not-run"
         evidence = not_run_runtime_evidence()
-    if release_class == "stable":
+    if diagnostic_auth is not None:
+        observed_auth_class = diagnostic_auth
+    elif release_class == "stable":
         try:
             observed_auth_class = auth_class(binary, work, env)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
@@ -6432,7 +6609,13 @@ def _observe_runtime_profile_bound_inner(
     return profile
 
 
-def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, provider_input: Optional[Mapping[str, Any]] = None, probe_only: bool = False) -> Dict[str, Any]:
+def observe_runtime_profile(
+    repository_root: Path, model: str, reasoning: str,
+    provider_input: Optional[Mapping[str, Any]] = None, probe_only: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    if launch_diagnostics is not None and (not probe_only or provider_input is None):
+        raise ContractError("launch diagnostics requires the approved probe-only provider")
     try:
         require_runtime_fs_capabilities()
     except PROFILE_BOUNDARY_EXCEPTIONS:
@@ -6455,7 +6638,7 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, p
             return _unavailable_runtime_profile(model, reasoning, probe_only)
         env = minimal_environment(binary, layout.home, layout.tmp)
         return _observe_runtime_profile_bound(
-            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout, probe_only,
+            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout, probe_only, launch_diagnostics,
         )
     resolved = resolve_executable_from_path("codex", {"PATH": REVIEWED_SENSOR_PATH})
     if resolved is None:
@@ -6528,6 +6711,9 @@ def cli_verify(repository_root: Path) -> Dict[str, Any]:
 
 
 def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, Any]:
+    diagnostic_requested = getattr(args, "launch_diagnostics", False)
+    if diagnostic_requested and not args.probe_only:
+        raise ContractError("launch diagnostics requires probe-only mode")
     try:
         require_runtime_fs_capabilities()
     except PROFILE_BOUNDARY_EXCEPTIONS:
@@ -6541,10 +6727,19 @@ def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, An
         validate_colima_provider_input(provider_input)
     except PROFILE_BOUNDARY_EXCEPTIONS:
         raise ProfileProbeError("provider-input", "input-invalid") from None
-    return observe_runtime_profile(
+    diagnostics = {name: launch_diagnostic_record() for name in ("shell", "network")} if diagnostic_requested else None
+    diagnostic_options = {"launch_diagnostics": diagnostics} if diagnostics is not None else {}
+    profile = observe_runtime_profile(
         repository_root, args.model, args.reasoning_effort, provider_input,
         probe_only=args.probe_only,
+        **diagnostic_options,
     )
+    if diagnostics is None:
+        return profile
+    return validate_launch_diagnostics_wrapper({
+        "schema": LAUNCH_DIAGNOSTIC_SCHEMA, "authority": "adapter-authored",
+        "runtime_profile": profile, "launch_diagnostics": diagnostics,
+    })
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -6565,6 +6760,10 @@ def build_parser() -> argparse.ArgumentParser:
     profile_parser.add_argument(
         "--probe-only", action="store_true",
         help="observe unauthenticated Stage A lanes; never authorize live execution",
+    )
+    profile_parser.add_argument(
+        "--launch-diagnostics", action="store_true",
+        help="opt in to safe supplemental launch classifications; requires unauthenticated probe-only",
     )
     return parser
 

@@ -127,6 +127,48 @@ a zero exit with any other output maps to `unknown`. The adapter records only
 the safe classification. It never persists raw stdout/stderr, authentication
 files, credential material, or private paths.
 
+### T12 sandbox-launch diagnosis, not runtime acceptance
+
+The 2026-09-05 [bounded remediation](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5550009263)
+is offline only. Official 0.150.1 source commit
+`90854393966b21e9ebfd21b122334eb09a20c93d` rejects global `--strict-config`
+for `sandbox` before dispatch; `debug_sandbox` intentionally sets
+`strict_config=false`. The sandbox prefix therefore omits that flag, while
+doctor and live exec keep it. Reviewed overrides and their intent digest,
+Option B, environment, image/provider, network, and AppArmor/bubblewrap
+contracts are unchanged. This fixes a source-demonstrated incompatibility;
+prior discarded stderr is unknown, and real sandbox compatibility remains
+unproven by offline checks.
+
+The opt-in command `profile --probe-only --launch-diagnostics` retains the
+existing closed `runtime-profile/v1` unchanged inside a separate
+`t12-sandbox-launch-diagnostics/v1` wrapper. Its only outer fields are
+`schema`, `authority` (`adapter-authored`), `runtime_profile`, and
+`launch_diagnostics` (exactly `shell` and `network`). Each diagnostic lane
+contains only `status`, fixed `stage`, fixed `reason_code`, `exit_code`
+(integer 0-255 or null), and `signal` (integer 1-64 or null). Exit and signal
+cannot both be present. This wrapper is not a runtime profile, receipt,
+attestation, or replacement acceptance gate.
+
+An unavailable-auth status is checked before enabling capture, then reused;
+diagnostics is rejected outside probe-only mode or with available/unknown
+auth. All existing provider and prerequisite gates remain. There is no extra
+sandbox launch: the same one process per lane temporarily captures at most
+4096 stderr bytes, classifies them in memory, and strips them before the
+original lane classifier. No bytes, environment values, paths, exception
+text, or raw argv are exported. A source-exact strict-flag rejection maps to
+`cli-dispatch` / `unsupported-strict-config`; unrecognized errors stay
+`unclassified`, without a guessed config-loader or sandbox-launcher cause.
+Signal, timeout, overflow, spawn failure, and incomplete reap are distinct
+safe classifications. Supplemental launch success cannot promote environment,
+network, or profile results. Normal profile output is unchanged.
+
+Both T12 Stage A attempts remain non-success and no third attempt is
+authorized. A future measurement using this option requires a separate owner
+replan against the exhausted retry allowance; calling it a diagnostic run
+does not bypass that limit. This correction executes no VM, Codex probe,
+authentication, model, live worker, receipt, or Stage B.
+
 The qualification boundary is one fresh, attempt-only Colima
 Linux VM using the VZ backend and native `aarch64`. Its profile name is
 `t11-e2e-<exact-public-head-first-12>-01`. The host Mac, default Colima

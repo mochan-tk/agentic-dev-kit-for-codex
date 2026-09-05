@@ -3168,6 +3168,58 @@ def validate_runtime_frontier(
         )
 
 
+def validate_sandbox_launch_contract(adapter: Any, errors: List[str]) -> None:
+    """Offline behavioral checks, not evidence of actual CLI acceptance."""
+    label = ".github/scripts/codex-exec-adapter.py: sandbox launch contract"
+    try:
+        environment = {name: "reviewed" for name in adapter.SHELL_ENVIRONMENT_NAMES}
+        sandbox = adapter.sandbox_probe_argv(
+            Path("/reviewed/codex"), environment, ["/usr/bin/env", "-0"],
+            Path("/reviewed/root"),
+        )
+        doctor = adapter.runtime_configuration_argv(Path("/reviewed/codex"), environment)
+        if (
+            "--strict-config" in sandbox
+            or doctor.count("--strict-config") != 1
+            or sandbox[:sandbox.index("sandbox")] != [item for item in doctor if item != "--strict-config"]
+            or sandbox[sandbox.index("sandbox"):] != ["sandbox", "--permission-profile", ":read-only", "-C", "/reviewed/root", "--", "/usr/bin/env", "-0"]
+            or adapter.LAUNCH_DIAGNOSTIC_STDERR_LIMIT != 4096
+        ):
+            errors.append(label + " surface/override/limit drifted")
+        try:
+            adapter.validate_sandbox_probe_argv(sandbox[:1] + ["--strict-config"] + sandbox[1:])
+        except adapter.ContractError:
+            pass
+        else:
+            errors.append(label + " accepts unsupported strict flag")
+        source_rejection = b"Error: `--strict-config` is not supported for `codex sandbox`\n"
+        rejection = adapter.classify_sandbox_launch(adapter.ProcessResult(
+            1, None, False, False, False, b"", len(source_rejection), True, source_rejection,
+        ))
+        if rejection != {"status": "fail", "stage": "cli-dispatch", "reason_code": "unsupported-strict-config", "exit_code": 1, "signal": None}:
+            errors.append(label + " pinned-source rejection classification drifted")
+        unknown = adapter.classify_sandbox_launch(adapter.ProcessResult(
+            2, None, False, False, False, b"", 7, True, b"unknown",
+        ))
+        if unknown != {"status": "fail", "stage": "unclassified", "reason_code": "unrecognized-stderr", "exit_code": 2, "signal": None}:
+            errors.append(label + " unknown output was exposed or promoted")
+        wrapper = {
+            "schema": "t12-sandbox-launch-diagnostics/v1", "authority": "adapter-authored",
+            "runtime_profile": adapter._unavailable_runtime_profile("gpt-5.6-sol", "high", True),
+            "launch_diagnostics": {lane: adapter.launch_diagnostic_record() for lane in ("shell", "network")},
+        }
+        adapter.validate_launch_diagnostics_wrapper(wrapper)
+        wrapper["launch_diagnostics"]["shell"]["raw_stderr"] = "synthetic"
+        try:
+            adapter.validate_launch_diagnostics_wrapper(wrapper)
+        except adapter.ContractError:
+            pass
+        else:
+            errors.append(label + " diagnostic wrapper accepts raw fields")
+    except (AttributeError, KeyError, TypeError, ValueError, adapter.ContractError):
+        errors.append(label + " is invalid")
+
+
 def validate_repository(root: Path) -> List[str]:
     errors: List[str] = []
     for relative in SCHEMAS + JSON_FIXTURES + OTHER_FILES + (
@@ -3441,6 +3493,9 @@ def validate_repository(root: Path) -> List[str]:
                         + argument
                     )
             adapter.validate_runtime_argv_policy(live_argv, require_memory_overrides=True)
+            if live_argv.count("--strict-config") != 1:
+                errors.append(".github/scripts/codex-exec-adapter.py: live worker strict configuration drifted")
+            validate_sandbox_launch_contract(adapter, errors)
             for override_key, override_value in sorted(EXPECTED_RUNTIME_OVERRIDES.items()):
                 rendered = "{}={}".format(override_key, adapter.toml_literal(override_value))
                 if rendered not in live_argv:

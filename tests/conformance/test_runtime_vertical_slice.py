@@ -2964,6 +2964,275 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     "sandbox probe argv",
                 )
 
+    def test_official_0150_dispatch_rejects_strict_only_on_sandbox(self):
+        # Static source regression, not execution/compatibility evidence:
+        # 90854393966b21e9ebfd21b122334eb09a20c93d cli/src/main.rs
+        # rejects --strict-config for Sandbox before dispatch (2467, 2490).
+        environment = {name: "reviewed" for name in self.adapter.SHELL_ENVIRONMENT_NAMES}
+        sandbox = self.adapter.sandbox_probe_argv(
+            Path("/reviewed/codex"), environment, ["/usr/bin/env", "-0"],
+            Path("/reviewed/root"),
+        )
+        doctor = self.adapter.runtime_configuration_argv(
+            Path("/reviewed/codex"), environment,
+        ) + ["doctor", "--json"]
+        self.assertNotIn("--strict-config", sandbox)
+        self.assertEqual(1, doctor.count("--strict-config"))
+        self.assertEqual(
+            [item for item in doctor[:-2] if item != "--strict-config"],
+            sandbox[:sandbox.index("sandbox")],
+        )
+        live = self.adapter.build_live_argv(
+            Path("/reviewed/codex"), Path("/reviewed/root"), ROOT, self.envelope,
+        )
+        self.assertEqual(1, live.count("--strict-config"))
+
+        self.assert_contract_error(lambda: self.adapter.validate_sandbox_probe_argv(
+            sandbox[:1] + ["--strict-config"] + sandbox[1:],
+        ))
+        self.assert_contract_error(lambda: self.adapter.runtime_configuration_argv(
+            Path("/reviewed/codex"), environment, surface="unreviewed",
+        ))
+
+    def test_sandbox_launch_diagnostics_closed_numeric_and_reason_projection(self):
+        base = self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)
+        rejection = self.adapter.STRICT_SANDBOX_REJECTION
+        cases = (
+            (base, "none", "process-execution"),
+            (base._replace(exit_code=1), "process-nonzero", "unclassified"),
+            (base._replace(exit_code=2), "process-nonzero", "unclassified"),
+            (base._replace(exit_code=None, signal_number=9), "process-signal", "process-execution"),
+            (base._replace(timed_out=True), "process-timeout", "process-execution"),
+            (base._replace(stderr_overflow=True), "output-overflow", "process-execution"),
+            (base._replace(stdout_overflow=True), "output-overflow", "process-execution"),
+            (base._replace(reaped=False, timed_out=True), "process-not-reaped", "process-cleanup"),
+            (base._replace(exit_code=1, stderr=rejection, stderr_size=len(rejection)), "unsupported-strict-config", "cli-dispatch"),
+            (base._replace(exit_code=2, stderr=b"unknown", stderr_size=7), "unrecognized-stderr", "unclassified"),
+            (base._replace(exit_code=None), "process-observation-uncheckable", "unclassified"),
+        )
+        for process, reason, stage in cases:
+            with self.subTest(reason=reason, exit=process.exit_code):
+                result = self.adapter.classify_sandbox_launch(process)
+                self.assertEqual({"status", "stage", "reason_code", "exit_code", "signal"}, set(result))
+                self.assertEqual(reason, result["reason_code"])
+                self.assertEqual(stage, result["stage"])
+                self.assertEqual(process.exit_code, result["exit_code"])
+                self.assertEqual(process.signal_number, result["signal"])
+        for size, reason in ((4096, "unrecognized-stderr"), (4097, "output-overflow")):
+            result = self.adapter.classify_sandbox_launch(base._replace(
+                exit_code=1, stderr=b"x" * size, stderr_size=size,
+            ))
+            self.assertEqual(reason, result["reason_code"])
+        private = b"/private/synthetic-fixture secret=synthetic-value"
+        result = self.adapter.classify_sandbox_launch(base._replace(
+            exit_code=1, stderr=private, stderr_size=len(private),
+        ))
+        self.assertNotIn(private, self.adapter.canonical_bytes(result))
+        self.assertEqual("unrecognized-stderr", result["reason_code"])
+        for changed in (
+            base._replace(exit_code=True), base._replace(exit_code=256),
+            base._replace(exit_code=0, signal_number=9),
+            base._replace(signal_number=65),
+        ):
+            self.assertEqual("process-observation-uncheckable", self.adapter.classify_sandbox_launch(changed)["reason_code"])
+
+    def test_sandbox_launch_diagnostic_capture_is_single_bounded_and_scrubbed(self):
+        synthetic = b"Error: synthetic private path /private/fixture\n"
+        process = self.adapter.ProcessResult(1, None, False, False, False, b"", len(synthetic), True, synthetic)
+        for lane in ("shell", "network"):
+            for enabled in (False, True):
+                diagnostics = {} if enabled else None
+                with mock.patch.object(self.adapter, "bounded_capture", return_value=process) as capture:
+                    result = self.adapter._capture_sandbox_probe(
+                        ["/synthetic/codex"], ROOT, {}, 4096, diagnostics, lane,
+                    )
+                capture.assert_called_once()
+                self.assertEqual(4096, capture.call_args.kwargs["stderr_limit"])
+                self.assertEqual(enabled, capture.call_args.kwargs.get("capture_stderr", False))
+                self.assertEqual(b"", result.stderr)
+                if enabled:
+                    self.assertEqual("unrecognized-stderr", diagnostics[lane]["reason_code"])
+                    self.assertNotIn(synthetic, self.adapter.canonical_bytes(diagnostics))
+        for failure, reason in (
+            (self.adapter.ProcessSpawnError("private"), "process-spawn-failed"),
+            (OSError("private"), "process-observation-uncheckable"),
+            (self.adapter.ContractError("private"), "process-observation-uncheckable"),
+        ):
+            diagnostics = {}
+            with mock.patch.object(self.adapter, "bounded_capture", side_effect=failure):
+                with self.assertRaises(type(failure)):
+                    self.adapter._capture_sandbox_probe(["/synthetic/codex"], ROOT, {}, 4096, diagnostics, "shell")
+            self.assertEqual(reason, diagnostics["shell"]["reason_code"])
+
+    def test_sandbox_launch_diagnostic_buffer_bound_on_synthetic_process(self):
+        # Ordinary offline Python fixture, never Codex, a VM, or a sandbox.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home, tmp = root / "home", root / "tmp"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            env = self.adapter.minimal_environment(Path(sys.executable).resolve(), home, tmp)
+            for size in (4096, 4097):
+                result = self.adapter.bounded_capture(
+                    [sys.executable, "-I", "-c", "import sys; sys.stderr.buffer.write(b'x'*{})".format(size)],
+                    root, env, stdout_limit=64, stderr_limit=4096, capture_stderr=True,
+                )
+                self.assertLessEqual(len(result.stderr), 4096)
+                self.assertEqual(size == 4097, result.stderr_overflow)
+                self.assertTrue(result.reaped)
+
+    def test_sandbox_launch_diagnostics_each_lane_invokes_once_without_promoting_gate(self):
+        environment = {name: "reviewed" for name in self.adapter.SHELL_ENVIRONMENT_NAMES}
+        required = self.adapter.reviewed_runtime_configuration(environment)
+        process = self.adapter.ProcessResult(2, None, False, False, False, b"", 7, True, b"unknown")
+        listener, client, accepted = mock.MagicMock(), mock.MagicMock(), mock.MagicMock()
+        listener.getsockname.return_value = ("127.0.0.1", 43123)
+        client.getsockname.return_value = ("127.0.0.1", 54321)
+        listener.accept.return_value = (accepted, ("127.0.0.1", 54321))
+        for lane in ("shell", "network"):
+            diagnostics = {}
+            with mock.patch.object(self.adapter, "bounded_capture", return_value=process) as capture, \
+                 mock.patch.object(self.adapter, "_network_namespace_sha256", return_value="1" * 64), \
+                 mock.patch.object(self.adapter.socket, "socket", return_value=listener), \
+                 mock.patch.object(self.adapter.socket, "create_connection", return_value=client):
+                if lane == "shell":
+                    evidence = self.adapter.shell_environment_probe(
+                        Path("/synthetic/codex"), ROOT, environment, required, diagnostics,
+                    )
+                else:
+                    evidence = self.adapter.network_sandbox_behavior_probe(
+                        Path("/synthetic/codex"), ROOT, environment, diagnostics,
+                    )
+            capture.assert_called_once()
+            self.assertTrue(capture.call_args.kwargs["capture_stderr"])
+            self.assertEqual("process-nonzero", evidence["reason_code"])
+            self.assertEqual("fail" if lane == "shell" else "UNCHECKABLE", evidence["status"])
+            self.assertEqual("unrecognized-stderr", diagnostics[lane]["reason_code"])
+
+    def test_sandbox_launch_diagnostics_auth_observation_is_reused(self):
+        stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
+        calls = []
+        diagnostics = {lane: self.adapter.launch_diagnostic_record() for lane in ("shell", "network")}
+        def auth(*_args):
+            calls.append("auth")
+            return "unavailable"
+        def capture(argv, *_args, **_kwargs):
+            calls.append("version-help")
+            return self.adapter.ProcessResult(0, None, False, False, False,
+                b"codex-cli 0.150.1\n" if argv[-1] == "--version" else stable_help, 0, True)
+        def probe(*_args, **kwargs):
+            calls.append("lanes")
+            self.assertIs(diagnostics, kwargs["launch_diagnostics"])
+            self.assertFalse(kwargs["auth_required"])
+            return self.passing_runtime_probe()
+        with mock.patch.object(self.adapter, "auth_class", side_effect=auth) as auth_sensor, \
+             mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+             mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64), \
+             mock.patch.object(self.adapter, "observe_stage_a1_prerequisite", return_value=self.passing_stage_a1_prerequisite()), \
+             mock.patch.object(self.adapter, "probe_runtime_evidence", side_effect=probe), \
+             mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=self.passing_containment_evidence()), \
+             mock.patch.object(self.adapter.os, "uname", return_value=SimpleNamespace(sysname="Linux", machine="aarch64")):
+            profile = self.adapter._observe_runtime_profile_bound_inner(
+                ROOT, "gpt-5.6-sol", "high", Path("/synthetic/codex"), ROOT,
+                {}, self.colima_provider_input(), object(), True, diagnostics,
+            )
+        auth_sensor.assert_called_once()
+        self.assertEqual("auth", calls[0])
+        self.assertEqual(1, calls.count("lanes"))
+        self.assertEqual("probe-only-match", profile["status"])
+        self.assertFalse(profile["live_run_allowed"])
+
+    def test_sandbox_launch_checker_detects_surface_and_projection_drift(self):
+        errors = []
+        self.checker.validate_sandbox_launch_contract(self.adapter, errors)
+        self.assertEqual([], errors)
+        with mock.patch.object(self.adapter, "LAUNCH_DIAGNOSTIC_STDERR_LIMIT", 8192):
+            self.checker.validate_sandbox_launch_contract(self.adapter, errors)
+        self.assertTrue(errors)
+        errors = []
+        with mock.patch.object(self.adapter, "classify_sandbox_launch", return_value={"raw_stderr": "synthetic"}):
+            self.checker.validate_sandbox_launch_contract(self.adapter, errors)
+        self.assertTrue(errors)
+
+    def test_sandbox_launch_diagnostics_gate_before_capture_and_reject_live(self):
+        parser = self.adapter.build_parser()
+        self.assertTrue(parser.parse_args(["profile", "--probe-only", "--launch-diagnostics"]).launch_diagnostics)
+        args = parser.parse_args(["profile", "--launch-diagnostics"])
+        with mock.patch.object(self.adapter, "read_stdin_bounded") as stdin:
+            self.assert_contract_error(lambda: self.adapter.cli_profile(args, ROOT), "probe-only")
+        stdin.assert_not_called()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            parser.parse_args(["run", "--mode", "live", "--launch-diagnostics"])
+        for auth in ("signed-in-client", "api-key", "unknown"):
+            with mock.patch.object(self.adapter, "auth_class", return_value=auth) as auth_sensor, \
+                 mock.patch.object(self.adapter, "bounded_capture") as capture, \
+                 mock.patch.object(self.adapter, "probe_runtime_evidence") as probe:
+                self.assert_contract_error(lambda: self.adapter._observe_runtime_profile_bound_inner(
+                    ROOT, "gpt-5.6-sol", "high", Path("/synthetic/codex"), ROOT,
+                    {}, {}, object(), probe_only=True, launch_diagnostics={},
+                ), "unavailable authentication")
+            auth_sensor.assert_called_once()
+            capture.assert_not_called()
+            probe.assert_not_called()
+        for probe_only, provider in ((False, {}), (True, None)):
+            with mock.patch.object(self.adapter, "require_runtime_fs_capabilities") as fs:
+                self.assert_contract_error(lambda: self.adapter.observe_runtime_profile(
+                    ROOT, "gpt-5.6-sol", "high", provider, probe_only=probe_only, launch_diagnostics={},
+                ))
+            fs.assert_not_called()
+        with mock.patch.object(self.adapter, "bounded_capture") as capture:
+            self.assert_contract_error(lambda: self.adapter.probe_runtime_evidence(
+                Path("/synthetic/codex"), ROOT, {}, ROOT, launch_diagnostics={},
+            ))
+        capture.assert_not_called()
+
+    def test_sandbox_launch_wrapper_is_separate_from_unchanged_profile_schema(self):
+        profile = self.adapter._unavailable_runtime_profile("gpt-5.6-sol", "high", True)
+        wrapper = {
+            "schema": self.adapter.LAUNCH_DIAGNOSTIC_SCHEMA,
+            "authority": "adapter-authored", "runtime_profile": profile,
+            "launch_diagnostics": {lane: self.adapter.launch_diagnostic_record() for lane in ("shell", "network")},
+        }
+        schema = json.loads((ROOT / "docs/agreements/runtime/runtime-profile.v1.schema.json").read_text())
+        self.assert_draft_2020_valid(schema, profile)
+        self.assert_draft_2020_invalid(schema, wrapper)
+        self.adapter.validate_runtime_profile(profile)
+        self.adapter.validate_launch_diagnostics_wrapper(wrapper)
+        self.assert_contract_error(lambda: self.adapter.validate_runtime_profile(wrapper))
+        omitted = copy.deepcopy(wrapper)
+        del omitted["launch_diagnostics"]
+        self.assert_contract_error(lambda: self.adapter.validate_launch_diagnostics_wrapper(omitted))
+        inline = copy.deepcopy(profile)
+        inline["launch_diagnostics"] = wrapper["launch_diagnostics"]
+        self.assert_contract_error(lambda: self.adapter.validate_runtime_profile(inline))
+        self.assert_draft_2020_invalid(schema, inline)
+        for key, value in (("raw_stderr", "private"), ("reason_code", "invented"), ("exit_code", True), ("signal", 999), ("stage", "private")):
+            bad = copy.deepcopy(wrapper)
+            bad["launch_diagnostics"]["shell"][key] = value
+            self.assert_contract_error(lambda: self.adapter.validate_launch_diagnostics_wrapper(bad))
+        args = self.adapter.build_parser().parse_args(["profile", "--probe-only", "--launch-diagnostics"])
+        with mock.patch.object(self.adapter, "read_stdin_bounded", return_value=self.adapter.canonical_bytes(self.colima_provider_input())), \
+             mock.patch.object(self.adapter, "observe_runtime_profile", return_value=profile):
+            observed = self.adapter.cli_profile(args, ROOT)
+        self.assertEqual(wrapper, observed)
+        args.launch_diagnostics = False
+        with mock.patch.object(self.adapter, "read_stdin_bounded", return_value=self.adapter.canonical_bytes(self.colima_provider_input())), \
+             mock.patch.object(self.adapter, "observe_runtime_profile", return_value=profile) as sensor:
+            self.assertEqual(profile, self.adapter.cli_profile(args, ROOT))
+        self.assertNotIn("launch_diagnostics", sensor.call_args.kwargs)
+
+    def test_sandbox_launch_diagnostics_capability_error_preserves_safe_error(self):
+        args = self.adapter.build_parser().parse_args(["profile", "--probe-only", "--launch-diagnostics"])
+        with mock.patch.object(self.adapter, "require_runtime_fs_capabilities", side_effect=self.adapter.ContractError("synthetic private detail")), \
+             mock.patch.object(self.adapter, "read_stdin_bounded") as stdin, \
+             mock.patch.object(self.adapter, "observe_runtime_profile") as sensor:
+            with self.assertRaises(self.adapter.ProfileProbeError) as caught:
+                self.adapter.cli_profile(args, ROOT)
+        stdin.assert_not_called()
+        sensor.assert_not_called()
+        safe = self.adapter.safe_error(caught.exception)
+        self.assertNotIn(b"synthetic private detail", self.adapter.canonical_bytes(safe))
+
     def test_shell_environment_probe_has_closed_reason_codes_and_safe_metrics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
