@@ -31,6 +31,13 @@ PHASE2_EPIC = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22"
 T11_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
 T12_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
 T11_BRANCH = "codex/phase-2-minimal-execution-slice"
+T12_BRANCH = "codex/phase-2-live-codex-runtime"
+T11_ACCEPTED_MERGE = "4a85a007ed62795b48bcbce04f6b7e5482e71e82"
+T11_ACCEPTED_TREE = "49afe003de2bbb04249d6f4c36ea6462c271c26f"
+T12_OWNER_AMENDMENT = T12_RECORD + "#issuecomment-5480062206"
+T12_OWNER_AMENDMENT_SHA256 = (
+    "b3f051da26ebba7e0d49b79917cffa81ec6e9c66d409029ffd0020d0211850ee"
+)
 HISTORICAL_PHASE1_CHECKER = ".github/scripts/check-phase1-acceptance.py"
 HISTORICAL_PHASE1_CHECKER_BLOB = "9e8cccbc824efbb11756ac72c5e1e5ec8726ef4d"
 HISTORICAL_PHASE1_CHECKER_SHA256 = (
@@ -43,16 +50,16 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "9e782f44ac240c5323effa03ffa85b3c62515074e969c6afdcabd6a5a90bd69f"
+    "16b236db40262832ae12067fa26d04e0d12e1cc54159b3315b3b470262f47531"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "ade066a4efda3d16d4a69e30e484510339a88cd7b087a03b5a8fd3309f7086de"
+    "d93099cba6ffc799a6a79f1c943bf8dd694610a792e747855e4ceba0fcc25118"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
-    "881ba721357305af66232949d4fd8ef49dcb0d641a094810511cc3b3d4bbe815"
+    "dcd524428bebf4781345a9880a753fa702673ed39984ffbf6288db731657e24a"
 )
 TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 REVIEWED_INVARIANT_DIGEST = (
@@ -163,48 +170,50 @@ DIRECT_COMMAND = re.compile(
 )
 GOVERNED_FILE = re.compile(r"^(?:check-|check_|test-|test_).+\.(?:py|sh)$")
 DISCOVERABLE_CONFORMANCE_TEST = re.compile(r"^test_[A-Za-z0-9_]+\.py$")
-EXPECTED_T11_PATHS = (
+EXPECTED_T11_RESIDUAL_PATHS = (
     ".codex/agents/task_supervisor.toml",
     ".codex/agents/task_verifier.toml",
     ".codex/agents/task_worker.toml",
     ".github/ISSUE_TEMPLATE/ai-task.yml",
-    ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/governance/codex-runtime-profile.v1.json",
-    ".github/governance/ledger-contracts.v1.json",
-    ".github/governance/phase-task-ownership.v1.json",
-    ".github/scripts/check-ledger-templates.py",
     FROZEN_PHASE1_WRAPPER,
-    ".github/scripts/check-repository-policy.py",
-    ".github/scripts/check-runtime-contracts.py",
-    ".github/scripts/codex-exec-adapter.py",
-    ".github/scripts/post-runtime-receipt.py",
     ".github/workflows/ci.yml",
-    "README.md",
-    "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
     "docs/agreements/runtime/codex-final-response.v1.schema.json",
     "docs/agreements/runtime/execution-result.v1.schema.json",
     "docs/agreements/runtime/loop-event.v1.schema.json",
-    "docs/agreements/runtime/minimal-codex-execution-loop.md",
     "docs/agreements/runtime/runtime-profile.v1.schema.json",
-    "docs/agreements/runtime/runtime-receipt.v1.schema.json",
-    "docs/agreements/runtime/task-execution-envelope.v1.schema.json",
-    "docs/known-limitations.md",
     "tests/conformance/phase1-accepted-snapshot.v1.json",
-    "tests/conformance/test_ledger_templates.py",
     "tests/conformance/test_phase1_acceptance.py",
     "tests/conformance/test_phase1_accepted_snapshot.py",
-    "tests/conformance/test_repository_policy.py",
-    "tests/conformance/test_runtime_receipt.py",
-    "tests/conformance/test_runtime_vertical_slice.py",
     "tests/runtime/fixtures/codex-final-response-valid.v1.json",
     "tests/runtime/fixtures/codex-jsonl-interrupted.jsonl",
     "tests/runtime/fixtures/codex-jsonl-valid.jsonl",
-    "tests/runtime/fixtures/envelope-valid.v1.json",
-    "tests/runtime/fixtures/execution-result-valid.v1.json",
     "tests/runtime/fixtures/fake-codex.py",
     "tests/runtime/fixtures/loop-events-valid.v1.jsonl",
     "tests/runtime/fixtures/representative-task.v1.json",
     "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+)
+EXPECTED_T12_PATHS = (
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/governance/ledger-contracts.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-ledger-templates.py",
+    ".github/scripts/check-repository-policy.py",
+    ".github/scripts/check-runtime-contracts.py",
+    ".github/scripts/codex-exec-adapter.py",
+    ".github/scripts/post-runtime-receipt.py",
+    "README.md",
+    "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
+    "docs/agreements/runtime/minimal-codex-execution-loop.md",
+    "docs/agreements/runtime/runtime-receipt.v1.schema.json",
+    "docs/agreements/runtime/task-execution-envelope.v1.schema.json",
+    "docs/known-limitations.md",
+    "tests/conformance/test_ledger_templates.py",
+    "tests/conformance/test_repository_policy.py",
+    "tests/conformance/test_runtime_receipt.py",
+    "tests/conformance/test_runtime_vertical_slice.py",
+    "tests/runtime/fixtures/envelope-valid.v1.json",
+    "tests/runtime/fixtures/execution-result-valid.v1.json",
     "tests/runtime/fixtures/runtime-receipt-valid.v1.json",
 )
 
@@ -878,7 +887,7 @@ def validate_manifest(
 
 
 def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None:
-    """Pin the live Phase 2 work order without weakening generic schema tests."""
+    """Pin the accepted T11 history and sole-active T12 work order."""
 
     tasks_value = payload.get("tasks")
     tasks = tasks_value if isinstance(tasks_value, list) else []
@@ -894,8 +903,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t11, dict):
         errors.append("ownership manifest is missing T11")
         return
-    if t11.get("state") != "active":
-        errors.append("ownership T11 must be the active Task")
+    if t11.get("state") != "accepted":
+        errors.append("ownership T11 must be accepted before T12 activation")
     if t11.get("record") != T11_RECORD:
         errors.append("ownership T11 must reference Issue 23")
     if t11.get("branch") != T11_BRANCH:
@@ -916,13 +925,47 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
         if isinstance(entries, list)
         else ()
     )
-    if actual_paths != EXPECTED_T11_PATHS:
-        errors.append("ownership T11 must declare exactly the reviewed 42 paths")
+    if actual_paths != EXPECTED_T11_RESIDUAL_PATHS:
+        errors.append("ownership T11 must retain exactly the reviewed residual 21 paths")
     if not isinstance(entries, list) or any(
         not isinstance(entry, dict) or entry.get("mode") != "100644"
         for entry in entries
     ):
         errors.append("ownership T11 paths must all use mode 100644")
+
+    t12 = task_by_id.get("T12")
+    if not isinstance(t12, dict):
+        errors.append("ownership manifest is missing T12")
+        return
+    if t12.get("state") != "active":
+        errors.append("ownership T12 must be the sole active Task")
+    if t12.get("record") != T12_RECORD:
+        errors.append("ownership T12 must reference Issue 25")
+    if t12.get("branch") != T12_BRANCH:
+        errors.append("ownership T12 branch drifted")
+    if t12.get("base_commit") != T11_ACCEPTED_MERGE:
+        errors.append("ownership T12 base_commit drifted")
+    if t12.get("base_tree") != T11_ACCEPTED_TREE:
+        errors.append("ownership T12 base_tree drifted")
+    if t12.get("path_transitions") != []:
+        errors.append("ownership T12 path_transitions must remain empty")
+    t12_entries = t12.get("owned_paths")
+    t12_paths = (
+        tuple(
+            entry.get("path")
+            for entry in t12_entries
+            if isinstance(entry, dict)
+        )
+        if isinstance(t12_entries, list)
+        else ()
+    )
+    if t12_paths != EXPECTED_T12_PATHS:
+        errors.append("ownership T12 must declare exactly the approved 21 paths")
+    if not isinstance(t12_entries, list) or any(
+        not isinstance(entry, dict) or entry.get("mode") != "100644"
+        for entry in t12_entries
+    ):
+        errors.append("ownership T12 paths must all use mode 100644")
 
 
 def validate_git_anchor(
@@ -1247,8 +1290,8 @@ def validate_historical_phase1_checker_boundary(
     t11 = next((task for task in usable_tasks if task.get("id") == "T11"), None)
     if t10 is None or t10.get("state") != "accepted":
         errors.append("historical Phase 1 checker exception requires accepted T10")
-    if t11 is None or t11.get("state") != "active":
-        errors.append("historical Phase 1 checker exception requires active T11")
+    if t11 is None or t11.get("state") != "accepted":
+        errors.append("historical Phase 1 checker exception requires accepted T11")
 
     def owns(task: dict[str, Any] | None, relative: str) -> bool:
         entries = task.get("owned_paths") if isinstance(task, dict) else None
@@ -1262,7 +1305,7 @@ def validate_historical_phase1_checker_boundary(
     if not owns(t10, HISTORICAL_PHASE1_CHECKER):
         errors.append("accepted T10 must retain the historical Phase 1 checker")
     if not owns(t11, FROZEN_PHASE1_WRAPPER):
-        errors.append("active T11 must own the frozen Phase 1 wrapper")
+        errors.append("accepted T11 must retain the frozen Phase 1 wrapper")
 
     commands = policy.get("required_quality_commands")
     if not isinstance(commands, list):
@@ -1500,6 +1543,38 @@ def validate_import_time_structure(
     def validate_class(node: ast.ClassDef) -> bool:
         if validate_ctypes_structure(node):
             return True
+        if node.name == "ProcessSpawnError":
+            def inert_exception(candidate: ast.ClassDef, name: str, base: str, doc: str) -> bool:
+                return (
+                    candidate.name == name and not candidate.decorator_list
+                    and not candidate.keywords and len(candidate.bases) == 1
+                    and isinstance(candidate.bases[0], ast.Name)
+                    and candidate.bases[0].id == base and len(candidate.body) == 1
+                    and isinstance(candidate.body[0], ast.Expr)
+                    and isinstance(candidate.body[0].value, ast.Constant)
+                    and candidate.body[0].value.value == doc
+                )
+            bases = [item for item in tree.body if isinstance(item, ast.ClassDef) and item.name == "ContractError"]
+            spawns = [item for item in tree.body if isinstance(item, ast.ClassDef) and item.name == "ProcessSpawnError"]
+            if (
+                label != RUNTIME_ADAPTER or len(bases) != 1 or len(spawns) != 1
+                or tree.body.index(bases[0]) >= tree.body.index(node)
+                or not inert_exception(bases[0], "ContractError", "Exception", "A bounded, user-safe contract failure.")
+                or not inert_exception(node, "ProcessSpawnError", "ContractError", "A fixed safe failure raised only at the direct Popen boundary.")
+            ):
+                return False
+            # A custom __init_subclass__, alias, or overwritten builtin could
+            # execute when the subclass is created, even with an inert body.
+            protected = {"Exception", "ContractError"}
+            for item in ast.walk(tree):
+                if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and item.name in protected and item is not bases[0]:
+                    return False
+                if isinstance(item, (ast.Import, ast.ImportFrom)) and any((alias.asname or alias.name.split(".")[0]) in protected for alias in item.names):
+                    return False
+                targets = item.targets if isinstance(item, ast.Assign) else [item.target] if isinstance(item, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)) else []
+                if any(isinstance(part, ast.Name) and part.id in protected for target in targets for part in ast.walk(target)):
+                    return False
+            return True
         if (
             node.decorator_list
             or node.keywords
@@ -1614,6 +1689,8 @@ def validate_reachable_module_calls(
             continue
         observed.add(function_name)
         for node in ast.walk(function):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in forbidden_local_calls:
+                errors.append(f"{label} reachable code references actuator {node.id}")
             if isinstance(node, ast.Attribute):
                 qualified = ast_qualified_name(node)
                 if dangerous_runtime_call(qualified):
@@ -1672,22 +1749,31 @@ def validate_offline_runtime_checker_boundary(
         "adapter.APPROVED_GIT_BINARY_SHA256",
         "adapter.APPROVED_GIT_PACKAGE_VERSION",
         "adapter.APPROVED_GIT_VERSION_OUTPUT",
+        "adapter.ContractError",
+        "adapter.LAUNCH_DIAGNOSTIC_STDERR_LIMIT",
         "adapter.ProcessResult",
         "adapter.NETWORK_SANDBOX_REASON_CODES",
         "adapter.REQUIRED_OVERRIDES",
         "adapter.SHELL_ENVIRONMENT_REASON_CODES",
+        "adapter.SHELL_ENVIRONMENT_NAMES",
         "adapter.REQUIRED_OVERRIDES.items",
         "adapter.STAGE_A1_BWRAP_SMOKE_ARGV",
         "adapter.STAGE_A1_CONTROLLER_ARGV",
         "adapter.STAGE_A1_CONTROLLER_ARGV_SHA256",
         "adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV",
         "adapter.STAGE_A1_PRECLONE_CONTROLLER_ARGV_SHA256",
+        "adapter.T11_ACCEPTED_PUBLIC_BRANCH",
+        "adapter.T12_PUBLIC_BRANCH",
         "adapter.build_live_argv",
+        "adapter.classify_sandbox_launch",
         "adapter.doctor_diagnostic_health",
         "adapter.expected_git_bootstrap_evidence",
         "adapter.not_run_git_bootstrap_evidence",
         "adapter.parse_jsonl",
+        "adapter.launch_diagnostic_record",
+        "adapter.runtime_configuration_argv",
         "adapter.runtime_configuration_intent",
+        "adapter.sandbox_probe_argv",
         "adapter.stage_a1_git_clone_contract",
         "adapter.stage_a1_git_clone_contract_sha256",
         "adapter.toml_literal",
@@ -1696,7 +1782,10 @@ def validate_offline_runtime_checker_boundary(
         "adapter.validate_execution_result",
         "adapter.validate_final_response",
         "adapter.validate_runtime_profile",
+        "adapter.validate_launch_diagnostics_wrapper",
+        "adapter.validate_sandbox_probe_argv",
         "adapter.validate_verifier_record",
+        "adapter._unavailable_runtime_profile",
     }
     for node in ast.walk(checker_tree):
         if isinstance(node, ast.Attribute):
@@ -1748,6 +1837,13 @@ def validate_offline_runtime_checker_boundary(
                 "build_live_argv",
                 "doctor_diagnostic_health",
                 "runtime_configuration_intent",
+                "runtime_configuration_argv",
+                "sandbox_probe_argv",
+                "validate_sandbox_probe_argv",
+                "classify_sandbox_launch",
+                "launch_diagnostic_record",
+                "validate_launch_diagnostics_wrapper",
+                "_unavailable_runtime_profile",
                 "toml_literal",
                 "validate_runtime_argv_policy",
             },
@@ -1764,6 +1860,7 @@ def validate_offline_runtime_checker_boundary(
                 "_xattr_name_blob",
                 "_xattr_value",
                 "auth_class",
+                "_capture_sandbox_probe",
                 "bounded_capture",
                 "cli_profile",
                 "run_bounded_process",
@@ -1778,7 +1875,6 @@ def validate_offline_runtime_checker_boundary(
                 "probe_runtime_evidence",
                 "materialize_reviewed_rules_profile",
                 "network_sandbox_behavior_probe",
-                "runtime_configuration_argv",
                 "shell_environment_probe",
                 "validate_execution_root_transition",
                 "cli_run",
@@ -2379,7 +2475,7 @@ def validate_required_markers(
 
 
 def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
-    """Keep the offline T11 frontier bound to canonical non-release state."""
+    """Keep accepted T11 history and active T12 bound to non-release state."""
 
     contract = read_json(root / LEDGER_CONTRACT, errors, "ledger contract")
     frontier = contract.get("runtime_frontier")
@@ -2389,45 +2485,85 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
     exact_keys(
         frontier,
         {
-            "agreement",
-            "acceptance_mapping",
+            "tree_snapshot",
+            "t11_history",
+            "t12_activation",
             "status",
-            "deferred_task",
-            "stage_a2",
             "canonical_release_boundary",
         },
         "ledger runtime_frontier",
         errors,
     )
+    expected_snapshot = {
+        "t11": "accepted",
+        "t12": "sole-active",
+        "live_evidence": "external-github-current-outcome-not-embedded-in-tree",
+    }
+    if frontier.get("tree_snapshot") != expected_snapshot:
+        errors.append("T12 runtime frontier tree snapshot drifted")
+
+    history = frontier.get("t11_history")
+    if not isinstance(history, dict):
+        errors.append("T11 runtime history must be an object")
+        history = {}
+    exact_keys(
+        history,
+        {"agreement", "acceptance_mapping", "status", "merge", "stage_a1", "stage_a2"},
+        "T11 runtime history",
+        errors,
+    )
+    if history.get("agreement") != {
+        "version": "t11-agreement-v2",
+        "task_issue": T11_RECORD,
+        "decision_url": T11_RECORD + "#issuecomment-5472720734",
+        "decision_body_sha256": (
+            "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
+        ),
+    }:
+        errors.append("accepted T11 agreement anchor drifted")
     expected_mapping = {
         "AC-01-through-AC-12": "applicable-offline-static-boundary",
         "AC-13": "deferred-to-T12-by-approved-agreement-replan",
         "AC-14": "unchanged",
         "AC-15": "owner-merge-gate-offline-harness",
     }
-    if frontier.get("acceptance_mapping") != expected_mapping:
-        errors.append("T11 agreement-v2 acceptance mapping drifted")
-    expected_status = {
+    if history.get("acceptance_mapping") != expected_mapping:
+        errors.append("accepted T11 agreement-v2 acceptance mapping drifted")
+    expected_t11_status = {
+        "task": "accepted",
         "runtime_harness": "minimal-offline-implemented",
         "live_codex_execution": "deferred-to-T12",
         "sandbox_compatibility": "unresolved-non-success",
         "runtime_receipt_apply": "deferred-to-T12",
-        "phase_2": "incomplete",
-        "repository": "incomplete",
-        "release_blocked": True,
     }
-    if frontier.get("status") != expected_status:
-        errors.append("T11 agreement-v2 runtime status drifted or overclaims live evidence")
-    expected_deferred = {
-        "id": "T12",
-        "issue": T12_RECORD,
-        "state": "open-planning-only-inactive",
-        "blocked_by": [T11_RECORD, "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"],
+    if history.get("status") != expected_t11_status:
+        errors.append("accepted T11 runtime history drifted or overclaims live evidence")
+    expected_merge = {
+        "commit": T11_ACCEPTED_MERGE,
+        "tree": T11_ACCEPTED_TREE,
+        "receipt": T11_RECORD + "#issuecomment-5473274452",
     }
-    if frontier.get("deferred_task") != expected_deferred:
-        errors.append("T11 agreement-v2 must retain the exact planning-only T12 URL")
+    if history.get("merge") != expected_merge:
+        errors.append("accepted T11 merge history drifted")
 
-    stage_a2 = frontier.get("stage_a2")
+    stage_a1 = history.get("stage_a1")
+    if not isinstance(stage_a1, dict) or stage_a1 != {
+        "classification": "bounded-non-success",
+        "qualified_boundary": "git-and-bubblewrap-prerequisites-only",
+        "aggregate_status": "UNCHECKABLE",
+        "direct_bwrap_smoke_status": "pass",
+        "device_auth_performed": False,
+        "logical_codex_exec_worker_process_invocation_count": 0,
+        "runtime_receipt_dry_run_count": 0,
+        "runtime_receipt_apply_count": 0,
+        "evidence_issue_url": T11_RECORD + "#issuecomment-5470293000",
+        "evidence_body_sha256": (
+            "5911657f46e4a0f555ac642ed69f38dd31efe771ec5846d5a19d2a4f1a62dbce"
+        ),
+    }:
+        errors.append("Stage A.1 must remain exact bounded non-success history")
+
+    stage_a2 = history.get("stage_a2")
     expected_stage_a2 = {
         "classification": "bounded-non-success",
         "aggregate_status": "UNCHECKABLE",
@@ -2441,8 +2577,7 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         "codex_sandbox_network_reason_code": "process-nonzero",
         "auth_status": "unavailable",
         "device_auth_performed": False,
-        "model_invoked": False,
-        "real_codex_worker_success_count": 0,
+        "logical_codex_exec_worker_process_invocation_count": 0,
         "runtime_receipt_dry_run_count": 0,
         "runtime_receipt_apply_count": 0,
         "evidence_issue_url": (
@@ -2457,7 +2592,128 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         ),
     }
     if stage_a2 != expected_stage_a2:
-        errors.append("Stage A.2 must remain exact bounded non-success evidence")
+        errors.append("Stage A.2 must remain exact bounded non-success history")
+
+    activation = frontier.get("t12_activation")
+    if not isinstance(activation, dict):
+        errors.append("T12 activation must be an object")
+        activation = {}
+    exact_keys(
+        activation,
+        {
+            "task_issue",
+            "state",
+            "branch",
+            "phase_origin",
+            "task_base",
+            "owner_amendment",
+            "ownership",
+            "runtime_evidence",
+            "compatibility_baseline",
+            "invocation_boundary",
+            "pull_request_binding",
+            "receipt_chronology",
+            "source_parity",
+        },
+        "T12 activation",
+        errors,
+    )
+    for field, expected in (
+        ("task_issue", T12_RECORD),
+        ("state", "active-in-this-tree"),
+        ("branch", T12_BRANCH),
+        ("pull_request_binding", "dynamic-github-readback-required-no-static-pr-number"),
+    ):
+        if activation.get(field) != expected:
+            errors.append(f"T12 activation {field} drifted")
+    if activation.get("phase_origin") != {
+        "commit": ACCEPTED_PHASE1_COMMIT,
+        "tree": ACCEPTED_PHASE1_TREE,
+    }:
+        errors.append("T12 activation must preserve the immutable Phase 2 origin")
+    if activation.get("task_base") != {
+        "commit": T11_ACCEPTED_MERGE,
+        "tree": T11_ACCEPTED_TREE,
+    }:
+        errors.append("T12 activation Task base drifted")
+    if activation.get("owner_amendment") != {
+        "url": T12_OWNER_AMENDMENT,
+        "body_sha256": T12_OWNER_AMENDMENT_SHA256,
+    }:
+        errors.append("T12 owner amendment URL or digest drifted")
+    if activation.get("ownership") != {
+        "transferred_path_count": 21,
+        "path_transitions": [],
+        "expansion_requires_replan": True,
+    }:
+        errors.append("T12 activation ownership boundary drifted")
+    expected_chronology = [
+        "stage-b-live-worker",
+        "deterministic-verification",
+        "receipt-dry-run",
+        "exact-head-tree-check-readback",
+        "exactly-one-runtime-receipt-apply",
+        "canonical-receipt-readback",
+        "provider-and-runtime-destruction",
+        "profile-runtime-data-process-absence-readback",
+        "one-append-only-lifecycle-completion-evidence-comment",
+        "owner-merge-judgment",
+    ]
+    if activation.get("receipt_chronology") != expected_chronology:
+        errors.append("T12 runtime receipt chronology drifted")
+    if activation.get("compatibility_baseline") != {
+        "client": "official-stable-codex-cli-0.150.1",
+        "scope": "one-exact-receipt-bound-profile-only",
+        "current_latest_stable_claimed": False,
+        "version_change": "ownership-and-source-review-replan-required",
+    }:
+        errors.append("T12 bounded 0.150.1 compatibility baseline drifted")
+    if activation.get("invocation_boundary") != {
+        "claim": "exactly-one-owner-triggered-logical-codex-exec-worker-process-invocation",
+        "execution_result_logical_invocations": 1,
+        "backend_model_request_count_claimed": False,
+        "automatic_worker_retry": False,
+    }:
+        errors.append("T12 logical worker-process invocation boundary drifted")
+    expected_runtime_evidence = {
+        "authority": "external-github-current-outcome-not-embedded-in-tree",
+        "stage_a": "required-before-stage-b",
+        "stage_b": "required-before-runtime-receipt",
+        "sandbox_compatibility": "must-be-qualified-not-embedded",
+        "runtime_receipt_apply": "exactly-once-required-not-embedded",
+        "lifecycle_completion": "separate-append-only-comment-not-runtime-receipt",
+    }
+    if activation.get("runtime_evidence") != expected_runtime_evidence:
+        errors.append("T12 external runtime-evidence boundary drifted")
+    source_parity = activation.get("source_parity")
+    if not isinstance(source_parity, dict) or source_parity.get("repository") != (
+        "mochan-tk/agentic-dev-kit-for-copilot"
+    ) or source_parity.get("commit") != (
+        "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
+    ) or source_parity.get("tree") != (
+        "88f96493ec167602750c8dfec044629bd494a586"
+    ) or source_parity.get("contributes") != [
+        "capability-aware-routing-for-one-exact-profile",
+        "bounded-worker-execution",
+        "durable-attempt-and-receipt-trail",
+        "independent-verification-over-worker-claim",
+        "privacy-by-reference",
+    ] or source_parity.get("does_not_complete") != [
+        "K09", "K10", "K11", "K12", "full-runtime-parity"
+    ]:
+        errors.append("T12 bounded source-parity contribution drifted")
+
+    expected_status = {
+        "runtime_harness": "minimal-offline-implemented",
+        "live_codex_execution": "active-qualification-external-evidence-not-embedded",
+        "sandbox_compatibility": "required-external-evidence-not-embedded",
+        "runtime_receipt_apply": "required-external-evidence-not-embedded",
+        "phase_2": "incomplete",
+        "repository": "incomplete",
+        "release_blocked": True,
+    }
+    if frontier.get("status") != expected_status:
+        errors.append("T12 runtime frontier status drifted or embeds live evidence")
 
     expected_release = {
         "scenario_count": 136,
@@ -2467,7 +2723,7 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         "release_blocked": True,
     }
     if frontier.get("canonical_release_boundary") != expected_release:
-        errors.append("T11 runtime frontier release boundary drifted")
+        errors.append("T12 runtime frontier release boundary drifted")
 
     coverage = read_json(root / COVERAGE, errors, "conformance coverage")
     entries = coverage.get("entries")
@@ -2492,7 +2748,7 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         != 136
         or any(entry.get("verification_state") != "not-run" for entry in entries)
     ):
-        errors.append("T11 deferral requires all 136 canonical scenarios to remain not-run")
+        errors.append("T12 activation requires all 136 canonical scenarios to remain not-run")
 
     manifest = read_json(root / CONFORMANCE_MANIFEST, errors, "conformance manifest")
     catalog = manifest.get("scenario_catalog")
@@ -2506,7 +2762,7 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         or manifest.get("results") != []
         or manifest.get("release_blocked") is not True
     ):
-        errors.append("T11 deferral requires the manifest release sentinel to remain blocked")
+        errors.append("T12 activation requires the manifest release sentinel to remain blocked")
 
     results = read_json(root / CONFORMANCE_RESULTS, errors, "conformance results")
     if (
@@ -2514,7 +2770,7 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         or results.get("results") != []
         or results.get("release_blocked") is not True
     ):
-        errors.append("T11 deferral requires empty release-level results")
+        errors.append("T12 activation requires empty release-level results")
 
 
 def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
@@ -2780,8 +3036,13 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
         (RUNTIME_ADR_PATH, runtime_adr),
         (RUNTIME_AGREEMENT_PATH, runtime_agreement),
     ):
+        normalized_t12_text = (
+            " ".join(text.split()).replace("worker- process", "worker-process")
+            if text is not None
+            else None
+        )
         validate_required_markers(
-            text,
+            normalized_t12_text,
             runtime_status_markers,
             f"T11 agreement-v2 status markers are missing from {label}",
             errors,
@@ -2790,6 +3051,49 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
             marker in text for marker in FORBIDDEN_T11_LIVE_SUCCESS_MARKERS
         ):
             errors.append(f"{label} contains a forbidden T11 live-success claim")
+    for label, text in (
+        ("README.md", readme),
+        (KNOWN_LIMITATIONS_PATH, limitations),
+        (RUNTIME_ADR_PATH, runtime_adr),
+        (RUNTIME_AGREEMENT_PATH, runtime_agreement),
+    ):
+        normalized_t12_text = (
+            " ".join(text.split()).replace("worker- process", "worker-process")
+            if text is not None
+            else None
+        )
+        validate_required_markers(
+            normalized_t12_text,
+            (
+                "0.150.1",
+                "current latest stable",
+                "owner-triggered logical `codex exec` worker-process invocation",
+                "backend model request",
+                "not a second runtime receipt",
+            ),
+            f"T12 version, logical-invocation, or receipt boundary is missing from {label}",
+            errors,
+        )
+    for label, text in (
+        (RUNTIME_ADR_PATH, runtime_adr),
+        (RUNTIME_AGREEMENT_PATH, runtime_agreement),
+    ):
+        normalized_t12_text = " ".join(text.split()) if text is not None else None
+        validate_required_markers(
+            normalized_t12_text,
+            (
+                ACCEPTED_PHASE1_COMMIT,
+                ACCEPTED_PHASE1_TREE,
+                T11_ACCEPTED_MERGE,
+                T11_ACCEPTED_TREE,
+                T12_OWNER_AMENDMENT,
+                "capability-aware routing",
+                "privacy by reference",
+                "does not complete K09, K10, K11, K12",
+            ),
+            f"T12 origin, amendment, or source-parity boundary is missing from {label}",
+            errors,
+        )
     validate_required_markers(
         agents_markers,
         (

@@ -3,7 +3,7 @@
 > [!WARNING]
 > **Current status:** Phase 0 is complete. This tree satisfies the **Phase 1 portable-core implementation gate**.
 > The current durable owner-acceptance outcome is external GitHub state, authoritative in [Issue #12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12) and [Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2); this immutable tree records only its creation-time snapshot and does not embed a later post-merge outcome.
-> Phase 2 [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) delivers a deterministic offline execution harness. Its approved agreement v2 defers live Codex compatibility, the exactly-one live E2E, and runtime-receipt application to planning-only [T12 / Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25), which remains blocked by T11 and PR #24.
+> Phase 2 [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) delivered the accepted deterministic offline execution harness through merged PR #24. This tree activates [T12 / Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25) as the sole implementation frontier for one exact live-runtime qualification and receipt.
 > Stage A.1 and Stage A.2 remain bounded non-success evidence. Stage A.1
 > qualified only its narrow prerequisite set; Stage A.2's aggregate profile was
 > `UNCHECKABLE`, with shell-environment `fail` and sandbox/network
@@ -73,7 +73,7 @@ The Phase 1 portable core adds:
 - all eight repository Skills with source-to-target parity records; and
 - a machine-readable acceptance package and human scorecard.
 
-The current Phase 2 T11 tree adds, at a deliberately narrow offline evidence
+The accepted Phase 2 T11 merge adds, at a deliberately narrow offline evidence
 level:
 
 - three static role-definition files that are configuration layers, not
@@ -98,11 +98,22 @@ repository = incomplete
 release_blocked = true
 ```
 
+This tree preserves that T11 result as history and activates T12. The
+[owner amendment](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5480062206)
+keeps the Phase 2 origin at the accepted Phase 1 merge/tree while binding T12
+itself to the accepted T11 merge/tree. T12 qualifies only official stable
+Codex CLI `0.150.1` as one bounded compatibility baseline; it makes no claim
+that this version is the current latest stable or that other stable versions
+match. Current live evidence remains external GitHub state and is not embedded
+in this immutable tree.
+
 Required CI proves only the offline/static boundary. The current Stage A.2
 evidence remains non-success and is not rewritten as runtime-profile `match`,
 sandbox compatibility, live-worker success, or receipt evidence. A real
 `codex exec` worker, live compatibility qualification, receipt dry-run/apply,
-and exact read-back are T12 acceptance work. T11 claims only deterministic
+and exact read-back are T12 acceptance work. The live boundary is exactly one
+owner-triggered logical `codex exec` worker-process invocation; it does not
+claim exactly one backend model request. T11 claims only deterministic
 fixture-based receipt validation, dry-run, zero-write, idempotency, conflict,
 and read-back behavior.
 
@@ -153,7 +164,12 @@ alpha snapshot remains `unsupported-client`. The later Stage A.2 observation
 also remains non-success; neither record is a successful live runtime result.
 The approved [T11 agreement-v2 decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734)
 makes AC-13 `deferred-to-T12-by-approved-agreement-replan`, not passed or
-silently omitted.
+silently omitted. The T12 activation amendment preserves the governed order:
+live worker, deterministic verification, receipt dry-run, exact head/tree/check
+read-back, one runtime-receipt apply and canonical read-back, provider/runtime
+destruction and absence read-back, then one separate append-only lifecycle-
+completion evidence comment. That lifecycle comment is not a second runtime
+receipt.
 
 ## Repository completion boundary
 

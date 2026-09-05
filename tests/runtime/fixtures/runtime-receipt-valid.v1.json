@@ -2,12 +2,12 @@
   "schema": "runtime-receipt-request/v1",
   "repository": "mochan-tk/agentic-dev-kit-for-codex",
   "task": {
-    "issue": 23,
-    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+    "issue": 25,
+    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
   },
   "pull_request": {
-    "number": 24,
-    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24",
+    "number": 73,
+    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/73",
     "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
@@ -122,7 +122,7 @@
           "repository_clean": true,
           "repository_git_bootstrap": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "git", "package_version": "1:2.43.0-1ubuntu7.3", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942", "version_output": "git version 2.43.0", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false},
           "repository_git_bootstrap_runtime_match": true,
-          "repository_git_clone_contract_sha256": "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
+          "repository_git_clone_contract_sha256": "af134538a459119e618854b6455199ac92ee0b7abd4546fabc1c7330d4eb51d8",
           "codex_version_output": "codex-cli 0.150.1",
           "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
           "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
@@ -221,8 +221,8 @@
       "schema": "task-execution-envelope/v1",
       "task": {
         "repository": "mochan-tk/agentic-dev-kit-for-codex",
-        "issue": 23,
-        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+        "issue": 25,
+        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
       },
       "attempt_id": "ATTEMPT-0123456789abcdef",
       "harness": {
@@ -917,8 +917,8 @@
         "record_sha256": "eadf6a4de1854f600255940213aebc966ecfe5185d48a9f34c83db3e2ce0af12"
       },
       "digests": {
-        "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
-        "runtime_profile_sha256": "a95f54f5b75890d9e72c4cfa7edebd76c0d580f7f1777a06b85e897f12142dea"
+        "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637",
+        "runtime_profile_sha256": "573f7be8d81cbd0f6610b9156fbf006868fe9563711952a3077bd213c5f38191"
       },
       "privacy": {
         "raw_jsonl_retained": false,

@@ -58,6 +58,105 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         jsonschema.Draft202012Validator.check_schema(schema)
         self.assertFalse(jsonschema.Draft202012Validator(schema).is_valid(instance))
 
+    def t12_live_profile(self):
+        profile = copy.deepcopy(self.profile)
+        provider = profile["evidence"]["containment_provider"]
+        provider["repository_git_clone_contract_sha256"] = (
+            self.adapter.stage_a1_git_clone_contract_sha256(
+                provider["public_head"], provider["public_tree"],
+                self.adapter.T12_PUBLIC_BRANCH,
+            )
+        )
+        return profile
+
+    def test_t12_activation_identity_is_exact_and_pr_agnostic(self):
+        self.assertEqual(25, self.adapter.TASK_ISSUE)
+        self.assertEqual(
+            "codex/phase-2-live-codex-runtime",
+            self.adapter.T12_PUBLIC_BRANCH,
+        )
+        self.assertEqual(
+            "codex/phase-2-minimal-execution-slice",
+            self.adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+        )
+        self.assertFalse(hasattr(self.adapter, "T11_PUBLIC_BRANCH"))
+        self.assertEqual(
+            {
+                "repository": "mochan-tk/agentic-dev-kit-for-codex",
+                "issue": 25,
+                "url": (
+                    "https://github.com/mochan-tk/"
+                    "agentic-dev-kit-for-codex/issues/25"
+                ),
+            },
+            self.envelope["task"],
+        )
+        schema = json.loads(
+            (
+                ROOT
+                / "docs/agreements/runtime/"
+                "task-execution-envelope.v1.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(25, schema["properties"]["task"]["properties"]["issue"]["const"])
+        self.assertEqual(
+            self.envelope["task"]["url"],
+            schema["properties"]["task"]["properties"]["url"]["const"],
+        )
+        source = ADAPTER_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("PULL_REQUEST", source)
+
+    def test_t12_stage_a_and_stage_b_profile_semantics_are_exact(self):
+        stage_a = self.t12_live_profile()
+        stage_a["scope"] = "exact-head-probe-only-sensor"
+        stage_a["status"] = "probe-only-match"
+        stage_a["reason"] = "exact unauthenticated Stage A probes match"
+        stage_a["auth"]["class"] = "unavailable"
+        stage_a["evidence"]["lane_statuses"]["auth_status"] = "unavailable"
+        stage_a["live_run_allowed"] = False
+        self.adapter.validate_runtime_profile(stage_a, allow_fixture=True)
+        self.assert_contract_error(
+            lambda: self.adapter.execute_slice(
+                ROOT, copy.deepcopy(self.envelope), stage_a, "live"
+            ),
+            "blocked",
+        )
+
+        stage_b = self.t12_live_profile()
+        stage_b["scope"] = "exact-head-live-sensor"
+        stage_b["status"] = "match"
+        stage_b["auth"]["class"] = "signed-in-client"
+        stage_b["evidence"]["lane_statuses"]["auth_status"] = (
+            "signed-in-client"
+        )
+        stage_b["live_run_allowed"] = True
+        self.adapter.validate_runtime_profile(stage_b, allow_fixture=True)
+
+    def test_execution_result_requires_exactly_one_logical_invocation(self):
+        verifier = {
+            "schema": "t11-verifier-result/v1",
+            "attempt_id": self.envelope["attempt_id"],
+            "status": "pass",
+            "fresh_process": True,
+            "read_only": True,
+            "checks": self.adapter.VERIFIER_CHECKS,
+        }
+        result = json.loads(
+            (
+                ROOT / "tests/runtime/fixtures/execution-result-valid.v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        for count in (0, 2):
+            candidate = copy.deepcopy(result)
+            candidate["worker"]["logical_invocations"] = count
+            with self.subTest(count=count):
+                self.assert_contract_error(
+                    lambda value=candidate: self.adapter.validate_execution_result(
+                        value, self.envelope, self.profile, verifier
+                    ),
+                    "exactly one logical invocation",
+                )
+
     def minimal_process_environment(self, root, behavior=None):
         home = root / "home"
         tmp = root / "tmp"
@@ -434,7 +533,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             contract["repository_url"],
         )
         self.assertEqual(
-            "codex/phase-2-minimal-execution-slice", contract["branch"],
+            "codex/phase-2-live-codex-runtime", contract["branch"],
         )
         self.assertEqual("0077", contract["process_umask"])
         self.assertEqual(
@@ -482,8 +581,26 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             digest,
         )
         self.assertEqual(
-            "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
+            "af134538a459119e618854b6455199ac92ee0b7abd4546fabc1c7330d4eb51d8",
             digest,
+        )
+        historical = self.adapter.stage_a1_git_clone_contract(
+            head, tree, self.adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+        )
+        self.assertEqual(
+            "codex/phase-2-minimal-execution-slice", historical["branch"],
+        )
+        self.assertEqual(
+            "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
+            self.adapter.stage_a1_git_clone_contract_sha256(
+                head, tree, self.adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+            ),
+        )
+        self.assert_contract_error(
+            lambda: self.adapter.stage_a1_git_clone_contract(
+                head, tree, "codex/unreviewed-branch",
+            ),
+            "branch",
         )
         self.assertNotEqual(
             digest,
@@ -516,7 +633,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 ["/usr/bin/git", "init", "--quiet", str(source)],
                 [
                     "/usr/bin/git", "-C", str(source), "checkout", "--quiet",
-                    "-b", self.adapter.T11_PUBLIC_BRANCH,
+                    "-b", self.adapter.T12_PUBLIC_BRANCH,
                 ],
                 ["/usr/bin/git", "-C", str(source), "add", "."],
                 [
@@ -560,7 +677,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             clone = subprocess.run(
                 [
                     *wrapper, *prefix, "clone", "--quiet", "--no-checkout",
-                    "--single-branch", "--branch", self.adapter.T11_PUBLIC_BRANCH,
+                    "--single-branch", "--branch", self.adapter.T12_PUBLIC_BRANCH,
                     str(source), str(target),
                 ],
                 cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1864,7 +1981,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 )
 
     def test_live_profile_cross_binds_provider_platform_client_and_chronology(self):
-        valid = copy.deepcopy(self.profile)
+        valid = self.t12_live_profile()
         valid["scope"] = "exact-head-live-sensor"
         valid["platform"] = {"os": "Linux", "architecture": "aarch64"}
         self.adapter.validate_runtime_profile(valid)
@@ -2020,7 +2137,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             root = Path(temporary)
             os.chmod(root, 0o700)
-            profile = copy.deepcopy(self.profile)
+            profile = self.t12_live_profile()
             profile["evidence"]["containment_provider"]["public_head"] = "f" * 40
             with mock.patch.object(self.adapter, "run_bounded_process", return_value=failed_worker) as worker:
                 self.assert_contract_error(lambda: self.adapter.run_claimed_live_worker(
@@ -2056,7 +2173,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        stage_a2 = contract["runtime_frontier"]["stage_a2"]
+        stage_a2 = contract["runtime_frontier"]["t11_history"]["stage_a2"]
         self.assertEqual("bounded-non-success", stage_a2["classification"])
         self.assertEqual("UNCHECKABLE", stage_a2["aggregate_status"])
         self.assertEqual("fail", stage_a2["shell_environment_status"])
@@ -2069,8 +2186,9 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         )
         self.assertEqual("unavailable", stage_a2["auth_status"])
         self.assertIs(stage_a2["device_auth_performed"], False)
-        self.assertIs(stage_a2["model_invoked"], False)
-        self.assertEqual(0, stage_a2["real_codex_worker_success_count"])
+        self.assertEqual(
+            0, stage_a2["logical_codex_exec_worker_process_invocation_count"],
+        )
         self.assertEqual(0, stage_a2["runtime_receipt_dry_run_count"])
         self.assertEqual(0, stage_a2["runtime_receipt_apply_count"])
 
@@ -2084,13 +2202,15 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda stage: stage.__setitem__("classification", "pass"),
             lambda stage: stage.__setitem__("aggregate_status", "match"),
             lambda stage: stage.__setitem__("shell_environment_status", "pass"),
-            lambda stage: stage.__setitem__("real_codex_worker_success_count", 1),
+            lambda stage: stage.__setitem__(
+                "logical_codex_exec_worker_process_invocation_count", 1
+            ),
             lambda stage: stage.__setitem__("runtime_receipt_apply_count", 1),
         )
         for mutation in mutations:
             with self.subTest(mutation=mutation):
                 candidate = copy.deepcopy(original_contract)
-                mutation(candidate["runtime_frontier"]["stage_a2"])
+                mutation(candidate["runtime_frontier"]["t11_history"]["stage_a2"])
                 encoded = (
                     json.dumps(candidate, ensure_ascii=False, indent=2) + "\n"
                 ).encode("utf-8")
@@ -2232,7 +2352,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
 
     def test_profile_fail_closed_states_never_authorize_live(self):
         for state in ("profile-drift", "unsupported-client", "UNKNOWN", "UNCHECKABLE"):
-            profile = copy.deepcopy(self.profile)
+            profile = self.t12_live_profile()
             profile["scope"] = "exact-head-live-sensor"
             profile["status"] = state
             profile["live_run_allowed"] = False
@@ -2843,6 +2963,275 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                     lambda value=mutation: self.adapter.validate_sandbox_probe_argv(value),
                     "sandbox probe argv",
                 )
+
+    def test_official_0150_dispatch_rejects_strict_only_on_sandbox(self):
+        # Static source regression, not execution/compatibility evidence:
+        # 90854393966b21e9ebfd21b122334eb09a20c93d cli/src/main.rs
+        # rejects --strict-config for Sandbox before dispatch (2467, 2490).
+        environment = {name: "reviewed" for name in self.adapter.SHELL_ENVIRONMENT_NAMES}
+        sandbox = self.adapter.sandbox_probe_argv(
+            Path("/reviewed/codex"), environment, ["/usr/bin/env", "-0"],
+            Path("/reviewed/root"),
+        )
+        doctor = self.adapter.runtime_configuration_argv(
+            Path("/reviewed/codex"), environment,
+        ) + ["doctor", "--json"]
+        self.assertNotIn("--strict-config", sandbox)
+        self.assertEqual(1, doctor.count("--strict-config"))
+        self.assertEqual(
+            [item for item in doctor[:-2] if item != "--strict-config"],
+            sandbox[:sandbox.index("sandbox")],
+        )
+        live = self.adapter.build_live_argv(
+            Path("/reviewed/codex"), Path("/reviewed/root"), ROOT, self.envelope,
+        )
+        self.assertEqual(1, live.count("--strict-config"))
+
+        self.assert_contract_error(lambda: self.adapter.validate_sandbox_probe_argv(
+            sandbox[:1] + ["--strict-config"] + sandbox[1:],
+        ))
+        self.assert_contract_error(lambda: self.adapter.runtime_configuration_argv(
+            Path("/reviewed/codex"), environment, surface="unreviewed",
+        ))
+
+    def test_sandbox_launch_diagnostics_closed_numeric_and_reason_projection(self):
+        base = self.adapter.ProcessResult(0, None, False, False, False, b"", 0, True)
+        rejection = self.adapter.STRICT_SANDBOX_REJECTION
+        cases = (
+            (base, "none", "process-execution"),
+            (base._replace(exit_code=1), "process-nonzero", "unclassified"),
+            (base._replace(exit_code=2), "process-nonzero", "unclassified"),
+            (base._replace(exit_code=None, signal_number=9), "process-signal", "process-execution"),
+            (base._replace(timed_out=True), "process-timeout", "process-execution"),
+            (base._replace(stderr_overflow=True), "output-overflow", "process-execution"),
+            (base._replace(stdout_overflow=True), "output-overflow", "process-execution"),
+            (base._replace(reaped=False, timed_out=True), "process-not-reaped", "process-cleanup"),
+            (base._replace(exit_code=1, stderr=rejection, stderr_size=len(rejection)), "unsupported-strict-config", "cli-dispatch"),
+            (base._replace(exit_code=2, stderr=b"unknown", stderr_size=7), "unrecognized-stderr", "unclassified"),
+            (base._replace(exit_code=None), "process-observation-uncheckable", "unclassified"),
+        )
+        for process, reason, stage in cases:
+            with self.subTest(reason=reason, exit=process.exit_code):
+                result = self.adapter.classify_sandbox_launch(process)
+                self.assertEqual({"status", "stage", "reason_code", "exit_code", "signal"}, set(result))
+                self.assertEqual(reason, result["reason_code"])
+                self.assertEqual(stage, result["stage"])
+                self.assertEqual(process.exit_code, result["exit_code"])
+                self.assertEqual(process.signal_number, result["signal"])
+        for size, reason in ((4096, "unrecognized-stderr"), (4097, "output-overflow")):
+            result = self.adapter.classify_sandbox_launch(base._replace(
+                exit_code=1, stderr=b"x" * size, stderr_size=size,
+            ))
+            self.assertEqual(reason, result["reason_code"])
+        private = b"/private/synthetic-fixture secret=synthetic-value"
+        result = self.adapter.classify_sandbox_launch(base._replace(
+            exit_code=1, stderr=private, stderr_size=len(private),
+        ))
+        self.assertNotIn(private, self.adapter.canonical_bytes(result))
+        self.assertEqual("unrecognized-stderr", result["reason_code"])
+        for changed in (
+            base._replace(exit_code=True), base._replace(exit_code=256),
+            base._replace(exit_code=0, signal_number=9),
+            base._replace(signal_number=65),
+        ):
+            self.assertEqual("process-observation-uncheckable", self.adapter.classify_sandbox_launch(changed)["reason_code"])
+
+    def test_sandbox_launch_diagnostic_capture_is_single_bounded_and_scrubbed(self):
+        synthetic = b"Error: synthetic private path /private/fixture\n"
+        process = self.adapter.ProcessResult(1, None, False, False, False, b"", len(synthetic), True, synthetic)
+        for lane in ("shell", "network"):
+            for enabled in (False, True):
+                diagnostics = {} if enabled else None
+                with mock.patch.object(self.adapter, "bounded_capture", return_value=process) as capture:
+                    result = self.adapter._capture_sandbox_probe(
+                        ["/synthetic/codex"], ROOT, {}, 4096, diagnostics, lane,
+                    )
+                capture.assert_called_once()
+                self.assertEqual(4096, capture.call_args.kwargs["stderr_limit"])
+                self.assertEqual(enabled, capture.call_args.kwargs.get("capture_stderr", False))
+                self.assertEqual(b"", result.stderr)
+                if enabled:
+                    self.assertEqual("unrecognized-stderr", diagnostics[lane]["reason_code"])
+                    self.assertNotIn(synthetic, self.adapter.canonical_bytes(diagnostics))
+        for failure, reason in (
+            (self.adapter.ProcessSpawnError("private"), "process-spawn-failed"),
+            (OSError("private"), "process-observation-uncheckable"),
+            (self.adapter.ContractError("private"), "process-observation-uncheckable"),
+        ):
+            diagnostics = {}
+            with mock.patch.object(self.adapter, "bounded_capture", side_effect=failure):
+                with self.assertRaises(type(failure)):
+                    self.adapter._capture_sandbox_probe(["/synthetic/codex"], ROOT, {}, 4096, diagnostics, "shell")
+            self.assertEqual(reason, diagnostics["shell"]["reason_code"])
+
+    def test_sandbox_launch_diagnostic_buffer_bound_on_synthetic_process(self):
+        # Ordinary offline Python fixture, never Codex, a VM, or a sandbox.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home, tmp = root / "home", root / "tmp"
+            home.mkdir(mode=0o700)
+            tmp.mkdir(mode=0o700)
+            env = self.adapter.minimal_environment(Path(sys.executable).resolve(), home, tmp)
+            for size in (4096, 4097):
+                result = self.adapter.bounded_capture(
+                    [sys.executable, "-I", "-c", "import sys; sys.stderr.buffer.write(b'x'*{})".format(size)],
+                    root, env, stdout_limit=64, stderr_limit=4096, capture_stderr=True,
+                )
+                self.assertLessEqual(len(result.stderr), 4096)
+                self.assertEqual(size == 4097, result.stderr_overflow)
+                self.assertTrue(result.reaped)
+
+    def test_sandbox_launch_diagnostics_each_lane_invokes_once_without_promoting_gate(self):
+        environment = {name: "reviewed" for name in self.adapter.SHELL_ENVIRONMENT_NAMES}
+        required = self.adapter.reviewed_runtime_configuration(environment)
+        process = self.adapter.ProcessResult(2, None, False, False, False, b"", 7, True, b"unknown")
+        listener, client, accepted = mock.MagicMock(), mock.MagicMock(), mock.MagicMock()
+        listener.getsockname.return_value = ("127.0.0.1", 43123)
+        client.getsockname.return_value = ("127.0.0.1", 54321)
+        listener.accept.return_value = (accepted, ("127.0.0.1", 54321))
+        for lane in ("shell", "network"):
+            diagnostics = {}
+            with mock.patch.object(self.adapter, "bounded_capture", return_value=process) as capture, \
+                 mock.patch.object(self.adapter, "_network_namespace_sha256", return_value="1" * 64), \
+                 mock.patch.object(self.adapter.socket, "socket", return_value=listener), \
+                 mock.patch.object(self.adapter.socket, "create_connection", return_value=client):
+                if lane == "shell":
+                    evidence = self.adapter.shell_environment_probe(
+                        Path("/synthetic/codex"), ROOT, environment, required, diagnostics,
+                    )
+                else:
+                    evidence = self.adapter.network_sandbox_behavior_probe(
+                        Path("/synthetic/codex"), ROOT, environment, diagnostics,
+                    )
+            capture.assert_called_once()
+            self.assertTrue(capture.call_args.kwargs["capture_stderr"])
+            self.assertEqual("process-nonzero", evidence["reason_code"])
+            self.assertEqual("fail" if lane == "shell" else "UNCHECKABLE", evidence["status"])
+            self.assertEqual("unrecognized-stderr", diagnostics[lane]["reason_code"])
+
+    def test_sandbox_launch_diagnostics_auth_observation_is_reused(self):
+        stable_help = b"--json --ephemeral --strict-config --ignore-user-config workspace-write --model --sandbox\n"
+        calls = []
+        diagnostics = {lane: self.adapter.launch_diagnostic_record() for lane in ("shell", "network")}
+        def auth(*_args):
+            calls.append("auth")
+            return "unavailable"
+        def capture(argv, *_args, **_kwargs):
+            calls.append("version-help")
+            return self.adapter.ProcessResult(0, None, False, False, False,
+                b"codex-cli 0.150.1\n" if argv[-1] == "--version" else stable_help, 0, True)
+        def probe(*_args, **kwargs):
+            calls.append("lanes")
+            self.assertIs(diagnostics, kwargs["launch_diagnostics"])
+            self.assertFalse(kwargs["auth_required"])
+            return self.passing_runtime_probe()
+        with mock.patch.object(self.adapter, "auth_class", side_effect=auth) as auth_sensor, \
+             mock.patch.object(self.adapter, "bounded_capture", side_effect=capture), \
+             mock.patch.object(self.adapter, "hash_regular_file", return_value="a" * 64), \
+             mock.patch.object(self.adapter, "observe_stage_a1_prerequisite", return_value=self.passing_stage_a1_prerequisite()), \
+             mock.patch.object(self.adapter, "probe_runtime_evidence", side_effect=probe), \
+             mock.patch.object(self.adapter, "observe_colima_provider_evidence", return_value=self.passing_containment_evidence()), \
+             mock.patch.object(self.adapter.os, "uname", return_value=SimpleNamespace(sysname="Linux", machine="aarch64")):
+            profile = self.adapter._observe_runtime_profile_bound_inner(
+                ROOT, "gpt-5.6-sol", "high", Path("/synthetic/codex"), ROOT,
+                {}, self.colima_provider_input(), object(), True, diagnostics,
+            )
+        auth_sensor.assert_called_once()
+        self.assertEqual("auth", calls[0])
+        self.assertEqual(1, calls.count("lanes"))
+        self.assertEqual("probe-only-match", profile["status"])
+        self.assertFalse(profile["live_run_allowed"])
+
+    def test_sandbox_launch_checker_detects_surface_and_projection_drift(self):
+        errors = []
+        self.checker.validate_sandbox_launch_contract(self.adapter, errors)
+        self.assertEqual([], errors)
+        with mock.patch.object(self.adapter, "LAUNCH_DIAGNOSTIC_STDERR_LIMIT", 8192):
+            self.checker.validate_sandbox_launch_contract(self.adapter, errors)
+        self.assertTrue(errors)
+        errors = []
+        with mock.patch.object(self.adapter, "classify_sandbox_launch", return_value={"raw_stderr": "synthetic"}):
+            self.checker.validate_sandbox_launch_contract(self.adapter, errors)
+        self.assertTrue(errors)
+
+    def test_sandbox_launch_diagnostics_gate_before_capture_and_reject_live(self):
+        parser = self.adapter.build_parser()
+        self.assertTrue(parser.parse_args(["profile", "--probe-only", "--launch-diagnostics"]).launch_diagnostics)
+        args = parser.parse_args(["profile", "--launch-diagnostics"])
+        with mock.patch.object(self.adapter, "read_stdin_bounded") as stdin:
+            self.assert_contract_error(lambda: self.adapter.cli_profile(args, ROOT), "probe-only")
+        stdin.assert_not_called()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            parser.parse_args(["run", "--mode", "live", "--launch-diagnostics"])
+        for auth in ("signed-in-client", "api-key", "unknown"):
+            with mock.patch.object(self.adapter, "auth_class", return_value=auth) as auth_sensor, \
+                 mock.patch.object(self.adapter, "bounded_capture") as capture, \
+                 mock.patch.object(self.adapter, "probe_runtime_evidence") as probe:
+                self.assert_contract_error(lambda: self.adapter._observe_runtime_profile_bound_inner(
+                    ROOT, "gpt-5.6-sol", "high", Path("/synthetic/codex"), ROOT,
+                    {}, {}, object(), probe_only=True, launch_diagnostics={},
+                ), "unavailable authentication")
+            auth_sensor.assert_called_once()
+            capture.assert_not_called()
+            probe.assert_not_called()
+        for probe_only, provider in ((False, {}), (True, None)):
+            with mock.patch.object(self.adapter, "require_runtime_fs_capabilities") as fs:
+                self.assert_contract_error(lambda: self.adapter.observe_runtime_profile(
+                    ROOT, "gpt-5.6-sol", "high", provider, probe_only=probe_only, launch_diagnostics={},
+                ))
+            fs.assert_not_called()
+        with mock.patch.object(self.adapter, "bounded_capture") as capture:
+            self.assert_contract_error(lambda: self.adapter.probe_runtime_evidence(
+                Path("/synthetic/codex"), ROOT, {}, ROOT, launch_diagnostics={},
+            ))
+        capture.assert_not_called()
+
+    def test_sandbox_launch_wrapper_is_separate_from_unchanged_profile_schema(self):
+        profile = self.adapter._unavailable_runtime_profile("gpt-5.6-sol", "high", True)
+        wrapper = {
+            "schema": self.adapter.LAUNCH_DIAGNOSTIC_SCHEMA,
+            "authority": "adapter-authored", "runtime_profile": profile,
+            "launch_diagnostics": {lane: self.adapter.launch_diagnostic_record() for lane in ("shell", "network")},
+        }
+        schema = json.loads((ROOT / "docs/agreements/runtime/runtime-profile.v1.schema.json").read_text())
+        self.assert_draft_2020_valid(schema, profile)
+        self.assert_draft_2020_invalid(schema, wrapper)
+        self.adapter.validate_runtime_profile(profile)
+        self.adapter.validate_launch_diagnostics_wrapper(wrapper)
+        self.assert_contract_error(lambda: self.adapter.validate_runtime_profile(wrapper))
+        omitted = copy.deepcopy(wrapper)
+        del omitted["launch_diagnostics"]
+        self.assert_contract_error(lambda: self.adapter.validate_launch_diagnostics_wrapper(omitted))
+        inline = copy.deepcopy(profile)
+        inline["launch_diagnostics"] = wrapper["launch_diagnostics"]
+        self.assert_contract_error(lambda: self.adapter.validate_runtime_profile(inline))
+        self.assert_draft_2020_invalid(schema, inline)
+        for key, value in (("raw_stderr", "private"), ("reason_code", "invented"), ("exit_code", True), ("signal", 999), ("stage", "private")):
+            bad = copy.deepcopy(wrapper)
+            bad["launch_diagnostics"]["shell"][key] = value
+            self.assert_contract_error(lambda: self.adapter.validate_launch_diagnostics_wrapper(bad))
+        args = self.adapter.build_parser().parse_args(["profile", "--probe-only", "--launch-diagnostics"])
+        with mock.patch.object(self.adapter, "read_stdin_bounded", return_value=self.adapter.canonical_bytes(self.colima_provider_input())), \
+             mock.patch.object(self.adapter, "observe_runtime_profile", return_value=profile):
+            observed = self.adapter.cli_profile(args, ROOT)
+        self.assertEqual(wrapper, observed)
+        args.launch_diagnostics = False
+        with mock.patch.object(self.adapter, "read_stdin_bounded", return_value=self.adapter.canonical_bytes(self.colima_provider_input())), \
+             mock.patch.object(self.adapter, "observe_runtime_profile", return_value=profile) as sensor:
+            self.assertEqual(profile, self.adapter.cli_profile(args, ROOT))
+        self.assertNotIn("launch_diagnostics", sensor.call_args.kwargs)
+
+    def test_sandbox_launch_diagnostics_capability_error_preserves_safe_error(self):
+        args = self.adapter.build_parser().parse_args(["profile", "--probe-only", "--launch-diagnostics"])
+        with mock.patch.object(self.adapter, "require_runtime_fs_capabilities", side_effect=self.adapter.ContractError("synthetic private detail")), \
+             mock.patch.object(self.adapter, "read_stdin_bounded") as stdin, \
+             mock.patch.object(self.adapter, "observe_runtime_profile") as sensor:
+            with self.assertRaises(self.adapter.ProfileProbeError) as caught:
+                self.adapter.cli_profile(args, ROOT)
+        stdin.assert_not_called()
+        sensor.assert_not_called()
+        safe = self.adapter.safe_error(caught.exception)
+        self.assertNotIn(b"synthetic private detail", self.adapter.canonical_bytes(safe))
 
     def test_shell_environment_probe_has_closed_reason_codes_and_safe_metrics(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -3581,7 +3970,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertEqual("UNCHECKABLE", inconsistent_exit["status"])
 
     def test_runtime_lanes_are_independent_and_probe_only_never_authorizes_live(self):
-        profile = copy.deepcopy(self.profile)
+        profile = self.t12_live_profile()
         profile["scope"] = "exact-head-probe-only-sensor"
         profile["status"] = "probe-only-match"
         profile["live_run_allowed"] = False
@@ -3843,7 +4232,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             self.assertIn(required, argv)
         rendered = "\n".join(argv)
         self.assertNotIn(self.envelope["attempt_id"], rendered)
-        self.assertNotIn("Issue #23", rendered)
+        self.assertNotIn("Issue #25", rendered)
         self.assertNotIn("--add-dir", argv)
         self.assertNotIn("--ignore-rules", argv)
         self.assertFalse(any(value.startswith("--dangerously-bypass-") for value in argv))

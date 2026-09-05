@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T11"
-CURRENT_TASK_BRANCH = "codex/phase-2-minimal-execution-slice"
+CURRENT_TASK_ID = "T12"
+CURRENT_TASK_BRANCH = "codex/phase-2-live-codex-runtime"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,12 +521,18 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T11"], [task["id"] for task in active])
+        self.assertEqual(["T12"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T11_PATHS,
+            self.checker.EXPECTED_T12_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(42, len(active[0]["owned_paths"]))
+        self.assertEqual(21, len(active[0]["owned_paths"]))
+        t11 = next(task for task in payload["tasks"] if task["id"] == "T11")
+        self.assertEqual("accepted", t11["state"])
+        self.assertEqual(
+            self.checker.EXPECTED_T11_RESIDUAL_PATHS,
+            tuple(entry["path"] for entry in t11["owned_paths"]),
+        )
         t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
         self.assertEqual("accepted", t10["state"])
 
@@ -674,7 +680,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                 )
                 self.assert_rejected(self.errors_for(fixture))
 
-    def test_phase2_frontier_rejects_t10_or_t11_drift(self):
+    def test_phase2_frontier_rejects_t10_t11_or_t12_drift(self):
         cases = (
             (
                 "t10-state",
@@ -718,6 +724,27 @@ class RepositoryPolicyTest(unittest.TestCase):
                 )["owned_paths"][0].__setitem__("mode", "100755"),
                 "paths must all use mode 100644",
             ),
+            (
+                "t12-record",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T12"
+                ).__setitem__("record", self.checker.T11_RECORD),
+                "reference Issue 25",
+            ),
+            (
+                "t12-base",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T12"
+                ).__setitem__("base_commit", self.checker.ACCEPTED_PHASE1_COMMIT),
+                "T12 base_commit drifted",
+            ),
+            (
+                "t12-expansion",
+                lambda payload: next(
+                    task for task in payload["tasks"] if task["id"] == "T12"
+                )["owned_paths"].append({"path": "unreviewed.txt", "mode": "100644"}),
+                "exactly the approved 21 paths",
+            ),
         )
         for label, mutate, fragment in cases:
             with self.subTest(label=label):
@@ -731,7 +758,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T11", self.active_task(payload)["id"])
+        self.assertEqual("T12", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
@@ -750,7 +777,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 42 paths"
+            self.errors_for(fixture), "exactly the approved 21 paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -1885,6 +1912,81 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assert_rejected(errors, "runtime import digest drifted")
         self.assert_rejected(errors, "import-time class execution")
 
+    def test_runtime_spawn_exception_requires_exact_inert_class_and_base(self):
+        safe = (
+            'class ContractError(Exception):\n'
+            '    """A bounded, user-safe contract failure."""\n\n'
+            'class ProcessSpawnError(ContractError):\n'
+            '    """A fixed safe failure raised only at the direct Popen boundary."""\n'
+        )
+        errors = []
+        self.checker.validate_import_time_structure(
+            self.checker.ast.parse(safe), self.checker.RUNTIME_ADAPTER, errors,
+        )
+        self.assertEqual([], errors)
+        mutations = (
+            safe.replace("ProcessSpawnError(ContractError)", "AnotherError(ContractError)"),
+            safe.replace("ProcessSpawnError(ContractError)", "ProcessSpawnError(resolve_base())"),
+            safe.replace("ProcessSpawnError(ContractError)", "ProcessSpawnError(ContractError, metaclass=Meta)"),
+            safe + "\nclass ProcessSpawnError(ContractError):\n    payload = dangerous()\n",
+            safe.replace("class ProcessSpawnError", "@decorate\nclass ProcessSpawnError"),
+            safe.replace('    """A fixed safe failure raised only at the direct Popen boundary."""', "    payload = dangerous()"),
+            safe.replace('    """A fixed safe failure raised only at the direct Popen boundary."""', "    def run(self):\n        pass"),
+            safe.replace('    """A bounded, user-safe contract failure."""', "    def __init_subclass__(cls):\n        dangerous()"),
+            safe.replace("class ProcessSpawnError", "ContractError = OtherBase\nclass ProcessSpawnError"),
+            safe.replace("class ProcessSpawnError", "ContractError.__init_subclass__ = dangerous\nclass ProcessSpawnError"),
+            "Exception = OtherBase\n" + safe,
+        )
+        for source in mutations:
+            with self.subTest(source=source):
+                errors = []
+                self.checker.validate_import_time_structure(
+                    self.checker.ast.parse(source), self.checker.RUNTIME_ADAPTER, errors,
+                )
+                self.assert_rejected(errors, "import-time class execution")
+
+    def test_sandbox_diagnostic_pure_entrypoints_cannot_reach_runtime_actuators(self):
+        temporary, fixture = self.copy_fixture()
+        self.addCleanup(temporary.cleanup)
+        path = fixture / self.checker.RUNTIME_ADAPTER
+        original = path.read_text(encoding="utf-8")
+        entrypoints = (
+            "sandbox_probe_argv", "validate_sandbox_probe_argv",
+            "runtime_configuration_argv", "classify_sandbox_launch",
+            "launch_diagnostic_record", "validate_launch_diagnostics_wrapper",
+            "_unavailable_runtime_profile",
+        )
+        mutations = [(name, "_capture_sandbox_probe()") for name in entrypoints]
+        mutations.extend(("runtime_configuration_argv", helper + "()") for helper in (
+            "bounded_capture", "auth_class", "observe_runtime_profile",
+            "probe_runtime_evidence", "execute_slice", "run_bounded_process",
+            "main", "subprocess.run",
+        ))
+        mutations.append(("classify_sandbox_launch", "hidden = bounded_capture\nhidden()"))
+        for entrypoint, injected in mutations:
+            with self.subTest(entrypoint=entrypoint, injected=injected):
+                tree = self.checker.ast.parse(original)
+                function = next(node for node in tree.body if isinstance(node, self.checker.ast.FunctionDef) and node.name == entrypoint)
+                function.body[0:0] = self.checker.ast.parse(injected).body
+                path.write_text(self.checker.ast.unparse(tree), encoding="utf-8")
+                errors = []
+                self.checker.validate_offline_runtime_checker_boundary(fixture, errors)
+                self.assert_rejected(errors, "runtime import digest drifted")
+                self.assertTrue(any("reachable code" in error and "actuator" in error for error in errors))
+
+    def test_spawn_exception_allowance_does_not_extend_to_other_module(self):
+        source = (
+            'class ContractError(Exception):\n'
+            '    """A bounded, user-safe contract failure."""\n\n'
+            'class ProcessSpawnError(ContractError):\n'
+            '    """A fixed safe failure raised only at the direct Popen boundary."""\n'
+        )
+        errors = []
+        self.checker.validate_import_time_structure(
+            self.checker.ast.parse(source), self.checker.RUNTIME_RECEIPT_ACTUATOR, errors,
+        )
+        self.assert_rejected(errors, "import-time class execution")
+
     def test_runtime_checker_and_imports_are_exact(self):
         for relative, expected in (
             (
@@ -2021,7 +2123,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 42 paths"
+            self.errors_for(fixture), "exactly the approved 21 paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2330,7 +2432,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the reviewed 42 paths"
+                    self.errors_for(fixture), "exactly the approved 21 paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2342,7 +2444,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 42 paths"
+            self.errors_for(fixture), "exactly the approved 21 paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
@@ -2632,7 +2734,7 @@ jobs:
         active["state"] = "accepted"
         transferred["tasks"].append(
             {
-                "id": "T12",
+                "id": "T13",
                 "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/24",
                 "state": "active",
                 "branch": "codex/phase-2-next-task",
@@ -2904,7 +3006,7 @@ jobs:
         )
         historical["owned_paths"].remove(manifest_entry)
         active = {
-            "id": "T12",
+            "id": "T13",
             "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/24",
             "state": "active",
             "branch": historical["branch"],
@@ -2959,11 +3061,6 @@ jobs:
                 fixture, payload, _task, _entries = self.transition_fixture(
                     operation, destination=destination
                 )
-                if destination is not None:
-                    commands = payload["policy"]["required_quality_commands"]
-                    commands.append(f"bash {destination}")
-                    self.set_quality_registry(fixture, commands)
-                    payload = self.ownership_payload(fixture)
                 errors = []
                 self.checker.validate_execution_authorization(
                     fixture, payload, {}, errors
@@ -2971,7 +3068,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T11",
+                    "ownership T12",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):
@@ -3288,7 +3385,7 @@ jobs:
         fixture = self.local_branch_fixture()
         relative = "docs/agreements/runtime/minimal-codex-execution-loop.md"
         self.assertEqual(
-            "A",
+            "M",
             subprocess.check_output(
                 [
                     "git",

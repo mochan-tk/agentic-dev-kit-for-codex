@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/agreements/runtime/runtime-receipt.v1.schema.json",
   "title": "runtime-receipt-request/v1",
+  "description": "The CLI dry-run emits a repository-generated deterministic binding digest over the validated receipt projection. --apply requires that exact digest; it is not an authenticated attestation that a particular actor executed the dry-run.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "repository", "task", "pull_request", "artifacts", "checks", "limitations", "privacy"],
   "properties": {
     "schema": {"const": "runtime-receipt-request/v1"},
     "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
-    "task": {"type": "object", "additionalProperties": false, "required": ["issue", "url"], "properties": {"issue": {"const": 23}, "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"}}},
+    "task": {"type": "object", "additionalProperties": false, "required": ["issue", "url"], "properties": {"issue": {"const": 25}, "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"}}},
     "pull_request": {"type": "object", "additionalProperties": false, "required": ["number", "url", "head", "tree"], "properties": {"number": {"type": "integer", "minimum": 1}, "url": {"type": "string", "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/pull/[0-9]+$"}, "head": {"$ref": "#/$defs/oid"}, "tree": {"$ref": "#/$defs/oid"}}},
     "artifacts": {
       "type": "object", "additionalProperties": false,
