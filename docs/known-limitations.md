@@ -6,8 +6,35 @@ portable-core implementation gate**. Its committed status is a creation-time
 snapshot. The current durable owner-acceptance outcome is external GitHub state
 authoritative in Issue #12 and Epic #2; a later post-merge outcome is not
 embedded in this tree.
-The overall repository implementation remains incomplete, the repository is
-not installable, and it is not a parity release. `release_blocked` remains `true`.
+The overall repository implementation remains incomplete. T14 adds bounded
+local-source installation, not a parity release. `release_blocked` remains `true`.
+
+## Source-first installer boundary (2026-09-09)
+
+The local-source installer provides explicit dry-run/apply, 47 reviewed
+generic payload files, source-derived workflows, and adopter preservation.
+It does not export this development repository's AGENTS, Task IDs, pins,
+qualification infrastructure, or sole-active ownership policy. It requires
+exclusive access to an existing adopter Git root during apply, refuses
+conflicting engine files and symlinks, and does not overwrite tuned/instance
+files. It is not a concurrent filesystem transaction or automatic upgrade/
+rollback engine; an interrupted apply may leave a reported partial install.
+No files are automatically staged or committed. Windows Git Bash entrypoint
+behavior has static/offline coverage only, not a measured Windows run.
+
+The three native role definitions are configuration/instruction layers, not
+authenticated roles. Skills use documented available tooling or explicit
+manual fallback; installation tests do not prove runtime orchestration or
+cross-surface parity. Optional setup helpers are explicit GitHub actuators,
+never invoked by installation; no Ruleset, Projects board, CODEOWNERS, or
+external connector is required by the installer. See the
+[source-first guide](distribution/source-first-installer.md).
+
+T12 / Issue #25 and PR #26 are paused, open, and unaccepted. Their historical
+non-success evidence remains unchanged. T14 activation is independent and
+does not accept T12. The remaining sections preserve accepted T11's
+creation-time qualification design and evidence, not a current instruction
+to run a VM or a prerequisite for using the source-first payload.
 
 ## The deterministic offline harness is not a live Codex runtime
 
@@ -28,9 +55,9 @@ required CI cannot run real Codex, enter live mode, or apply a receipt.
 The approved agreement-v2 boundary records
 `live_codex_execution = deferred-to-T12`,
 `sandbox_compatibility = unresolved-non-success`, and
-`runtime_receipt_apply = deferred-to-T12`. T12 is the open, planning-only
+`runtime_receipt_apply = deferred-to-T12`. T12 is the open, paused
 [Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25)
-and remains inactive and blocked by T11 / PR #24. Phase 2 and the repository
+with unaccepted PR #26; no T12 implementation is imported here. Phase 2 and the repository
 remain incomplete, and `release_blocked = true`.
 
 The Task-start observation found `codex-cli 0.150.0-alpha.8`. That prerelease

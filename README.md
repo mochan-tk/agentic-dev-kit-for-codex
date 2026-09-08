@@ -3,13 +3,13 @@
 > [!WARNING]
 > **Current status:** Phase 0 is complete. This tree satisfies the **Phase 1 portable-core implementation gate**.
 > The current durable owner-acceptance outcome is external GitHub state, authoritative in [Issue #12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12) and [Epic #2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/2); this immutable tree records only its creation-time snapshot and does not embed a later post-merge outcome.
-> Phase 2 [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) delivers a deterministic offline execution harness. Its approved agreement v2 defers live Codex compatibility, the exactly-one live E2E, and runtime-receipt application to planning-only [T12 / Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25), which remains blocked by T11 and PR #24.
+> Accepted [T11 / Issue #23](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23) delivers a deterministic offline execution harness. Live qualification in [T12 / Issue #25](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25) and PR #26 is paused, open, and unaccepted. It is not a prerequisite for the separately approved source-first local installation in [T14 / Issue #27](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27).
 > Stage A.1 and Stage A.2 remain bounded non-success evidence. Stage A.1
 > qualified only its narrow prerequisite set; Stage A.2's aggregate profile was
 > `UNCHECKABLE`, with shell-environment `fail` and sandbox/network
 > `UNCHECKABLE`. No successful real Codex worker or applied runtime receipt is
 > claimed.
-> The overall repository implementation remains incomplete, not installable, and not a parity release.
+> The overall repository implementation remains incomplete. The source-first kit supports local-source installation; it is not a parity release.
 > `release_blocked` remains `true`.
 
 This project is the Codex-native edition of the governed agentic-development
@@ -17,14 +17,38 @@ harness in
 [`mochan-tk/agentic-dev-kit-for-copilot`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot).
 It preserves product-independent behavior and governance while building
 toward later verified Codex-native replacements for Copilot-specific execution
-surfaces. This tree contains only the first bounded, offline-tested adapter
-slice; the broader runtime, cross-surface parity, and distribution system are
-not implemented.
+surfaces. The usable local-source payload reuses the source workflows with
+minimal Codex adaptations, independently of the bounded offline adapter.
+Broader runtime qualification, cross-surface parity, automatic upgrades, and
+a release distribution system remain incomplete.
 
 The frozen behavioral source is commit
 [`fd265ddef150fab86cd54d0e383c2c25fe297ffb`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot/commit/fd265ddef150fab86cd54d0e383c2c25fe297ffb).
 The port does not copy the source wholesale and does not silently reproduce
 known source defects.
+
+## Install the source-first kit locally
+
+Review a local checkout, then run the explicit dry-run before applying to an
+existing adopter Git repository that you own exclusively during installation:
+
+```sh
+bash .github/scripts/scaffold-init.sh --dry-run /path/to/adopter
+bash .github/scripts/scaffold-init.sh --apply /path/to/adopter
+```
+
+Windows uses the adjacent `scaffold-init.ps1` Git Bash entrypoint with the same
+arguments. No download, VM, authentication, automatic Git init/stage/commit, or
+GitHub write occurs. The payload contains eight source-derived Skills, three
+native Codex role definitions, issue/PR templates, optional explicit helpers,
+and empty adopter agreement/context seeds. Existing tuned and adopter-owned
+files are preserved; conflicting engine files and symlinks are refused.
+
+Inspect the changes, commit/push them yourself, and invoke
+`$project-onboarding` in Codex. Read the
+[installer guide and limits](docs/distribution/source-first-installer.md).
+The kit-development `AGENTS.md`, Task IDs, context pins, sole-active ownership
+policy, and Colima qualification infrastructure are never exported.
 
 ## Durable operating model
 
@@ -108,7 +132,7 @@ and read-back behavior.
 
 ## What remains outside the portable core
 
-- an installer or upgrade path;
+- automated upgrades, rollback, or release installation;
 - a final custom-agent topology or verified native named-agent selection;
 - hooks, recovery orchestration, or a general runtime control plane;
 - a production-complete execution envelope, loop-event protocol, or `codex
@@ -116,7 +140,7 @@ and read-back behavior.
 - the live Task ritual, consent feedback transport, and general adopter
   governance activation;
 - local/worktree/cloud parity claims;
-- clean-adopter installation, upgrade, rollback, and E2E evidence;
+- clean-adopter live runtime E2E, upgrade, and rollback evidence;
 - authenticated runtime roles, universal heartbeat/budget/control, or
   automatic merge.
 
@@ -133,8 +157,10 @@ any capability.
    event, controller/fake-worker/verifier, and receipt-validation harness; then
    use T12 to qualify live Codex compatibility and obtain an exact-head live
    receipt before hardening roles, recovery, hooks, and runtime parity.
-4. **Enforcement and distribution:** installer/upgrade, Task ritual,
-   ownership, and governance.
+4. **Source-first delivery:** local dry-run/apply and preservation are
+   independent of paused live qualification. Automatic upgrade, Task ritual
+   enforcement, and general governance activation retain their own evidence
+   and approval boundaries.
 5. **Parity release:** static and runtime probes, all 136 conformance
    scenarios, adopter migration, and independently reviewed evidence.
 

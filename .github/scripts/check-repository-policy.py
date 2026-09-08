@@ -31,6 +31,78 @@ PHASE2_EPIC = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22"
 T11_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
 T12_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
 T11_BRANCH = "codex/phase-2-minimal-execution-slice"
+T14_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27"
+T14_BRANCH = "codex/source-first-installer"
+T14_BASE_COMMIT = "4a85a007ed62795b48bcbce04f6b7e5482e71e82"
+T14_BASE_TREE = "49afe003de2bbb04249d6f4c36ea6462c271c26f"
+INSTALLER_COMMAND = "python3 -I .github/scripts/check-installer.py"
+EXPECTED_T14_PATHS = (
+    ".github/distribution/payload.v1.tsv",
+    ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+    ".github/distribution/payload/.agents/skills/context-distillation/SKILL.md",
+    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+    ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+    ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+    ".github/distribution/payload/.agents/skills/plan-management/templates/epic-body.md",
+    ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md",
+    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+    ".github/distribution/payload/.agents/skills/retro/SKILL.md",
+    ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+    ".github/distribution/payload/.agents/skills/task-routing/SKILL.md",
+    ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+    ".github/distribution/payload/.codex/agents/orchestrator.toml",
+    ".github/distribution/payload/.codex/agents/planner.toml",
+    ".github/distribution/payload/.codex/agents/reviewer.toml",
+    ".github/distribution/payload/.gitattributes",
+    ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
+    ".github/distribution/payload/.github/ISSUE_TEMPLATE/config.yml",
+    ".github/distribution/payload/.github/ISSUE_TEMPLATE/epic.yml",
+    ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
+    ".github/distribution/payload/.github/codex-instructions.md",
+    ".github/distribution/payload/.github/connectors/CONNECTOR-TEMPLATE.md",
+    ".github/distribution/payload/.github/connectors/README.md",
+    ".github/distribution/payload/.github/connectors/builtin.md",
+    ".github/distribution/payload/.github/connectors/speckit.md",
+    ".github/distribution/payload/.github/docs/agreements/README.md",
+    ".github/distribution/payload/.github/docs/agreements/adr/ADR-0000-template.md",
+    ".github/distribution/payload/.github/docs/agreements/glossary.md",
+    ".github/distribution/payload/.github/docs/agreements/non-goals.md",
+    ".github/distribution/payload/.github/docs/agreements/requirements.md",
+    ".github/distribution/payload/.github/docs/agreements/retro-log.md",
+    ".github/distribution/payload/.github/docs/context/README.md",
+    ".github/distribution/payload/.github/instructions/code-review.instructions.md",
+    ".github/distribution/payload/.github/instructions/docs.instructions.md",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+    ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+    ".github/distribution/payload/.github/scripts/run.ps1",
+    ".github/distribution/payload/.github/scripts/setup-labels.sh",
+    ".github/distribution/payload/.github/scripts/setup-project.sh",
+    ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+    ".github/distribution/payload/.github/scripts/setup-sources.sh",
+    ".github/distribution/payload/.github/scripts/tuning-status.sh",
+    ".github/distribution/payload/.gitignore",
+    ".github/distribution/payload/AGENTS.md",
+    ".github/distribution/payload/README.md",
+    ".github/distribution/payload/SCAFFOLD-CHANGELOG.md",
+    ".github/distribution/payload/docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+    ".github/distribution/source-parity.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-installer.py",
+    ".github/scripts/check-repository-policy.py",
+    ".github/scripts/scaffold-init.ps1",
+    ".github/scripts/scaffold-init.sh",
+    ".github/scripts/tests/test-scaffold-init.sh",
+    ".github/workflows/ci.yml",
+    "README.md",
+    "docs/distribution/source-first-installer.md",
+    "docs/known-limitations.md",
+    "tests/conformance/test_installer.py",
+    "tests/conformance/test_repository_policy.py",
+)
+DISTRIBUTION_PREFIX = ".github/distribution/payload/"
+EXPECTED_DISTRIBUTION_PATHS = frozenset(
+    path for path in EXPECTED_T14_PATHS if path.startswith(DISTRIBUTION_PREFIX)
+)
 HISTORICAL_PHASE1_CHECKER = ".github/scripts/check-phase1-acceptance.py"
 HISTORICAL_PHASE1_CHECKER_BLOB = "9e8cccbc824efbb11756ac72c5e1e5ec8726ef4d"
 HISTORICAL_PHASE1_CHECKER_SHA256 = (
@@ -463,6 +535,12 @@ def validate_registry_reachability(
     canonical_discovery = CANONICAL_CONFORMANCE_DISCOVERY in commands
     for relative in sorted(paths):
         name = PurePosixPath(relative).name
+        if relative in EXPECTED_DISTRIBUTION_PATHS:
+            # Exact installed data, not a development checker against this repo.
+            # The closed inventory is validated below and its checker is required.
+            if INSTALLER_COMMAND not in commands:
+                errors.append("distribution payload checker is not reachable")
+            continue
         if relative.startswith("tests/conformance/") and relative.endswith(".py"):
             if (
                 PurePosixPath(relative).parent
@@ -517,6 +595,31 @@ def validate_registry_reachability(
             errors.append(f"governed checker or test is not reachable: {relative}")
 
 
+def validate_distribution_inventory(root: Path, paths: set[str], policy: dict[str, Any], errors: list[str]) -> None:
+    """Classify only the exact reviewed payload, never an arbitrary subtree."""
+    observed = {path for path in paths if path.startswith(DISTRIBUTION_PREFIX)}
+    if observed != EXPECTED_DISTRIBUTION_PATHS:
+        errors.append("distribution payload differs from the reviewed exact inventory")
+    quality = policy.get("required_quality_commands")
+    if not isinstance(quality, list) or quality.count(INSTALLER_COMMAND) != 1:
+        errors.append("distribution payload checker must be registered exactly once")
+    inventory = current_regular_bytes(root, ".github/distribution/payload.v1.tsv")
+    if inventory is None:
+        errors.append("distribution inventory is missing or unsafe")
+        return
+    try:
+        rows = [line.split("\t") for line in inventory.decode().splitlines() if line and not line.startswith("#")]
+        expected = sorted(path.removeprefix(DISTRIBUTION_PREFIX) for path in EXPECTED_DISTRIBUTION_PATHS)
+        if any(len(row) != 3 for row in rows) or [row[0] for row in rows] != expected:
+            raise ValueError("inventory shape")
+        for name, kind, digest in rows:
+            data = current_regular_bytes(root, DISTRIBUTION_PREFIX + name)
+            if kind not in {"engine", "tuned", "instance", "seed"} or data is None or hashlib.sha256(data).hexdigest() != digest:
+                errors.append("distribution inventory digest/class mismatch: " + name)
+    except (UnicodeError, ValueError):
+        errors.append("distribution inventory is malformed")
+
+
 def validate_execution_root_surfaces(paths: set[str], errors: list[str]) -> None:
     """Reject ambiguous Python and shell files in execution-root directories."""
 
@@ -527,6 +630,8 @@ def validate_execution_root_surfaces(paths: set[str], errors: list[str]) -> None
         ".github/scripts/check-workflow-permissions.sh",
         ".github/scripts/conformance-catalog.py",
         ".github/scripts/install-ci-tools.py",
+        ".github/scripts/scaffold-init.sh",
+        ".github/scripts/scaffold-init.ps1",
         ".github/scripts/codex-exec-adapter.py",
         ".github/scripts/post-runtime-receipt.py",
         ".github/scripts/tests/lib.sh",
@@ -894,8 +999,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t11, dict):
         errors.append("ownership manifest is missing T11")
         return
-    if t11.get("state") != "active":
-        errors.append("ownership T11 must be the active Task")
+    if t11.get("state") != "accepted":
+        errors.append("ownership T11 must remain accepted; T12 is not imported or accepted")
     if t11.get("record") != T11_RECORD:
         errors.append("ownership T11 must reference Issue 23")
     if t11.get("branch") != T11_BRANCH:
@@ -916,13 +1021,33 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
         if isinstance(entries, list)
         else ()
     )
-    if actual_paths != EXPECTED_T11_PATHS:
-        errors.append("ownership T11 must declare exactly the reviewed 42 paths")
+    retained = tuple(path for path in EXPECTED_T11_PATHS if path not in EXPECTED_T14_PATHS)
+    if actual_paths != retained:
+        errors.append("accepted ownership T11 must retain its reviewed non-transferred paths")
     if not isinstance(entries, list) or any(
         not isinstance(entry, dict) or entry.get("mode") != "100644"
         for entry in entries
     ):
         errors.append("ownership T11 paths must all use mode 100644")
+    t14 = task_by_id.get("T14")
+    if not isinstance(t14, dict):
+        errors.append("ownership manifest is missing T14")
+        return
+    for key, expected in (("state", "active"), ("record", T14_RECORD),
+                          ("branch", T14_BRANCH), ("base_commit", T14_BASE_COMMIT),
+                          ("base_tree", T14_BASE_TREE)):
+        if t14.get(key) != expected:
+            errors.append("ownership T14 " + key + " drifted")
+    entries = t14.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T14_PATHS:
+        errors.append("ownership T14 must declare exactly the reviewed 61 paths")
+    if t14.get("path_transitions") != []:
+        errors.append("ownership T14 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T14 paths must all use mode 100644")
+    if "T12" in task_by_id:
+        errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 
 
 def validate_git_anchor(
@@ -1247,8 +1372,8 @@ def validate_historical_phase1_checker_boundary(
     t11 = next((task for task in usable_tasks if task.get("id") == "T11"), None)
     if t10 is None or t10.get("state") != "accepted":
         errors.append("historical Phase 1 checker exception requires accepted T10")
-    if t11 is None or t11.get("state") != "active":
-        errors.append("historical Phase 1 checker exception requires active T11")
+    if t11 is None or t11.get("state") != "accepted":
+        errors.append("historical Phase 1 checker exception requires accepted T11")
 
     def owns(task: dict[str, Any] | None, relative: str) -> bool:
         entries = task.get("owned_paths") if isinstance(task, dict) else None
@@ -1262,7 +1387,7 @@ def validate_historical_phase1_checker_boundary(
     if not owns(t10, HISTORICAL_PHASE1_CHECKER):
         errors.append("accepted T10 must retain the historical Phase 1 checker")
     if not owns(t11, FROZEN_PHASE1_WRAPPER):
-        errors.append("active T11 must own the frozen Phase 1 wrapper")
+        errors.append("accepted T11 must own the frozen Phase 1 wrapper")
 
     commands = policy.get("required_quality_commands")
     if not isinstance(commands, list):
@@ -2752,7 +2877,7 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
             "alpha snapshot remains `unsupported-client`",
             "unsupported-client",
             "No successful real Codex worker or applied runtime receipt",
-            "not installable",
+            "local-source installation",
             "not a parity release",
             "`release_blocked` remains `true`",
         ),
@@ -3278,6 +3403,7 @@ def validate_repository(
     validate_offline_runtime_checker_boundary(root, errors)
     validate_execution_root_surfaces(paths, errors)
     validate_registry_reachability(paths, policy, errors)
+    validate_distribution_inventory(root, paths, policy, errors)
     validate_text_policy(root, paths, errors)
     return errors
 

@@ -1,0 +1,481 @@
+#!/usr/bin/env bash
+# check-task-ritual.sh — CI wall: a PR's linked Task must carry the start
+# ritual, in order.
+#
+# The session-orchestration skill requires, before work starts on a Task:
+#   - a claim comment: starts with "Starting in session" or "Resuming in session"
+#   - a plan comment:  contains a "## Plan" heading or starts with "Plan:"
+# This wall fails any PR whose primary linked issue — the first task link
+# ("Closes #N"; close/fix/resolve variants accepted, as GitHub treats them
+# alike; "Refs #N" accepted for tasks with post-merge acceptance, AGENTS.md
+# §4) — lacks either comment. A PR with no task link at all fails too:
+# the tracking graph makes an unlinked PR a defect, not a skip.
+#
+# Beyond existence, the wall proves chronology — artifacts posted after the
+# fact do not count as a ritual:
+#   - the earliest claim precedes the earliest plan comment;
+#   - the earliest plan comment precedes the PR's earliest commit
+#     (AGENTS.md §2: the plan is posted before implementation begins);
+#   - claim and plan comments are unedited (updated_at == created_at) —
+#     revisions belong in fresh comments, never edits of the record.
+# Timestamps are second-resolution ISO-8601 UTC, so lexicographic
+# comparison is chronological ordering. Equal stamps cannot prove an
+# inversion, so ties pass: the wall fails only on provable violations.
+#
+# Beyond the start ritual, the wall enforces the execution mode (ADR-0003
+# Decision 2) from comment content, order, and edit-state — never
+# authorship, since all sessions share one GitHub login:
+#   - a worker-dispatch comment starts with "Dispatching worker"; a release
+#     comment starts with "Releasing worker" (first-line regexes, exactly
+#     like the claim);
+#   - a dispatch's first line names the worker session and its branch. The
+#     branch must be the PR's head ref (managed prefixes allowed), which is
+#     what stops one task's dispatch from satisfying another's trail. The
+#     session ID is required but **not verified**: session trees are
+#     app-local and no API reachable from CI can enumerate them, so it is a
+#     durable record for humans and audits, not proof. This wall shows that
+#     a specific session and branch were claimed — the supervisor is
+#     responsible for having actually raised the session before writing it;
+#   - any dispatch comment selects the two-tier path: the earliest dispatch
+#     must not predate the earliest plan and must not postdate the PR's
+#     first commit (committer date, ties pass), every dispatch after the
+#     first needs a release comment timestamped between the previous
+#     dispatch and the new one, and dispatch/release comments are unedited
+#     like claim and plan. Declared exemptions are then ignored — a replan
+#     from exemption to worker split is legitimate, and the dispatch trail
+#     is the stronger signal of what actually happened;
+#   - with no dispatch comment, at least one plan comment must declare the
+#     small-task exemption with the phrase "no worker will be spawned",
+#     matched case-insensitively (AGENTS.md §4);
+#   - neither trail present fails: the task ran in an undeclared mode.
+#
+# Beyond chronology, the wall proves provenance and routing:
+#   - the PR body carries a plan link ("Plan: …#issuecomment-ID") that
+#     resolves to a real plan comment on the linked Task in this
+#     repository — a dead link, a link to another repository or issue,
+#     or a link to a non-plan comment (e.g. the claim) all fail (a dead
+#     plan link shipped once and was caught by a human, not CI);
+#   - the linked issue carries the 'type:task' label (plan-management:
+#     Tasks enter the graph through the ai-task template, which labels
+#     them; an unlabeled issue is invisible to frontier label queries).
+#
+# Usage:
+#   check-task-ritual.sh [<pr-number>]     # or set PR_NUMBER
+#
+# Exemptions — three, all narrow:
+#   1. Allowlisted dependency bots skip the ritual (default: dependabot[bot]
+#      renovate[bot] github-actions[bot]; override with RITUAL_EXEMPT_BOTS,
+#      space-separated logins). Any other bot author — cloud coding agents
+#      included — holds a session and is held to the full ritual.
+#   2. The onboarding evidence PR, which has no upstream Task because it *is*
+#      the deliverable. It must carry the skill-mandated title
+#      `scaffold: onboard <project>`, target an adopted scaffold (the base
+#      branch's scaffold-version marker names a real commit, not the
+#      template's own `sha=unknown`), and target a base that still carries
+#      CUSTOMIZE markers. Those last two make the exemption self-limiting: it
+#      holds at most once per adopting repository and lapses the moment
+#      onboarding merges.
+#   3. The adoption PR — the one that installs the scaffold. Its base has no
+#      AGENTS.md and it adds both AGENTS.md and codex-instructions.md.
+#      No title is involved: adoption PRs have no naming convention. Also
+#      self-limiting — after the merge the base has AGENTS.md forever.
+#
+# Requires: GitHub CLI (gh), authenticated. Repo context comes from the
+# checkout ({owner}/{repo} placeholders); set GH_REPO to override.
+
+set -euo pipefail
+
+PR="${1:-${PR_NUMBER:-}}"
+if [[ -z "$PR" ]]; then
+  echo "usage: check-task-ritual.sh <pr-number>  (or set PR_NUMBER)" >&2
+  exit 2
+fi
+
+command -v gh >/dev/null 2>&1 || { echo "error: gh CLI not found" >&2; exit 1; }
+
+# GitHub occasionally answers with a transient HTML 5xx page ("invalid
+# character '<'"); a deterministic wall must not flake on that, so every API
+# read gets three attempts with a short pause. Offline fixtures set the pause
+# to zero through RITUAL_API_RETRY_DELAY; production keeps the two-second
+# default. The attempt count is never configurable.
+api() {
+  local attempt out delay="${RITUAL_API_RETRY_DELAY:-2}"
+  for attempt in 1 2 3; do
+    if out=$(gh api "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+    if [[ $attempt -lt 3 && "$delay" != "0" ]]; then
+      sleep "$delay"
+    fi
+  done
+  printf '%s\n' "$out" >&2
+  return 1
+}
+
+meta=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '[.user.login, .user.type] | @tsv')
+IFS=$'\t' read -r author author_type <<< "$meta"
+
+# Only dependency bots are exempt — they do not hold sessions. Cloud coding
+# agents also author PRs as bots (user.type == "Bot"), and those *do* run
+# sessions, so exemption is an explicit allowlist, never a bot-type check.
+if [[ "$author_type" == "Bot" || "$author" == *"[bot]" ]]; then
+  case " ${RITUAL_EXEMPT_BOTS:-dependabot[bot] renovate[bot] github-actions[bot]} " in
+    *" ${author} "*)
+      echo "PASS: PR #${PR} is authored by allowlisted bot ${author}; dependency bots do not hold sessions."
+      exit 0
+      ;;
+    *)
+      echo "note: PR #${PR} author ${author} is a bot but not allowlisted; the full start ritual applies."
+      ;;
+  esac
+fi
+
+body=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.body // ""')
+
+# The onboarding evidence PR is the one legitimate PR with no upstream Task:
+# it *is* the deliverable, and no Task issue exists when it opens. Exempt it,
+# but only when every signal agrees, so an ordinary PR cannot claim the
+# exemption by choosing a title:
+#
+#   1. the title the onboarding skill mandates, `scaffold: onboard <project>`;
+#   2. an adopting repository, not this template itself — the base branch's
+#      scaffold-version marker names a real commit, where the template's own
+#      copy reads `sha=unknown`;
+#   3. a base branch that has not been onboarded yet — CUSTOMIZE markers still
+#      present there.
+#
+# Signals 2 and 3 make the exemption self-limiting: it holds at most once per
+# adopting repository and lapses the moment the onboarding PR merges, because
+# the base tree is tuned from then on. Signal 3 must be measured against the
+# *base*, never the PR tree — the onboarding PR is precisely the change that
+# removes those markers, so its own tree is already tuned.
+base_ref=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.base.ref')
+title=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.title // ""')
+if printf '%s\n' "$title" | grep -qE '^scaffold: onboard '; then
+  # Read the base tree through the API so the check behaves identically
+  # wherever it runs — the workflow's checkout may not carry the base ref.
+  base_file() {
+    api "repos/{owner}/{repo}/contents/$1?ref=${base_ref}" --jq '.content' 2>/dev/null \
+      | base64 -d 2>/dev/null || true
+  }
+  adopted=0
+  base_file 'SCAFFOLD-CHANGELOG.md' \
+    | grep -qE '^<!-- scaffold-version: repo=[^ ]+ sha=[0-9a-f]{7,40} ' && adopted=1
+  base_untuned=0
+  base_file '.github/codex-instructions.md' | grep -q 'CUSTOMIZE' && base_untuned=1
+
+  if [[ "$adopted" -eq 1 && "$base_untuned" -eq 1 ]]; then
+    echo "PASS: PR #${PR} is the onboarding evidence PR (title '${title}'). Its base"
+    echo "      '${base_ref}' is an adopted scaffold that still carries CUSTOMIZE"
+    echo "      markers, so no Task issue exists yet — this PR is the deliverable."
+    echo "      The exemption lapses once onboarding merges."
+    exit 0
+  fi
+  echo "note: PR #${PR} is titled like an onboarding PR, but base '${base_ref}' is"
+  if [[ "$adopted" -eq 0 ]]; then
+    echo "      not an adopted scaffold (no pinned scaffold-version marker);"
+  else
+    echo "      already onboarded;"
+  fi
+  echo "      the full start ritual applies."
+fi
+
+# The adoption PR — the one that *installs* this scaffold — has no upstream
+# Task either, and for a stronger reason: when it opens, the repository has no
+# scaffold, usually no issues, and the workflow doing this enforcing arrives in
+# that very diff. Exemption 2 cannot cover it; its self-limiting signal asks
+# whether the base is already adopted, which is exactly what an adoption PR is
+# not.
+#
+# This path is ours to support, not an edge case. The installer stages without
+# committing, and README step 4 recommends a ruleset on `main` that *requires* a
+# pull request — so an adopter who follows that advice cannot push the adoption
+# commit directly, and the only route left is the one this exemption unblocks.
+#
+# Every signal is structural. Title is not among them: adoption PRs have no
+# naming convention (the reported one read "Add Agentic Dev Kit for Copilot
+# scaffold"), and a title an author chooses is not evidence anyway.
+#
+#   1. the base carries no AGENTS.md — read at ?ref=<base>, so the workflow's
+#      checkout is irrelevant;
+#   2. this PR adds AGENTS.md (status "added", not "modified");
+#   3. it also adds .github/codex-instructions.md, so a repository writing an
+#      AGENTS.md of its own cannot claim the exemption.
+#
+# Self-limiting by construction: after the merge the base has AGENTS.md, so
+# signal 1 can never hold again there. This template excludes itself the same
+# way — main carries the scaffold.
+if ! api "repos/{owner}/{repo}/contents/AGENTS.md?ref=${base_ref}" --jq '.sha' >/dev/null 2>&1; then
+  # A 3000-file listing cap applies; the scaffold is ~90 files, so a PR that
+  # hits the cap is not an adoption PR and simply fails the signal below.
+  added=$(api "repos/{owner}/{repo}/pulls/${PR}/files?per_page=100" --paginate \
+    --jq '[.[] | select(.status == "added") | .filename]' 2>/dev/null || echo '[]')
+  adds_agents=$(printf '%s' "$added" | grep -c '"AGENTS.md"' || true)
+  adds_instructions=$(printf '%s' "$added" | grep -c '"\.github/codex-instructions\.md"' || true)
+
+  if [[ "$adds_agents" -ge 1 && "$adds_instructions" -ge 1 ]]; then
+    echo "PASS: PR #${PR} adopts the scaffold — base '${base_ref}' has no AGENTS.md,"
+    echo "      and this PR adds AGENTS.md and .github/codex-instructions.md."
+    echo "      No Task issue can exist yet: the ritual this wall enforces arrives"
+    echo "      in this diff. The exemption lapses the moment this merges."
+    exit 0
+  fi
+fi
+
+# The first task link names the primary Task under review. A qualifier may sit
+# between the keyword and the number ("Refs Epic #2") — the phrasing is
+# accurate and rejecting it buys no safety.
+link=$(printf '%s\n' "$body" \
+  | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]+([A-Za-z]+[[:space:]]+)?#[0-9]+' \
+  | head -n1 || true)
+if [[ -z "$link" ]]; then
+  echo "FAIL: PR #${PR} body has no task link (e.g. 'Closes #N', or 'Refs #N' for post-merge acceptance)."
+  echo "      Every PR must declare the Task it lands (plan-management, tracking graph)."
+  exit 1
+fi
+issue="${link##*#}"
+
+# One pass over the issue's comments, emitting a TSV marker per ritual
+# artifact: TYPE, created_at, updated_at. The API returns ascending
+# created_at, but earliest-of is computed with an explicit sort anyway.
+markers=$(api "repos/{owner}/{repo}/issues/${issue}/comments" --paginate --jq '
+  .[] |
+  (if (.body | test("^(Starting|Resuming) in session")) then [ "CLAIM", .created_at, .updated_at ] | @tsv else empty end),
+  (if ((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) then [ "PLAN", .created_at, .updated_at ] | @tsv else empty end),
+  (if (.body | test("^Dispatching worker")) then [ "DISPATCH", .created_at, .updated_at, (.body | split("\n")[0]) ] | @tsv else empty end),
+  (if (.body | test("^Releasing worker")) then [ "RELEASE", .created_at, .updated_at ] | @tsv else empty end),
+  (if (((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) and (.body | ascii_downcase | contains("no worker will be spawned"))) then [ "EXEMPT", .created_at, .updated_at ] | @tsv else empty end)
+')
+
+ok=true
+case "$markers" in
+  *CLAIM*) ;;
+  *) echo "FAIL: issue #${issue} has no start claim comment ('Starting in session …' or 'Resuming in session …')."
+     ok=false ;;
+esac
+case "$markers" in
+  *PLAN*) ;;
+  *) echo "FAIL: issue #${issue} has no plan comment (a '## Plan' heading, or a body starting 'Plan:')."
+     ok=false ;;
+esac
+
+if ! $ok; then
+  echo "      Post the missing comment(s) on #${issue} — session-orchestration start ritual, steps 4-5 — then re-run this check."
+  exit 1
+fi
+
+# Immutability — ritual comments are append-only; a revision lives in a
+# fresh comment (session-orchestration, work loop). An edited ritual
+# comment breaks the audit trail. EXEMPT rows are skipped: an exemption
+# marker always doubles a PLAN row for the same comment, which already
+# reports any edit.
+edited=$(printf '%s\n' "$markers" | awk -F '\t' '$1 != "EXEMPT" && $2 != $3 { print $1 " created " $2 ", updated " $3 }')
+if [[ -n "$edited" ]]; then
+  echo "FAIL: issue #${issue} has ritual comment(s) edited after posting:"
+  printf '%s\n' "$edited" | sed 's/^/        /'
+  echo "      Ritual comments (claim, plan, dispatch, release) are immutable; post a fresh comment instead of editing (session-orchestration, work loop)."
+  ok=false
+fi
+
+earliest_claim=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "CLAIM" { print $2 }' | sort | head -n1)
+earliest_plan=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "PLAN" { print $2 }' | sort | head -n1)
+
+# Chronology 1 — claim, then plan (session-orchestration steps 4-5).
+if [[ "$earliest_claim" > "$earliest_plan" ]]; then
+  echo "FAIL: issue #${issue} ritual is out of order: earliest claim (${earliest_claim}) postdates earliest plan (${earliest_plan})."
+  echo "      Claim the task first, then post the plan (session-orchestration, steps 4-5)."
+  ok=false
+fi
+
+# Chronology 2 — the plan precedes the code (AGENTS.md §2). Committer date
+# is primary: rebases rewrite it forward, which only widens the margin,
+# while amends preserve the author date — an author date may predate the
+# plan even when the code followed it. Author date is only a fallback for
+# commit objects lacking a committer date.
+first_commit=$(api "repos/{owner}/{repo}/pulls/${PR}/commits" --paginate \
+  --jq '.[].commit | ((.committer.date // .author.date) // empty)' | sort | head -n1)
+if [[ -n "$first_commit" && "$earliest_plan" > "$first_commit" ]]; then
+  echo "FAIL: PR #${PR}'s first commit (${first_commit}, committer date) predates the plan comment on issue #${issue} (${earliest_plan})."
+  echo "      The plan of record is posted before implementation begins (AGENTS.md §2)."
+  ok=false
+fi
+
+# Execution mode (ADR-0003 Decision 2) — every task shows either a
+# worker-dispatch trail or a declared small-task exemption; an undeclared
+# mode fails. Any dispatch comment selects the two-tier path and declared
+# exemptions are then ignored: a replan from exemption to worker split is
+# legitimate, and the dispatch trail is the stronger signal of what
+# actually happened. The exemption marker is the exact phrase quoted in
+# AGENTS.md §4, matched case-sensitively inside a plan comment.
+mode_desc=""
+if [[ "$markers" == *DISPATCH* ]]; then
+  earliest_dispatch=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH" { print $2 }' | sort | head -n1)
+  mode_desc="two-tier (dispatch ${earliest_dispatch})"
+
+  # Worker identity. The dispatch comment names the session it raised and the
+  # branch that session works on. The branch is checkable — it must be the
+  # PR's head ref, so a dispatch written for one task cannot satisfy
+  # another's trail. The session ID is not: session trees are app-local and
+  # no API here can enumerate them, so it is required as a durable record for
+  # humans and audits, never treated as proof. What this wall can show is
+  # that the supervisor claimed a specific session and a matching branch.
+  head_ref=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.head.ref')
+  while IFS=$'\t' read -r _kind _created _updated first_line; do
+    [[ -n "$first_line" ]] || continue
+    if ! printf '%s\n' "$first_line" | grep -qE 'session[[:space:]]+[0-9a-fA-F-]{8,}'; then
+      echo "FAIL: issue #${issue} has a worker-dispatch comment that names no session:"
+      echo "        ${first_line}"
+      echo "      Create the worker session first, then record it — 'Dispatching worker: PR #<n> worker (session <id>), branch <branch>' (session-orchestration skill)."
+      ok=false
+      continue
+    fi
+    dispatch_branch=$(printf '%s\n' "$first_line" | sed -n 's/.*branch[[:space:]]\{1,\}\([^ ,)]\{1,\}\).*/\1/p')
+    if [[ -z "$dispatch_branch" ]]; then
+      echo "FAIL: issue #${issue} has a worker-dispatch comment that names no branch:"
+      echo "        ${first_line}"
+      echo "      Record the worker's branch so the dispatch can be tied to this PR (session-orchestration skill)."
+      ok=false
+    elif [[ -n "$head_ref" && "$dispatch_branch" != "$head_ref" && "$head_ref" != *"$dispatch_branch" ]]; then
+      # Managed surfaces prefix the branch they generate (AGENTS.md §4), so a
+      # head ref ending in the dispatched name is the same branch.
+      echo "FAIL: issue #${issue} dispatches branch '${dispatch_branch}', but PR #${PR} is from '${head_ref}'."
+      echo "      A dispatch names the branch its worker actually works on (session-orchestration skill)."
+      ok=false
+    fi
+  done <<EOF
+$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH"')
+EOF
+
+  # Chronology 3 — the dispatch follows the plan of record: the supervisor
+  # dispatches a worker to execute an already-posted plan (ADR-0003).
+  if [[ "$earliest_plan" > "$earliest_dispatch" ]]; then
+    echo "FAIL: issue #${issue} ritual is out of order: earliest worker dispatch (${earliest_dispatch}) predates earliest plan (${earliest_plan})."
+    echo "      Post the plan first, then the worker-dispatch comment (session-orchestration skill; ADR-0003)."
+    ok=false
+  fi
+
+  # Chronology 4 — workers only start after dispatch, so the earliest
+  # dispatch precedes the PR's first commit. Committer-date semantics as
+  # above: rebases move committer dates forward, which only widens the
+  # margin; equal stamps prove nothing, so ties pass.
+  if [[ -n "$first_commit" && "$earliest_dispatch" > "$first_commit" ]]; then
+    echo "FAIL: PR #${PR}'s first commit (${first_commit}, committer date) predates the worker-dispatch comment on issue #${issue} (${earliest_dispatch})."
+    echo "      The supervisor dispatches the worker before implementation begins (ADR-0003; session-orchestration skill)."
+    ok=false
+  fi
+
+  # One active worker per PR — every dispatch after the first must be
+  # preceded by a release comment timestamped between the previous
+  # dispatch and the new one, inclusive on both ends: a release stamped
+  # in the same second as either dispatch cannot prove a violation.
+  releases=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "RELEASE" { print $2 }' | sort)
+  dispatches=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH" { print $2 }' | sort)
+  prev_dispatch=""
+  while IFS= read -r d; do
+    [[ -z "$d" ]] && continue
+    if [[ -n "$prev_dispatch" ]]; then
+      released=false
+      while IFS= read -r r; do
+        [[ -z "$r" ]] && continue
+        if [[ ! "$r" < "$prev_dispatch" && ! "$r" > "$d" ]]; then
+          released=true
+          break
+        fi
+      done <<< "$releases"
+      if ! $released; then
+        echo "FAIL: issue #${issue} dispatches a replacement worker (${d}) with no release comment between it and the previous dispatch (${prev_dispatch})."
+        echo "      Release the active worker first ('Releasing worker …'), then dispatch the successor (session-orchestration skill; ADR-0003)."
+        ok=false
+      fi
+    fi
+    prev_dispatch="$d"
+  done <<< "$dispatches"
+elif [[ "$markers" == *EXEMPT* ]]; then
+  mode_desc="declared small-task exemption"
+
+  # The exemption is a declaration made *before* implementing, mirroring
+  # plan-before-commit. Without this, a plan carrying the phrase posted after
+  # the work still satisfies the mode check — the exemption becomes something
+  # claimed in hindsight rather than a decision the trail records.
+  earliest_exempt=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "EXEMPT" { print $2 }' | sort | head -n1)
+  if [[ -n "$first_commit" && "$earliest_exempt" > "$first_commit" ]]; then
+    echo "FAIL: PR #${PR}'s first commit (${first_commit}, committer date) predates the small-task exemption on issue #${issue} (${earliest_exempt})."
+    echo "      Declare the exemption in the plan comment before implementing (AGENTS.md §4; session-orchestration skill)."
+    ok=false
+  fi
+else
+  echo "FAIL: issue #${issue} declares no execution mode: no worker-dispatch comment ('Dispatching worker …' first line) and no plan comment containing 'no worker will be spawned'."
+  echo "      Dispatch a worker or declare the small-task exemption in the plan comment (AGENTS.md §4; session-orchestration skill)."
+  ok=false
+fi
+
+# Routing — the linked issue must be a Task in the tracking graph. The
+# ai-task template applies 'type:task'; without it the issue is invisible
+# to label-driven frontier queries, so a PR closing it lands untracked work.
+if labels=$(api "repos/{owner}/{repo}/issues/${issue}" --jq '[.labels[].name] | join(" ")'); then
+  case " ${labels} " in
+    *" type:task "*) ;;
+    *)
+      echo "FAIL: issue #${issue} lacks the 'type:task' label (has: ${labels:-none})."
+      echo "      Apply it with: gh issue edit ${issue} --add-label type:task (labels: .github/scripts/setup-labels.sh)."
+      ok=false
+      ;;
+  esac
+else
+  echo "FAIL: could not read issue #${issue} metadata for the label check."
+  ok=false
+fi
+
+# Provenance — the PR's plan link must resolve to the plan of record on the
+# linked Task in this repository. The link is load-bearing for reviewers and
+# future sessions; a dead link once passed CI and needed a human to catch.
+plan_link=$(printf '%s\n' "$body" \
+  | grep -oiE 'plan:[[:space:]]*https://github\.com/[^/[:space:]]+/[^/[:space:]]+/issues/[0-9]+#issuecomment-[0-9]+' \
+  | head -n1 || true)
+if [[ -z "$plan_link" ]]; then
+  echo "FAIL: PR #${PR} body has no plan link ('Plan: https://github.com/<owner>/<repo>/issues/N#issuecomment-ID')."
+  echo "      Link the plan comment posted on the Task (session-orchestration step 5; the PR template's Plan line)."
+  ok=false
+else
+  # Parse a lowercased copy: GitHub treats owner/repo case-insensitively,
+  # and the numeric fields are unaffected.
+  plan_link_lc=$(printf '%s' "$plan_link" | tr '[:upper:]' '[:lower:]')
+  link_repo=$(printf '%s\n' "$plan_link_lc" | sed -E 's|.*github\.com/([^/]+/[^/]+)/issues/.*|\1|')
+  link_issue=$(printf '%s\n' "$plan_link_lc" | sed -E 's|.*/issues/([0-9]+)#issuecomment-[0-9]+.*|\1|')
+  comment_id=$(printf '%s\n' "$plan_link_lc" | sed -E 's|.*#issuecomment-([0-9]+).*|\1|')
+  # The comment-id lookup below is repository-scoped, so a link naming a
+  # foreign repository could otherwise resolve to an unrelated local
+  # comment that happens to share the id — reject it outright.
+  if ! repo_full=$(api "repos/{owner}/{repo}" --jq '.full_name'); then
+    echo "FAIL: could not resolve this repository's full name for the plan-link check."
+    ok=false
+  elif [[ "$link_repo" != "$(printf '%s' "$repo_full" | tr '[:upper:]' '[:lower:]')" ]]; then
+    echo "FAIL: PR #${PR}'s plan link points at repository ${link_repo}, but the linked task lives in ${repo_full}."
+    echo "      Link the plan comment on the linked Task in this repository."
+    ok=false
+  elif [[ "$link_issue" != "$issue" ]]; then
+    echo "FAIL: PR #${PR}'s plan link points at issue #${link_issue}, but the PR's task link is #${issue}."
+    ok=false
+  elif resolved=$(api "repos/{owner}/{repo}/issues/comments/${comment_id}" --jq '
+      [ (.issue_url | sub(".*/"; "")),
+        (if ((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) then "plan" else "other" end)
+      ] | @tsv' 2>/dev/null); then
+    IFS=$'\t' read -r comment_issue comment_kind <<< "$resolved"
+    if [[ "$comment_issue" != "$issue" ]]; then
+      echo "FAIL: PR #${PR}'s plan link resolves to issue #${comment_issue}, not the linked task #${issue}."
+      ok=false
+    elif [[ "$comment_kind" != "plan" ]]; then
+      echo "FAIL: PR #${PR}'s plan link resolves to a comment that is not a plan comment (no '## Plan' heading or 'Plan:' prefix)."
+      echo "      Link the plan of record itself — not the claim comment or a status update."
+      ok=false
+    fi
+  else
+    echo "FAIL: PR #${PR}'s plan link does not resolve: comment ${comment_id} not found on this repository."
+    ok=false
+  fi
+fi
+
+$ok || exit 1
+
+echo "PASS: PR #${PR} → issue #${issue} ritual in order: claim ${earliest_claim} → plan ${earliest_plan} → first commit ${first_commit:-none}; mode: ${mode_desc}; plan link and type:task verified."

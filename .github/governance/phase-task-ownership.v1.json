@@ -22,6 +22,8 @@
       "python3 -I .github/scripts/check-skills.py",
       "python3 -I .github/scripts/check-phase1-accepted-snapshot.py",
       "python3 -I .github/scripts/check-runtime-contracts.py",
+      "python3 -I .github/scripts/check-installer.py",
+      "bash .github/scripts/tests/test-scaffold-init.sh",
       "python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination \"$RUNNER_TEMP/agentic-ci-tools\" --check-repository",
       "python3 -I .github/scripts/conformance-catalog.py check",
       "bash .github/scripts/check-action-pins.sh",

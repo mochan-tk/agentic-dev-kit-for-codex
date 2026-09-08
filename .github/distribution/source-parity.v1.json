@@ -1,0 +1,440 @@
+{
+  "schema": "source-first-installer-parity/v1",
+  "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+  "source_commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+  "files": [
+    {
+      "destination": ".agents/skills/context-collection/SKILL.md",
+      "source_path": ".github/skills/context-collection/SKILL.md",
+      "source_blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+      "target_sha256": "90edc067f5dde208f93def58d63b162aaa76d8a393cdae08ede3f44886c472cb",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/context-distillation/SKILL.md",
+      "source_path": ".github/skills/context-distillation/SKILL.md",
+      "source_blob": "4f2e57a7f613cdadb7c7d76306c3a04458ca7b08",
+      "target_sha256": "3d6e4955a67f83758cf15ad96e4357de0a64a67e24394aed61f2c7d563f41a62",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/SKILL.md",
+      "source_path": ".github/skills/plan-management/SKILL.md",
+      "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      "target_sha256": "326fb44e119ae445a79e748b7bccf4480e84035724494466a52a3ee0ed9034a9",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/scripts/frontier.sh",
+      "source_path": ".github/skills/plan-management/scripts/frontier.sh",
+      "source_blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+      "target_sha256": "5bf1671721bdae472b48a917227a08fbf580c2a7ea27397df54c052c605da348",
+      "adaptations": [
+        "Retain Task/frontier computation; fail closed on list/dependency/state errors and truncation; no unchecked text fallback; embed original MIT notice."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/scripts/new-task.sh",
+      "source_path": ".github/skills/plan-management/scripts/new-task.sh",
+      "source_blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
+      "target_sha256": "876095fb0dbd52bcef3529b1a1a67c23d30c113639326521f62f78f3316059bf",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/templates/epic-body.md",
+      "source_path": ".github/skills/plan-management/templates/epic-body.md",
+      "source_blob": "b01a35256b48f1c1e1c31c4d1e35822767bd5551",
+      "target_sha256": "28adc386b85e5d9a4861aede3a476606b9b826a74d08308ac69461232aa248b4",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/templates/task-body.md",
+      "source_path": ".github/skills/plan-management/templates/task-body.md",
+      "source_blob": "2338d2e79db0afad54e498d5582b80ad63fa198f",
+      "target_sha256": "f3f89d95012c653587ba807a2928b1d34da65e9b563826b6db91f27ddf1b512b",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/project-onboarding/SKILL.md",
+      "source_path": ".github/skills/project-onboarding/SKILL.md",
+      "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
+      "target_sha256": "28a0698c4fd96a4af99a2e5a9f00c759e2fb73a92f34f9ac0d249f0791c7fdb6",
+      "adaptations": [
+        "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff."
+      ]
+    },
+    {
+      "destination": ".agents/skills/retro/SKILL.md",
+      "source_path": ".github/skills/retro/SKILL.md",
+      "source_blob": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
+      "target_sha256": "e9fa3642573da3fa657dfeae2cafdea8cf393c53d3d51507d2c2b95494c1559a",
+      "adaptations": [
+        "Retain candidate/occurrence/retro loop; source-only platform polling/monthly workflow not shipped; upstream writes require permission."
+      ]
+    },
+    {
+      "destination": ".agents/skills/session-orchestration/SKILL.md",
+      "source_path": ".github/skills/session-orchestration/SKILL.md",
+      "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+      "target_sha256": "0df552288dbeff1b2ee355486c4d050ebe1d727082fbdca80a25f1fad68c2305",
+      "adaptations": [
+        "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI."
+      ]
+    },
+    {
+      "destination": ".agents/skills/task-routing/SKILL.md",
+      "source_path": ".github/skills/task-routing/SKILL.md",
+      "source_blob": "30a6b0123f82b15f6379a4b1e62f5c6d30c7e984",
+      "target_sha256": "c378850de4a1b45471361c06438aa057603681c4073bfc5b113a8866577b4ac2",
+      "adaptations": [
+        "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI."
+      ]
+    },
+    {
+      "destination": ".agents/skills/verification/SKILL.md",
+      "source_path": ".github/skills/verification/SKILL.md",
+      "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+      "target_sha256": "9f03cb5fdfacad6580e2c704d9b036a60fccb4d7273e3cb15ef7f3de4e8ab572",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".codex/agents/orchestrator.toml",
+      "source_path": ".github/agents/orchestrator.agent.md",
+      "source_blob": "5574a1422f53651330a204dce08dce49ea4c1f59",
+      "target_sha256": "ebeb390c7086eed880e410428936fb155d82782f31a00c91f73c754836b17b3f",
+      "adaptations": [
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee."
+      ]
+    },
+    {
+      "destination": ".codex/agents/planner.toml",
+      "source_path": ".github/agents/planner.agent.md",
+      "source_blob": "7227835f359f3383cd2ddbc47ffb69e5e1ce867e",
+      "target_sha256": "041d2818858e6369a60651fef5f273f840edc104560fd8b3d363f41db3be57f2",
+      "adaptations": [
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee."
+      ]
+    },
+    {
+      "destination": ".codex/agents/reviewer.toml",
+      "source_path": ".github/agents/reviewer.agent.md",
+      "source_blob": "36901b4a8835ebe8f0989994bf3847bcd2809beb",
+      "target_sha256": "24561aab8290a75b2ebed0037e5fc0a6ee641d05e32e7f85810ed1a2856b8ee5",
+      "adaptations": [
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee."
+      ]
+    },
+    {
+      "destination": ".gitattributes",
+      "source_path": ".gitattributes",
+      "source_blob": "beda7eb8fb0d073281b23f758094da7348e92ee8",
+      "target_sha256": "ab80c861d48f16d34e0057c069d0e6149a806488529cfa25ae3dadc2ddbb0363",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "source_path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "source_blob": "f8d70b3d44f53de307d88284f192da79cdf45fdd",
+      "target_sha256": "228cf273cc279e696518a266b1f64d8da3ef45b2e021233b865582af1bbab3de",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/ISSUE_TEMPLATE/config.yml",
+      "source_path": ".github/ISSUE_TEMPLATE/config.yml",
+      "source_blob": "a3649e71ac42fee71010da2292893c900536e650",
+      "target_sha256": "1ebcfe46aed6d581a1403b98000ee097b1ebd41206dd534cae49143688e09f74",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/ISSUE_TEMPLATE/epic.yml",
+      "source_path": ".github/ISSUE_TEMPLATE/epic.yml",
+      "source_blob": "2fd09aceddf192a2d2c1816dcdc2a25873340da4",
+      "target_sha256": "fa13a17f61dcde61d32f5f3477cc76005d34ec487603e361fe22253c1d081b3a",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/PULL_REQUEST_TEMPLATE.md",
+      "source_path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "source_blob": "145a05bbc0050c215b397e7d7c029507c7f065fa",
+      "target_sha256": "a277e46753c687d79a5e67e29c0dd04c49e1bc3c48171a5e17e25def4c2955be",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/codex-instructions.md",
+      "source_path": ".github/copilot-instructions.md",
+      "source_blob": "c2ec9fb4c156b5139b7d88624593216c69a800f0",
+      "target_sha256": "c4bdb13c1afa682273aa64c53932e57a062e7394ca4f1af47c7c12e4160100f0",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/CONNECTOR-TEMPLATE.md",
+      "source_path": ".github/connectors/CONNECTOR-TEMPLATE.md",
+      "source_blob": "997e2dc5825d2cabeafbbbe01ab997ae86b958d4",
+      "target_sha256": "b9fb8eebe51b7dedcb5d5ae92dd5cd5f827563a9624346ca73bcd16a143a92ea",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/README.md",
+      "source_path": ".github/connectors/README.md",
+      "source_blob": "386639f24f8323ce92bed53c5ea6518bc50c2dc5",
+      "target_sha256": "5c80ab5deaaa7d130d91d2acf75b2fc4a67bf3abe73f702b1be622da3b948180",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/builtin.md",
+      "source_path": ".github/connectors/builtin.md",
+      "source_blob": "3bf19026be22f7d167f9c26d82410c4b9b9ca022",
+      "target_sha256": "14b2c8997a203de2d394f0a66cddbca1161f3139185fff4c751c9383977f5b31",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/speckit.md",
+      "source_path": ".github/connectors/speckit.md",
+      "source_blob": "441b1c8e639813a49dcc200ae4c1c2b018f91a5a",
+      "target_sha256": "9bd166f0cc9b6dbd3e62a04cd45fa29e71b04066fcfd3cc7f1a5b159d9078684",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/README.md",
+      "source_path": ".github/docs/agreements/README.md",
+      "source_blob": "413054a2fb8f80406c62491fdb558efa302c43f0",
+      "target_sha256": "c573f1dc6d285294b1d85abdf99004a728af7efe32a0e5dccb90829b4205436a",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/adr/ADR-0000-template.md",
+      "source_path": ".github/docs/agreements/adr/ADR-0000-template.md",
+      "source_blob": "269f127a929cf24e2f9979c189a725b2683bb80d",
+      "target_sha256": "7f6442e1155ea7acbc808d4be62d6177e53e500130444f6c7f206d5ecb78b5d3",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/glossary.md",
+      "source_path": ".github/docs/agreements/glossary.md",
+      "source_blob": "cc5336086dd24145067be37c4282288cd2fa8709",
+      "target_sha256": "9b58195e57846404a2e1e2c93e75b343ae28e6807703db5aac7da83c3bfce504",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/non-goals.md",
+      "source_path": ".github/docs/agreements/non-goals.md",
+      "source_blob": "abd4ca28ba184f6aa5173b383afab873038577f0",
+      "target_sha256": "2446ce092a2d96998f1e7626a620218e6c7709dd9cf5aebc42dbe5e4892c0b41",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/requirements.md",
+      "source_path": ".github/docs/agreements/requirements.md",
+      "source_blob": "f68e5804e54c7e71ce65775794685bab70270676",
+      "target_sha256": "c8081a1b26f62cd58464ffcd33ce3887a66a35c3e3ea762e876639b34a0c23f8",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/retro-log.md",
+      "source_path": ".github/docs/agreements/retro-log.md",
+      "source_blob": "f401f268702fd21efeb8db85e7b380ef69f3de5d",
+      "target_sha256": "a86441a480003f676a2063c320e70ee44312c2ce9d6b319fb131a8d02941219d",
+      "adaptations": [
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+      ]
+    },
+    {
+      "destination": ".github/docs/context/README.md",
+      "source_path": ".github/docs/context/README.md",
+      "source_blob": "3b915dda3cd9968757c90d8d3a03f11e6378e0b6",
+      "target_sha256": "5317fc5f84ee992d4b9491e44d12793db8d7fde443998c465d407b4beb76797f",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/instructions/code-review.instructions.md",
+      "source_path": ".github/instructions/code-review.instructions.md",
+      "source_blob": "1336728a7d8f72520bec2b97a2ed25568e17d0b3",
+      "target_sha256": "a328ab03546b8f5b7f3f91b31c9bd97e98dd807ae8610600c5d43c5dd5fc0edb",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/instructions/docs.instructions.md",
+      "source_path": ".github/instructions/docs.instructions.md",
+      "source_blob": "68ff889b87df96282cdb014f1ee88a1922dfc072",
+      "target_sha256": "66bba659c1034b72227824332c0aff8c1c2fb3bf693b6c37389a507fd3b4399e",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/scripts/check-task-ritual.sh",
+      "source_path": ".github/scripts/check-task-ritual.sh",
+      "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
+      "target_sha256": "78bec6b897ead9a954f11eb9cb6e6a6d8b258d50ef7dcbcd8cdc031f76f71a46",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".github/scripts/ownership-overlap.sh",
+      "source_path": ".github/scripts/ownership-overlap.sh",
+      "source_blob": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
+      "target_sha256": "b32265006b5d979199fea8ff338f947d604cae6e1b3712dda65309557f8e1086",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".github/scripts/run.ps1",
+      "source_path": ".github/scripts/run.ps1",
+      "source_blob": "269b798e1d163b0832a3036114c9550684a1aa76",
+      "target_sha256": "c8e8b2027c2845260807dec8b58d5c6e2549b4306481c9746c01fdef7c9d6eee",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-labels.sh",
+      "source_path": ".github/scripts/setup-labels.sh",
+      "source_blob": "f76b67dcbe9563cfb61bd56451f7c51a68f8afca",
+      "target_sha256": "328491ff1d0a5be0ace6512b4a674b20d31f3693db8cd764561d0c5867bf6a75",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-project.sh",
+      "source_path": ".github/scripts/setup-project.sh",
+      "source_blob": "4dd5b61186b8488e5e8fff143e5b40d3958087ca",
+      "target_sha256": "a92e71104e6058c0562d62514f0f8964db3745f86b856f7560232d3f49ab548b",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-ruleset.sh",
+      "source_path": ".github/scripts/setup-ruleset.sh",
+      "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
+      "target_sha256": "a5b992a50ccbf64f6db08c9cb01dd46cd62cdc89f71ebb052685a8270a469a7f",
+      "adaptations": [
+        "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-sources.sh",
+      "source_path": ".github/scripts/setup-sources.sh",
+      "source_blob": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff",
+      "target_sha256": "d442d5eb6b359734f9a9ee51b5ab256db7e90a8ec3ff1bf77686b6b4217b9289",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".github/scripts/tuning-status.sh",
+      "source_path": ".github/scripts/tuning-status.sh",
+      "source_blob": "1b764f3bd67e897e64c11c98503e5750d73746dd",
+      "target_sha256": "509fd711d809fc1db0d052499f966b09607e92667b8c64fc3aaa1e2117668730",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+      ]
+    },
+    {
+      "destination": ".gitignore",
+      "source_path": ".gitignore",
+      "source_blob": "8b8c60b83d8d879d40b0c803931a1d68d76ab742",
+      "target_sha256": "60e314fa9bf4c55a26ca39b280535a3824fa9a034359067910537eb99b887b72",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": "AGENTS.md",
+      "source_path": "AGENTS.md",
+      "source_blob": "d575018d2d456c9376144495467cfcf8ac498b96",
+      "target_sha256": "39cd615ea25de9d8b368d269facfdc6fec39490bb97db9633e3be6667becc5ae",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": "README.md",
+      "source_path": "README.md",
+      "source_blob": "76480f3ae0458926d854e62f51d10958ff229bd3",
+      "target_sha256": "be3f6a0ecf930765bdb8bd286fb913c6e76856b2552ac337777779192d8a33b3",
+      "adaptations": [
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+      ]
+    },
+    {
+      "destination": "SCAFFOLD-CHANGELOG.md",
+      "source_path": "SCAFFOLD-CHANGELOG.md",
+      "source_blob": "c0898a331200d0a332c5c4423fefc9017531a95f",
+      "target_sha256": "e826bef0731477e141a7c336b7ad9877a006a8ba6e896c6a5d8487aefc1cc1fb",
+      "adaptations": [
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+      ]
+    },
+    {
+      "destination": "docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+      "source_path": "docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+      "source_blob": "f07906ce7eea7dc45b04cbdd1b739557ec018df8",
+      "target_sha256": "b2d95256c31e84fb9211485b34aef15447cc8fd44fc7969c2fe80f9a4c9c83e2",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    }
+  ],
+  "installer_source": {
+    "scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+    "scaffold-init.ps1": "6baa8ca94535d25c3b3b1cc1e4ac4ba95542321f",
+    "test-scaffold-init.sh": "e060e59ef1fc4c8dabdae2de091ed8eabafba8a9"
+  },
+  "limits": [
+    "Local-source explicit apply only; no auto download/init/stage/commit/force/upgrade.",
+    "No live Codex, Windows or GitHub-helper execution proof; no VM prerequisite.",
+    "Development-only AGENTS/PIN/Task IDs/governance/results are excluded."
+  ]
+}

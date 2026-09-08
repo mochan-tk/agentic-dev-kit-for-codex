@@ -1,0 +1,386 @@
+---
+name: session-orchestration
+description: Protocol for running work through parent/child agent sessions (e.g., the available Codex task/worktree tools, or any orchestrator dispatching cloud-agent runs). Use this whenever a session spawns or reports to another session, when starting work on a Task issue in a new session, when writing a completion/blocked/failed report, or when deciding what belongs in plan.md versus GitHub.
+
+---
+
+# Session Orchestration
+
+Session trees and inter-session messages are powerful but **app-local**: a
+cloud agent, a teammate, another machine, or you-next-week cannot see them.
+GitHub is the only shared memory. Every rule below exists to keep the durable
+record on GitHub while using sessions for speed.
+
+## Mapping (two-tier, per ADR-0003)
+
+| Plan object | Session object | Workspace object |
+|---|---|---|
+| The Epic set (whole project) | One Project coordination responsibility (optional sibling thread) | — |
+| Epic issue | Parent (orchestrator) session | — |
+| Task issue | One supervisor session (ritual only, no code edits) | — |
+| Pull request | One active worker session | One worktree + branch `codex/task-<n>-<slug>` (or accepted tool-prefixed variant) |
+
+One Task issue per supervisor session — never batch several issues into one
+session (reports become unattributable) and never split one issue across
+supervisors without replanning first. A PR has exactly one active worker at
+a time; use a separate worktree per concurrent worker so parallel sessions
+cannot write to the same checkout. For trivial tasks **a Task supervisor**
+may implement directly (small-task exemption), declared in its plan comment;
+conductors have no such exemption — see Role boundaries.
+
+**Verify execution context, not transport names.** Codex subagents and
+threads have surface-specific workspace/lifetime behavior. Do not infer an
+isolated worktree from a child name. Before assigning a writer, establish
+the actual branch, worktree and exclusive ownership. A same-worktree helper
+may perform bounded read-only work; a single assigned writer may work there
+when the Task explicitly declares it and no other writer competes.
+
+A created object is not proof of execution. Check the supervisor's durable
+claim and the actual worker state. If dispatch is unavailable, record the
+exact manual kickoff or use the declared small-task exemption; do not invent
+a started worker or silently let a conductor implement.
+
+**Role boundaries.** A session's role is fixed when it is created; it is not
+something a session reasons its way out of mid-run. A conductor (Project or
+Epic) that finds itself about to edit application files, check out a Task
+branch, or commit has met the boundary, whatever the justification: file or
+locate the Task issue, dispatch it, and verify — or escalate (§6). "It is
+small" is not a route around this; the small-task exemption belongs to Task
+supervisors, whose job is that one Task, and it does not extend to a
+conductor deciding to do the work itself.
+
+**What enforces this, and what does not.** The three Codex role files contain
+guidance only, with no permission overrides. Installed procedures and
+comments do not authenticate roles or prove exclusive writes. Verify actual
+Git state and ownership; use the current client's documented restrictions
+where available. The included ritual script is an explicitly invoked sensor,
+not an installed CI wall. Its output is evidence only when actually run
+against the current PR; no workflow or ruleset is automatically installed.
+
+**Who posts what:** claim, plan, worker-dispatch, and outcome comments on
+the Task issue belong to the **supervisor**; the PR is opened and iterated
+by the **worker**. Before a worker starts, the supervisor **creates the
+worker session, confirms it exists, and only then** posts a worker-dispatch
+comment naming it — session name, session ID, and branch, plus the target PR
+and scope. No verified worker, no implementation: a dispatch comment for a
+session that was never created records a split that did not happen, which is
+the one thing this trail exists to show (ADR-0003). A supervisor that cannot
+raise a worker either declares the small-task exemption in its plan comment
+and implements directly, or escalates — it does not write the comment
+anyway. A replacement
+worker is preceded by a comment releasing the old worker and naming its
+successor.
+**Sensor-compatible format:** the worker-dispatch comment's *first line* must
+match the regex `^Dispatching worker`, and the release comment's *first
+line* must match `^Releasing worker` — no leading blank line, greeting, or
+Markdown heading before either — as checked when explicitly invoked by
+`.github/scripts/check-task-ritual.sh`. That first line also carries the
+worker's identity, in this shape:
+
+```
+Dispatching worker: PR #12 worker (session 6af9582d-42d1-425d-82c8-f9ec651225a8), branch task/12-fix-esp32
+```
+
+The branch is compared against the PR's head ref, so a dispatch written for
+one task cannot satisfy another's trail. The session ID is the evidence that
+a session was really raised; the sensor cannot authenticate it, because session trees are
+app-local, so it is recorded for humans and later audits rather than
+machine-verified. The same sensor expects every task to
+declare its execution mode (ADR-0003): either a dispatch trail (earliest
+dispatch after the earliest plan and before the PR's first commit, a release
+between successive dispatches, dispatch and release comments unedited) or a
+plan comment carrying the small-task exemption phrase
+"no worker will be spawned" (matched case-insensitively; AGENTS.md §4) — a
+task showing neither fails the wall.
+
+## Child session protocol
+
+This ritual is executed by the **supervisor** session for its Task issue
+(steps 1–5); the implementation itself runs in a worker session dispatched
+afterwards (see Worker protocol below). Under the declared small-task
+exemption, the supervisor performs both parts single-session.
+
+**Start ritual** (do this before touching any file):
+1. `gh issue view <n>` — read the full brief: Objective, Context & references,
+   Acceptance criteria, Out of scope, File ownership, Verification, Routing.
+2. Open every agreement the issue cites (`REQ-###`, ADR links) — many tasks
+   cite none, which is normal. If a cited reference is missing, note it and
+   proceed on the issue body; stop and apply the Ambiguity rule
+   (`AGENTS.md` §6) only when a reference **contradicts** the issue — do
+   not fill gaps with guesses.
+3. Write `plan.md` in the implementing session's worktree root (the
+   worker's, once dispatched; yours only under the declared small-task
+   exemption): restate the acceptance criteria, the
+   ownership paths, the verification commands, and your step plan. `plan.md`
+   is a **session cache** — convenient, disposable, never authoritative, and
+   never a substitute for updating the issue. Do not commit it
+   (add to `.gitignore` if needed).
+4. Comment one line on the issue: `Starting in session <name/link>, branch
+   codex/task-<n>-<slug>` (or the accepted tool-prefixed variant, AGENTS.md §4) —
+   the branch is the worker's *intended* branch, forward-looking, and is
+   named again in the worker-dispatch comment.
+   Now the world knows this task is taken.
+   **Sensor-compatible format:** the claim comment's *first line* must match
+   the regex `^(Starting|Resuming) in session` — no leading blank line,
+   greeting, or Markdown heading before it — as checked when explicitly invoked by
+   `.github/scripts/check-task-ritual.sh` (this exact wording has failed CI
+   twice when paraphrased).
+5. Post the plan as a comment on the Task issue **before your first
+   commit**: goal restated, intended approach, files you expect to touch,
+   verification you will run.
+   **Sensor-compatible format:** the plan comment must contain a `## Plan`
+   heading or have a body starting with `Plan:` — literal strings checked
+   by `.github/scripts/check-task-ritual.sh`; a plan titled anything else
+   does not count. When explicitly invoked, the included ritual sensor rejects
+   any PR whose linked Task lacks a claim and a plan comment, shows them
+   out of chronological order (claim → plan → first commit, committer
+   date), shows either comment edited after posting, lacks the `type:task`
+   label, or whose PR `Plan:` line does not link a real plan comment on
+   that issue in this repository. This comment —
+   not `plan.md`, not the PR description — is the plan of record. The
+   timeline then reads work order (body) → start → plan → outcome, which is
+   what makes deviations diagnosable from one page.
+
+Surfaces that write a plan into the PR description automatically (e.g. the
+cloud agent) produce a convenient copy: link the plan comment from the PR
+description and treat the issue timeline as authoritative.
+
+**Risk gate** (`risk:high` tasks only): stop after posting the plan comment
+and wait for an explicit approval comment from the requester/orchestrator
+before the first commit. The default is pass-through — a posted plan on an
+unlabeled task is actionable immediately (lazy consensus); the gate exists
+only for tasks whose blast radius warrants a pre-flight human eye
+(`plan-management`, Intervening).
+
+**Work loop** (the implementing session — the worker, or the supervisor
+under a declared exemption): stay inside the ownership paths; commit early
+and often;
+update `plan.md` freely — and when the plan changes *materially*, post a
+fresh plan comment on the issue (never edit the old one; the sequence of
+plan comments is the plan's history). If scope drifts, stop and follow the
+Ambiguity rule rather than quietly expanding.
+
+**Verify** (before any completion claim): run every command in the issue's
+Verification section; then confirm external state with commands, e.g.
+`gh pr view <pr> --json state,statusCheckRollup`, `gh pr checks <pr>`,
+`git status --short` (must be clean), and, when the task tracked Project
+items, `gh project item-list`. Evidence = command + observed result.
+
+**Record before report** — post this comment on the Task issue, then (and
+only then) message the parent:
+
+```markdown
+## Outcome: <completed | blocked | failed | needs-replan>
+**PR:** #<pr-number>
+**Evidence:**
+| Criterion | Evidence (command / link) | Result |
+|---|---|---|
+| AC1 ... | `pio test -e native` -> 12 passed | pass |
+**Deviations:** <none, or what differs from the brief and why>
+**Follow-ups:** <suggested downstream issue changes, or none>
+**Scaffold friction:** <none | retro:candidate issue link>
+```
+
+The **Scaffold friction** line is optional: fill it when you filed or +1'd a
+`retro:candidate` issue during the task (retro skill, §Candidate ledger).
+
+Any `deferred` row in the Evidence table prohibits `Outcome: completed`: the
+outcome stays `blocked` or `needs-replan` until the requester revises the
+work order (body edit + change comment) to remove or re-home that criterion.
+The executor may propose the revision, never make it.
+
+**Post-merge acceptance:** when criteria include steps that happen only
+after the merge (a tag, a release, a deploy check), the PR links the issue
+with `Refs #<n>`, never `Closes` (AGENTS.md §4). Order: merge → post-merge
+steps → outcome comment → close the issue manually. Auto-close would end
+the record before the work it certifies exists.
+
+The message to the parent is a pointer, not a payload: outcome word + issue
+and PR links. If the parent session is gone, the record still stands — that
+is the point. Reports climb one hop at a time: the **worker** reports to its
+**supervisor** (PR link, CI status, verification output, deviations); the
+supervisor independently verifies against ground truth (`gh pr view/checks`,
+diff vs. ownership), posts the outcome comment, and only then reports to the
+**Epic orchestrator**. A worker never posts the ritual comments and never
+reports past its supervisor.
+
+## Worker protocol (ADR-0003)
+
+A worker session implements exactly one PR from its kickoff. It runs the
+plan of record in **autopilot with no plan gate of its own** — plan
+approval, where required at all (`risk:high`), happened at the supervisor
+tier; lazy consensus otherwise. PR review is the output checkpoint. If the
+plan does not survive contact with reality (ownership
+too narrow, contradiction with the referenced agreements), the worker stops
+and escalates to its supervisor per AGENTS.md §6 — it never replans alone
+and never posts comments on the Task issue. When done: PR open, CI green,
+report to the supervisor, stop. Rework may return to the same worker or a
+fresh replacement — the plan and history live on the issue, so replacements
+start cheap.
+
+**Worker kickoff template** — a worker sees only its kickoff and the
+ledger, so the kickoff must be complete (kickoff completeness is
+load-bearing, ADR-0003):
+
+```markdown
+You are the WORKER session for Task issue #<n> in <owner>/<repo>.
+- Issue: <issue URL> — read it in full (`gh issue view <n> --comments`).
+- Plan of record (execute it; no plan gate of your own): <plan comment URL>
+- File ownership (verbatim from the issue — touch EXACTLY these):
+  <paths, copied verbatim>
+- Verification (run ALL before marking the PR ready):
+  <commands, copied verbatim>
+- Branch: codex/task-<n>-<slug> (or managed-prefix equivalent). One PR,
+  `Closes #<n>` (`Refs #<n>` instead for stacked non-final layers and
+  post-merge acceptance, per AGENTS.md §4 and ADR-0003 Decision 3).
+- Environment notes: <OS/shell quirks, tool constraints, anything not in the repo docs>
+- Do NOT post comments on the issue; report to your supervisor session and stop.
+```
+
+## Project session protocol
+
+One Project coordination responsibility per project, durably handed off by onboarding
+(`project-onboarding` P6) once the phase Epics exist, and kept for the life
+of the plan. It conducts conductors: it never decomposes, dispatches Tasks,
+or edits code itself. Its first move waits for the onboarding evidence PR to
+merge — a phase started against a half-tuned repository verifies nothing.
+
+1. **Start an Epic's session when that phase's turn comes** — when its
+   `blocked-by` Epics are closed, or the frontier has run dry. Hand it the
+   Epic number and nothing else; the Epic is the brief. Name it `Epic #<n>`
+   (session naming: §Codex topology and lifecycle).
+2. **Epic sessions are siblings, not descendants.** An Epic session that
+   sees the next phase becoming actionable reports that to the Project
+   session rather than starting a peer itself: sessions spawning their
+   successors nest one level deeper per phase, and after a few phases the
+   tree is unreadable. Epics are siblings in the issue graph; their sessions
+   mirror that.
+3. **Watch across Epics, not within one.** Phase-spanning trouble is the
+   Project session's business: an Epic whose blockers never clear, a
+   dependency that turns out to be backwards, repeated escalations of the
+   same shape. Within an Epic, its own session decides.
+4. **Replan across phases** (`plan-management` skill) when reality diverges
+   from the outline — reordering phases, splitting one, dropping another.
+   Record the rationale on the affected Epic, not in session memory.
+5. **Ending.** Project sessions die like any other: before one ends, the
+   state of play must be legible from GitHub alone — each Epic's status
+   visible from its issue, its comments, and the board. Whoever restarts a
+   Project session reads the graph, not the transcript.
+
+## Parent session protocol
+
+1. Dispatch only from the frontier (`plan-management` skill), after checking
+   that concurrently dispatched tasks have disjoint File-ownership paths.
+   Use the available Codex surface or the explicit manual handoff described
+   by task-routing. Observe CI records: queued/action-required is not failure
+   or success, and owner approval may be needed for actual repository policy.
+   Never bypass that policy or fabricate a worker result.
+
+
+
+2. **Issue-first, dedicated-session — no exceptions for infra/ops.** Ad-hoc
+   requests (e.g. a human asking "can you deploy this?"), and cloud/deploy/
+   infra work in general (provisioning, secrets, deploy unblocking), get a
+   Task issue created *before* any work begins, and run in a dedicated child
+   session like any other task — never inline in the parent. No issue, no
+   work: evidence recorded after the fact on a closed issue does not count.
+3. When dispatching a **supervisor**, pass the issue number only — the
+   issue is the brief, and name the session `Task #<n> supervisor`
+   (workers: `PR #<n> worker`; naming rule in §Codex topology and lifecycle). If
+   you feel the need to add substantial instructions in the dispatch message,
+   the brief is incomplete: fix the issue first. Supervisor→worker kickoffs
+   are the exception: they use the complete Worker kickoff template above,
+   because kickoff completeness is load-bearing (ADR-0003) and the worker
+   never re-derives scope from the issue alone.
+4. Steer with short course-correction messages when session logs show drift;
+   prefer steering over restarting.
+5. On receiving a report: verify the record exists on the issue and spot-check
+   the evidence with your own `gh` calls before updating labels/Project state
+   or dispatching dependents — `gh` calls are the whole of it, because the
+   artifact is CI's to verify and not yours to rebuild (`verification`
+   §The layers). An unrecorded report is returned to the child
+   with one instruction: record first. **Silence is checked the same way.** A
+   child that wakes its parent having written nothing on the issue has not
+   been quietly productive — it has not started, or it has died. Read the
+   issue before concluding anything about a child that never spoke.
+6. Route `needs-replan` outcomes to the planner procedure
+   (`plan-management` §Replanning) and post the rationale on the Epic.
+7. When the Epic's phase is done — its Tasks closed, their PRs merged, the
+   Epic's own state line current — tell the Project session so the next
+   phase gets a session, then stop. Do not start that session yourself and
+   do not carry on as it: the Project session keeps Epic sessions siblings
+   (see Project session protocol), and a session that continues into the
+   next phase makes the tree a single thread again. Stay open until the
+   Epic closes — rework and late questions come back here. If
+   no Project session is running, say so in the Epic's closing comment and
+   name the next Epic, so a human or a fresh Project session can pick it up.
+
+## Codex topology and lifecycle
+
+The source Project-parent nesting was a Copilot-app platform workaround,
+not a parity requirement. Keep one Project coordination responsibility across
+the Epic set, with Epic threads as siblings. A Project strategy/navigation
+thread is optional and may itself be a sibling. The Issue graph remains
+durable authority regardless of replaceable thread transport.
+
+Prefer an explicit Project controller that creates/manages sibling Epic
+threads only after a capability probe proves a documented thread-management
+surface is available. Do not assume an agent in one thread can control peers.
+Preserve Epic -> Task -> Worker delegation and complete kickoffs; when native
+control is absent, supply a durable manual handoff rather than invented API
+names. Name navigation surfaces Project, Epic #<n>, Task #<n> supervisor and
+PR #<n> worker where the available UI permits.
+
+Inspect the actual result and durable record before advancing the graph.
+Stop/release the old worker before replacement. Keep workers available for
+review rework when possible, then clean up only owned resources through
+documented controls. No creator-scoped archive behavior is assumed.
+Project coordination lasts while the plan needs it; an Epic coordinator lasts
+until the Epic closes. A dead thread can be replaced from GitHub records.
+
+## Resume protocol (crash-only)
+
+Sessions die without warning — network, quota, machine sleep, closed laptop.
+The scaffold has **no dedicated resume machinery** on purpose: the ordinary
+start ritual *is* the resume path (crash-only design — recovery and startup
+are the same code path).
+
+- **Successor session**: run the start ritual (AGENTS.md §9) exactly as for a
+  fresh task, then derive the current position from the ledger + ground
+  truth: the issue timeline (start / plan / latest comments), the branch
+  (`git log`, `git status`), and the PR (`gh pr view/checks`). What is not on
+  GitHub did not happen — do not reconstruct intent from memory or chat.
+- **Claim before touching**: post a *resume comment* on the Task issue
+  (`Resuming in session <name/link>, branch codex/task-<n>-<slug>`) before any
+  commit. The claim prevents two sessions from silently owning one task; if
+  the timeline shows another live claim, stop and escalate instead.
+- **Orphan detection is the parent's duty**: a task with a start comment, no
+  Outcome comment, and a dead session is an orphan. The parent (or any
+  orchestrator sweeping the frontier) either dispatches a successor — which
+  claims as above — or comments the task back to the frontier.
+- **Repeat failure**: if the resumed attempt dies the same way the first one
+  did, apply `needs:human` and stop. Two identical session deaths signal
+  infrastructure, not approach — crash-resume is exempt from the three-strike
+  ladder (Escalation below).
+
+## Escalation
+
+Execution failures climb a three-tier ladder. The boundary at every tier is
+the **same failure three times**: then the work hands up one tier.
+
+An attempt counts toward the *same failure* only when both the command or
+check **and** the observed root-cause signature match. The counter resets
+only after a materially different intervention grounded in new evidence —
+changed code, configuration, inputs, ownership, or approach. A plain retry,
+restart, or fresh session never resets it.
+
+1. **Agent** — self-correction inside the session; vary the approach between
+   attempts. Three identical failures spend this tier's budget.
+2. **Parent session** — rephrase the work order, split it, or re-route it to
+   a different surface or model. The same three-failure budget applies.
+3. **Human** — label `needs:human` and stop the affected line of work.
+
+Judgment and trust failures skip the ladder and go straight to a human: an
+agreement in `.github/docs/agreements/` turns out wrong; credentials/security issues
+appear; or two sessions claim the same ownership paths. These are not
+execution failures — humans own those.
