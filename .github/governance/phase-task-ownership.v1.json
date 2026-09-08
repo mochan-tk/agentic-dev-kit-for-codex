@@ -10,7 +10,10 @@
   },
   "policy": {
     "invariant_digest": "a084a123e16d2fd42619b09161efdaf49bda0ea0ca4a1e076254bd1902aa63f6",
-    "required_jobs": ["quality", "conformance"],
+    "required_jobs": [
+      "quality",
+      "conformance"
+    ],
     "required_quality_commands": [
       "python3 -I .github/scripts/check-phase0-contracts.py",
       "python3 -I .github/scripts/check-repository-policy.py",
@@ -40,14 +43,38 @@
       "base_commit": "32615344ad4f0310948bc59d234a84718741788a",
       "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
       "owned_paths": [
-        {"path": ".gitattributes", "mode": "100644"},
-        {"path": ".github/scripts/check-action-pins.sh", "mode": "100644"},
-        {"path": ".github/scripts/tests/lib.sh", "mode": "100644"},
-        {"path": ".github/scripts/tests/test-action-pins.sh", "mode": "100644"},
-        {"path": ".gitignore", "mode": "100644"},
-        {"path": "LICENSE", "mode": "100644"},
-        {"path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md", "mode": "100644"},
-        {"path": "docs/planning/phase-0-orientation.md", "mode": "100644"}
+        {
+          "path": ".gitattributes",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-action-pins.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/tests/lib.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/tests/test-action-pins.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".gitignore",
+          "mode": "100644"
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/adr/ADR-0004-codex-port-baseline.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/planning/phase-0-orientation.md",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -58,9 +85,18 @@
       "base_commit": "32615344ad4f0310948bc59d234a84718741788a",
       "base_tree": "33259721ec9f378fa67392ef8e1c7645db1321f9",
       "owned_paths": [
-        {"path": ".github/scripts/check-phase0-contracts.py", "mode": "100644"},
-        {"path": "tests/conformance/phase0-snapshot.json", "mode": "100644"},
-        {"path": "tests/conformance/test_phase0_contracts.py", "mode": "100644"}
+        {
+          "path": ".github/scripts/check-phase0-contracts.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/phase0-snapshot.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_phase0_contracts.py",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -71,16 +107,46 @@
       "base_commit": "3065afcf80ee348796a7d159f6aaefeeac65ad10",
       "base_tree": "f7132c5867023a2b971e0383d95a6c4184e20f35",
       "owned_paths": [
-        {"path": ".github/scripts/conformance-catalog.py", "mode": "100644"},
-        {"path": "docs/agreements/adr/ADR-0006-conformance-catalog-provenance.md", "mode": "100644"},
-        {"path": "docs/conformance/catalog.md", "mode": "100644"},
-        {"path": "tests/conformance/catalog.json", "mode": "100644"},
-        {"path": "tests/conformance/catalog.schema.json", "mode": "100644"},
-        {"path": "tests/conformance/coverage.schema.json", "mode": "100644"},
-        {"path": "tests/conformance/results.json", "mode": "100644"},
-        {"path": "tests/conformance/results.schema.json", "mode": "100644"},
-        {"path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md", "mode": "100644"},
-        {"path": "tests/conformance/source/manifest.json", "mode": "100644"}
+        {
+          "path": ".github/scripts/conformance-catalog.py",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/adr/ADR-0006-conformance-catalog-provenance.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/conformance/catalog.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/catalog.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/catalog.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/coverage.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/results.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/results.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/source/05_CONFORMANCE_SCENARIOS.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/source/manifest.json",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -91,10 +157,22 @@
       "base_commit": "7cd36f3b2e5711b1cf127e69731951cf9604b4d5",
       "base_tree": "b63d34ed4dabc81c6a4914af017cbe7de3d25739",
       "owned_paths": [
-        {"path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md", "mode": "100644"},
-        {"path": "docs/agreements/repository-completion.md", "mode": "100644"},
-        {"path": "tests/conformance/coverage.json", "mode": "100644"},
-        {"path": "tests/conformance/test_conformance_catalog.py", "mode": "100644"}
+        {
+          "path": "docs/agreements/adr/ADR-0005-issue-graph-authority.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/repository-completion.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/coverage.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_conformance_catalog.py",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -106,11 +184,26 @@
       "base_tree": "85153f261e574d1287970d7ce14c3446e4e0d020",
       "path_transitions": [],
       "owned_paths": [
-        {"path": ".github/governance/ci-tools.lock.v1.json", "mode": "100644"},
-        {"path": ".github/scripts/check-workflow-permissions.sh", "mode": "100644"},
-        {"path": ".github/scripts/install-ci-tools.py", "mode": "100644"},
-        {"path": ".github/scripts/tests/test-workflow-permissions.sh", "mode": "100644"},
-        {"path": "tests/conformance/test_ci_toolchain.py", "mode": "100644"}
+        {
+          "path": ".github/governance/ci-tools.lock.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-workflow-permissions.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/install-ci-tools.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/tests/test-workflow-permissions.sh",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_ci_toolchain.py",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -122,11 +215,26 @@
       "base_tree": "fe96b1eb5c825be6b4d936fa4850e26a51b7b3d0",
       "path_transitions": [],
       "owned_paths": [
-        {"path": ".github/ISSUE_TEMPLATE/epic.yml", "mode": "100644"},
-        {"path": "tests/ledger/fixtures/epic-rendered.md", "mode": "100644"},
-        {"path": "tests/ledger/fixtures/ledger-valid.v1.json", "mode": "100644"},
-        {"path": "tests/ledger/fixtures/pull-request-rendered.md", "mode": "100644"},
-        {"path": "tests/ledger/fixtures/task-rendered.md", "mode": "100644"}
+        {
+          "path": ".github/ISSUE_TEMPLATE/epic.yml",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/ledger/fixtures/epic-rendered.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/ledger/fixtures/ledger-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/ledger/fixtures/pull-request-rendered.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/ledger/fixtures/task-rendered.md",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -138,19 +246,58 @@
       "base_tree": "e755dfba299b73d06f97fe7caeba6d520225c202",
       "path_transitions": [],
       "owned_paths": [
-        {"path": ".github/connectors/README.md", "mode": "100644"},
-        {"path": ".github/connectors/connector-contract.v1.json", "mode": "100644"},
-        {"path": ".github/scripts/check-portable-contracts.py", "mode": "100644"},
-        {"path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md", "mode": "100644"},
-        {"path": "docs/agreements/decisions/DEC-0001.json", "mode": "100644"},
-        {"path": "docs/agreements/portable-context-contract.md", "mode": "100644"},
-        {"path": "docs/agreements/portable-context-contract.v1.json", "mode": "100644"},
-        {"path": "docs/agreements/requirements/REQ-0001.json", "mode": "100644"},
-        {"path": "docs/context/README.md", "mode": "100644"},
-        {"path": "docs/context/pins/PIN-0001.context-pin.v1.json", "mode": "100644"},
-        {"path": "tests/contracts/fixtures/connector-valid.v1.json", "mode": "100644"},
-        {"path": "tests/contracts/fixtures/decisions-valid.v1.json", "mode": "100644"},
-        {"path": "tests/contracts/fixtures/requirements-valid.v1.json", "mode": "100644"}
+        {
+          "path": ".github/connectors/README.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/connectors/connector-contract.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-portable-contracts.py",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/adr/ADR-0007-connector-neutral-context-contract.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/decisions/DEC-0001.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/portable-context-contract.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/portable-context-contract.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/requirements/REQ-0001.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/context/README.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/context/pins/PIN-0001.context-pin.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/contracts/fixtures/connector-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/contracts/fixtures/decisions-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/contracts/fixtures/requirements-valid.v1.json",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -162,30 +309,102 @@
       "base_tree": "f006ed8963d600a2a9bbf1b3917dc57e6f6a41d8",
       "path_transitions": [],
       "owned_paths": [
-        {"path": ".agents/skills/context-collection/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/context-collection/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/context-distillation/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/context-distillation/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/plan-management/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/plan-management/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/plan-management/references/issue-graph-procedure.md", "mode": "100644"},
-        {"path": ".agents/skills/project-onboarding/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/project-onboarding/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/project-onboarding/references/onboarding-procedure.md", "mode": "100644"},
-        {"path": ".agents/skills/retro/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/retro/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/session-orchestration/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/session-orchestration/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/session-orchestration/references/orchestration-protocols.md", "mode": "100644"},
-        {"path": ".agents/skills/task-routing/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/task-routing/agents/openai.yaml", "mode": "100644"},
-        {"path": ".agents/skills/verification/SKILL.md", "mode": "100644"},
-        {"path": ".agents/skills/verification/agents/openai.yaml", "mode": "100644"},
-        {"path": ".github/scripts/check-skills.py", "mode": "100644"},
-        {"path": "docs/agreements/skill-parity.v1.json", "mode": "100644"},
-        {"path": "tests/conformance/test_portable_contracts.py", "mode": "100644"},
-        {"path": "tests/conformance/test_skills.py", "mode": "100644"},
-        {"path": "tests/skills/fixtures/source-manifest.v1.json", "mode": "100644"}
+        {
+          "path": ".agents/skills/context-collection/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/context-collection/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/context-distillation/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/context-distillation/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/plan-management/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/plan-management/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/plan-management/references/issue-graph-procedure.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/project-onboarding/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/project-onboarding/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/project-onboarding/references/onboarding-procedure.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/retro/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/retro/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/session-orchestration/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/session-orchestration/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/session-orchestration/references/orchestration-protocols.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/task-routing/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/task-routing/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/verification/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".agents/skills/verification/agents/openai.yaml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-skills.py",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/skill-parity.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_portable_contracts.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_skills.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/skills/fixtures/source-manifest.v1.json",
+          "mode": "100644"
+        }
       ]
     },
     {
@@ -197,67 +416,448 @@
       "base_tree": "69c808a7afc59858213ee68dc89cb6a5a20e3e09",
       "path_transitions": [],
       "owned_paths": [
-        {"path": ".github/scripts/check-phase1-acceptance.py", "mode": "100644"},
-        {"path": "AGENTS.md", "mode": "100644"},
-        {"path": "docs/conformance/phase-1-scorecard.md", "mode": "100644"},
-        {"path": "docs/context/pins/PIN-0002.context-pin.v1.json", "mode": "100644"},
-        {"path": "docs/planning/phase-1-acceptance.md", "mode": "100644"},
-        {"path": "tests/conformance/manifest.json", "mode": "100644"},
-        {"path": "tests/conformance/results/phase-1.json", "mode": "100644"},
-        {"path": "tests/contracts/fixtures/context-pin-valid.v1.json", "mode": "100644"}
+        {
+          "path": ".github/scripts/check-phase1-acceptance.py",
+          "mode": "100644"
+        },
+        {
+          "path": "AGENTS.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/conformance/phase-1-scorecard.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/context/pins/PIN-0002.context-pin.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/planning/phase-1-acceptance.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/manifest.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/results/phase-1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/contracts/fixtures/context-pin-valid.v1.json",
+          "mode": "100644"
+        }
       ]
     },
     {
       "id": "T11",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/phase-2-minimal-execution-slice",
       "base_commit": "36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2",
       "base_tree": "1c1f46ad20dd289a713663c84eaf1dbb62840deb",
       "path_transitions": [],
       "owned_paths": [
-        {"path": ".codex/agents/task_supervisor.toml", "mode": "100644"},
-        {"path": ".codex/agents/task_verifier.toml", "mode": "100644"},
-        {"path": ".codex/agents/task_worker.toml", "mode": "100644"},
-        {"path": ".github/ISSUE_TEMPLATE/ai-task.yml", "mode": "100644"},
-        {"path": ".github/PULL_REQUEST_TEMPLATE.md", "mode": "100644"},
-        {"path": ".github/governance/codex-runtime-profile.v1.json", "mode": "100644"},
-        {"path": ".github/governance/ledger-contracts.v1.json", "mode": "100644"},
-        {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
-        {"path": ".github/scripts/check-ledger-templates.py", "mode": "100644"},
-        {"path": ".github/scripts/check-phase1-accepted-snapshot.py", "mode": "100644"},
-        {"path": ".github/scripts/check-repository-policy.py", "mode": "100644"},
-        {"path": ".github/scripts/check-runtime-contracts.py", "mode": "100644"},
-        {"path": ".github/scripts/codex-exec-adapter.py", "mode": "100644"},
-        {"path": ".github/scripts/post-runtime-receipt.py", "mode": "100644"},
-        {"path": ".github/workflows/ci.yml", "mode": "100644"},
-        {"path": "README.md", "mode": "100644"},
-        {"path": "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md", "mode": "100644"},
-        {"path": "docs/agreements/runtime/codex-final-response.v1.schema.json", "mode": "100644"},
-        {"path": "docs/agreements/runtime/execution-result.v1.schema.json", "mode": "100644"},
-        {"path": "docs/agreements/runtime/loop-event.v1.schema.json", "mode": "100644"},
-        {"path": "docs/agreements/runtime/minimal-codex-execution-loop.md", "mode": "100644"},
-        {"path": "docs/agreements/runtime/runtime-profile.v1.schema.json", "mode": "100644"},
-        {"path": "docs/agreements/runtime/runtime-receipt.v1.schema.json", "mode": "100644"},
-        {"path": "docs/agreements/runtime/task-execution-envelope.v1.schema.json", "mode": "100644"},
-        {"path": "docs/known-limitations.md", "mode": "100644"},
-        {"path": "tests/conformance/phase1-accepted-snapshot.v1.json", "mode": "100644"},
-        {"path": "tests/conformance/test_ledger_templates.py", "mode": "100644"},
-        {"path": "tests/conformance/test_phase1_acceptance.py", "mode": "100644"},
-        {"path": "tests/conformance/test_phase1_accepted_snapshot.py", "mode": "100644"},
-        {"path": "tests/conformance/test_repository_policy.py", "mode": "100644"},
-        {"path": "tests/conformance/test_runtime_receipt.py", "mode": "100644"},
-        {"path": "tests/conformance/test_runtime_vertical_slice.py", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/codex-final-response-valid.v1.json", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/codex-jsonl-interrupted.jsonl", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/codex-jsonl-valid.jsonl", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/envelope-valid.v1.json", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/execution-result-valid.v1.json", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/fake-codex.py", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/loop-events-valid.v1.jsonl", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/representative-task.v1.json", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/runtime-profile-valid.v1.json", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/runtime-receipt-valid.v1.json", "mode": "100644"}
+        {
+          "path": ".codex/agents/task_supervisor.toml",
+          "mode": "100644"
+        },
+        {
+          "path": ".codex/agents/task_verifier.toml",
+          "mode": "100644"
+        },
+        {
+          "path": ".codex/agents/task_worker.toml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/PULL_REQUEST_TEMPLATE.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/governance/codex-runtime-profile.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/governance/ledger-contracts.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-ledger-templates.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-phase1-accepted-snapshot.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-runtime-contracts.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/codex-exec-adapter.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/post-runtime-receipt.py",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/codex-final-response.v1.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/execution-result.v1.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/loop-event.v1.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/minimal-codex-execution-loop.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/runtime-profile.v1.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/runtime-receipt.v1.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/agreements/runtime/task-execution-envelope.v1.schema.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/phase1-accepted-snapshot.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_ledger_templates.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_phase1_acceptance.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_phase1_accepted_snapshot.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_runtime_receipt.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_runtime_vertical_slice.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/codex-final-response-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/codex-jsonl-interrupted.jsonl",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/codex-jsonl-valid.jsonl",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/envelope-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/execution-result-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/fake-codex.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/loop-events-valid.v1.jsonl",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/representative-task.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/runtime/fixtures/runtime-receipt-valid.v1.json",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T14",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27",
+      "state": "active",
+      "branch": "codex/source-first-installer",
+      "base_commit": "4a85a007ed62795b48bcbce04f6b7e5482e71e82",
+      "base_tree": "49afe003de2bbb04249d6f4c36ea6462c271c26f",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/distribution/payload.v1.tsv",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/context-distillation/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/templates/epic-body.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/task-routing/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.codex/agents/orchestrator.toml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.codex/agents/planner.toml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.codex/agents/reviewer.toml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.gitattributes",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/config.yml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/epic.yml",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/codex-instructions.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/connectors/CONNECTOR-TEMPLATE.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/connectors/README.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/connectors/builtin.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/connectors/speckit.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/agreements/README.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/agreements/adr/ADR-0000-template.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/agreements/glossary.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/agreements/non-goals.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/agreements/requirements.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/agreements/retro-log.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/docs/context/README.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/instructions/code-review.instructions.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/instructions/docs.instructions.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/run.ps1",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-labels.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.gitignore",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/AGENTS.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/README.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/SCAFFOLD-CHANGELOG.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/source-parity.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/governance/phase-task-ownership.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-installer.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-repository-policy.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/scaffold-init.ps1",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/scaffold-init.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/tests/test-scaffold-init.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "mode": "100644"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/distribution/source-first-installer.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/known-limitations.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_installer.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_repository_policy.py",
+          "mode": "100644"
+        }
       ]
     }
   ]
