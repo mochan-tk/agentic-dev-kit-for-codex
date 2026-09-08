@@ -3093,6 +3093,123 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     return profile
 
 
+PROFILE_STABLE_ROOTS = (
+    "schema", "repository", "scope", "status", "reason", "platform", "client",
+    "capabilities", "auth", "request", "shell_environment", "live_run_allowed",
+)
+PROFILE_STABLE_EVIDENCE = (
+    "configuration_intent", "exact_worker_argv", "shell_environment_behavior",
+    "bubblewrap_prerequisite", "lane_statuses",
+)
+PROFILE_FRESH_EVIDENCE = ("diagnostic_health", "network_sandbox_behavior")
+PROFILE_PROVIDER_STABLE = (
+    "schema", "authority", "codex_authenticated_attestation", "status",
+    "provider_kind", "vm_backend", "architecture", "native_architecture",
+    "guest_os", "guest_kernel", "host_mount_count", "host_mount_classifications",
+    "all_host_mounts_read_only", "provider_cache_only", "host_sensitive_mounts_absent",
+    "unapproved_mounts_absent", "ssh_agent_forwarding", "dot_ssh_public_key_loading",
+    "user_ssh_config_modified", "public_head", "public_tree", "repository_clean",
+    "repository_git_bootstrap", "repository_git_bootstrap_runtime_match",
+    "repository_git_clone_contract_sha256", "codex_version_output",
+    "approved_archive_sha256", "observed_archive_sha256", "extracted_binary_sha256",
+)
+PROFILE_PROVIDER_ATTEMPT = (
+    "profile_name", "created_at", "provider_configuration_sha256",
+    "effective_mount_inventory_sha256", "provider_cache_mount_sha256",
+    "provider_cache_guest_mountpoint_sha256", "vm_instance_identity_sha256",
+    "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
+    "control_plane", "lifecycle",
+)
+
+
+def compare_runtime_profiles(
+    supplied: Dict[str, Any], fresh: Dict[str, Any],
+    observation_started_at: datetime.datetime,
+    observation_finished_at: datetime.datetime,
+    *, allow_fixture: bool = False, now: Optional[datetime.datetime] = None,
+) -> Dict[str, Any]:
+    """Compare complete native profiles without normalizing away fresh proof.
+
+    The caller must own the actual new sensor invocation. Timestamps or a
+    changed namespace alone cannot authenticate an arbitrary caller artifact.
+    """
+    for profile in (supplied, fresh):
+        validate_runtime_profile(profile, allow_fixture=allow_fixture)
+        exact_keys(profile, (*PROFILE_STABLE_ROOTS, "observed_at", "evidence"), "classified profile")
+        exact_keys(profile["evidence"], (*PROFILE_STABLE_EVIDENCE, *PROFILE_FRESH_EVIDENCE, "containment_provider"), "classified profile evidence")
+        exact_keys(profile["evidence"]["containment_provider"], (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT), "classified provider")
+        if profile["status"] != "match" or profile["live_run_allowed"] is not True:
+            raise ContractError("profile comparison requires independently passing live profiles")
+        if not allow_fixture and profile["scope"] != "exact-head-live-sensor":
+            raise ContractError("profile comparison requires the exact live sensor")
+    for key in PROFILE_STABLE_ROOTS:
+        if supplied[key] != fresh[key]:
+            raise ContractError("stable runtime profile binding drifted")
+    for key in PROFILE_STABLE_EVIDENCE:
+        if supplied["evidence"][key] != fresh["evidence"][key]:
+            raise ContractError("stable runtime evidence binding drifted")
+    for key in (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT):
+        if supplied["evidence"]["containment_provider"][key] != fresh["evidence"]["containment_provider"][key]:
+            raise ContractError("stable or same-attempt provider binding drifted")
+    # Every fresh network/doctor predicate was checked above by the complete
+    # native validator. Do not require cross-observation namespace novelty.
+    def timestamp(value: str) -> datetime.datetime:
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+
+    current = now or datetime.datetime.now(datetime.timezone.utc)
+    dates = (observation_started_at, observation_finished_at, current)
+    if any(not isinstance(value, datetime.datetime) or value.utcoffset() != datetime.timedelta(0) for value in dates):
+        raise ContractError("profile sensor invocation window is invalid")
+    start = observation_started_at.replace(microsecond=0)
+    finish = observation_finished_at.replace(microsecond=0)
+    old_time, new_time = timestamp(supplied["observed_at"]), timestamp(fresh["observed_at"])
+    if (
+        not old_time < new_time
+        or not start <= new_time <= finish <= current
+        or (current - old_time).total_seconds() > 900
+        or (current - finish).total_seconds() > 300
+    ):
+        raise ContractError("fresh semantic runtime sensor observation is stale, replayed, or outside its invocation")
+    return runtime_profile_comparison_record(supplied, fresh, observation_started_at, observation_finished_at, "pass")
+
+
+def runtime_profile_comparison_record(
+    supplied: Dict[str, Any], fresh: Dict[str, Any],
+    observation_started_at: datetime.datetime,
+    observation_finished_at: datetime.datetime, status_value: str,
+) -> Dict[str, Any]:
+    # Native shape validation alone does not make arbitrary bounded prose safe
+    # to export. Refuse known private-path/credential forms in either original.
+    pending: List[Any] = [supplied, fresh]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+        elif isinstance(item, str) and (
+            PRIVATE_PATH_RE.search(item)
+            or any(pattern.search(item) for pattern in SENSITIVE_VALUE_PATTERNS)
+        ):
+            raise ContractError("runtime profile observation cannot be safely exported")
+    # A canonical roundtrip prevents caller mutation after validation. Native
+    # artifacts stay unchanged; this supplemental record retains both originals.
+    return {
+        "schema": "t12-runtime-profile-comparison/v1",
+        "authority": "adapter-authored",
+        "status": status_value,
+        "stable_bindings": "exact" if status_value == "pass" else "not-established",
+        "same_attempt_bindings": "exact" if status_value == "pass" else "not-established",
+        "fresh_lanes": "independently-validated" if status_value == "pass" else "comparison-non-success",
+        "supplied_profile": json.loads(canonical_bytes(supplied)),
+        "fresh_profile": json.loads(canonical_bytes(fresh)),
+        "supplied_profile_sha256": sha256_bytes(canonical_bytes(supplied)),
+        "fresh_profile_sha256": sha256_bytes(canonical_bytes(fresh)),
+        "sensor_started_at": observation_started_at.isoformat(),
+        "sensor_finished_at": observation_finished_at.isoformat(),
+    }
+
+
 def validate_verifier_record(value: Any, attempt_id: str) -> Dict[str, Any]:
     if not isinstance(value, dict):
         raise ContractError("verifier artifact must be an object")
@@ -3998,7 +4115,183 @@ def descriptor_xattr_inventory(descriptor: int) -> Tuple[Tuple[str, int, str], .
     return first
 
 
-def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
+NATIVE_BUILTIN_ROOT = ".codex/skills/.system"
+NATIVE_BUILTIN_MARKER = NATIVE_BUILTIN_ROOT + "/.codex-system-skills.marker"
+# Exact untransformed embedded samples tree dd83abff11d7be56fc9fc10330fc686d1a48ab01.
+NATIVE_BUILTIN_ASSETS = {
+    "imagegen/LICENSE.txt": (10776, "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"),
+    "imagegen/SKILL.md": (19201, "681ddb4ad6d06a2acc78a3535b583f8d0c1ea800ecda3d56370d3310fd2cd4ba"),
+    "imagegen/agents/openai.yaml": (275, "9ca574af14580dc7a2a3dc37a1796d17f93cb8850be66501f0799ef8603e9dc0"),
+    "imagegen/assets/imagegen-small.svg": (2889, "cff5f34f57ff60b3ee92eaedd17b15e96dd4b9e776df3e78936c9e00d42be294"),
+    "imagegen/assets/imagegen.png": (1711, "95952f644064eb9e890f98d8db07216347186526e4c41ad66d3420629eb86e20"),
+    "imagegen/references/cli.md": (9655, "ecfc2e09261a0feb3482517a5fa0ff410cb7d1958e3cbd2ac6b61586f5b81405"),
+    "imagegen/references/codex-network.md": (1779, "c88298ca4481f6116a16fa7987434fc977f8b311c1bbc0c3d862ffd0c5981148"),
+    "imagegen/references/image-api.md": (6072, "dc975d7af8a4888967251a0276014b4a71ea30455294944b762256373ce3e569"),
+    "imagegen/references/prompting.md": (8282, "b210b051c775860267080941eba968212bf0ac7fce581d75c5dcc217d8293f8b"),
+    "imagegen/references/sample-prompts.md": (17617, "70474177d151855b175c6133de2aae1d90b7f146b0dab50ec830972c47d72183"),
+    "imagegen/scripts/image_gen.py": (34271, "35e8f9fa47deca111e46c63c4ac2008e09198ef664c0926a9dfdcd6745aa37ed"),
+    "imagegen/scripts/remove_chroma_key.py": (13836, "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e"),
+    "openai-docs/LICENSE.txt": (10776, "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"),
+    "openai-docs/SKILL.md": (5446, "7cb8fa1b2a0c635b5c61ffe1da7b8594a7ea0fce5b71e8d523e2025d88b2a05e"),
+    "openai-docs/agents/openai.yaml": (370, "44b9efac6be1bae32d869aa2942fecbe4dcae82682ee03e4120f2f9b7d4658ec"),
+    "openai-docs/assets/openai-small.svg": (1091, "45be1f0757eb18889eefb1e7db79668ef46a275dc4e0e78e8df5ebd7f6cdeadc"),
+    "openai-docs/assets/openai.png": (1429, "156cc84d7332bfe95b310350bd470b690d22aa33d65340cc6c2e06022946194c"),
+    "openai-docs/references/codex-self-knowledge.md": (7417, "8c8fb00e6e5cb1977924f5164684a6095427fa828bbc765225f17d9aeb79a912"),
+    "openai-docs/references/latest-model.md": (2094, "f25e351e522dd6e30e82d482f31f44c992e794b11031cdcb6ac7c0e6b20c9d5d"),
+    "openai-docs/references/mcp-diagnostics.md": (2318, "49bbd2f73df7bbd7f86c80425dea4da2d301c22046080399a36bfc0ca49509e9"),
+    "openai-docs/references/model-migration.md": (5054, "5f20c38fbbb10319767b216d91ba74bae49c68fc1bfd6d1abd7c9b4cc9cb9ab0"),
+    "openai-docs/references/model-selection.md": (1344, "ba2d164abbca30435a460a0bc3a7d82398dce2bdf092705c98ba55b3f3af38a8"),
+    "openai-docs/references/official-docs.md": (3337, "7962f2dce55089b93bde4115bb89fd42f20993c1597a2b13edd4956f463875b9"),
+    "openai-docs/references/prompting-guide.md": (15747, "db913884cfe0fabf29bee1a139918f56e299decfa0a14d61c48596f23f76621d"),
+    "openai-docs/references/upgrade-guide.md": (1050, "ed1b75a89b8ec4d67787774ef6c4e8b98eace16c63348f42e969e6ffa67cb656"),
+    "openai-docs/references/upgrading-to-gpt-5p6-sol.md": (23093, "9a918a0c8dd051d574f2fd0309201afa8a9b9c08241c11ca1fb0ac2f4724e7ac"),
+    "openai-docs/scripts/fetch-codex-manual.mjs": (16085, "f53eb6d2f286e9efcc397e8bee93a938e37296c90953e4e06e94899ef1b6c363"),
+    "openai-docs/scripts/resolve-latest-model-info": (1038, "7354dbb030ca0736dd633a7ca1b930cf640abd40370725dea3a458cb51d49523"),
+    "openai-docs/scripts/resolve-latest-model-info.cjs": (3937, "eeb1bb486018e16b37edfc06b1a37179dbc672982d501040d4f7142f29dd2e64"),
+    "plugin-creator/SKILL.md": (11467, "71b95b8219644f95d633721e7f7cd3c469edfc8fe50f8415d400dfb2d74bc7b9"),
+    "plugin-creator/agents/openai.yaml": (339, "fecaf35d692bd3d33d1a065648258d12e393afa9055d78adf6e57b42f4142f6d"),
+    "plugin-creator/assets/plugin-creator-small.svg": (1319, "6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb"),
+    "plugin-creator/assets/plugin-creator.png": (1563, "a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162"),
+    "plugin-creator/references/installing-and-updating.md": (6000, "91c4781d48568fcc708b45566b08fb610ad1c88672720ae512f9525a1cf9cb20"),
+    "plugin-creator/references/plugin-json-spec.md": (9179, "eeb640130f69636affaa299d4170d5a7ae6a0ff978296ddf75c409ce6dd87b91"),
+    "plugin-creator/scripts/create_basic_plugin.py": (11495, "46f532721079f6de6443f30f9362d77f1d879f57c0559250ef9433867414eb93"),
+    "plugin-creator/scripts/identifier_validation.py": (784, "a6d51ce4a9a7e8f85626ff5808a467a67574e7f8cdf1167ffb467c5f67e57223"),
+    "plugin-creator/scripts/read_marketplace_name.py": (1644, "ba24e6d91eed6f778bde022a967be335c6253983b5ecd1c5e30c8483385887fd"),
+    "plugin-creator/scripts/update_plugin_cachebuster.py": (3043, "97c5ecab5ad85d871f0ebfc9bdf25d4b9e1a1680128fd3deb18a8c64f15f85c5"),
+    "plugin-creator/scripts/validate_plugin.py": (21533, "6ff4bc1cc8ca94827c30c8299951efdac900ff38a5069c03e9a6554fc194a723"),
+    "review-agent/SKILL.md": (2661, "07079efd0dc76f05fade424e5dfb048dce1de2df7626e1a4f56292a4f3f92228"),
+    "review-agent/agents/openai.yaml": (252, "4d867a46d15e36ac880176484aae160f59855340c6059b2ea6ab9fbc9af084de"),
+    "skill-creator/SKILL.md": (15311, "6656e54755638e8efcf275a472b9672eaa8a9a1b9e59dc210e275b03b59e1e66"),
+    "skill-creator/agents/openai.yaml": (183, "d07d21b93fcf3d4dc8d9a3399c05fc226a49a333a96d3e1c68b451b8dd9eade6"),
+    "skill-creator/assets/skill-creator-small.svg": (1319, "6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb"),
+    "skill-creator/assets/skill-creator.png": (1563, "a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162"),
+    "skill-creator/license.txt": (11358, "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"),
+    "skill-creator/references/openai_yaml.md": (2356, "ffac39318e408108141d40f820968e59f70434a891694f9bf1d25be8237b150c"),
+    "skill-creator/scripts/generate_openai_yaml.py": (6619, "ddaf9abdfb3e762ed3c82571e9c607ce964188f49f2146281beb2cb8a553a93d"),
+    "skill-creator/scripts/init_skill.py": (10160, "bc04fae1e671aa1e5104212674e7f22c9665a791fafa2fc2b3897187a89801b2"),
+    "skill-creator/scripts/quick_validate.py": (4227, "1fd66498c219616fd9249eacdf16c458412ea9065a9d887fd716aeef03907762"),
+    "skill-installer/LICENSE.txt": (11358, "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"),
+    "skill-installer/SKILL.md": (3367, "d68b77e5bbb34dedab89d134da52855f140fc4b4299b80104f534e3b9e98f8ee"),
+    "skill-installer/agents/openai.yaml": (221, "5ce223d8b1070b82c42298538f1b8d376f788eb9e7a42a987e8c094070d73f0e"),
+    "skill-installer/assets/skill-installer-small.svg": (923, "3928703ff00dc1a681e7a22401843b7edcbd4b2051651ce4c43b75f7e140504e"),
+    "skill-installer/assets/skill-installer.png": (1086, "d0a230b1a79b71b858b7c215a0fbb0768d6459c14ea4ef80c61592629bf0e605"),
+    "skill-installer/scripts/github_utils.py": (659, "61c1bbe2ae217433b4b6f9f09f21aca4df52c12598068343ade719f706e4859b"),
+    "skill-installer/scripts/install-skill-from-github.py": (11790, "3569ac8c0b3a525515c2e0e27c4f48e6aef9f2ff04029dcb3f622b280fa8c25e"),
+    "skill-installer/scripts/list-skills.py": (2967, "e4e1f78ca3d045827f2a05cfd99fae57cc7c1a1bfeba8704029108834debff35"),
+}
+
+NATIVE_DATABASES = (
+    "state_5.sqlite", "logs_2.sqlite", "goals_1.sqlite",
+    "memories_1.sqlite", "queue_1.sqlite",
+)
+NATIVE_ARG0_DIRECTORY_RE = re.compile(r"\.codex/tmp/arg0/codex-arg0[A-Za-z0-9]{6}\Z")
+NATIVE_SNAPSHOT_RE = re.compile(
+    r"\.codex/shell_snapshots/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}"
+    r"(?:\.[0-9]{1,39}\.sh|\.tmp-[0-9]{1,39})\Z"
+)
+NATIVE_HELPER_NAMES = ("apply_patch", "applypatch", "codex-linux-sandbox", "codex-execve-wrapper")
+NATIVE_MUTABLE_DIRECTORIES = (".codex", ".codex/tmp", ".codex/tmp/arg0", ".codex/shell_snapshots")
+MAX_NATIVE_STATE_ENTRIES = 128
+MAX_NATIVE_STATE_BYTES = 67_108_864
+
+
+def native_builtin_cache_directories() -> List[str]:
+    directories = {".codex/skills", NATIVE_BUILTIN_ROOT}
+    for relative in NATIVE_BUILTIN_ASSETS:
+        pieces = relative.split("/")
+        for count in range(1, len(pieces)):
+            directories.add(NATIVE_BUILTIN_ROOT + "/" + "/".join(pieces[:count]))
+    return sorted(directories)
+
+
+def validate_native_builtin_cache(inventory: Mapping[str, Any]) -> None:
+    content = {row[1]: row for row in inventory["content"]}
+    observed = {path for path in content if path == ".codex/skills" or path.startswith(".codex/skills/")}
+    if not observed:
+        return
+    directories = set(native_builtin_cache_directories())
+    files = {NATIVE_BUILTIN_ROOT + "/" + path for path in NATIVE_BUILTIN_ASSETS}
+    if observed != directories | files | {NATIVE_BUILTIN_MARKER}:
+        raise ContractError("native builtin cache is not the complete exact pinned set")
+    for path in directories:
+        row = content[path]
+        if row[0] != "dir" or row[2:4] != (0o700, 0) or row[-1] != ():
+            raise ContractError("native builtin directory metadata drifted")
+    for path, (size, digest) in NATIVE_BUILTIN_ASSETS.items():
+        row = content[NATIVE_BUILTIN_ROOT + "/" + path]
+        if row[0] != "file" or row[2:5] != (0o600, 0, size) or row[7] != digest or row[-1] != ():
+            raise ContractError("native builtin asset bytes or metadata drifted")
+    marker = content[NATIVE_BUILTIN_MARKER]
+    if marker[0] != "file" or marker[2:4] != (0o600, 0) or not 2 <= marker[4] <= 17 or marker[-1] != ():
+        raise ContractError("native builtin marker metadata is invalid")
+
+
+def native_state_class(relative: str) -> Tuple[str, int, int, str]:
+    """Finite source-grounded type/mode/byte cap/lifecycle; no default allow."""
+    if relative in (".", ".codex/rules"):
+        return "dir", 0o700, 0, "protected"
+    if relative in NATIVE_MUTABLE_DIRECTORIES:
+        return "dir", 0o700, 0, "directory"
+    if relative == ".codex/" + REVIEWED_RULES_RELATIVE_PATH:
+        return "file", 0o600, len(REVIEWED_RULES_BYTES), "protected"
+    if relative == ".codex/auth.json":
+        return "file", 0o600, 1_048_576, "protected"
+    if relative == ".codex/installation_id":
+        return "file", 0o644, 36, "create-once"
+    if relative in native_builtin_cache_directories():
+        return "dir", 0o700, 0, "immutable-directory"
+    if relative == NATIVE_BUILTIN_MARKER:
+        return "file", 0o600, 17, "create-once"
+    if relative.startswith(NATIVE_BUILTIN_ROOT + "/"):
+        source_relative = relative[len(NATIVE_BUILTIN_ROOT) + 1:]
+        if source_relative in NATIVE_BUILTIN_ASSETS:
+            return "file", 0o600, NATIVE_BUILTIN_ASSETS[source_relative][0], "create-once"
+    if relative == ".codex/models_cache.json":
+        return "file", 0o600, 4_194_304, "update"
+    for database in NATIVE_DATABASES:
+        if relative == ".codex/" + database:
+            return "file", 0o600, 16_777_216, "update"
+        if relative == ".codex/" + database + "-wal":
+            return "file", 0o600, 16_777_216, "ephemeral"
+        if relative == ".codex/" + database + "-shm":
+            return "file", 0o600, 1_048_576, "ephemeral"
+    if NATIVE_ARG0_DIRECTORY_RE.fullmatch(relative):
+        return "dir", 0o700, 0, "ephemeral-directory"
+    parent, _, name = relative.rpartition("/")
+    if NATIVE_ARG0_DIRECTORY_RE.fullmatch(parent):
+        if name == ".lock":
+            return "file", 0o600, 0, "ephemeral"
+        if name in NATIVE_HELPER_NAMES:
+            return "link", 0o777, 0, "ephemeral"
+    if NATIVE_SNAPSHOT_RE.fullmatch(relative):
+        nanos = relative.rsplit("/", 1)[1].split(".", 1)[1]
+        nanos = nanos[4:] if nanos.startswith("tmp-") else nanos[:-3]
+        if int(nanos) > 2 ** 128 - 1:
+            raise ContractError("native shell snapshot timestamp exceeds unsigned 128-bit bound")
+        return "file", 0o600, 1_048_576, "ephemeral"
+    raise ContractError("unclassified native runtime state")
+
+
+def native_helper_link_xattr_size(path: Path) -> int:
+    """No-follow link-metadata observation; retain neither names nor values."""
+    try:
+        library = _runtime_libc()
+        if sys.platform == "darwin":
+            function = library.listxattr
+            function.argtypes = [ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+            function.restype = ctypes.c_ssize_t
+            return function(os.fsencode(path), None, 0, 1)  # XATTR_NOFOLLOW
+        if sys.platform.startswith("linux"):
+            function = library.llistxattr
+            function.argtypes = [ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t]
+            function.restype = ctypes.c_ssize_t
+            return function(os.fsencode(path), None, 0)
+    except (OSError, TypeError, NotImplementedError, AttributeError):
+        pass
+    raise ContractError("native helper link metadata is uncheckable")
+
+
+def execution_root_inventory(root: Path, *, native_binary: Optional[Path] = None) -> Dict[str, List[Tuple[Any, ...]]]:
     """Inventory the private execution root without following any link.
 
     This bounds the adapter-owned target, HOME, and TMPDIR namespace. It is a
@@ -4006,7 +4299,11 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
     kernel write-confinement primitive.
     """
     require_runtime_fs_capabilities()
-    descriptor, root_binding = bound_directory(root)
+    if native_binary is None:
+        descriptor, root_binding = bound_directory(root)
+    else:
+        descriptor, root_info = _open_absolute_directory_nofollow(root)
+        root_binding = (root_info.st_dev, root_info.st_ino)
     content_rows: List[Tuple[Any, ...]] = []
     binding_rows: List[Tuple[Any, ...]] = []
     counters = {"entries": 0, "bytes": 0}
@@ -4017,13 +4314,17 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
         directory_before = os.fstat(directory_descriptor)
         if not stat.S_ISDIR(directory_before.st_mode):
             raise ContractError("execution root contains a non-directory binding")
+        if native_binary is not None:
+            expected_kind, expected_mode, _cap, _lifecycle = native_state_class(relative)
+            if expected_kind != "dir" or directory_before.st_uid != os.getuid() or directory_before.st_gid != os.getgid() or stat.S_IMODE(directory_before.st_mode) != expected_mode:
+                raise ContractError("native directory type, owner or mode drifted")
         xattrs = descriptor_xattr_inventory(directory_descriptor)
         names: List[str] = []
         with os.scandir(directory_descriptor) as entries:
             for entry in entries:
                 names.append(entry.name)
                 counters["entries"] += 1
-                if counters["entries"] > MAX_EXECUTION_ROOT_ENTRIES:
+                if counters["entries"] > (MAX_NATIVE_STATE_ENTRIES if native_binary is not None else MAX_EXECUTION_ROOT_ENTRIES):
                     raise ContractError("execution root exceeds its entry bound")
         if len(names) != len(set(names)) or any(
             not name or name in (".", "..") or "/" in name or "\0" in name
@@ -4035,6 +4336,13 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
             child_relative = name if relative == "." else relative + "/" + name
             info = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
             kind = stat.S_IFMT(info.st_mode)
+            native = native_state_class(child_relative) if native_binary is not None else None
+            if native is not None:
+                actual_kind = "dir" if stat.S_ISDIR(info.st_mode) else "file" if stat.S_ISREG(info.st_mode) else "link" if stat.S_ISLNK(info.st_mode) else "special"
+                if actual_kind != native[0] or stat.S_IMODE(info.st_mode) != native[1] or info.st_uid != os.getuid() or info.st_gid != os.getgid():
+                    raise ContractError("native state type, owner or mode drifted")
+                if actual_kind == "file" and info.st_size > native[2]:
+                    raise ContractError("native state exceeds its class byte limit")
             if stat.S_ISDIR(info.st_mode):
                 flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
                 child_descriptor = os.open(name, flags, dir_fd=directory_descriptor)
@@ -4068,30 +4376,50 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
                         opened.st_dev, opened.st_ino, stat.S_IFMT(opened.st_mode), opened.st_size
                     ) != (info.st_dev, info.st_ino, kind, info.st_size):
                         raise ContractError("execution-root file binding changed before read")
+                    if native is not None and (
+                        opened.st_mode, opened.st_uid, opened.st_gid, opened.st_nlink,
+                        opened.st_mtime_ns, opened.st_ctime_ns,
+                    ) != (
+                        info.st_mode, info.st_uid, info.st_gid, info.st_nlink,
+                        info.st_mtime_ns, info.st_ctime_ns,
+                    ):
+                        raise ContractError("native file metadata changed before descriptor binding")
                     digest = hashlib.sha256()
                     read_size = 0
+                    native_scalar_bytes = bytearray()
                     while True:
                         chunk = os.read(child_descriptor, 65_536)
                         if not chunk:
                             break
                         read_size += len(chunk)
                         counters["bytes"] += len(chunk)
-                        if read_size > MAX_EXECUTION_ROOT_FILE_BYTES or counters["bytes"] > MAX_EXECUTION_ROOT_TOTAL_BYTES:
+                        if read_size > MAX_EXECUTION_ROOT_FILE_BYTES or counters["bytes"] > (MAX_NATIVE_STATE_BYTES if native is not None else MAX_EXECUTION_ROOT_TOTAL_BYTES):
                             raise ContractError("execution root exceeds its content bound")
+                        if native is not None and read_size > native[2]:
+                            raise ContractError("native state grew beyond its class byte limit")
+                        if native is not None and child_relative in (".codex/installation_id", NATIVE_BUILTIN_MARKER):
+                            native_scalar_bytes.extend(chunk)
                         digest.update(chunk)
+                    if native is not None and child_relative == ".codex/installation_id" and re.fullmatch(rb"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}", bytes(native_scalar_bytes)) is None:
+                        raise ContractError("native installation identity is malformed")
+                    if native is not None and child_relative == NATIVE_BUILTIN_MARKER and re.fullmatch(rb"[0-9a-f]{1,16}\n", bytes(native_scalar_bytes)) is None:
+                        raise ContractError("native builtin marker is malformed")
                     child_xattrs = descriptor_xattr_inventory(child_descriptor)
                     after = os.fstat(child_descriptor)
                     named_after = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
                     before_state = (
                         opened.st_dev, opened.st_ino, opened.st_size,
                         opened.st_mtime_ns, opened.st_ctime_ns,
+                        opened.st_mode, opened.st_uid, opened.st_gid, opened.st_nlink,
                     )
                     if (
                         after.st_dev, after.st_ino, after.st_size,
                         after.st_mtime_ns, after.st_ctime_ns,
+                        after.st_mode, after.st_uid, after.st_gid, after.st_nlink,
                     ) != before_state or (
                         named_after.st_dev, named_after.st_ino, named_after.st_size,
                         named_after.st_mtime_ns, named_after.st_ctime_ns,
+                        named_after.st_mode, named_after.st_uid, named_after.st_gid, named_after.st_nlink,
                     ) != before_state:
                         raise ContractError("execution-root file namespace changed during read")
                     content_rows.append((
@@ -4104,12 +4432,38 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
                         "file", child_relative, opened.st_dev, opened.st_ino,
                         stat.S_IFMT(opened.st_mode), stat.S_IMODE(opened.st_mode),
                         opened.st_nlink,
-                    ))
+                    ) + ((opened.st_gid,) if native is not None else ()))
                 finally:
                     os.close(child_descriptor)
+            elif native is not None and native[0] == "link":
+                # Read link text without traversing it. Only four source-defined
+                # arg0 aliases may name the exact already pinned executable.
+                if info.st_nlink != 1 or native_binary is None or not native_binary.is_absolute():
+                    raise ContractError("native helper link binding is invalid")
+                target = os.readlink(name, dir_fd=directory_descriptor)
+                if target != str(native_binary):
+                    raise ContractError("native helper target escapes the pinned executable")
+                link_xattrs = native_helper_link_xattr_size(root / child_relative)
+                if link_xattrs < 0:
+                    raise ContractError("native helper link metadata is uncheckable")
+                if link_xattrs != 0 or descriptor_stat_flags(info):
+                    raise ContractError("native helper link metadata is unapproved")
+                named_after = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+                if (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_uid, info.st_gid, info.st_nlink, info.st_mode) != (named_after.st_dev, named_after.st_ino, named_after.st_mtime_ns, named_after.st_ctime_ns, named_after.st_uid, named_after.st_gid, named_after.st_nlink, named_after.st_mode):
+                    raise ContractError("native helper link namespace changed")
+                content_rows.append(("link", child_relative, 0o777, descriptor_stat_flags(info), info.st_size, info.st_mtime_ns, info.st_ctime_ns, sha256_bytes(target.encode("utf-8")), ()))
+                binding_rows.append(("link", child_relative, info.st_dev, info.st_ino, kind, 0o777, 1, info.st_gid))
             else:
                 raise ContractError("execution root contains a symlink or special file")
         directory_after = os.fstat(directory_descriptor)
+        if native_binary is not None and (
+            directory_after.st_uid != directory_before.st_uid
+            or directory_after.st_gid != directory_before.st_gid
+            or directory_after.st_mode != directory_before.st_mode
+            or descriptor_stat_flags(directory_after) != descriptor_stat_flags(directory_before)
+            or descriptor_xattr_inventory(directory_descriptor) != xattrs
+        ):
+            raise ContractError("native directory metadata changed during inventory")
         if (
             directory_after.st_dev, directory_after.st_ino,
             directory_after.st_mtime_ns, directory_after.st_ctime_ns,
@@ -4127,7 +4481,7 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
             "dir", relative, directory_after.st_dev, directory_after.st_ino,
             stat.S_IFMT(directory_after.st_mode), stat.S_IMODE(directory_after.st_mode),
             directory_after.st_nlink,
-        ))
+        ) + ((directory_after.st_gid,) if native_binary is not None else ()))
 
     try:
         walk(descriptor, ".", 1)
@@ -4137,6 +4491,64 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
     finally:
         os.close(descriptor)
     return {"content": sorted(content_rows, key=lambda row: row[1]), "binding": sorted(binding_rows, key=lambda row: row[1])}
+
+
+def native_codex_home_inventory(home: Path, binary: Path) -> Dict[str, List[Tuple[Any, ...]]]:
+    """VM-local only: never export this potentially sensitive path inventory."""
+    binary_digest = hash_regular_file(binary)
+    inventory = execution_root_inventory(home, native_binary=binary)
+    for row in inventory["content"]:
+        if native_state_class(row[1])[3] != "protected" and (row[3] != 0 or row[-1] != ()):
+            raise ContractError("native state contains unapproved flags or xattrs")
+    validate_native_builtin_cache(inventory)
+    paths = [row[1] for row in inventory["content"]]
+    if sum(bool(NATIVE_ARG0_DIRECTORY_RE.fullmatch(path)) for path in paths) > 4:
+        raise ContractError("native arg0 directory count exceeds its bound")
+    if sum(bool(NATIVE_SNAPSHOT_RE.fullmatch(path)) for path in paths) > 8:
+        raise ContractError("native shell snapshot count exceeds its bound")
+    if hash_regular_file(binary) != binary_digest:
+        raise ContractError("native helper executable binding drifted")
+    return inventory
+
+
+def validate_native_codex_home_transition(before: Mapping[str, Any], after: Mapping[str, Any]) -> None:
+    """Protect credentials/rules and stable identities; permit finite native data."""
+    maps = []
+    for inventory in (before, after):
+        exact_keys(inventory, ("content", "binding"), "native inventory")
+        content = {row[1]: tuple(row) for row in inventory["content"]}
+        bindings = {row[1]: tuple(row) for row in inventory["binding"]}
+        if len(content) != len(inventory["content"]) or len(bindings) != len(inventory["binding"]) or set(content) != set(bindings):
+            raise ContractError("native inventory membership is malformed")
+        for path in content:
+            native_state_class(path)
+        maps.append((content, bindings))
+    (old, old_binding), (new, new_binding) = maps
+    for path in set(old) | set(new):
+        _kind, _mode, _cap, lifecycle = native_state_class(path)
+        if lifecycle == "protected":
+            if old.get(path) != new.get(path) or old_binding.get(path) != new_binding.get(path):
+                raise ContractError("protected native configuration or credential lifecycle changed")
+            continue
+        if path not in old or path not in new:
+            if path in old and lifecycle not in ("ephemeral", "ephemeral-directory"):
+                raise ContractError("persistent native state disappeared")
+            continue
+        left, right = old[path], new[path]
+        if left[0] != right[0] or left[2:4] != right[2:4] or left[-1] != right[-1]:
+            raise ContractError("native state metadata drifted")
+        if left[0] == "dir":
+            # Child directory creation/removal may alter nlink and timestamps,
+            # never the original directory identity/type/mode/owner.
+            if old_binding[path][:6] != new_binding[path][:6] or old_binding[path][7:] != new_binding[path][7:]:
+                raise ContractError("native directory binding drifted")
+            if lifecycle == "immutable-directory" and (left != right or old_binding[path] != new_binding[path]):
+                raise ContractError("immutable native builtin directory changed")
+        elif lifecycle not in ("ephemeral",):
+            if old_binding[path] != new_binding[path]:
+                raise ContractError("persistent native file binding drifted")
+            if lifecycle == "create-once" and left != right:
+                raise ContractError("native installation identity changed")
 
 
 def validate_execution_root_transition(
@@ -4949,7 +5361,7 @@ def worker_process_record(process: ProcessResult) -> Dict[str, Any]:
     }
 
 
-def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict[str, Any], mode: str, fake_behavior: str = "valid", include_artifacts: bool = False) -> Dict[str, Any]:
+def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict[str, Any], mode: str, fake_behavior: str = "valid", include_artifacts: bool = False, *, profile_observation_sink: Optional[Any] = None) -> Dict[str, Any]:
     require_runtime_fs_capabilities()
     validate_envelope(envelope)
     validate_runtime_profile(profile, allow_fixture=(mode == "offline"))
@@ -4972,17 +5384,30 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         age = (datetime.datetime.now(datetime.timezone.utc) - observed).total_seconds()
         if age < -300 or age > 900:
             raise ContractError("live runtime profile is stale or future-dated")
+        if not callable(profile_observation_sink):
+            raise ContractError("live execution requires a retained profile observation sink")
+        sensor_started = datetime.datetime.now(datetime.timezone.utc)
         fresh_profile = observe_runtime_profile(
             repository_root,
             envelope["worker"]["model"],
             envelope["worker"]["reasoning_effort"],
             provider_input,
         )
+        sensor_finished = datetime.datetime.now(datetime.timezone.utc)
         validate_runtime_profile(fresh_profile)
-        supplied_semantics = {key: value for key, value in profile.items() if key != "observed_at"}
-        fresh_semantics = {key: value for key, value in fresh_profile.items() if key != "observed_at"}
-        if fresh_profile["status"] != "match" or fresh_profile["live_run_allowed"] is not True or fresh_semantics != supplied_semantics:
-            raise ContractError("fresh semantic runtime sensor does not match the approved profile")
+        try:
+            comparison = compare_runtime_profiles(profile, fresh_profile, sensor_started, sensor_finished)
+        except ContractError:
+            # Retain both valid, sanitized native records even when their
+            # comparison rejects. Invalid native records are not exported.
+            profile_observation_sink(runtime_profile_comparison_record(
+                profile, fresh_profile, sensor_started, sensor_finished, "fail",
+            ))
+            raise
+        profile_observation_sink(comparison)
+        # Native result/receipt binding follows the actual immediate pre-worker
+        # observation. The separately retained comparison preserves both inputs.
+        profile = fresh_profile
     if mode not in ("offline", "live"):
         raise ContractError("unsupported execution mode")
 
@@ -5025,7 +5450,7 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             if version_result.stdout.decode("utf-8", errors="strict").strip() != profile["client"]["version_output"] or sha256_bytes(help_result.stdout) != profile["client"]["exec_help_sha256"]:
                 raise ContractError("Codex version/help evidence drifted after the runtime sensor")
             harness_binding = verify_harness_state(repository_root, envelope, environment)
-            persistent_home_before = execution_root_inventory(private_home)
+            persistent_home_before = native_codex_home_inventory(private_home, executable)
             persistent_tmp_before = execution_root_inventory(private_tmp)
         target_root = create_synthetic_repository(container, environment)
         before = git_snapshot(target_root, environment)
@@ -5076,8 +5501,9 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             assert harness_binding is not None
             verify_harness_state(repository_root, envelope, environment, harness_binding)
             assert persistent_home_before is not None and persistent_tmp_before is not None and binary_before is not None
-            if execution_root_inventory(private_home) != persistent_home_before:
-                raise ContractError("dedicated Codex HOME changed during the live worker")
+            validate_native_codex_home_transition(
+                persistent_home_before, native_codex_home_inventory(private_home, executable),
+            )
             if execution_root_inventory(private_tmp) != persistent_tmp_before:
                 raise ContractError("dedicated private TMPDIR changed during the live worker")
             if hash_regular_file(executable) != binary_before:

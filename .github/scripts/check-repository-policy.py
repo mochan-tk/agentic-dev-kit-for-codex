@@ -55,7 +55,7 @@ RUNTIME_CONTRACT_CHECKER_SHA256 = (
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "d93099cba6ffc799a6a79f1c943bf8dd694610a792e747855e4ceba0fcc25118"
+    "93cd18a9f8d16527854c59f83a2582f48df524d388a35b8bc831e6cdc095ece8"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
@@ -1850,6 +1850,8 @@ def validate_offline_runtime_checker_boundary(
             {
                 "descriptor_xattr_inventory",
                 "execution_root_inventory",
+                "native_codex_home_inventory",
+                "native_helper_link_xattr_size",
                 "execute_slice",
                 "_ensure_private_child",
                 "_open_absolute_directory_nofollow",

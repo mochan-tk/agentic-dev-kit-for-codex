@@ -229,6 +229,27 @@ sandbox/network, shell environment, configuration, or authentication status.
 
 ## Security and privacy consequences
 
+### T12 native-state and profile-comparison amendment (2026-09-08)
+
+The [owner amendment](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5577690456)
+supersedes only whole-private-HOME equality and whole-profile equality except
+for time. It does not supersede representative repository equality, credential
+lifecycle, protected configuration/rules, or any failed historical observation.
+The implementation uses the finite state/comparison tables in the companion
+runtime agreement. Those tables precede implementation and bind official
+Codex 0.150.1 source commit `90854393966b21e9ebfd21b122334eb09a20c93d`.
+Native state is private, potentially sensitive runtime data, not proof of
+Codex authorship or permission to export it. It is destroyed with the same
+approved disposable VM; no additional retention boundary is introduced.
+
+Both complete sanitized runtime observations are independently validated and
+retained with their original canonical digests. Stable security bindings and
+same-attempt VM/root/ownership bindings remain exact. A newly executed sensor
+must independently establish every required lane; namespace identifiers may
+coincide with or differ from the earlier sensor, but freshness and successful
+isolation cannot be inferred from identifier novelty. No protected native
+schema is changed by this comparison contract.
+
 ### T12 bounded sandbox-launch remediation (2026-09-05)
 
 The [bounded owner plan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5550009263)
@@ -311,7 +332,10 @@ only the safe wrapper. No such command is executed by this remediation.
   byte-identical namespace replacement, unreachable objects, split/shared
   indexes, config/hooks, and other Git-internal changes even if a caller forges
   its pre-state.
-- A single private execution root encloses the target, HOME, and TMPDIR. Its
+- The offline private execution root encloses the target, HOME, and TMPDIR. The
+  live path keeps persistent HOME/TMPDIR separately inside the private VM.
+  The 2026-09-08 finite native-state amendment supersedes whole-HOME equality,
+  but leaves target-root and TMPDIR checks exact. The target inventory's
   bounded no-follow before/after inventory includes persistent membership,
   bytes, bindings, modes, timestamps, xattr names/value digests, and `st_flags`
   where exposed, allowing only the exact owned-leaf transition. It does not

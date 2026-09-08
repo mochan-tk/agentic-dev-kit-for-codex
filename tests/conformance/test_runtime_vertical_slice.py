@@ -2432,10 +2432,14 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         drifted["live_run_allowed"] = False
         with mock.patch.object(self.adapter, "observe_runtime_profile", return_value=drifted) as sensor, \
              mock.patch.object(self.adapter, "create_synthetic_repository") as create:
+            observations = []
             self.assert_contract_error(
-                lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), supplied, "live"),
-                "fresh",
+                lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), supplied, "live", profile_observation_sink=observations.append),
+                "independently passing",
             )
+            self.assertEqual(1, len(observations))
+            self.assertEqual("fail", observations[0]["status"])
+            self.assertEqual(drifted, observations[0]["fresh_profile"])
         sensor.assert_called_once()
         fresh_provider_input = sensor.call_args.args[3]
         self.assertEqual("t11-colima-provider-input/v1", fresh_provider_input["schema"])
@@ -4813,6 +4817,360 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             with self.subTest(text=text):
                 with self.assertRaises((ValueError, OverflowError)):
                     self.checker.strict_json_loads(text)
+
+
+class NativeStateAndProfileAmendmentTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.adapter = load_module(ADAPTER_PATH, "native_state_amendment_tests")
+
+    @contextlib.contextmanager
+    def native_home(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            home = root / "home"
+            home.mkdir(mode=0o700)
+            binary = root / "codex"
+            binary.write_bytes(b"offline pinned executable fixture")
+            binary.chmod(0o700)
+            self.adapter.materialize_reviewed_rules_profile({
+                "HOME": str(home), "CODEX_HOME": str(home / ".codex"),
+            })
+            # Model the pinned Linux native-state xattr policy on macOS, where
+            # this OS adds provenance metadata to newly created fixture files.
+            # Real Linux tests use descriptor xattr observations unchanged.
+            seam = mock.patch.object(self.adapter, "descriptor_xattr_inventory", return_value=()) if sys.platform == "darwin" else contextlib.nullcontext()
+            with seam:
+                yield home, binary
+
+    def inventory(self, home, binary):
+        return self.adapter.native_codex_home_inventory(home, binary)
+
+    def write_state(self, home, relative, data=b"native fixture", mode=0o600):
+        path = home / relative
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        for parent in path.parents:
+            if parent == home:
+                break
+            parent.chmod(0o700)
+        path.write_bytes(data)
+        path.chmod(mode)
+        return path
+
+    def test_native_db_and_bounded_startup_creation_pass(self):
+        with self.native_home() as (home, binary):
+            before = self.inventory(home, binary)
+            self.write_state(home, ".codex/state_5.sqlite")
+            self.write_state(home, ".codex/logs_2.sqlite-wal")
+            self.write_state(home, ".codex/models_cache.json", b"{}")
+            self.write_state(home, ".codex/installation_id", b"00000000-0000-0000-0000-000000000001", 0o644)
+            self.adapter.validate_native_codex_home_transition(before, self.inventory(home, binary))
+
+    def test_exact_arg0_links_and_ephemeral_child_lifecycle_pass(self):
+        with self.native_home() as (home, binary):
+            before = self.inventory(home, binary)
+            lock = self.write_state(home, ".codex/tmp/arg0/codex-arg0Ab3dE6/.lock", b"")
+            for name in ("apply_patch", "applypatch", "codex-linux-sandbox", "codex-execve-wrapper"):
+                link = lock.parent / name
+                link.symlink_to(binary)
+                if sys.platform == "darwin":
+                    os.chmod(link, 0o777, follow_symlinks=False)
+            # macOS injects OS link xattrs into this fixture; model the approved
+            # Linux empty-link-xattr condition only. No runtime metadata removal.
+            seam = mock.patch.object(self.adapter, "native_helper_link_xattr_size", return_value=0) if sys.platform == "darwin" else contextlib.nullcontext()
+            with seam:
+                after = self.inventory(home, binary)
+            self.adapter.validate_native_codex_home_transition(before, after)
+            for child in lock.parent.iterdir():
+                child.unlink()
+            lock.parent.rmdir()
+            self.adapter.validate_native_codex_home_transition(after, self.inventory(home, binary))
+
+    def test_unknown_native_entries_and_retention_paths_fail(self):
+        for path in ("unknown", ".codex/unknown.sqlite", ".codex/history.jsonl", ".codex/thread_history_1.sqlite", ".codex/config.toml", ".codex/log/raw.log", ".codex/tmp/unreviewed"):
+            with self.subTest(path=path), self.native_home() as (home, binary):
+                self.write_state(home, path)
+                with self.assertRaises(self.adapter.ContractError):
+                    self.inventory(home, binary)
+
+    def test_auth_and_reviewed_rules_changes_are_protected(self):
+        for relative in (".codex/auth.json", ".codex/" + self.adapter.REVIEWED_RULES_RELATIVE_PATH):
+            with self.subTest(relative=relative), self.native_home() as (home, binary):
+                initial = self.adapter.REVIEWED_RULES_BYTES if "/rules/" in relative else b"protected baseline"
+                path = self.write_state(home, relative, initial)
+                before = self.inventory(home, binary)
+                path.write_bytes(b"x" * len(initial))
+                with self.assertRaises(self.adapter.ContractError):
+                    self.adapter.validate_native_codex_home_transition(before, self.inventory(home, binary))
+
+    def test_auth_creation_and_disappearance_block(self):
+        with self.native_home() as (home, binary):
+            before = self.inventory(home, binary)
+            auth = self.write_state(home, ".codex/auth.json", b"fixture")
+            after = self.inventory(home, binary)
+            for left, right in ((before, after), (after, before)):
+                with self.assertRaises(self.adapter.ContractError):
+                    self.adapter.validate_native_codex_home_transition(left, right)
+            auth.unlink()
+
+    def test_invalid_native_links_hardlinks_and_special_files_block(self):
+        with self.native_home() as (home, binary):
+            path = home / ".codex/state_5.sqlite"
+            path.symlink_to(binary)
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+            path.unlink()
+            os.link(binary, path)
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+            path.unlink()
+            os.mkfifo(path, 0o600)
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+
+    def test_arg0_escaping_or_wrong_helper_target_blocks(self):
+        with self.native_home() as (home, binary):
+            lock = self.write_state(home, ".codex/tmp/arg0/codex-arg0Ab3dE6/.lock", b"")
+            (lock.parent / "apply_patch").symlink_to("../../../../outside")
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+
+    def test_native_size_count_and_mode_limits_block(self):
+        with self.native_home() as (home, binary):
+            path = self.write_state(home, ".codex/state_5.sqlite-shm", b"x" * (1_048_576 + 1))
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+
+            path.unlink()
+            path = self.write_state(home, ".codex/state_5.sqlite", mode=0o644)
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+            path.unlink()
+            for index in range(9):
+                self.write_state(home, ".codex/shell_snapshots/00000000-0000-0000-0000-000000000001.{}.sh".format(index))
+            with self.assertRaises(self.adapter.ContractError):
+                self.inventory(home, binary)
+
+    def test_native_snapshot_nanos_at_and_over_unsigned128_limit(self):
+        prefix = ".codex/shell_snapshots/00000000-0000-0000-0000-000000000001."
+        self.adapter.native_state_class(prefix + str(2 ** 128 - 1) + ".sh")
+        with self.assertRaises(self.adapter.ContractError):
+            self.adapter.native_state_class(prefix + str(2 ** 128) + ".sh")
+
+    def test_native_home_namespace_swap_is_rejected(self):
+        with self.native_home() as (home, binary):
+            original = self.adapter.descriptor_xattr_inventory
+            switched = False
+
+            def swap_once(descriptor):
+                nonlocal switched
+                if not switched:
+                    switched = True
+                    home.rename(home.with_name("original-home"))
+                    home.mkdir(mode=0o700)
+                return original(descriptor)
+
+            with mock.patch.object(self.adapter, "descriptor_xattr_inventory", side_effect=swap_once):
+                with self.assertRaises(self.adapter.ContractError):
+                    self.inventory(home, binary)
+
+    def test_native_helper_unknown_metadata_remains_non_success(self):
+        with self.native_home() as (home, binary):
+            lock = self.write_state(home, ".codex/tmp/arg0/codex-arg0Ab3dE6/.lock", b"")
+            link = lock.parent / "apply_patch"
+            link.symlink_to(binary)
+            if sys.platform == "darwin":
+                os.chmod(link, 0o777, follow_symlinks=False)
+            for count in (-1, 1):
+                with self.subTest(count=count), mock.patch.object(self.adapter, "native_helper_link_xattr_size", return_value=count):
+                    with self.assertRaises(self.adapter.ContractError):
+                        self.inventory(home, binary)
+
+    def test_native_open_race_cannot_adopt_changed_mode_or_hardlink(self):
+        for race in ("mode", "hardlink"):
+            with self.subTest(race=race), self.native_home() as (home, binary):
+                target = self.write_state(home, ".codex/state_5.sqlite")
+                original_open = self.adapter.os.open
+                changed = False
+
+                def raced_open(path, flags, *args, **kwargs):
+                    nonlocal changed
+                    if path == "state_5.sqlite" and not changed:
+                        changed = True
+                        if race == "mode":
+                            target.chmod(0o644)
+                        else:
+                            os.link(target, home.parent / "unrelated-alias")
+                    return original_open(path, flags, *args, **kwargs)
+
+                with mock.patch.object(self.adapter.os, "open", side_effect=raced_open) as hooked_open, \
+                     mock.patch.object(self.adapter.os, "supports_dir_fd", self.adapter.os.supports_dir_fd | {hooked_open}):
+                    with self.assertRaisesRegex(self.adapter.ContractError, "metadata changed"):
+                        self.inventory(home, binary)
+                self.assertTrue(changed)
+
+    def test_native_group_binding_cannot_change(self):
+        with self.native_home() as (home, binary):
+            self.write_state(home, ".codex/state_5.sqlite")
+            before = self.inventory(home, binary)
+            for path in (".codex", ".codex/state_5.sqlite"):
+                after = copy.deepcopy(before)
+                after["binding"] = [
+                    (*row[:-1], row[-1] + 1) if row[1] == path else row
+                    for row in after["binding"]
+                ]
+                with self.subTest(path=path), self.assertRaises(self.adapter.ContractError):
+                    self.adapter.validate_native_codex_home_transition(before, after)
+
+    def test_new_native_xattrs_are_rejected(self):
+        with self.native_home() as (home, binary):
+            self.write_state(home, ".codex/state_5.sqlite")
+            with mock.patch.object(self.adapter, "descriptor_xattr_inventory", return_value=(("fixture-xattr", "a" * 64),)):
+                with self.assertRaisesRegex(self.adapter.ContractError, "unapproved flags or xattrs"):
+                    self.inventory(home, binary)
+
+    def cache_inventory_fixture(self):
+        adapter = self.adapter
+        rows = []
+        for path in adapter.native_builtin_cache_directories():
+            rows.append(("dir", path, 0o700, 0, 0, 0, ()))
+        for path, (size, digest) in adapter.NATIVE_BUILTIN_ASSETS.items():
+            rows.append(("file", adapter.NATIVE_BUILTIN_ROOT + "/" + path, 0o600, 0, size, 0, 0, digest, ()))
+        rows.append(("file", adapter.NATIVE_BUILTIN_MARKER, 0o600, 0, 3, 0, 0, adapter.sha256_bytes(b"ab\n"), ()))
+        return {"content": rows, "binding": []}
+
+    def test_complete_source_pinned_builtin_inventory_passes(self):
+        self.assertEqual(59, len(self.adapter.NATIVE_BUILTIN_ASSETS))
+        self.assertEqual(384736, sum(row[0] for row in self.adapter.NATIVE_BUILTIN_ASSETS.values()))
+        self.adapter.validate_native_builtin_cache(self.cache_inventory_fixture())
+
+    def test_builtin_documented_manifest_matches_exact_code_table(self):
+        document = (ROOT / "docs/agreements/runtime/minimal-codex-execution-loop.md").read_text()
+        documented = {}
+        for line in document.splitlines():
+            match = self.adapter.re.fullmatch(r"\| `([^`]+)` \| ([0-9]+) \| `([0-9a-f]{64})` \|", line)
+            if match:
+                documented[match[1]] = (int(match[2]), match[3])
+        self.assertEqual(self.adapter.NATIVE_BUILTIN_ASSETS, documented)
+
+    def test_builtin_partial_extra_or_changed_cache_rejects_regardless_marker(self):
+        fixture = self.cache_inventory_fixture()
+        for mutation in ("partial", "extra", "changed"):
+            inventory = copy.deepcopy(fixture)
+            if mutation == "partial":
+                inventory["content"].pop(0)
+            elif mutation == "extra":
+                row = next(row for row in inventory["content"] if row[0] == "file")
+                inventory["content"].append((row[0], self.adapter.NATIVE_BUILTIN_ROOT + "/unknown", *row[2:]))
+            else:
+                index = next(i for i, row in enumerate(inventory["content"]) if row[0] == "file")
+                row = inventory["content"][index]
+                inventory["content"][index] = (*row[:7], "0" * 64, row[8])
+            with self.subTest(mutation=mutation), self.assertRaises(self.adapter.ContractError):
+                self.adapter.validate_native_builtin_cache(inventory)
+
+    def test_builtin_marker_syntax_cannot_substitute_for_exact_assets(self):
+        with self.native_home() as (home, binary):
+            self.write_state(home, ".codex/skills/.system/.codex-system-skills.marker", b"ab\n")
+            with self.assertRaisesRegex(self.adapter.ContractError, "complete"):
+                self.inventory(home, binary)
+            self.write_state(home, ".codex/skills/.system/.codex-system-skills.marker", b"arbitrary\n")
+            with self.assertRaisesRegex(self.adapter.ContractError, "marker"):
+                self.inventory(home, binary)
+
+    def test_native_binding_replacement_and_installation_id_update_block(self):
+        for relative, mode, initial, final in (
+            (".codex/state_5.sqlite", 0o600, b"same", b"same"),
+            (".codex/installation_id", 0o644, b"00000000-0000-0000-0000-000000000001", b"00000000-0000-0000-0000-000000000002"),
+        ):
+            with self.subTest(relative=relative), self.native_home() as (home, binary):
+                path = self.write_state(home, relative, initial, mode)
+                before = self.inventory(home, binary)
+                if relative.endswith("sqlite"):
+                    replacement = home.parent / "replacement"
+                    replacement.write_bytes(final)
+                    replacement.chmod(mode)
+                    replacement.replace(path)
+                else:
+                    path.write_bytes(final)
+                with self.assertRaises(self.adapter.ContractError):
+                    self.adapter.validate_native_codex_home_transition(before, self.inventory(home, binary))
+
+    def profiles(self):
+        supplied = json.loads(PROFILE_PATH.read_text())
+        fresh = copy.deepcopy(supplied)
+        fresh["observed_at"] = "2026-08-28T00:00:04Z"
+        start = datetime.datetime(2026, 8, 28, 0, 0, 1, tzinfo=datetime.timezone.utc)
+        finish = start + datetime.timedelta(seconds=4)
+        return supplied, fresh, start, finish
+
+    def compare(self, supplied, fresh, start, finish):
+        return self.adapter.compare_runtime_profiles(supplied, fresh, start, finish, allow_fixture=True, now=finish)
+
+    def test_fresh_valid_changed_identifiers_and_denial_pass(self):
+        supplied, fresh, start, finish = self.profiles()
+        network = fresh["evidence"]["network_sandbox_behavior"]
+        network["parent_netns_sha256"] = "3" * 64
+        network["sandbox_netns_sha256"] = "4" * 64
+        network["sandbox_connect_errno"] = "ECONNREFUSED"
+        result = self.compare(supplied, fresh, start, finish)
+        self.assertEqual(supplied, result["supplied_profile"])
+        self.assertEqual(fresh, result["fresh_profile"])
+        self.assertEqual(self.adapter.sha256_bytes(self.adapter.canonical_bytes(fresh)), result["fresh_profile_sha256"])
+
+    def test_fresh_valid_reused_identifiers_do_not_require_novelty(self):
+        self.compare(*self.profiles())
+
+    def test_profile_comparison_cannot_export_private_prose(self):
+        supplied, fresh, start, finish = self.profiles()
+        supplied["reason"] = fresh["reason"] = "/Users/example/private-value"
+        with self.assertRaisesRegex(self.adapter.ContractError, "safely exported"):
+            self.compare(supplied, fresh, start, finish)
+
+    def test_profile_replay_or_missing_observation_window_blocks(self):
+        supplied, fresh, start, finish = self.profiles()
+        for timestamp in (supplied["observed_at"], "2026-08-28T00:00:06Z"):
+            fresh["observed_at"] = timestamp
+            with self.assertRaises(self.adapter.ContractError):
+                self.compare(supplied, fresh, start, finish)
+
+    def test_profile_stable_security_and_same_vm_drift_blocks(self):
+        for field in ("client", "vm", "config"):
+            supplied, fresh, start, finish = self.profiles()
+            if field == "client":
+                fresh["client"]["exec_help_sha256"] = "c" * 64
+            elif field == "vm":
+                fresh["evidence"]["containment_provider"]["runtime_root_binding_sha256"] = "d" * 64
+            else:
+                fresh["evidence"]["configuration_intent"]["configuration_sha256"] = "e" * 64
+            with self.subTest(field=field), self.assertRaises(self.adapter.ContractError):
+                self.compare(supplied, fresh, start, finish)
+
+    def test_profile_failed_lane_and_unclassified_field_block(self):
+        for field in ("failed", "unknown"):
+            supplied, fresh, start, finish = self.profiles()
+            if field == "failed":
+                fresh["evidence"]["network_sandbox_behavior"]["sandbox_netns_sha256"] = fresh["evidence"]["network_sandbox_behavior"]["parent_netns_sha256"]
+            else:
+                fresh["evidence"]["containment_provider"]["unclassified"] = True
+            with self.subTest(field=field), self.assertRaises(self.adapter.ContractError):
+                self.compare(supplied, fresh, start, finish)
+
+    def test_missing_live_sink_prevents_sensor_claim_and_worker(self):
+        envelope = json.loads(ENVELOPE_PATH.read_text())
+        profile = json.loads(PROFILE_PATH.read_text())
+        profile["scope"] = "exact-head-live-sensor"
+        profile["observed_at"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        with mock.patch.object(self.adapter, "validate_runtime_profile"), \
+             mock.patch.object(self.adapter, "colima_provider_input_from_profile", return_value={}), \
+             mock.patch.object(self.adapter, "observe_runtime_profile") as sensor, \
+             mock.patch.object(self.adapter, "create_live_attempt_claim") as claim, \
+             mock.patch.object(self.adapter, "run_claimed_live_worker") as worker:
+            with self.assertRaisesRegex(self.adapter.ContractError, "observation sink"):
+                self.adapter.execute_slice(ROOT, envelope, profile, "live")
+        sensor.assert_not_called()
+        claim.assert_not_called()
+        worker.assert_not_called()
 
 
 if __name__ == "__main__":
