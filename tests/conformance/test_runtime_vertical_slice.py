@@ -122,7 +122,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
     def test_compatibility_revision_requires_new_nested_evidence(self):
         contract = self.adapter.compatibility_contract()
         self.assertEqual("t12-compatibility-contract/v1", contract["schema"])
-        self.assertEqual("known-worker-tmp-unresolved", contract["worker_boundary"])
+        self.assertEqual("same-private-tmp-observed-worker-linux-helper-quiescent-only", contract["worker_boundary"])
         value = self.adapter.not_run_compatibility_network()
         self.assertEqual("t11-network-sandbox-evidence/v2", value["schema"])
         self.assertEqual("not-run", value["status"])
@@ -144,7 +144,74 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
                 mock.patch.object(self.adapter, "create_live_attempt_claim", side_effect=AssertionError("no claim")), \
                 mock.patch.object(self.adapter, "run_claimed_live_worker", side_effect=AssertionError("no worker")):
             self.assert_contract_error(lambda: self.adapter.execute_slice(
-                ROOT, copy.deepcopy(self.envelope), profile, "live"), "known-worker-tmp-unresolved")
+                ROOT, copy.deepcopy(self.envelope), profile, "live"), "worker observation sink")
+
+    def worker_role_fixture(self):
+        target, tmp, binary = Path('/reviewed/target'), Path('/reviewed/tmp'), Path('/reviewed/codex')
+        entries = [{'path': {'type': 'special', 'value': {'kind': kind}}, 'access': access}
+            for kind, access in (('root', 'read'), ('project_roots', 'write'), ('slash_tmp', 'write'), ('tmpdir', 'write'))]
+        entries += [{'path': {'type': 'special', 'value': {'kind': 'project_roots', 'subpath': name}}, 'access': 'read', 'missing_path_behavior': 'skip'} for name in ('.git', '.agents', '.codex')]
+        permission = {'type': 'managed', 'network': 'restricted', 'file_system': {'type': 'restricted', 'entries': entries}}
+        registry = str(tmp / (self.adapter.SANDBOX_REGISTRY_PREFIX + str(os.geteuid())))
+        args = ['bwrap', '--as-pid-1', '--new-session', '--die-with-parent', '--unshare-user', '--unshare-pid', '--unshare-ipc', '--unshare-net',
+            '--ro-bind', '/', '/', '--bind', str(tmp), str(tmp), '--ro-bind', registry, registry, '--cap-drop', 'ALL', '--argv0', 'codex-linux-sandbox', '--',
+            str(binary), '--sandbox-policy-cwd', str(target), '--command-cwd', str(target), '--permission-profile', json.dumps(permission),
+            '--apply-seccomp-then-exec', '--', '/bin/sh', '-c', 'modeled command -- with opaque arguments']
+        return args, binary, target, tmp, {'CODEX_HOME': '/reviewed/home/.codex'}, permission
+
+    def test_worker_role_requires_same_tmp_seccomp_permissions_and_last_ro_binding(self):
+        args, binary, target, tmp, env, permission = self.worker_role_fixture()
+        def accepts(values):
+            return self.adapter.worker_sandbox_launcher_role(('\0'.join(values) + '\0').encode(), binary, target, tmp, env)
+        self.assertTrue(accepts(args))
+        self.assertFalse(self.adapter.sandbox_launcher_role(('\0'.join(args) + '\0').encode()), 'worker witness is not the shell probe witness')
+        for mutation in ('network', 'extra-grant', 'wrong-cwd', 'help', 'tmpfs-after-ro', 'other-source-after-ro', 'alias-destination', 'tmpfs-without-host-binding'):
+            changed = list(args)
+            if mutation in ('network', 'extra-grant'):
+                policy = copy.deepcopy(permission)
+                if mutation == 'network': policy['network'] = 'enabled'
+                else: policy['file_system']['entries'].append({'path': {'type': 'special', 'value': {'kind': 'root'}}, 'access': 'write'})
+                changed[changed.index('--permission-profile') + 1] = json.dumps(policy)
+            elif mutation == 'wrong-cwd': changed[changed.index('--sandbox-policy-cwd') + 1] = '/reviewed/other'
+            elif mutation == 'help': changed = ['bwrap', '--help']
+            elif mutation == 'alias-destination': changed[changed.index('--bind') + 2] = str(tmp) + '/../tmp'
+            elif mutation == 'tmpfs-without-host-binding':
+                index = changed.index('--bind'); changed[index:index + 6] = ['--tmpfs', str(tmp)]
+            else:
+                registry = str(tmp / (self.adapter.SANDBOX_REGISTRY_PREFIX + str(os.geteuid())))
+                addition = ['--tmpfs', registry] if mutation == 'tmpfs-after-ro' else ['--ro-bind', '/reviewed/other', registry]
+                changed[changed.index('--'):changed.index('--')] = addition
+            with self.subTest(mutation=mutation): self.assertFalse(accepts(changed))
+        for entry in permission['file_system']['entries']:
+            value = entry['path']['value']
+            if value['kind'] == 'project_roots': entry['path'] = {'type': 'path', 'path': str(target / value['subpath']) if 'subpath' in value else str(target)}
+        self.assertTrue(self.adapter.worker_permission_profile_matches(permission, target))
+
+    def test_worker_setup_git_init_requires_observed_reap(self):
+        for reaped, signal_number in ((False, None), (True, 9)):
+            with self.subTest(reaped=reaped, signal=signal_number), tempfile.TemporaryDirectory() as name, \
+                    mock.patch.object(self.adapter, 'resolve_executable_from_path', return_value=Path('/reviewed/git')), \
+                    mock.patch.object(self.adapter, 'run_bounded_process', return_value=self.adapter.ProcessResult(0,signal_number,False,False,False,b'',0,reaped)), \
+                    mock.patch.object(self.adapter, 'run_git', side_effect=AssertionError('no later Git operation')):
+                with self.assertRaisesRegex(self.adapter.ContractError, 'synthetic Git initialization failed'):
+                    self.adapter.create_synthetic_repository(Path(name), {})
+                self.assertFalse((Path(name)/'target/work-item.txt').exists())
+
+    def test_worker_observer_does_not_spend_image_budget_on_waiting_codex_leader(self):
+        observer = self.adapter.WorkerLauncherImageObserver({})
+        table = {11: (1, 11, 'linux:100')}
+        with mock.patch.object(self.adapter, '_read_owned_linux_identity', return_value=(11, 1, 11, 'linux:100')), \
+                mock.patch.object(self.adapter, '_owned_linux_image_candidate', return_value=False), \
+                mock.patch.object(self.adapter, '_read_owned_linux_image', side_effect=AssertionError('no expensive image read')):
+            for _ in range(300): observer.observe(11, table[11], table)
+        self.assertEqual(0, observer.samples)
+        self.assertFalse(observer.exhausted)
+        with mock.patch.object(self.adapter, '_read_owned_linux_identity', return_value=(11, 1, 11, 'linux:100')), \
+                mock.patch.object(self.adapter, '_owned_linux_image_candidate', return_value=True), \
+                mock.patch.object(self.adapter, '_read_owned_linux_image', return_value=True):
+            observer.observe(11, table[11], table)
+        self.assertTrue(observer.observed)
+        self.assertEqual(1, observer.samples)
 
     def rebind_compatibility_fixture(self, profile):
         """Synthetic fixture binding, never a producer/sensor workaround."""
@@ -374,7 +441,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
             lambda: self.adapter.execute_slice(
                 ROOT, copy.deepcopy(self.envelope), stage_a, "live"
             ),
-            "known-worker-tmp-unresolved",
+            "worker observation sink",
         )
 
         stage_b = self.t12_live_profile()
@@ -2572,7 +2639,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertFalse(profile["live_run_allowed"])
         self.assert_contract_error(
             lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), profile, "live"),
-            "known-worker-tmp-unresolved",
+            "worker observation sink",
         )
 
     def test_profile_fail_closed_states_never_authorize_live(self):
@@ -2658,7 +2725,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
              mock.patch.object(self.adapter, "create_synthetic_repository") as create:
             observations = []
             self.assert_contract_error(
-                lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), supplied, "live", profile_observation_sink=observations.append),
+                lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), supplied, "live", profile_observation_sink=observations.append, worker_observation_sink=lambda value: None),
                 "independently passing",
             )
             self.assertEqual(1, len(observations))
@@ -4211,7 +4278,7 @@ class RuntimeVerticalSliceTest(unittest.TestCase):
         self.assertFalse(profile["live_run_allowed"])
         self.assert_contract_error(
             lambda: self.adapter.execute_slice(ROOT, copy.deepcopy(self.envelope), profile, "live"),
-            "known-worker-tmp-unresolved",
+            "worker observation sink",
         )
 
         mount_drift = copy.deepcopy(self.profile)
@@ -5392,7 +5459,7 @@ class NativeStateAndProfileAmendmentTest(unittest.TestCase):
              mock.patch.object(self.adapter, "create_live_attempt_claim") as claim, \
              mock.patch.object(self.adapter, "run_claimed_live_worker") as worker:
             with self.assertRaisesRegex(self.adapter.ContractError, "observation sink"):
-                self.adapter.execute_slice(ROOT, envelope, profile, "live")
+                self.adapter.execute_slice(ROOT, envelope, profile, "live", worker_observation_sink=lambda value: None)
         sensor.assert_not_called()
         claim.assert_not_called()
         worker.assert_not_called()
@@ -5441,6 +5508,187 @@ class SandboxHousekeepingProductionTest(unittest.TestCase):
 
     def observe(self):
         return self.adapter.observe_sandbox_housekeeping(self.root, expected_uid=self.uid, expected_gid=self.gid)
+
+    def test_worker_boundary_collects_real_tmp_and_reap_not_a_readiness_boolean(self):
+        envelope = json.loads(ENVELOPE_PATH.read_text())
+        profile = json.loads(PROFILE_PATH.read_text())
+        profile['observed_at'] = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        observer = SimpleNamespace(observed=True, samples=1, errors=0, exhausted=False)
+        process = self.adapter.ProcessResult(0, None, False, False, False, b'', 0, True)
+        retained = []
+        def modeled_worker():
+            self.create_registry()
+            return process
+        with mock.patch.object(self.adapter, '_launcher_file_snapshot', return_value={'digest': self.adapter.compatibility_contract()['launcher_binary_sha256']}), \
+                mock.patch.object(self.adapter, 'worker_launcher_observer', return_value=observer):
+            returned, record, private_after = self.adapter.observe_worker_boundary(
+                self.root, self.root, Path('/reviewed/codex'), {}, envelope, profile,
+                lambda _observer: modeled_worker(), retained.append,
+            )
+        self.assertIs(returned, process)
+        self.assertEqual('pass', record['status'])
+        self.assertFalse(record['housekeeping']['current_exact_predicate_equal'])
+        self.assertEqual('registry-created', record['housekeeping']['transition'])
+        self.assertEqual(record, retained[0])
+        self.assertEqual(private_after, self.observe()['inventory'])
+        for key in ('work_root', 'pid', 'argv', 'environment', 'inventory'):
+            self.assertNotIn(key, record)
+
+    def test_worker_boundary_unknown_backend_or_reap_never_passes(self):
+        envelope = json.loads(ENVELOPE_PATH.read_text())
+        profile = json.loads(PROFILE_PATH.read_text())
+        profile['observed_at'] = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        for observed, reaped, expected in ((False, True, 'worker-backend-unobserved'), (True, False, 'worker-reap-unconfirmed')):
+            with self.subTest(observed=observed, reaped=reaped):
+                retained = []
+                observer = SimpleNamespace(observed=observed, samples=1, errors=0, exhausted=False)
+                process = self.adapter.ProcessResult(0, None, False, False, False, b'', 0, reaped)
+                with mock.patch.object(self.adapter, '_launcher_file_snapshot', return_value={'digest': self.adapter.compatibility_contract()['launcher_binary_sha256']}), \
+                        mock.patch.object(self.adapter, 'worker_launcher_observer', return_value=observer):
+                    _, record, _private_after = self.adapter.observe_worker_boundary(
+                        self.root, self.root, Path('/reviewed/codex'), {}, envelope, profile,
+                        lambda _observer: process, retained.append,
+                    )
+                self.assertEqual('UNCHECKABLE', record['status'])
+                self.assertEqual(expected, record['reason_code'])
+                self.assertEqual(record, retained[0])
+
+    def test_worker_boundary_stale_setup_and_pre_snapshot_drift_never_invoke(self):
+        envelope = json.loads(ENVELOPE_PATH.read_text()); profile = json.loads(PROFILE_PATH.read_text())
+        baseline = self.observe()['inventory']
+        observer = SimpleNamespace(observed=False, samples=0, errors=0, exhausted=False)
+        with mock.patch.object(self.adapter, '_launcher_file_snapshot', return_value={}), \
+                mock.patch.object(self.adapter, 'worker_launcher_observer', return_value=observer):
+            invoke = mock.Mock(side_effect=AssertionError('worker must not start'))
+            with self.assertRaisesRegex(self.adapter.ContractError, 'stale'):
+                self.adapter.observe_worker_boundary(self.root, self.root, Path('/reviewed/codex'), {}, envelope, profile, invoke, lambda _: None)
+            self.create_registry()
+            with self.assertRaisesRegex(self.adapter.ContractError, 'before the worker'):
+                self.adapter.observe_worker_boundary(self.root, self.root, Path('/reviewed/codex'), {}, envelope, profile, invoke, lambda _: None, expected_before=baseline)
+            invoke.assert_not_called()
+
+    def test_worker_native_alias_rejects_parent_link_mode_and_swap(self):
+        with tempfile.TemporaryDirectory(prefix='t12-offline-alias-') as raw:
+            home = Path(raw).resolve(); home.chmod(0o700)
+            for path in (home/'tmp',home/'tmp/arg0',home/'tmp/arg0/codex-arg0Abc123'): path.mkdir(mode=0o700)
+            alias = home/'tmp/arg0/codex-arg0Abc123/codex-linux-sandbox'
+            binary = Path('/reviewed/codex'); alias.symlink_to(binary)
+            if hasattr(os,'lchmod'): os.lchmod(alias,0o777)
+            with mock.patch.object(self.adapter,'native_helper_link_xattr_size',return_value=0):
+                self.assertTrue(self.adapter.worker_native_helper_binding(str(alias),binary,home))
+                alias.parent.chmod(0o750)
+                self.assertFalse(self.adapter.worker_native_helper_binding(str(alias),binary,home))
+                alias.parent.chmod(0o700)
+                actual = home/'actual'; (home/'tmp/arg0').rename(actual); (home/'tmp/arg0').symlink_to(actual)
+                self.assertFalse(self.adapter.worker_native_helper_binding(str(alias),binary,home))
+                (home/'tmp/arg0').unlink(); actual.rename(home/'tmp/arg0')
+                original = os.readlink
+                def swap(*args,**kwargs):
+                    value=original(*args,**kwargs); alias.unlink(); alias.symlink_to(binary)
+                    if hasattr(os,'lchmod'): os.lchmod(alias,0o777)
+                    return value
+                with mock.patch.object(os,'readlink',side_effect=swap):
+                    self.assertFalse(self.adapter.worker_native_helper_binding(str(alias),binary,home))
+
+    def test_worker_boundary_unknown_process_retains_provisional_evidence(self):
+        envelope = json.loads(ENVELOPE_PATH.read_text()); profile = json.loads(PROFILE_PATH.read_text())
+        profile['observed_at'] = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        observer = SimpleNamespace(observed=False, samples=0, errors=0, exhausted=False)
+        retained = []; invoke = mock.Mock(side_effect=RuntimeError('modeled interruption'))
+        with mock.patch.object(self.adapter, '_launcher_file_snapshot', return_value={}), \
+                mock.patch.object(self.adapter, 'worker_launcher_observer', return_value=observer):
+            with self.assertRaises(RuntimeError):
+                self.adapter.observe_worker_boundary(self.root, self.root, Path('/reviewed/codex'), {}, envelope, profile, invoke, retained.append)
+        invoke.assert_called_once()
+        self.assertEqual('worker-process-unknown', retained[0]['reason_code'])
+        self.assertIsNone(retained[0]['process'])
+        self.assertIsNone(retained[0]['execution_result_sha256'])
+
+    def test_worker_adapter_actual_claim_capture_and_post_snapshot_gap(self):
+        # Entire live adapter route, with only external process/profile/Git
+        # operations modeled. Native worker proof, target/TMP inventories,
+        # original exclusive claim and native result validation remain real.
+        envelope = json.loads(ENVELOPE_PATH.read_text()); profile = json.loads(PROFILE_PATH.read_text())
+        profile['scope'] = 'exact-head-live-sensor'
+        profile['evidence']['containment_provider']['repository_git_clone_contract_sha256'] = self.adapter.stage_a1_git_clone_contract_sha256(
+            envelope['harness']['commit'], envelope['harness']['tree'], self.adapter.T12_PUBLIC_BRANCH)
+        help_bytes = b'modeled exact exec help\n'
+        profile['client']['exec_help_sha256'] = self.adapter.sha256_bytes(help_bytes)
+        advance_compatibility_fixture(self.adapter, profile, datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
+        verifier = json.loads((ROOT/'tests/runtime/fixtures/runtime-receipt-valid.v1.json').read_text())['artifacts']['verifier']
+        raw = (ROOT/'tests/runtime/fixtures/codex-jsonl-valid.jsonl').read_bytes()
+        baseline = {'head': envelope['target']['base_commit'], 'tree': envelope['target']['base_tree']}
+        for inject_gap, process_outcome in ((False, 'success'), (True, 'success'), (False, 'non-reaped'), (False, 'unknown'), (False, 'prelaunch-unknown'), (False, 'setup-non-reaped'), (False, 'verifier-unknown')):
+            with self.subTest(inject_gap=inject_gap, process_outcome=process_outcome), tempfile.TemporaryDirectory(prefix='t12-offline-adapter-') as name, contextlib.ExitStack() as patch:
+                root = Path(name).resolve(); root.chmod(0o700)
+                for child in ('home', 'work'): (root/child).mkdir(mode=0o700)
+                (root/'home/.codex').mkdir(mode=0o700)
+                binary = Path(sys.executable).resolve()
+                layout = self.adapter.ColimaRuntimeLayout(root, root/'home', self.root, root/'work', binary,
+                    self.adapter._directory_binding_sha256(root.stat(), 'runtime-root'), '7'*64)
+                def target(container, _env):
+                    target = container/'target'; target.mkdir(mode=0o700)
+                    (target/'work-item.txt').write_bytes(b'status=pending\n'); (target/'work-item.txt').chmod(0o644)
+                    return target
+                def fake_process(argv, cwd, _env, stdin, *limits, **kwargs):
+                    self.assertIsInstance(kwargs['launcher_observer'], SimpleNamespace)
+                    self.assertTrue(stdin)
+                    path = cwd/'work-item.txt'
+                    with path.open('r+b') as stream: stream.write(b'status=complete\n'); stream.truncate()
+                    if not self.registry.exists(): self.create_registry()
+                    else:
+                        marker = self.registry/'0123456789abcdef'; marker.mkdir(); marker.rmdir()
+                    if process_outcome == 'unknown':
+                        raise RuntimeError('modeled uncertain process return')
+                    return self.adapter.ProcessResult(0, None, False, False, False, raw, 0, process_outcome != 'non-reaped')
+                retained = []
+                def sink(record):
+                    retained.append(copy.deepcopy(record))
+                    if inject_gap: (self.root/'unexpected').write_bytes(b'modeled gap')
+                observer = SimpleNamespace(observed=True, samples=1, errors=0, exhausted=False)
+                replacements = {
+                    'observe_runtime_profile': lambda *_: copy.deepcopy(profile), 'compare_runtime_profiles': lambda *_: {'status':'pass'},
+                    'prepare_colima_runtime_layout': lambda: layout, 'materialize_reviewed_rules_profile': lambda _: self.adapter.runtime_configuration_intent()['rules_profile_sha256'],
+                    'hash_regular_file': lambda *_: profile['client']['binary_sha256'], 'verify_harness_state': lambda *_: (1,2),
+                    'native_codex_home_inventory': lambda *_: {'modeled':'native HOME is independently tested'}, 'validate_native_codex_home_transition': lambda *_: None,
+                    'create_synthetic_repository': target, 'git_snapshot': lambda *_: copy.deepcopy(baseline), 'validate_pre_snapshot': lambda *_: None, 'validate_post_snapshot': lambda *_: None,
+                    'build_live_argv': lambda *_args, **_kwargs: [str(binary), 'exec'], 'validate_runtime_argv_policy': lambda *_args, **_kwargs: None,
+                    '_launcher_file_snapshot': lambda *_: {'digest': self.adapter.APPROVED_BWRAP_BINARY_SHA256}, 'worker_launcher_observer': lambda *_: observer,
+                    'bounded_capture': lambda argv, *_args, **_kwargs: self.adapter.ProcessResult(0,None,False,False,False,
+                        (profile['client']['version_output']+'\n').encode() if argv[-1]=='--version' else help_bytes,0,True),
+                    '_run_bounded_process': fake_process, 'run_fresh_verifier': lambda *_: copy.deepcopy(verifier),
+                }
+                for key, value in replacements.items(): patch.enter_context(mock.patch.object(self.adapter,key,side_effect=value))
+                if process_outcome == 'prelaunch-unknown':
+                    patch.enter_context(mock.patch.object(self.adapter, 'bounded_capture', side_effect=RuntimeError('modeled setup uncertainty')))
+                if process_outcome == 'setup-non-reaped':
+                    patch.enter_context(mock.patch.object(self.adapter, 'bounded_capture', return_value=self.adapter.ProcessResult(0,None,False,False,False,b'version',0,False)))
+                if process_outcome == 'verifier-unknown':
+                    patch.enter_context(mock.patch.object(self.adapter, 'run_fresh_verifier', side_effect=RuntimeError('modeled verifier uncertainty')))
+                if process_outcome != 'success':
+                    with self.assertRaises((RuntimeError, self.adapter.ContractError)):
+                        self.adapter.execute_slice(ROOT,envelope,profile,'live',include_artifacts=True,profile_observation_sink=lambda _:None,worker_observation_sink=sink)
+                    self.assertEqual(1, len(list((root/'work').iterdir())), 'unconfirmed worker absence must retain the execution tree')
+                    if process_outcome not in ('prelaunch-unknown', 'setup-non-reaped', 'verifier-unknown'):
+                        self.assertEqual('UNCHECKABLE', retained[0]['status'])
+                elif inject_gap:
+                    with self.assertRaisesRegex(self.adapter.ContractError, 'after the observed worker'):
+                        self.adapter.execute_slice(ROOT,envelope,profile,'live',include_artifacts=True,profile_observation_sink=lambda _:None,worker_observation_sink=sink)
+                else:
+                    bundle = self.adapter.execute_slice(ROOT,envelope,profile,'live',include_artifacts=True,profile_observation_sink=lambda _:None,worker_observation_sink=sink)
+                    self.adapter.validate_worker_boundary(bundle['worker_boundary'],envelope,profile,bundle['execution_result'])
+                    self.assertEqual('pass',bundle['execution_result']['status'])
+                if process_outcome in ('prelaunch-unknown', 'setup-non-reaped'):
+                    self.assertEqual([], retained)
+                    self.assertFalse((root/self.adapter.LIVE_ATTEMPT_CLAIM_NAME).exists())
+                else:
+                    self.assertEqual(1,len(retained)); self.assertIsNone(retained[0]['execution_result_sha256'])
+                    self.assertTrue((root/self.adapter.LIVE_ATTEMPT_CLAIM_NAME).exists())
+                if process_outcome == 'success' and not inject_gap:
+                    self.assertEqual([], list((root/'work').iterdir()))
+                else:
+                    self.assertEqual(1, len(list((root/'work').iterdir())))
+            if inject_gap: (self.root/'unexpected').unlink()
 
     def test_source_modeled_registry_transition_preserves_worker_exact_rejection(self):
         before = self.observe()

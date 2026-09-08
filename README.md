@@ -117,7 +117,7 @@ claim exactly one backend model request. T11 claims only deterministic
 fixture-based receipt validation, dry-run, zero-write, idempotency, conflict,
 and read-back behavior.
 
-### Current offline compatibility integration
+### Compatibility integration and finite completion amendment
 
 The [2026-09-08 owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698)
 adds three existing paths to T12 (24 exact paths; accepted T11 retains 18).
@@ -128,13 +128,21 @@ bind the finite quiescent sandbox TMP transition to confirmed reap. Actual
 collector/classifier/profile/receipt wiring is tested with fake external
 operations and real temporary filesystem fixtures, not a new runtime attempt.
 
-`live_run_allowed` is a necessary authenticated profile-compatibility condition,
-not complete execution authority or receipt readiness. The production worker
-and receipt-actuation paths stop at `known-worker-tmp-unresolved`: the unchanged
-whole-worker TMP equality can reject a source-permitted cleaned registry
-lifecycle. No probe exception is silently extended to worker writes. Stage A
-remains 2/2 consumed; changing a head, schema, or helper creates no new allowance.
-The existing A1/A2 non-success evidence is unchanged. T12 and the repository
+The [subsequent owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437)
+adopts the same finite quiescent TMP allowance around the one reviewed worker,
+only with worker-specific pinned Linux-helper evidence and its original
+confirmed process reap. A closed supplemental `t12-worker-boundary/v1` artifact
+binds actual before/after TMP observations, exact attempt/head/tree, unchanged
+pre-worker profile and final result digests. Missing evidence blocks the native
+result/receipt path even if an entry-point readiness check is bypassed.
+
+`live_run_allowed` is necessary profile compatibility, not execution authority.
+The historical Stage A 2/2 allowance stays consumed. The new decision separately
+allows at most one Stage A orchestration and, only after its full success and
+cleanup plus manual owner authentication/confirmation, one fresh Stage B VM and
+one logical worker process. New code or a failed preflight does not reset either
+claim. All historical non-success evidence is unchanged. This tree records
+implementation and authority, not an unmeasured success: T12 and the repository
 remain incomplete, with empty release results and `release_blocked=true`.
 
 ## What remains outside the portable core

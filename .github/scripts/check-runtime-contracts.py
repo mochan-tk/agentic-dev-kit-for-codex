@@ -378,6 +378,20 @@ def expected_runtime_frontier() -> Dict[str, Any]:
                     "b3f051da26ebba7e0d49b79917cffa81ec6e9c66d409029ffd0020d0211850ee"
                 ),
             },
+            "worker_completion": {
+              "owner_decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+              "owner_decision_body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1",
+              "historical_stage_a_allowance": "2-of-2-consumed-not-reset",
+              "new_stage_a_orchestration_max": 1,
+              "new_stage_b_vm_max": 1,
+              "new_logical_worker_process_max": 1,
+              "new_runtime_receipt_apply_max": 1,
+              "stage_b_gate": "new-stage-a-pass-cleanup-and-manual-owner-auth-and-confirmation",
+              "worker_boundary_artifact": "t12-worker-boundary/v1-required-before-runtime-receipt",
+              "worker_tmp": "same-private-root-source-bound-quiescent-linux-helper-only",
+              "evidence_scope": "bounded-pre-post-not-authenticated-authorship",
+              "current_outcome": "external-github-not-embedded"
+            },
             "ownership": {
                 "transferred_path_count": 21,
                 "current_owned_path_count": 24,
@@ -546,7 +560,7 @@ def expected_compatibility_contract() -> Dict[str, Any]:
         "observation_max_age_ms": 300000, "capture_max_ms": 15000,
         "housekeeping": "quiescent-private-root-registry-empty-lock-only",
         "housekeeping_max_entries": 2, "housekeeping_file_bytes": 0,
-        "worker_boundary": "known-worker-tmp-unresolved",
+        "worker_boundary": "same-private-tmp-observed-worker-linux-helper-quiescent-only",
     }
 
 
@@ -3158,6 +3172,38 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
             errors.append(label + ": probe-only-match fail-closed constraints drifted")
 
 
+def worker_boundary_schema():
+    """Independent closed success shape; adapter checks native arithmetic/bindings."""
+    def obj(fields):
+        return {"type": "object", "additionalProperties": False, "required": list(fields), "properties": fields}
+    digest = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    oid = {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+    return obj({
+        "schema": {"const": "t12-worker-boundary/v1"}, "authority": {"const": "adapter-authored"},
+        "status": {"const": "pass"}, "reason_code": {"const": "none"},
+        "agreement": {"const": {"url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+            "body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1"}},
+        "binding": obj({"attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"}, "head": oid, "tree": oid,
+            "provider_attempt_sha256": digest, "runtime_profile_sha256": digest, "envelope_sha256": digest}),
+        "window": obj({key: {"type": "integer", "minimum": 1} for key in ("started_ms", "finished_ms")}),
+        "process": {"const": {"logical_invocations": 1, "exit_code": 0, "signal": None, "timed_out": False,
+            "stdout_overflow": False, "stderr_overflow": False, "reaped": True}},
+        "launcher": obj({"role": {"const": "same-tmp-worker-linux-sandbox"}, "actual_image_observed": {"const": True},
+            "binding_stable": {"const": True}, "image_samples": {"type": "integer", "minimum": 1, "maximum": 4096},
+            "image_error_count": {"type": "integer", "minimum": 0, "maximum": 4096}, "budget_exhausted": {"const": False},
+            "binary_sha256": {"const": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"},
+            "source_commit": {"const": "90854393966b21e9ebfd21b122334eb09a20c93d"}}),
+        "housekeeping": {**obj({"schema": {"const": "t12-sandbox-housekeeping-evidence/v1"}, "authority": {"const": "adapter-authored"},
+            "status": {"const": "pass"}, "reason_code": {"const": "none"}, "current_exact_predicate_equal": {"type": "boolean"},
+            "transition": {"enum": ["registry-created", "quiescent-preserved"]}, "unknown_entries_accepted": {"const": False},
+            "historical_a2_identified": {"const": False}, "cleanup_required": {"const": "existing-full-disposable-provider-destruction"}}),
+            "allOf": [{"if": {"properties": {"transition": {"const": "registry-created"}}, "required": ["transition"]},
+                "then": {"properties": {"current_exact_predicate_equal": {"const": False}}}}]},
+        "tmp_observations": obj({"before_sha256": digest, "after_sha256": digest, "before_status": {"const": "pass"}, "after_status": {"const": "pass"}}),
+        "execution_result_sha256": digest,
+    })
+
+
 def validate_runtime_receipt_schema(schema: Any, errors: List[str]) -> None:
     label = "docs/agreements/runtime/runtime-receipt.v1.schema.json"
     if not isinstance(schema, dict):
@@ -3171,9 +3217,12 @@ def validate_runtime_receipt_schema(schema: Any, errors: List[str]) -> None:
         "envelope": {"$ref": "task-execution-envelope.v1.schema.json"},
         "execution_result": {"$ref": "execution-result.v1.schema.json"},
         "verifier": {"$ref": "#/$defs/verifierArtifact"},
+        "worker_boundary": {"$ref": "#/$defs/workerBoundary"},
     }
     if artifacts.get("additionalProperties") is not False or artifacts.get("required") != list(expected) or artifacts.get("properties") != expected:
         errors.append(label + ": exact native runtime artifacts are not required")
+    if schema.get("$defs", {}).get("workerBoundary") != worker_boundary_schema():
+        errors.append(label + ": closed independently required worker boundary proof drifted")
     limitations = schema.get("properties", {}).get("limitations", {}).get("const", {})
     if limitations.get("artifact_provenance") != "unsigned-unverified":
         errors.append(label + ": unsigned artifact provenance limitation is missing")
@@ -3267,6 +3316,12 @@ def validate_runtime_frontier(
         errors.append(LEDGER_CONTRACT_PATH + ": ledger must be an object")
         return
     frontier = ledger.get("runtime_frontier")
+    activation = frontier.get("t12_activation") if isinstance(frontier, dict) else None
+    completion = activation.get("worker_completion") if isinstance(activation, dict) else None
+    if not isinstance(completion, dict) or any(type(completion.get(key)) is not int for key in (
+        "new_stage_a_orchestration_max", "new_stage_b_vm_max", "new_logical_worker_process_max", "new_runtime_receipt_apply_max",
+    )):
+        errors.append(LEDGER_CONTRACT_PATH + ": finite worker-completion maxima must be exact integers")
     if frontier != expected_runtime_frontier():
         errors.append(
             LEDGER_CONTRACT_PATH
@@ -3657,6 +3712,7 @@ def validate_repository(root: Path) -> List[str]:
                 adapter.validate_envelope(receipt_envelope)
                 adapter.validate_verifier_record(receipt_verifier, receipt_envelope["attempt_id"])
                 adapter.validate_execution_result(receipt_result, receipt_envelope, receipt_profile, receipt_verifier)
+                adapter.validate_worker_boundary(artifacts["worker_boundary"], receipt_envelope, receipt_profile, receipt_result)
             live_argv = adapter.build_live_argv(Path("/reviewed/codex"), Path("/private-target"), root, envelope)
             joined = "\n".join(live_argv)
             for marker in (envelope["attempt_id"], "Issue #25"):

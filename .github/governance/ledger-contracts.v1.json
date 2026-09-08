@@ -108,6 +108,20 @@
         "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5480062206",
         "body_sha256": "b3f051da26ebba7e0d49b79917cffa81ec6e9c66d409029ffd0020d0211850ee"
       },
+      "worker_completion": {
+        "owner_decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+        "owner_decision_body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1",
+        "historical_stage_a_allowance": "2-of-2-consumed-not-reset",
+        "new_stage_a_orchestration_max": 1,
+        "new_stage_b_vm_max": 1,
+        "new_logical_worker_process_max": 1,
+        "new_runtime_receipt_apply_max": 1,
+        "stage_b_gate": "new-stage-a-pass-cleanup-and-manual-owner-auth-and-confirmation",
+        "worker_boundary_artifact": "t12-worker-boundary/v1-required-before-runtime-receipt",
+        "worker_tmp": "same-private-root-source-bound-quiescent-linux-helper-only",
+        "evidence_scope": "bounded-pre-post-not-authenticated-authorship",
+        "current_outcome": "external-github-not-embedded"
+      },
       "ownership": {
         "transferred_path_count": 21,
         "current_owned_path_count": 24,

@@ -30,21 +30,27 @@ It never invents a connect attempt. A2's missing errno remains unknown rather
 than retroactively proving this new path. Missing or malformed child output
 preserves known safe exit/signal/reap diagnostics without exporting raw bytes.
 
-Probe-only finite TMP housekeeping does not authorize arbitrary worker TMP
-writes. A real-filesystem modeled registry-marker create/drop can preserve the
-finite quiescent contract while changing directory timestamps and failing the
-unchanged whole-worker TMP equality. The source route is conditional; no real
-worker failure is claimed. Production stops before a fresh live sensor, claim,
-or worker at `known-worker-tmp-unresolved`; runtime/lifecycle apply and current
-CLI dry-run stop at the same readiness boundary. Pure fixture validation,
-rendering and idempotency tests remain offline contract tests only.
+The [later worker amendment](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437)
+permits only the same finite quiescent TMP transition around the actual worker.
+It requires a separate same-TMP worker Linux-helper witness, actual bounded
+before/after observations and confirmed reap. The earlier shell-probe witness
+cannot substitute. A different unexamined backend, missed short-lived helper,
+unreadable process identity, unknown entry or uncertain cleanup remains
+non-success. No prompt, tool choice, backend or model is forced to obtain a pass.
+The existential helper witness does not claim every tool/backend was traced or
+authenticate authorship of every intermediate write. This accepted limitation
+does not weaken the representative file/Git, protected HOME/rules/credential,
+source binary, image, mount or cleanup checks.
 
 `live_run_allowed` retains its narrower profile-compatibility meaning, not
-whole-route readiness. Stage A remains 2/2 consumed. New code, schemas and
-external glue neither reset that allowance nor authorize authentication,
-VM/sandbox invocation, a live worker, runtime receipt, merge, or release.
-Future authority must name the integrated execution set and resolve the
-worker-TMP contract; all existing non-success observations remain unchanged.
+whole-route readiness. Historical Stage A remains 2/2 consumed. The later
+decision grants a distinct one-A/conditional-one-B allocation, bound to the
+frozen executable set and consumed at orchestration start even on pre-VM failure.
+Manual owner device authentication and explicit worker confirmation are still
+mandatory; no model or worker is invoked by offline tests. Native worker proof
+is independently required by receipt validation. Fixture dry-run/apply tests
+prove only deterministic mechanics; no live match, applied receipt, T12
+completion, merge or release is inferred. Existing observations stay unchanged.
 
 The 2026-09-05 T12 bounded remediation establishes one static launch defect:
 official Codex 0.150.1 source rejects `--strict-config` for `sandbox` before

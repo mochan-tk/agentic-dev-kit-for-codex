@@ -39,14 +39,31 @@ class RuntimeReceiptTest(unittest.TestCase):
             patcher = mock.patch.object(self.receipt, "require_runtime_receipt_readiness")
             patcher.start(); self.addCleanup(patcher.stop)
 
-    def test_current_readiness_blocks_api_and_cli_before_any_write_or_input(self):
+    def test_current_readiness_requires_worker_evidence_before_any_write(self):
         with mock.patch.object(self.receipt, "run_gh", side_effect=AssertionError("no GitHub")), \
-                mock.patch.object(self.receipt, "read_stdin_bounded", side_effect=AssertionError("no input")):
-            self.assert_receipt_error(lambda: self.receipt.apply_comment({}, ""), "known-worker-tmp-unresolved")
-            self.assert_receipt_error(lambda: self.receipt.apply_lifecycle_comments({}, ""), "known-worker-tmp-unresolved")
+                mock.patch.object(self.receipt, "read_stdin_bounded", return_value=b'{}'):
+            self.assert_receipt_error(lambda: self.receipt.apply_comment({}, ""), "worker boundary")
+            self.assert_receipt_error(lambda: self.receipt.apply_lifecycle_comments({}, ""), "worker boundary")
             for mode in ("--dry-run", "--apply", "--lifecycle-dry-run", "--lifecycle-apply"):
                 with mock.patch.object(sys, "stdout", mock.Mock(buffer=io.BytesIO())):
                     self.assertEqual(1, self.receipt.main([mode]))
+        projected = self.receipt.validate_receipt(copy.deepcopy(self.fixture), now=self.fixture_now())
+        for key in ('confirmed_reap', 'bounded_pre_post_not_authenticated_authorship'):
+            changed = copy.deepcopy(projected); changed['worker_boundary'][key] = 1
+            self.assert_receipt_error(lambda: self.receipt.require_runtime_receipt_readiness(changed), 'worker boundary')
+
+    def test_native_worker_proof_cannot_be_bypassed_by_readiness_seam(self):
+        for mutate in ('missing', 'reap', 'backend', 'binding', 'result', 'tmp'):
+            value = copy.deepcopy(self.fixture)
+            proof = value['artifacts']['worker_boundary']
+            if mutate == 'missing': del value['artifacts']['worker_boundary']
+            elif mutate == 'reap': proof['process']['reaped'] = False
+            elif mutate == 'backend': proof['launcher']['actual_image_observed'] = False
+            elif mutate == 'binding': proof['binding']['head'] = 'f' * 40
+            elif mutate == 'result': proof['execution_result_sha256'] = 'f' * 64
+            else: proof['tmp_observations']['after_sha256'] = None
+            with self.subTest(mutate=mutate):
+                self.assert_receipt_error(lambda: self.receipt.validate_receipt(value, now=self.fixture_now()))
 
     def assert_receipt_error(self, callback, token=None):
         with self.assertRaises(self.receipt.ReceiptError) as raised:
@@ -212,6 +229,14 @@ class RuntimeReceiptTest(unittest.TestCase):
         result["digests"]["runtime_profile_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(profile))
         result["digests"]["envelope_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(envelope))
         result["verifier"]["record_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(verifier))
+        if 'worker_boundary' in artifacts:
+            worker = artifacts['worker_boundary']
+            try:
+                worker['binding'] = adapter.worker_boundary_binding(envelope, profile)
+            except adapter.ContractError:
+                pass  # Preserve malformed negative fixture rejection.
+            worker['window'] = {key: number + delta for key, number in worker['window'].items()}
+            worker['execution_result_sha256'] = self.receipt.sha256(self.receipt.canonical_bytes(result))
         return fixture
 
     def test_valid_receipt_and_dry_run_are_canonical_and_private_path_free(self):
@@ -228,14 +253,14 @@ class RuntimeReceiptTest(unittest.TestCase):
             input=self.receipt.canonical_bytes(fresh), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             timeout=15,
         )
-        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual("fail", payload["status"])
+        self.assertEqual("pass", payload["status"])
         fresh_body = self.receipt.render_comment(self.receipt.validate_receipt(fresh))
         self.assertRegex(self.receipt.runtime_dry_run_proof_sha256(self.receipt.validate_receipt(fresh), fresh_body), r"^[0-9a-f]{64}$")
         fresh_receipt = self.receipt.validate_receipt(fresh)
         self.assertRegex(self.receipt.runtime_dry_run_proof_sha256(fresh_receipt, fresh_body), r"^[0-9a-f]{64}$")
-        self.assertNotIn("dry_run_proof_sha256", payload)
+        self.assertEqual(self.receipt.runtime_dry_run_proof_sha256(fresh_receipt, fresh_body), payload['dry_run_proof_sha256'])
 
     def test_receipt_rejects_stale_or_incomplete_check_bindings(self):
         mutations = (
@@ -1169,11 +1194,11 @@ class RuntimeReceiptTest(unittest.TestCase):
             input=self.receipt.canonical_bytes(fixture), stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, timeout=15,
         )
-        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual("runtime-receipt-error/v1", payload["schema"])
-        self.assertEqual("fail", payload["status"])
-        self.assertNotIn("body", payload)
+        self.assertEqual("t12-colima-lifecycle-completion-dry-run/v1", payload["schema"])
+        self.assertEqual("pass", payload["status"])
+        self.assertIn("body", payload)
 
     def test_lifecycle_completion_requires_all_absence_lanes_and_one_task_target(self):
         fixture = self.lifecycle_fixture()

@@ -376,7 +376,7 @@
               "pattern": "^[0-9a-f]{64}$"
             },
             "compatibility_contract_sha256": {
-              "const": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f"
+              "const": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4"
             }
           }
         },
@@ -815,7 +815,7 @@
               ]
             },
             "source_contract_sha256": {
-              "const": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f"
+              "const": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4"
             },
             "launcher": {
               "type": "object",
@@ -3639,7 +3639,7 @@
               ]
             },
             "source_contract_sha256": {
-              "const": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f"
+              "const": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4"
             },
             "transition": {
               "anyOf": [

@@ -30,7 +30,85 @@ this tree.
 
 ## Authority boundaries
 
-### Current combined compatibility contract (2026-09-08)
+### Current finite worker and completion amendment (2026-09-08)
+
+The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437),
+canonical body SHA-256 `764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1`,
+supersedes only the prior worker-TMP equality/latch described below. It keeps
+the same 24 owned paths, Phase/Task bases, all prior commits and historical
+observations. The earlier 2/2 Stage A ledger remains consumed.
+
+Apply the existing finite root/UID registry/empty-lock table to the same private
+TMP immediately before and after the actual logical worker. Keep root, lock,
+owner, mode, link, byte, xattr/flag and no-follow bindings unchanged except the
+already enumerated registry creation or cleaned-marker directory times. Require
+the original bounded worker process result to confirm reap. Setup before this
+interval and verification after it still require exact TMP equality with the
+actual respective endpoint; a later snapshot cannot absorb unknown changes.
+Unknown markers, partial state, links, special files, binding drift or cleanup
+uncertainty never pass, and no data is deleted or relocated to obtain a pass.
+The live synthetic execution directory has no automatic finalizer: it is
+retained on every non-success, including setup, worker or later verifier
+uncertainty. Only a completely validated success after those subprocesses
+enables its normal inner cleanup; otherwise the unchanged outer provider owns
+cleanup/absence decisions. A retained record alone never enables deletion.
+
+Qualification is worker-specific: an optional read-only observation on its
+original owned-process lineage must witness the pinned bwrap image with the
+source-defined inner seccomp worker role, exact private cwd/TMP binding and the
+closed restricted-network workspace-write permission set. Allow only the
+source-equivalent symbolic/project-root-to-exact-cwd materialization. A pinned
+native arg0 fallback alias must pass its exact no-follow parent/link binding.
+Validate ordered source-equal writable TMP exposure followed by its exact
+read-only registry bind; a later covering bind/mask invalidates that proof.
+Do not inspect the model-selected payload as an authorship assertion. Source:
+official Codex `90854393966b21e9ebfd21b122334eb09a20c93d`,
+`protocol/src/models.rs`, `protocol/src/permissions.rs`,
+`linux-sandbox/src/linux_run_main.rs`, `bwrap.rs` and `launcher.rs`.
+
+The shell `env -0`, help and inert preflight witnesses do not prove a worker
+backend. Cheap owned-image candidate checks do not exhaust the qualified image
+budget while the Codex leader waits; at most 4096 qualified image attempts are
+retained as bounded counts. No positive, a missed lifetime or another unexamined
+backend is non-success. The witness is existential, not an all-tool execution
+trace. The owner accepts bounded pre/post evidence, not authenticated authorship
+or full intermediate-write/process-lifetime tracing. Do not force a worker tool,
+prompt or backend to manufacture a passing witness.
+
+The closed supplemental `t12-worker-boundary/v1` record is the fifth live native
+artifact under the owned receipt schema; the pre-worker profile and unowned
+event/result schemas are unchanged. It binds the original full profile,
+envelope, provider attempt and public head/tree, finite observation digests,
+worker-specific launcher facts, original process status/reap and final result
+digest. Its mandatory durable sink retains provisional safe facts before JSONL
+parsing/Git/verifier operations, including non-success and unknown process
+outcomes; null counts/digests are never reported as measured zero. Only a
+successful final result binds the result digest. The worker window uses the
+existing 600-second timeout plus at most 30 seconds for existing cleanup,
+without changing any command timeout/grace. Native receipt validation requires
+this complete proof regardless of an entry-point readiness helper.
+
+The new external successor has a distinct owner-decision-bound ledger: at most
+one Stage A orchestration (consumed at entry even before VM preflight), and only
+after its exact execution-set-bound full unauthenticated qualification plus
+cleanup, at most one different fresh Stage B VM. Stage B pauses for manual owner
+device authentication and explicit one-worker confirmation, then requires exact
+auth classification and a fresh complete profile. The existing 600-second human
+pause limit, 600-second worker bound, model/effort, capture limits and B1/B2
+cleanup remain. No preparation test consumes an allowance; no automatic retry
+or new source directory resets one. Frozen sources/inputs and exact public CI
+must match. Missing account-setting observation or less than 8 GiB free space
+blocks actuation. This tree contains no measured success claim.
+
+Preserve receipt chronology: worker, deterministic verification, dry-run,
+exact head/tree/check read-back, one logical apply with uncertain-POST read-back
+reconciliation, canonical receipt read-back, provider/runtime destruction,
+all absence observations, and one separate lifecycle-completion comment.
+Cancellation or expired authentication pause still performs protected cleanup;
+observation errors are not absence. VM destruction is not account revocation.
+T12 remains incomplete until its actual durable evidence and owner judgment.
+
+### Prior combined compatibility contract (2026-09-08)
 
 The [supplementary owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698)
 (canonical body SHA-256 `ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b`)
@@ -134,7 +212,7 @@ and that recorded second plus 999 ms. Fresh comparison additionally bounds the
 records to the actual start/finish sensor window and rejects a reused observation
 ID. Namespace digest novelty is not required.
 
-#### Worker and receipt readiness remains blocked
+#### Prior worker disposition (superseded only by the amendment above)
 
 The exact whole-worker TMP inventory check is unchanged. Pinned source permits
 a conditional sandbox-launcher route whose cleaned registry-marker lifecycle
@@ -692,8 +770,10 @@ outer containment boundary. No raw output is copied into the durable result.
 Immediately around the offline worker, one private execution root contains only the
 target repository, private HOME, and private TMPDIR. The live path uses a separate
 target execution root and the existing persistent private HOME/TMPDIR. The
-amendment's finite native-state table supersedes whole-HOME equality only;
-the target root and TMPDIR remain exact. A bounded descriptor-
+native-state amendment supersedes whole-HOME equality, and the current worker
+amendment above permits only its finite observed private-TMP interval. The
+target root remains exact outside its single owned byte change; TMP setup and
+post-worker verification still bind the respective exact endpoints. A bounded descriptor-
 relative, no-follow pre/post inventory covers its membership, file bytes,
 device/inode bindings, mode, timestamps, xattr names and bounded value digests,
 and platform `st_flags`; only the exact `work-item.txt` initial-to-final byte

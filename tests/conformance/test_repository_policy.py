@@ -1945,6 +1945,35 @@ class RepositoryPolicyTest(unittest.TestCase):
                 )
                 self.assert_rejected(errors, "import-time class execution")
 
+    def test_worker_observer_subclass_requires_reviewed_inert_base(self):
+        safe = ('class OwnedLauncherImageObserver:\n    def observe(self):\n        pass\n'
+                'class WorkerLauncherImageObserver(OwnedLauncherImageObserver):\n    def candidate(self):\n        pass\n')
+        errors = []
+        self.checker.validate_import_time_structure(self.checker.ast.parse(safe), self.checker.RUNTIME_ADAPTER, errors)
+        self.assertEqual([], errors)
+        for source in (
+            safe.replace('WorkerLauncherImageObserver(', 'OtherObserver('),
+            safe.replace('class WorkerLauncherImageObserver', 'OwnedLauncherImageObserver = OtherBase\nclass WorkerLauncherImageObserver'),
+            safe.replace('    def observe(self):', '    def __init_subclass__(self):'),
+            safe.replace('class WorkerLauncherImageObserver', 'OwnedLauncherImageObserver.__init_subclass__ = dangerous\nclass WorkerLauncherImageObserver'),
+            safe.replace('WorkerLauncherImageObserver(OwnedLauncherImageObserver)', 'WorkerLauncherImageObserver(resolve())'),
+        ):
+            with self.subTest(source=source):
+                errors = []
+                self.checker.validate_import_time_structure(self.checker.ast.parse(source), self.checker.RUNTIME_ADAPTER, errors)
+                self.assert_rejected(errors, 'import-time class execution')
+
+    def test_finite_worker_completion_rejects_boolean_or_reset_allowances(self):
+        for field, value in (('new_stage_a_orchestration_max', True), ('new_logical_worker_process_max', 2), ('historical_stage_a_allowance', 'reset')):
+            with self.subTest(field=field):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / '.github/governance/ledger-contracts.v1.json'
+                value_json = json.loads(path.read_text())
+                value_json['runtime_frontier']['t12_activation']['worker_completion'][field] = value
+                path.write_text(json.dumps(value_json))
+                self.assert_rejected(self.errors_for(fixture), 'finite worker-completion')
+
     def test_sandbox_diagnostic_pure_entrypoints_cannot_reach_runtime_actuators(self):
         temporary, fixture = self.copy_fixture()
         self.addCleanup(temporary.cleanup)

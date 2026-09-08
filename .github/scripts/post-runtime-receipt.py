@@ -285,7 +285,7 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
     artifacts = value["artifacts"]
     if not isinstance(artifacts, dict):
         raise ReceiptError("native runtime artifacts must be an object")
-    exact_keys(artifacts, ("runtime_profile", "envelope", "execution_result", "verifier"), "native runtime artifacts")
+    exact_keys(artifacts, ("runtime_profile", "envelope", "execution_result", "verifier", "worker_boundary"), "native runtime artifacts")
     adapter = load_adapter()
     profile = artifacts["runtime_profile"]
     envelope = artifacts["envelope"]
@@ -296,6 +296,9 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
         adapter.validate_envelope(envelope)
         adapter.validate_verifier_record(verifier, envelope.get("attempt_id") if isinstance(envelope, dict) else "")
         adapter.validate_execution_result(result, envelope, profile, verifier)
+        # This is native validation, not the optional API/CLI readiness guard.
+        # Mocking that guard cannot convert missing worker evidence into proof.
+        adapter.validate_worker_boundary(artifacts["worker_boundary"], envelope, profile, result)
     except Exception as error:
         if error.__class__.__name__ == "ContractError":
             raise ReceiptError("native runtime artifact validation failed")
@@ -358,6 +361,15 @@ def validate_receipt(value: Any, now: Optional[datetime.datetime] = None) -> Dic
         "task": value["task"], "pull_request": pr, "attempt_id": attempt,
         "harness": dict(envelope["harness"]), "target": target,
         "artifact_bundle_sha256": sha256(canonical_bytes(artifacts)),
+        "worker_boundary": {
+            "schema": "worker-boundary-evidence/v1", "status": "pass",
+            "sha256": sha256(canonical_bytes(artifacts["worker_boundary"])),
+            "agreement_body_sha256": adapter.WORKER_BOUNDARY_OWNER_SHA256,
+            "runtime_profile_sha256": profile_digest, "envelope_sha256": envelope_digest,
+            "execution_result_sha256": result_digest,
+            "backend": "same-tmp-worker-linux-sandbox", "confirmed_reap": True,
+            "finite_tmp": "pass", "bounded_pre_post_not_authenticated_authorship": True,
+        },
         "runtime_profile": {
             "schema": "runtime-profile-evidence/v1", "sha256": profile_digest,
             "status": "pass", "observed_status": profile["status"],
@@ -999,6 +1011,7 @@ def render_comment(receipt: Mapping[str, Any]) -> str:
 - Envelope projection: `pass` / `{envelope_digest}`
 - Result projection: `pass` / `{result_digest}`
 - Fresh verifier projection: `pass` / `{verifier_digest}`
+- Native worker-boundary proof: `pass` / `{worker_digest}` (confirmed reap; finite private-TMP transition; one witnessed owned pinned Linux helper)
 - quality: [success]({quality_url})
 - conformance: [success]({conformance_url})
 
@@ -1007,6 +1020,7 @@ def render_comment(receipt: Mapping[str, Any]) -> str:
 - Named custom-agent runtime selection: unverified
 - Authenticated role identity: unverified
 - Artifact provenance/authentication: unsigned and unverified
+- Worker proof is bounded pre/post evidence, not authenticated authorship or an exclusive trace of every tool/backend
 - Phase 2 complete: false
 - Repository complete: false
 - Release ready: false
@@ -1017,7 +1031,7 @@ is stored. This receipt does not complete Phase 2, the repository, or a release.
         marker=receipt_marker(receipt), attempt=receipt["attempt_id"], pr_url=receipt["pull_request"]["url"], head=receipt["pull_request"]["head"], tree=receipt["pull_request"]["tree"],
         base=receipt["target"]["base_commit"], base_tree=receipt["target"]["base_tree"], post_tree=receipt["target"]["post_tree"], profile_digest=receipt["runtime_profile"]["sha256"],
         provider_kind=receipt["containment_provider"]["provider_kind"], profile_name=receipt["containment_provider"]["profile_name"], provider_status=receipt["containment_provider"]["status"], mount_digest=receipt["containment_provider"]["effective_mount_inventory_sha256"], instance_digest=receipt["containment_provider"]["vm_instance_identity_sha256"], control_plane_digest=receipt["containment_provider"]["control_plane"]["normalized_control_plane_sha256"],
-        envelope_digest=receipt["envelope"]["sha256"], result_digest=receipt["result"]["sha256"], verifier_digest=receipt["verifier"]["sha256"], quality_url=checks["quality"]["url"], conformance_url=checks["conformance"]["url"],
+        envelope_digest=receipt["envelope"]["sha256"], result_digest=receipt["result"]["sha256"], verifier_digest=receipt["verifier"]["sha256"], worker_digest=receipt["worker_boundary"]["sha256"], quality_url=checks["quality"]["url"], conformance_url=checks["conformance"]["url"],
     )
     if len(body.encode("utf-8")) > MAX_COMMENT_BYTES:
         raise ReceiptError("rendered receipt exceeds its byte limit")
@@ -1402,12 +1416,34 @@ def application_record(receipt: Mapping[str, Any], body: str, url: str, posted_a
     return {"schema": "runtime-receipt-application/v1", "status": "pass", "comment_url": url, "posted_at": posted_at, "body_sha256": digest, "readback_sha256": digest, "receipt_sha256": sha256(canonical_bytes(receipt)), "idempotent": idempotent, "reconciled_after_uncertain_post": reconciled}
 
 
-def require_runtime_receipt_readiness():
-    raise ReceiptError("known-worker-tmp-unresolved")
+def require_runtime_receipt_readiness(receipt):
+    """Require the independently derived worker projection before actuation."""
+    if not isinstance(receipt, dict):
+        raise ReceiptError("worker boundary receipt evidence is required")
+    if receipt.get("schema") == "t12-colima-lifecycle-completion/v1":
+        receipt = receipt.get("runtime_receipt", {}).get("record")
+    if not isinstance(receipt, dict):
+        raise ReceiptError("worker boundary receipt evidence is required")
+    worker = receipt.get("worker_boundary")
+    adapter = load_adapter()
+    expected = {"schema": "worker-boundary-evidence/v1", "status": "pass", "sha256": None,
+        "agreement_body_sha256": adapter.WORKER_BOUNDARY_OWNER_SHA256,
+        "runtime_profile_sha256": receipt.get("runtime_profile", {}).get("sha256"),
+        "envelope_sha256": receipt.get("envelope", {}).get("sha256"),
+        "execution_result_sha256": receipt.get("result", {}).get("sha256"),
+        "backend": "same-tmp-worker-linux-sandbox", "confirmed_reap": True, "finite_tmp": "pass",
+        "bounded_pre_post_not_authenticated_authorship": True}
+    if not isinstance(worker, dict):
+        raise ReceiptError("worker boundary receipt evidence is required")
+    expected["sha256"] = worker.get("sha256")
+    if (worker.get("confirmed_reap") is not True or worker.get("bounded_pre_post_not_authenticated_authorship") is not True
+            or worker != expected or any(not isinstance(expected[key], str) or not SHA.fullmatch(expected[key]) for key in
+            ("sha256", "runtime_profile_sha256", "envelope_sha256", "execution_result_sha256"))):
+        raise ReceiptError("worker boundary receipt evidence is invalid")
 
 
 def apply_comment(receipt: Mapping[str, Any], body: str) -> Dict[str, Any]:
-    require_runtime_receipt_readiness()
+    require_runtime_receipt_readiness(receipt)
     verify_external_head(receipt)
     existing = preflight_existing_receipt(receipt, body)
     if existing is not None:
@@ -1535,7 +1571,7 @@ def apply_one_lifecycle_comment(receipt: Mapping[str, Any], body: str) -> Tuple[
 
 
 def apply_lifecycle_comments(receipt: Mapping[str, Any], body: str) -> Dict[str, Any]:
-    require_runtime_receipt_readiness()
+    require_runtime_receipt_readiness(receipt)
     verify_external_head(receipt)
     verify_linked_runtime_receipt(receipt)
     issue_url, posted_at, idempotent, reconciled = apply_one_lifecycle_comment(
@@ -1683,12 +1719,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--dry-run-proof-sha256")
     args = parser.parse_args(argv)
     try:
-        if args.dry_run or args.lifecycle_dry_run or args.lifecycle_apply:
-            require_runtime_receipt_readiness()
-        if args.apply:
-            # Profile compatibility and structural fixture dry-runs do not
-            # resolve the distinct worker-TMP agreement or authorize apply.
-            require_runtime_receipt_readiness()
         if args.apply:
             if (
                 not isinstance(args.dry_run_proof_sha256, str)

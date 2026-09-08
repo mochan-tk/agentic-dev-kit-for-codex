@@ -50,16 +50,16 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "9a3bcbb0e3acde9767a2d3c82d7a734b6f99ebf15d0e77d15a06a767fed2b001"
+    "8303866ba9bfdd41ce95bae71fa23f7db5ed5c26d658f6b48fe45ac2ad536e6b"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "1b541b04adbb7899bf2f42bcc0d49308f5a4f966d9f21455d2ca91409dd1685f"
+    "bcb4692428a77418f62dc589b4029e41e1f4507c1981611be5c1054c50284eaf"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
-    "bae3df79ecff1a0a9337660a4567c9e00d256fc91cce3717e3f4375537e9b333"
+    "b6a3479406e483467c62bf44cebad162b116f5fa847335d8f035a3e2f5570f4d"
 )
 TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 REVIEWED_INVARIANT_DIGEST = (
@@ -1543,6 +1543,24 @@ def validate_import_time_structure(
     def validate_class(node: ast.ClassDef) -> bool:
         if validate_ctypes_structure(node):
             return True
+        reviewed_worker_base = False
+        if node.name == "WorkerLauncherImageObserver":
+            bases = [item for item in tree.body if isinstance(item, ast.ClassDef) and item.name == "OwnedLauncherImageObserver"]
+            if (label != RUNTIME_ADAPTER or len(bases) != 1
+                    or tree.body.index(bases[0]) >= tree.body.index(node)
+                    or bases[0].bases or not validate_class(bases[0])
+                    or any(isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == "__init_subclass__" for item in bases[0].body)
+                    or len(node.bases) != 1 or ast_qualified_name(node.bases[0]) != "OwnedLauncherImageObserver"):
+                return False
+            for item in ast.walk(tree):
+                if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == "OwnedLauncherImageObserver" and item is not bases[0]:
+                    return False
+                if isinstance(item, (ast.Import, ast.ImportFrom)) and any((alias.asname or alias.name.split(".")[0]) == "OwnedLauncherImageObserver" for alias in item.names):
+                    return False
+                targets = item.targets if isinstance(item, ast.Assign) else [item.target] if isinstance(item, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)) else []
+                if any(isinstance(part, ast.Name) and part.id == "OwnedLauncherImageObserver" for target in targets for part in ast.walk(target)):
+                    return False
+            reviewed_worker_base = True
         if node.name == "ProcessSpawnError":
             def inert_exception(candidate: ast.ClassDef, name: str, base: str, doc: str) -> bool:
                 return (
@@ -1580,7 +1598,7 @@ def validate_import_time_structure(
             or node.keywords
             or any(
                 not isinstance(base, ast.Name)
-                or base.id not in {"Exception", "NamedTuple"}
+                or base.id not in ({"OwnedLauncherImageObserver"} if reviewed_worker_base else {"Exception", "NamedTuple"})
                 for base in node.bases
             )
         ):
@@ -1795,6 +1813,7 @@ def validate_offline_runtime_checker_boundary(
         "adapter.validate_launch_diagnostics_wrapper",
         "adapter.validate_sandbox_probe_argv",
         "adapter.validate_verifier_record",
+        "adapter.validate_worker_boundary",
         "adapter._unavailable_runtime_profile",
     }
     for node in ast.walk(checker_tree):
@@ -1906,6 +1925,7 @@ def validate_offline_runtime_checker_boundary(
         "os",
         "re",
         "signal",
+        "shutil",
         "socket",
         "stat",
         "subprocess",
@@ -2623,6 +2643,7 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
             "runtime_evidence",
             "compatibility_baseline",
             "invocation_boundary",
+            "worker_completion",
             "pull_request_binding",
             "receipt_chronology",
             "source_parity",
@@ -2653,6 +2674,25 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         "body_sha256": T12_OWNER_AMENDMENT_SHA256,
     }:
         errors.append("T12 owner amendment URL or digest drifted")
+    completion = activation.get("worker_completion")
+    if not isinstance(completion, dict) or any(
+        type(completion.get(key)) is not int
+        for key in ("new_stage_a_orchestration_max", "new_stage_b_vm_max", "new_logical_worker_process_max", "new_runtime_receipt_apply_max")
+    ):
+        errors.append("T12 finite worker-completion maxima must be exact integers")
+    if completion != {
+        "owner_decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+        "owner_decision_body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1",
+        "historical_stage_a_allowance": "2-of-2-consumed-not-reset",
+        "new_stage_a_orchestration_max": 1, "new_stage_b_vm_max": 1,
+        "new_logical_worker_process_max": 1, "new_runtime_receipt_apply_max": 1,
+        "stage_b_gate": "new-stage-a-pass-cleanup-and-manual-owner-auth-and-confirmation",
+        "worker_boundary_artifact": "t12-worker-boundary/v1-required-before-runtime-receipt",
+        "worker_tmp": "same-private-root-source-bound-quiescent-linux-helper-only",
+        "evidence_scope": "bounded-pre-post-not-authenticated-authorship",
+        "current_outcome": "external-github-not-embedded",
+    }:
+        errors.append("T12 finite worker-completion authority or boundary drifted")
     if activation.get("ownership") != {
         "transferred_path_count": 21,
         "current_owned_path_count": 24,

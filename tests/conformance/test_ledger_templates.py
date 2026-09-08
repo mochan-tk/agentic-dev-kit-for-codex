@@ -320,6 +320,18 @@ class LedgerTemplatesTest(unittest.TestCase):
                 mutation(contract["runtime_frontier"])
                 self.assert_error(self.contract_errors(contract), fragment)
 
+    def test_worker_completion_authority_and_maxima_remain_exact(self):
+        for field, value, expected in (
+            ('new_stage_a_orchestration_max', True, 'maxima must be exact integers'),
+            ('new_stage_b_vm_max', 2, 'runtime frontier T12 activation drifted'),
+            ('historical_stage_a_allowance', 'reset', 'runtime frontier T12 activation drifted'),
+            ('owner_decision_body_sha256', '0'*64, 'runtime frontier T12 activation drifted'),
+        ):
+            with self.subTest(field=field):
+                contract = copy.deepcopy(self.contract)
+                contract['runtime_frontier']['t12_activation']['worker_completion'][field] = value
+                self.assert_error(self.contract_errors(contract), expected)
+
     def test_unknown_and_uncheckable_are_valid_record_states_but_not_success(self):
         for state in ("UNKNOWN", "UNCHECKABLE"):
             with self.subTest(state=state):

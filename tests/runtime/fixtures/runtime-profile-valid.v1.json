@@ -37,7 +37,7 @@
       "schema": "t11-runtime-configuration-intent/v1",
       "authority": "adapter-authored",
       "effective_configuration_proven": false,
-      "configuration_sha256": "7cb35ab91c101144299369053428e89a27bfb6f8ebdfdcdb0a0f62d8bddb6a9e",
+      "configuration_sha256": "57544f913162c855183d171f4217d9c1ad4f1a9a6d63f4539245ca8a73e16889",
       "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
       "dynamic_environment_values_excluded": [
         "CODEX_HOME",
@@ -51,7 +51,7 @@
         "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c",
         "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e"
       },
-      "compatibility_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+      "compatibility_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
       "reviewed_codex_injected_keys_sha256": "8ef011e3681e8a597c368d97b2dcc36e9a4c75ec9260d11a2fd5c05f26129ea6"
     },
     "diagnostic_health": {
@@ -102,7 +102,7 @@
         "unexpected_key_names_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
         "secret_shaped_key_count": 0
       },
-      "source_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+      "source_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
       "launcher": {
         "status": "pass",
         "path_binding_stable": true,
@@ -116,7 +116,7 @@
       "observation_binding": {
         "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "provider_attempt_sha256": "c219944a6bf33778f378fa09a0119e4fc720d352f3a19262944d58864c48d83b",
+        "provider_attempt_sha256": "cd1a2715374fc2054c686956917549c037bba7f45a571c4279da72dd6cac4595",
         "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
       },
       "window": {
@@ -138,7 +138,7 @@
         "binding": {
           "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "provider_attempt_sha256": "c219944a6bf33778f378fa09a0119e4fc720d352f3a19262944d58864c48d83b",
+          "provider_attempt_sha256": "cd1a2715374fc2054c686956917549c037bba7f45a571c4279da72dd6cac4595",
           "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
         },
         "control_connected": true,
@@ -168,19 +168,19 @@
         "expected_binding": {
           "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "provider_attempt_sha256": "c219944a6bf33778f378fa09a0119e4fc720d352f3a19262944d58864c48d83b",
+          "provider_attempt_sha256": "cd1a2715374fc2054c686956917549c037bba7f45a571c4279da72dd6cac4595",
           "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
         },
         "control_binding": {
           "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "provider_attempt_sha256": "c219944a6bf33778f378fa09a0119e4fc720d352f3a19262944d58864c48d83b",
+          "provider_attempt_sha256": "cd1a2715374fc2054c686956917549c037bba7f45a571c4279da72dd6cac4595",
           "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
         },
         "capture_binding": {
           "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "provider_attempt_sha256": "c219944a6bf33778f378fa09a0119e4fc720d352f3a19262944d58864c48d83b",
+          "provider_attempt_sha256": "cd1a2715374fc2054c686956917549c037bba7f45a571c4279da72dd6cac4595",
           "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
         },
         "observation_started_ms": 1787875199000,
@@ -346,7 +346,7 @@
       "authority": "adapter-authored",
       "status": "pass",
       "reason_code": "none",
-      "source_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+      "source_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
       "transition": {
         "schema": "t12-sandbox-housekeeping-evidence/v1",
         "authority": "adapter-authored",
@@ -361,7 +361,7 @@
       "observation_binding": {
         "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "provider_attempt_sha256": "c219944a6bf33778f378fa09a0119e4fc720d352f3a19262944d58864c48d83b",
+        "provider_attempt_sha256": "cd1a2715374fc2054c686956917549c037bba7f45a571c4279da72dd6cac4595",
         "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
       },
       "window": {

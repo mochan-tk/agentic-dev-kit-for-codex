@@ -229,6 +229,39 @@ sandbox/network, shell environment, configuration, or authentication status.
 
 ## Security and privacy consequences
 
+### T12 finite worker completion amendment (2026-09-08)
+
+The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437)
+with canonical body SHA-256
+`764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1`
+adopts the companion agreement's finite same-private-TMP worker transition.
+It supersedes the prior blanket worker/receipt latch below, not any failed
+historical observation, protected representative/Git boundary or native HOME,
+credential/rules, binary, mount, provider or cleanup requirement.
+
+Collect actual before/after finite observations directly around the one worker,
+its original confirmed process reap and a separate source-qualified same-TMP
+worker Linux-helper image witness. Shell/help/inert evidence cannot substitute.
+Missing or unexamined backend proof remains non-success; the model/tool/prompt
+is not forced to create a passing witness. Bind the closed supplemental
+`t12-worker-boundary/v1` artifact to exact attempt/head/tree, unchanged native
+profile/envelope and final result. Persist provisional safe worker evidence
+before later parsing/verification, retain unknown as unknown and require the
+proof independently in native receipt validation. A readiness-helper bypass
+cannot manufacture that proof. No unowned event/result schema changes.
+
+This is bounded pre/post and existential helper evidence, not authenticated
+authorship or an all-backend/intermediate-write trace. The same finite table
+and no-follow predicates apply; arbitrary TMP output is still rejected.
+The separate new allocation permits one Stage A orchestration and conditional
+one fresh Stage B VM/one logical worker/one logical receipt apply. The original
+2/2 ledger stays consumed. Bind exact reviewed sources and inputs after CI;
+pre-VM failure consumes the new orchestration once it starts. Manual owner
+authentication and explicit worker confirmation remain mandatory, as do the
+capacity/account-setting gates and existing bounded pause/B1/B2 cleanup.
+Keep the exact accepted receipt-before-destruction chronology below. No test
+or static authority record claims live success, T12 completion or merge readiness.
+
 ### T12 combined compatibility production integration (2026-09-08)
 
 The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698),

@@ -51,7 +51,7 @@
           "schema": "t11-runtime-configuration-intent/v1",
           "authority": "adapter-authored",
           "effective_configuration_proven": false,
-          "configuration_sha256": "7cb35ab91c101144299369053428e89a27bfb6f8ebdfdcdb0a0f62d8bddb6a9e",
+          "configuration_sha256": "57544f913162c855183d171f4217d9c1ad4f1a9a6d63f4539245ca8a73e16889",
           "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
           "dynamic_environment_values_excluded": [
             "CODEX_HOME",
@@ -65,7 +65,7 @@
             "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c",
             "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e"
           },
-          "compatibility_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+          "compatibility_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
           "reviewed_codex_injected_keys_sha256": "8ef011e3681e8a597c368d97b2dcc36e9a4c75ec9260d11a2fd5c05f26129ea6"
         },
         "diagnostic_health": {
@@ -116,7 +116,7 @@
             "unexpected_key_names_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
             "secret_shaped_key_count": 0
           },
-          "source_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+          "source_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
           "launcher": {
             "status": "pass",
             "path_binding_stable": true,
@@ -130,7 +130,7 @@
           "observation_binding": {
             "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            "provider_attempt_sha256": "b5ecf2b5f7d194e424bf87691078c513467f3ae07f71ba02eb82f2a9ad6c1d1a",
+            "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
             "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
           },
           "window": {
@@ -152,7 +152,7 @@
             "binding": {
               "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-              "provider_attempt_sha256": "b5ecf2b5f7d194e424bf87691078c513467f3ae07f71ba02eb82f2a9ad6c1d1a",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
               "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
             },
             "control_connected": true,
@@ -182,19 +182,19 @@
             "expected_binding": {
               "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-              "provider_attempt_sha256": "b5ecf2b5f7d194e424bf87691078c513467f3ae07f71ba02eb82f2a9ad6c1d1a",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
               "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
             },
             "control_binding": {
               "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-              "provider_attempt_sha256": "b5ecf2b5f7d194e424bf87691078c513467f3ae07f71ba02eb82f2a9ad6c1d1a",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
               "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
             },
             "capture_binding": {
               "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-              "provider_attempt_sha256": "b5ecf2b5f7d194e424bf87691078c513467f3ae07f71ba02eb82f2a9ad6c1d1a",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
               "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
             },
             "observation_started_ms": 1787875199000,
@@ -360,7 +360,7 @@
           "authority": "adapter-authored",
           "status": "pass",
           "reason_code": "none",
-          "source_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+          "source_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
           "transition": {
             "schema": "t12-sandbox-housekeeping-evidence/v1",
             "authority": "adapter-authored",
@@ -375,7 +375,7 @@
           "observation_binding": {
             "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            "provider_attempt_sha256": "b5ecf2b5f7d194e424bf87691078c513467f3ae07f71ba02eb82f2a9ad6c1d1a",
+            "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
             "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
           },
           "window": {
@@ -1133,7 +1133,7 @@
       },
       "digests": {
         "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637",
-        "runtime_profile_sha256": "50802fa49a90a7f640a6c8bcc0599b38a0afc35ad3ff850010be4e40b47cc38b"
+        "runtime_profile_sha256": "324ae540e30467fb5a741ec5c7e06adccc32477375bedd04428ce2fac871df39"
       },
       "privacy": {
         "raw_jsonl_retained": false,
@@ -1166,6 +1166,65 @@
         "index",
         "unreachable-objects"
       ]
+    },
+    "worker_boundary": {
+      "schema": "t12-worker-boundary/v1",
+      "authority": "adapter-authored",
+      "status": "pass",
+      "reason_code": "none",
+      "agreement": {
+        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+        "body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1"
+      },
+      "binding": {
+        "attempt_id": "ATTEMPT-0123456789abcdef",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+        "runtime_profile_sha256": "324ae540e30467fb5a741ec5c7e06adccc32477375bedd04428ce2fac871df39",
+        "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637"
+      },
+      "window": {
+        "started_ms": 1787875201000,
+        "finished_ms": 1787875202000
+      },
+      "process": {
+        "logical_invocations": 1,
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "stdout_overflow": false,
+        "stderr_overflow": false,
+        "reaped": true
+      },
+      "launcher": {
+        "role": "same-tmp-worker-linux-sandbox",
+        "actual_image_observed": true,
+        "binding_stable": true,
+        "image_samples": 1,
+        "image_error_count": 0,
+        "budget_exhausted": false,
+        "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8",
+        "source_commit": "90854393966b21e9ebfd21b122334eb09a20c93d"
+      },
+      "housekeeping": {
+        "schema": "t12-sandbox-housekeeping-evidence/v1",
+        "authority": "adapter-authored",
+        "status": "pass",
+        "reason_code": "none",
+        "current_exact_predicate_equal": false,
+        "transition": "registry-created",
+        "unknown_entries_accepted": false,
+        "historical_a2_identified": false,
+        "cleanup_required": "existing-full-disposable-provider-destruction"
+      },
+      "tmp_observations": {
+        "before_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "after_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "before_status": "pass",
+        "after_status": "pass"
+      },
+      "execution_result_sha256": "b295179de7b036e8dff92ddce23bae00a1cca8822ab576d6c8589fc06bd6612a"
     }
   },
   "checks": [

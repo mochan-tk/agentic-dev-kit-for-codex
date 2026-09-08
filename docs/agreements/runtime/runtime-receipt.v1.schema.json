@@ -5,36 +5,448 @@
   "description": "The CLI dry-run emits a repository-generated deterministic binding digest over the validated receipt projection. --apply requires that exact digest; it is not an authenticated attestation that a particular actor executed the dry-run.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "repository", "task", "pull_request", "artifacts", "checks", "limitations", "privacy"],
+  "required": [
+    "schema",
+    "repository",
+    "task",
+    "pull_request",
+    "artifacts",
+    "checks",
+    "limitations",
+    "privacy"
+  ],
   "properties": {
-    "schema": {"const": "runtime-receipt-request/v1"},
-    "repository": {"const": "mochan-tk/agentic-dev-kit-for-codex"},
-    "task": {"type": "object", "additionalProperties": false, "required": ["issue", "url"], "properties": {"issue": {"const": 25}, "url": {"const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"}}},
-    "pull_request": {"type": "object", "additionalProperties": false, "required": ["number", "url", "head", "tree"], "properties": {"number": {"type": "integer", "minimum": 1}, "url": {"type": "string", "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/pull/[0-9]+$"}, "head": {"$ref": "#/$defs/oid"}, "tree": {"$ref": "#/$defs/oid"}}},
-    "artifacts": {
-      "type": "object", "additionalProperties": false,
-      "required": ["runtime_profile", "envelope", "execution_result", "verifier"],
+    "schema": {
+      "const": "runtime-receipt-request/v1"
+    },
+    "repository": {
+      "const": "mochan-tk/agentic-dev-kit-for-codex"
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue",
+        "url"
+      ],
       "properties": {
-        "runtime_profile": {"$ref": "runtime-profile.v1.schema.json"},
-        "envelope": {"$ref": "task-execution-envelope.v1.schema.json"},
-        "execution_result": {"$ref": "execution-result.v1.schema.json"},
-        "verifier": {"$ref": "#/$defs/verifierArtifact"}
+        "issue": {
+          "const": 25
+        },
+        "url": {
+          "const": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
+        }
       }
     },
-    "checks": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "object", "additionalProperties": false, "required": ["context", "url", "head", "result"], "properties": {"context": {"enum": ["quality", "conformance"]}, "url": {"type": "string", "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/[0-9]+/job/[0-9]+$"}, "head": {"$ref": "#/$defs/oid"}, "result": {"const": "success"}}}},
-    "limitations": {"const": {"named_custom_agent_runtime_selection": "unverified", "authenticated_role_identity": "unverified", "artifact_provenance": "unsigned-unverified", "phase2_complete": false, "repository_complete": false, "release_ready": false}},
-    "privacy": {"const": {"allowlisted_projection": true, "raw_jsonl": false, "raw_reasoning": false, "raw_stderr": false, "transcript": false, "private_paths": false, "credential_values": false}}
+    "pull_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "url",
+        "head",
+        "tree"
+      ],
+      "properties": {
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/pull/[0-9]+$"
+        },
+        "head": {
+          "$ref": "#/$defs/oid"
+        },
+        "tree": {
+          "$ref": "#/$defs/oid"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_profile",
+        "envelope",
+        "execution_result",
+        "verifier",
+        "worker_boundary"
+      ],
+      "properties": {
+        "runtime_profile": {
+          "$ref": "runtime-profile.v1.schema.json"
+        },
+        "envelope": {
+          "$ref": "task-execution-envelope.v1.schema.json"
+        },
+        "execution_result": {
+          "$ref": "execution-result.v1.schema.json"
+        },
+        "verifier": {
+          "$ref": "#/$defs/verifierArtifact"
+        },
+        "worker_boundary": {
+          "$ref": "#/$defs/workerBoundary"
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "context",
+          "url",
+          "head",
+          "result"
+        ],
+        "properties": {
+          "context": {
+            "enum": [
+              "quality",
+              "conformance"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://github\\.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/[0-9]+/job/[0-9]+$"
+          },
+          "head": {
+            "$ref": "#/$defs/oid"
+          },
+          "result": {
+            "const": "success"
+          }
+        }
+      }
+    },
+    "limitations": {
+      "const": {
+        "named_custom_agent_runtime_selection": "unverified",
+        "authenticated_role_identity": "unverified",
+        "artifact_provenance": "unsigned-unverified",
+        "phase2_complete": false,
+        "repository_complete": false,
+        "release_ready": false
+      }
+    },
+    "privacy": {
+      "const": {
+        "allowlisted_projection": true,
+        "raw_jsonl": false,
+        "raw_reasoning": false,
+        "raw_stderr": false,
+        "transcript": false,
+        "private_paths": false,
+        "credential_values": false
+      }
+    }
   },
   "$defs": {
-    "oid": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "oid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
     "verifierArtifact": {
-      "type": "object", "additionalProperties": false,
-      "required": ["schema", "attempt_id", "status", "fresh_process", "read_only", "checks"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "attempt_id",
+        "status",
+        "fresh_process",
+        "read_only",
+        "checks"
+      ],
       "properties": {
-        "schema": {"const": "t11-verifier-result/v1"},
-        "attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"},
-        "status": {"const": "pass"}, "fresh_process": {"const": true}, "read_only": {"const": true},
-        "checks": {"const": ["root-binding", "file-binding", "branch", "head", "tree", "status", "diff", "ownership", "mode", "exact-bytes", "git-config", "hooks", "git-inventory", "refs", "index", "unreachable-objects"]}
+        "schema": {
+          "const": "t11-verifier-result/v1"
+        },
+        "attempt_id": {
+          "type": "string",
+          "pattern": "^ATTEMPT-[0-9a-f]{16}$"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "fresh_process": {
+          "const": true
+        },
+        "read_only": {
+          "const": true
+        },
+        "checks": {
+          "const": [
+            "root-binding",
+            "file-binding",
+            "branch",
+            "head",
+            "tree",
+            "status",
+            "diff",
+            "ownership",
+            "mode",
+            "exact-bytes",
+            "git-config",
+            "hooks",
+            "git-inventory",
+            "refs",
+            "index",
+            "unreachable-objects"
+          ]
+        }
+      }
+    },
+    "workerBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "authority",
+        "status",
+        "reason_code",
+        "agreement",
+        "binding",
+        "window",
+        "process",
+        "launcher",
+        "housekeeping",
+        "tmp_observations",
+        "execution_result_sha256"
+      ],
+      "properties": {
+        "schema": {
+          "const": "t12-worker-boundary/v1"
+        },
+        "authority": {
+          "const": "adapter-authored"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "reason_code": {
+          "const": "none"
+        },
+        "agreement": {
+          "const": {
+            "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+            "body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1"
+          }
+        },
+        "binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attempt_id",
+            "head",
+            "tree",
+            "provider_attempt_sha256",
+            "runtime_profile_sha256",
+            "envelope_sha256"
+          ],
+          "properties": {
+            "attempt_id": {
+              "type": "string",
+              "pattern": "^ATTEMPT-[0-9a-f]{16}$"
+            },
+            "head": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "tree": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "provider_attempt_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "runtime_profile_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "envelope_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "started_ms",
+            "finished_ms"
+          ],
+          "properties": {
+            "started_ms": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "finished_ms": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "process": {
+          "const": {
+            "logical_invocations": 1,
+            "exit_code": 0,
+            "signal": null,
+            "timed_out": false,
+            "stdout_overflow": false,
+            "stderr_overflow": false,
+            "reaped": true
+          }
+        },
+        "launcher": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "role",
+            "actual_image_observed",
+            "binding_stable",
+            "image_samples",
+            "image_error_count",
+            "budget_exhausted",
+            "binary_sha256",
+            "source_commit"
+          ],
+          "properties": {
+            "role": {
+              "const": "same-tmp-worker-linux-sandbox"
+            },
+            "actual_image_observed": {
+              "const": true
+            },
+            "binding_stable": {
+              "const": true
+            },
+            "image_samples": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096
+            },
+            "image_error_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "budget_exhausted": {
+              "const": false
+            },
+            "binary_sha256": {
+              "const": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"
+            },
+            "source_commit": {
+              "const": "90854393966b21e9ebfd21b122334eb09a20c93d"
+            }
+          }
+        },
+        "housekeeping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "authority",
+            "status",
+            "reason_code",
+            "current_exact_predicate_equal",
+            "transition",
+            "unknown_entries_accepted",
+            "historical_a2_identified",
+            "cleanup_required"
+          ],
+          "properties": {
+            "schema": {
+              "const": "t12-sandbox-housekeeping-evidence/v1"
+            },
+            "authority": {
+              "const": "adapter-authored"
+            },
+            "status": {
+              "const": "pass"
+            },
+            "reason_code": {
+              "const": "none"
+            },
+            "current_exact_predicate_equal": {
+              "type": "boolean"
+            },
+            "transition": {
+              "enum": [
+                "registry-created",
+                "quiescent-preserved"
+              ]
+            },
+            "unknown_entries_accepted": {
+              "const": false
+            },
+            "historical_a2_identified": {
+              "const": false
+            },
+            "cleanup_required": {
+              "const": "existing-full-disposable-provider-destruction"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "transition": {
+                    "const": "registry-created"
+                  }
+                },
+                "required": [
+                  "transition"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "current_exact_predicate_equal": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "tmp_observations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "before_sha256",
+            "after_sha256",
+            "before_status",
+            "after_status"
+          ],
+          "properties": {
+            "before_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "after_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "before_status": {
+              "const": "pass"
+            },
+            "after_status": {
+              "const": "pass"
+            }
+          }
+        },
+        "execution_result_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
     }
   }
