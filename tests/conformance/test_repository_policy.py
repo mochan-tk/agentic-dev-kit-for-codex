@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T11"
-CURRENT_TASK_BRANCH = "codex/phase-2-minimal-execution-slice"
+CURRENT_TASK_ID = "T14"
+CURRENT_TASK_BRANCH = "codex/source-first-installer"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,12 +521,13 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T11"], [task["id"] for task in active])
+        self.assertEqual(["T14"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T11_PATHS,
+            self.checker.EXPECTED_T14_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(42, len(active[0]["owned_paths"]))
+        self.assertEqual(61, len(active[0]["owned_paths"]))
+        self.assertEqual("accepted", next(task for task in payload["tasks"] if task["id"] == "T11")["state"])
         t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
         self.assertEqual("accepted", t10["state"])
 
@@ -731,7 +732,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T11", self.active_task(payload)["id"])
+        self.assertEqual("T14", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
@@ -750,7 +751,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 42 paths"
+            self.errors_for(fixture), "exactly the reviewed 61 paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -1104,7 +1105,7 @@ class RepositoryPolicyTest(unittest.TestCase):
             "alpha snapshot remains `unsupported-client`",
             "unsupported-client",
             "No successful real Codex worker or applied runtime receipt",
-            "not installable",
+            "local-source installation",
             "not a parity release",
             "`release_blocked` remains `true`",
         ):
@@ -1580,6 +1581,72 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertIn("  quality:\n", workflow)
         self.assertIn("  conformance:\n", workflow)
 
+    def test_t14_installer_checker_and_entrypoint_tests_are_reachable_once(self):
+        policy = self.ownership_payload()["policy"]
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        for command in (self.checker.INSTALLER_COMMAND,
+                        "bash .github/scripts/tests/test-scaffold-init.sh"):
+            self.assertEqual(1, policy["required_quality_commands"].count(command))
+            self.assertEqual(1, workflow.count("run: " + command))
+
+    def test_distribution_inventory_rejects_missing_or_duplicate_registration(self):
+        for copies in (0, 2):
+            with self.subTest(copies=copies):
+                payload = copy.deepcopy(self.ownership_payload())
+                commands = payload["policy"]["required_quality_commands"]
+                commands.remove(self.checker.INSTALLER_COMMAND)
+                commands.extend([self.checker.INSTALLER_COMMAND] * copies)
+                errors = []
+                self.checker.validate_distribution_inventory(
+                    ROOT, set(self.declared_paths(payload)), payload["policy"], errors)
+                self.assert_rejected(errors, "registered exactly once")
+
+    def test_payload_exception_does_not_hide_an_extra_checker_or_test(self):
+        for relative in (".github/distribution/payload/.github/scripts/check-extra.py",
+                         ".github/distribution/payload/tests/test_extra.py"):
+            with self.subTest(relative=relative):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("pass\n", encoding="utf-8")
+                errors = self.errors_for(fixture)
+                self.assert_rejected(errors, "reviewed exact inventory")
+                self.assert_rejected(errors, "undeclared live path")
+
+    def test_distribution_policy_rejects_row_digest_and_class_drift(self):
+        for defect in ("missing", "digest", "class"):
+            with self.subTest(defect=defect):
+                temporary, fixture = self.copy_fixture()
+                self.addCleanup(temporary.cleanup)
+                path = fixture / ".github/distribution/payload.v1.tsv"
+                lines = path.read_text(encoding="utf-8").splitlines()
+                index = next(i for i, line in enumerate(lines) if line and not line.startswith("#"))
+                if defect == "missing":
+                    del lines[index]
+                else:
+                    row = lines[index].split("\t")
+                    row[2 if defect == "digest" else 1] = "0" * 64 if defect == "digest" else "unknown"
+                    lines[index] = "\t".join(row)
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                self.assert_rejected(self.errors_for(fixture), "distribution inventory")
+
+    def test_t11_frozen_wrapper_cannot_be_transferred_or_reactivated(self):
+        for defect in ("owner", "state"):
+            with self.subTest(defect=defect):
+                payload = copy.deepcopy(self.ownership_payload())
+                historical = next(task for task in payload["tasks"] if task["id"] == "T11")
+                if defect == "state":
+                    historical["state"] = "active"
+                else:
+                    entry = next(entry for entry in historical["owned_paths"]
+                                 if entry["path"] == self.checker.FROZEN_PHASE1_WRAPPER)
+                    historical["owned_paths"].remove(entry)
+                    self.active_task(payload)["owned_paths"].append(entry)
+                errors = []
+                self.checker.validate_phase2_frontier(payload, errors)
+                self.assert_rejected(errors, "T11")
+
     def test_historical_phase1_checker_is_exact_and_wrapper_only(self):
         historical = ROOT / ".github/scripts/check-phase1-acceptance.py"
         payload = historical.read_bytes()
@@ -2021,7 +2088,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 42 paths"
+            self.errors_for(fixture), "exactly the reviewed 61 paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2330,7 +2397,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the reviewed 42 paths"
+                    self.errors_for(fixture), "exactly the reviewed 61 paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2342,7 +2409,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 42 paths"
+            self.errors_for(fixture), "exactly the reviewed 61 paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
@@ -2971,7 +3038,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T11",
+                    "ownership T14",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):
@@ -3286,7 +3353,7 @@ jobs:
 
     def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
         fixture = self.local_branch_fixture()
-        relative = "docs/agreements/runtime/minimal-codex-execution-loop.md"
+        relative = "docs/distribution/source-first-installer.md"
         self.assertEqual(
             "A",
             subprocess.check_output(

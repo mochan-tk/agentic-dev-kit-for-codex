@@ -1,0 +1,545 @@
+"""Disposable-adopter regressions derived from the frozen scaffold installer tests."""
+
+import hashlib
+import base64
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shutil
+import re
+import shlex
+import subprocess
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+INSTALLER = ROOT / ".github/scripts/scaffold-init.sh"
+PAYLOAD = ".github/distribution/payload"
+INVENTORY = ".github/distribution/payload.v1.tsv"
+
+
+class InstallerTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="codex-installer-test-")
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name).resolve()
+        self.target = self.base / "adopter with spaces"
+        self.target.mkdir()
+        subprocess.run(["git", "-c", "init.defaultBranch=main", "init", "-q", str(self.target)], check=True)
+
+    def run_install(self, *args, source=ROOT, target=None):
+        env = dict(os.environ, SCAFFOLD_SOURCE_DIR=str(source), LC_ALL="C")
+        return subprocess.run(["bash", str(INSTALLER), *args, str(target or self.target)], env=env,
+                              capture_output=True, text=True, timeout=30)
+
+    def snapshot(self, root):
+        if not root.exists():
+            return None
+        return {str(p.relative_to(root)): ("link", os.readlink(p)) if p.is_symlink()
+                else ("file", hashlib.sha256(p.read_bytes()).hexdigest()) if p.is_file()
+                else ("directory", "") for p in root.rglob("*")}
+
+    def git(self, *args):
+        return subprocess.check_output(["git", "-C", str(self.target), *args], text=True).strip()
+
+    def commit_adopter(self, message):
+        self.git("add", "--all")
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                 "commit", "-qm", message)
+        return self.git("rev-parse", "HEAD")
+
+    def adoption_fixture(self, *, initial=False, preserved=False, tune=True, application=False):
+        (self.target / "existing.txt").write_text("existing adopter file\n")
+        if preserved:
+            for name in ("AGENTS.md", "README.md", "SCAFFOLD-CHANGELOG.md"):
+                (self.target / name).write_text("adopter-owned " + name + "\n")
+        before_install = self.commit_adopter("before adoption")
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        adopted = self.commit_adopter("adopt reviewed local payload")
+        if initial:
+            return before_install, adopted
+        if tune:
+            path = self.target / ".github/codex-instructions.md"
+            path.write_text(path.read_text().replace("CUSTOMIZE", "CONFIGURED"))
+        if application:
+            (self.target / "application.py").write_text("print('application change')\n")
+        if not tune and not application:
+            (self.target / "existing.txt").write_text("ordinary work\n")
+        return adopted, self.commit_adopter("onboarding candidate")
+
+    def ritual(self, base, head, *, initial=False, defect=None, ordinary=False):
+        # GitHub projections are fixtures derived from real local Git objects.
+        # The fake transports data only; all proof decisions remain in the helper.
+        prefix = "repos/{owner}/{repo}"
+        replies = {}
+        def reply(endpoint, query, output, rc=0):
+            replies[endpoint + "\n" + query] = [rc, output]
+        meta = prefix + "/pulls/1"
+        for query, value in {
+            '[.user.login, .user.type] | @tsv': 'owner\tUser',
+            '.body // ""': ('Refs #2\nPlan: https://github.com/fixture/adopter/issues/2#issuecomment-3'
+                           if ordinary else ''), '.base.ref': 'main', '.base.sha': base,
+            '.head.sha': head, '.title // ""': 'adopt source-first kit' if initial else 'scaffold: onboard fixture',
+            '[.base.sha, .head.sha] | @tsv': base + '\t' + head,
+        }.items(): reply(meta, query, value)
+        for ref in (base, head):
+            tree = self.git("show", "-s", "--format=%T", ref)
+            reply(prefix + "/git/commits/" + ref, '.tree.sha', tree)
+            rows = []
+            for line in self.git("ls-tree", "-rt", ref).splitlines():
+                metadata, name = line.split("\t", 1)
+                mode, kind, oid = metadata.split()
+                rows.append("\t".join((name, mode, kind, oid)))
+                if kind == "blob":
+                    data = subprocess.check_output(["git", "-C", str(self.target), "cat-file", "blob", oid])
+                    reply(prefix + "/git/blobs/" + oid, '.encoding', 'base64')
+                    reply(prefix + "/git/blobs/" + oid, '.content | type', 'string')
+                    reply(prefix + "/git/blobs/" + oid, '.content', base64.b64encode(data).decode())
+            endpoint = prefix + "/git/trees/" + tree + "?recursive=1"
+            header = tree + "\tstring\tfalse\tboolean\tarray"
+            if ref == base and defect == "truncated": header = tree + "\tstring\ttrue\tboolean\tarray"
+            if ref == base and defect == "header-type": header = tree + "\tstring\tfalse\tstring\tarray"
+            if ref == base and defect == "duplicate": rows.append(rows[0])
+            if ref == base and defect == "symlink":
+                rows = [line.replace("\t100644\tblob\t", "\t120000\tblob\t")
+                        if line.startswith(".agents/skills/plan-management/scripts/frontier.sh\t") else line for line in rows]
+            if ref == base and defect == "missing-anchor":
+                rows = [line for line in rows if not line.startswith(
+                    ".agents/skills/plan-management/scripts/frontier.sh\t")]
+            reply(endpoint, '[.sha, (.sha | type), .truncated, (.truncated | type), (.tree | type)] | @tsv', header,
+                  1 if defect == "read-error" and ref == base else 0)
+            reply(endpoint, 'if all(.tree[]; ([.path, .mode, .type, .sha] | all(.[]; type == "string"))) then .tree[] | [.path, .mode, .type, .sha] | @tsv else error("invalid tree field type") end', "\n".join(rows),
+                  1 if ref == base and defect == "entry-type" else 0)
+        # Baseline consumer compatibility, including its incorrect error-as-absence path.
+        for name in ("AGENTS.md", "SCAFFOLD-CHANGELOG.md", ".github/codex-instructions.md"):
+            endpoint = prefix + "/contents/" + name + "?ref=main"
+            exists = subprocess.run(["git", "-C", str(self.target), "cat-file", "-e", base + ":" + name],
+                                    capture_output=True).returncode == 0
+            if exists:
+                data = subprocess.check_output(["git", "-C", str(self.target), "show", base + ":" + name])
+                reply(endpoint, '.content', base64.b64encode(data).decode())
+                reply(endpoint, '.sha', self.git("rev-parse", base + ":" + name),
+                      1 if defect == "read-error" and name == "AGENTS.md" else 0)
+            else:
+                reply(endpoint, '.content', '', 1); reply(endpoint, '.sha', '', 1)
+        added = self.git("diff", "--name-only", "--diff-filter=A", base, head).splitlines()
+        if defect == "read-error": added = ["AGENTS.md", ".github/codex-instructions.md"]
+        reply(meta + "/files?per_page=100", '[.[] | select(.status == "added") | .filename]', json.dumps(added))
+        if defect == "blob-error":
+            oid = self.git("rev-parse", base + ":.github/codex-instructions.md")
+            reply(prefix + "/git/blobs/" + oid, '.content', '', 1)
+        if defect in ("blob-type", "blob-content"):
+            oid = self.git("rev-parse", base + ":.github/codex-instructions.md")
+            reply(prefix + "/git/blobs/" + oid,
+                  '.content | type' if defect == "blob-type" else '.content',
+                  'array' if defect == "blob-type" else base64.b64encode(b"altered\n").decode())
+        if ordinary:
+            helper = (self.target / '.github/scripts/check-task-ritual.sh').read_text()
+            marker_query = helper.split('markers=$(api ', 1)[1].split("--jq '", 1)[1].split("'", 1)[0]
+            resolved_query = helper.split('elif resolved=$(api ', 1)[1].split("--jq '", 1)[1].split("'", 1)[0]
+            reply(prefix + '/issues/2/comments', marker_query,
+                  'CLAIM\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\n'
+                  'PLAN\t2026-01-01T00:01:00Z\t2026-01-01T00:01:00Z\n'
+                  'EXEMPT\t2026-01-01T00:01:00Z\t2026-01-01T00:01:00Z')
+            reply(meta + '/commits', '.[].commit | ((.committer.date // .author.date) // empty)',
+                  '2026-01-01T00:02:00Z')
+            reply(prefix + '/issues/2', '[.labels[].name] | join(" ")', 'type:task')
+            reply(prefix, '.full_name', 'fixture/adopter')
+            reply(prefix + '/issues/comments/3', resolved_query, '2\tplan')
+        fake = self.base / "ritual-bin"
+        fake.mkdir(exist_ok=True)
+        records = self.base / "github-fixture.json"
+        records.write_text(json.dumps(replies))
+        gh = fake / "gh"
+        gh.write_text("""#!/usr/bin/env python3
+import json, os, sys
+args=sys.argv[1:]
+if len(args)<4 or args[0]!='api' or '--jq' not in args: sys.exit(91)
+query=args[args.index('--jq')+1]
+value=json.load(open(os.environ['GITHUB_FIXTURE'])).get(args[1]+'\\n'+query)
+if value is None: sys.exit(92)
+print(value[1]); sys.exit(value[0])
+""")
+        gh.chmod(0o755)
+        if defect == "entry-error":
+            awk = fake / "awk"
+            base_oid = self.git("rev-parse", base + ":.github/codex-instructions.md")
+            awk.write_text("#!/usr/bin/env python3\nimport subprocess,sys\n"
+                "data=sys.stdin.buffer.read()\n"
+                "if any(arg in ('path=AGENTS.md','path=.github/codex-instructions.md') for arg in sys.argv[1:]) and "
+                + repr(base_oid.encode()) + " in data: sys.exit(93)\n"
+                "sys.exit(subprocess.run(['/usr/bin/awk',*sys.argv[1:]],input=data).returncode)\n")
+            awk.chmod(0o755)
+        return subprocess.run(["bash", ".github/scripts/check-task-ritual.sh", "1"],
+            cwd=self.target, env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"],
+                GITHUB_FIXTURE=str(records), RITUAL_API_RETRY_DELAY="0"),
+            capture_output=True, text=True, timeout=15)
+
+    def test_f1_installed_documented_invocations_use_0644_helpers(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        skill = (self.target / ".agents/skills/project-onboarding/SKILL.md").read_text()
+        command = re.search(r"Then run `([^`]+)`", skill).group(1)
+        helper = self.target / ".github/scripts/tuning-status.sh"
+        self.assertEqual(0o644, helper.stat().st_mode & 0o777)
+        try:
+            result = subprocess.run(shlex.split(command), cwd=self.target,
+                                    capture_output=True, text=True, timeout=5)
+        except PermissionError:
+            self.fail("documented direct execution fails against installed 0644 helper")
+        self.assertEqual(1, result.returncode, result.stderr)  # actually runs, reports untuned.
+        self.assertIn("CUSTOMIZE", result.stdout)
+        command = re.search(r"Run `([^`]*setup-labels\.sh)`", skill).group(1)
+        fake = self.base / "documented-bin"
+        fake.mkdir()
+        calls = self.base / "documented-calls"
+        gh = fake / "gh"
+        gh.write_text('#!/bin/sh\nprintf "called\\n" >> "$FIXTURE_CALLS"\nexit 1\n')
+        gh.chmod(0o755)
+        self.assertEqual(0o644, (self.target / '.github/scripts/setup-labels.sh').stat().st_mode & 0o777)
+        result = subprocess.run(shlex.split(command), cwd=self.target,
+            env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ['PATH'], FIXTURE_CALLS=str(calls)),
+            capture_output=True, text=True, timeout=5)
+        self.assertEqual(1, result.returncode)
+        self.assertEqual('called\n', calls.read_text())  # stopped at the fake authentication probe.
+
+    def test_f2_fresh_adoption_then_taskless_onboarding(self):
+        base, head = self.adoption_fixture()
+        result = self.ritual(base, head)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("onboarding evidence PR", result.stdout)
+
+    def test_f2_initial_adoption_read_error_is_not_absence(self):
+        base, head = self.adoption_fixture()
+        result = self.ritual(base, head, defect="read-error")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+
+    def test_f2_initial_adoption_has_complete_structural_proof(self):
+        base, head = self.adoption_fixture(initial=True)
+        self.assertEqual(0, self.ritual(base, head, initial=True).returncode)
+
+    def test_f2_preserved_adopter_records_do_not_block_real_adoption(self):
+        base, head = self.adoption_fixture(preserved=True)
+        for name in ("AGENTS.md", "README.md", "SCAFFOLD-CHANGELOG.md"):
+            self.assertEqual("adopter-owned " + name + "\n", (self.target / name).read_text())
+        result = self.ritual(base, head)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_f2_title_only_and_application_work_do_not_get_onboarding_exception(self):
+        base, head = self.adoption_fixture(tune=False, application=True)
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+        instructions = self.target / ".github/codex-instructions.md"
+        instructions.write_text(instructions.read_text().replace("CUSTOMIZE", "CONFIGURED"))
+        head = self.commit_adopter("tuning does not hide application work")
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+
+    def test_f2_invalid_or_unreadable_proof_is_non_success(self):
+        base, head = self.adoption_fixture()
+        for defect in ("truncated", "duplicate", "symlink", "blob-error", "missing-anchor",
+                       "blob-type", "blob-content", "entry-error", "header-type", "entry-type"):
+            with self.subTest(defect=defect):
+                self.assertNotEqual(0, self.ritual(base, head, defect=defect).returncode)
+
+    def test_f2_changed_output_symlink_does_not_get_onboarding_exception(self):
+        base, _ = self.adoption_fixture()
+        (self.target / '.github/docs/context/unsafe').symlink_to('../../../existing.txt')
+        head = self.commit_adopter('unsafe onboarding output')
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+
+    def test_f2_normal_task_uses_ritual_without_bootstrap_proof(self):
+        base, head = self.adoption_fixture(tune=False, application=True)
+        result = self.ritual(base, head, defect="read-error", ordinary=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn('ritual in order', result.stdout)
+
+    def clone_source(self):
+        source = self.base / "local source"
+        shutil.copytree(ROOT / ".github/distribution", source / ".github/distribution")
+        return source
+
+    def assert_refused_unchanged(self, *args, source=ROOT, target=None):
+        target = target or self.target
+        before = self.snapshot(target)
+        result = self.run_install(*args, source=source, target=target)
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertEqual(before, self.snapshot(target))
+        return result
+
+    def test_dry_run_preserves_target_git_and_source(self):
+        before = self.snapshot(self.target)
+        source_before = self.snapshot(ROOT / ".github/distribution")
+        result = self.run_install("--dry-run")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("install", result.stdout)
+        self.assertEqual(before, self.snapshot(self.target))
+        self.assertEqual(source_before, self.snapshot(ROOT / ".github/distribution"))
+
+    def test_default_is_dry_run(self):
+        before = self.snapshot(self.target)
+        self.assertEqual(0, self.run_install().returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def test_absent_dry_run_target_stays_absent(self):
+        target = self.base / "absent"
+        result = self.run_install("--dry-run", target=target)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertFalse(target.exists())
+
+    def test_apply_installs_exact_payload_without_git_mutation(self):
+        git_before = self.snapshot(self.target / ".git")
+        result = self.run_install("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = ROOT / PAYLOAD
+        files = [p for p in payload.rglob("*") if p.is_file()]
+        self.assertEqual(47, len(files))
+        for source in files:
+            self.assertEqual(source.read_bytes(), (self.target / source.relative_to(payload)).read_bytes())
+        self.assertEqual(git_before, self.snapshot(self.target / ".git"))
+        self.assertFalse((self.target / ".github/governance").exists())
+        self.assertFalse((self.target / "tests/conformance/results.json").exists())
+
+    def test_identical_reapply_is_noop(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        before = self.snapshot(self.target)
+        result = self.run_install("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.target))
+        self.assertNotIn("install\t", result.stdout)
+
+    def test_tuned_instance_seed_and_unrelated_files_are_preserved(self):
+        for name in ["AGENTS.md", "README.md", ".github/codex-instructions.md",
+                     ".github/docs/agreements/requirements.md", "app/private.txt", "SCAFFOLD-CHANGELOG.md"]:
+            p = self.target / name
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("adopter truth\n")
+        result = self.run_install("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        for name in ["AGENTS.md", "README.md", ".github/codex-instructions.md",
+                     ".github/docs/agreements/requirements.md", "app/private.txt", "SCAFFOLD-CHANGELOG.md"]:
+            self.assertEqual("adopter truth\n", (self.target / name).read_text())
+
+    def test_differing_engine_collision_refuses_before_any_write(self):
+        p = self.target / ".agents/skills/verification/SKILL.md"
+        p.parent.mkdir(parents=True)
+        p.write_text("adopter modified engine\n")
+        self.assert_refused_unchanged("--apply")
+
+    def test_unknown_force_upgrade_and_conflicting_modes_refuse(self):
+        for args in [("--force",), ("--upgrade",), ("--wat",), ("--apply", "--dry-run")]:
+            with self.subTest(args=args):
+                self.assert_refused_unchanged(*args)
+
+    def test_apply_requires_existing_git_root(self):
+        plain = self.base / "plain"
+        plain.mkdir()
+        self.assert_refused_unchanged("--apply", target=plain)
+        sub = self.target / "sub"
+        sub.mkdir()
+        self.assert_refused_unchanged("--apply", target=sub)
+
+    def test_target_root_and_ancestor_symlinks_refuse(self):
+        link = self.base / "target-link"
+        link.symlink_to(self.target, target_is_directory=True)
+        self.assert_refused_unchanged("--apply", target=link)
+        parent = self.base / "linked-parent"
+        parent.symlink_to(self.base, target_is_directory=True)
+        self.assert_refused_unchanged("--dry-run", target=parent / self.target.name)
+
+    def test_target_leaf_ancestor_and_broken_symlinks_refuse(self):
+        for name in ["AGENTS.md", ".agents", ".github/docs"]:
+            with self.subTest(name=name):
+                p = self.target / name
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.symlink_to(self.base / "missing")
+                self.assert_refused_unchanged("--apply")
+                p.unlink()
+
+    def test_file_directory_collisions_refuse(self):
+        (self.target / "AGENTS.md").mkdir()
+        self.assert_refused_unchanged("--apply")
+        (self.target / "AGENTS.md").rmdir()
+        (self.target / ".github").write_text("not a directory")
+        self.assert_refused_unchanged("--apply")
+
+    def test_source_root_ancestor_and_leaf_symlinks_refuse(self):
+        source = self.clone_source()
+        link = self.base / "source-link"
+        link.symlink_to(source, target_is_directory=True)
+        self.assert_refused_unchanged("--apply", source=link)
+        p = source / PAYLOAD / "AGENTS.md"
+        original = p.read_bytes()
+        p.unlink()
+        other = self.base / "outside.md"
+        other.write_bytes(original)
+        p.symlink_to(other)
+        self.assert_refused_unchanged("--apply", source=source)
+
+    def test_payload_digest_drift_refuses(self):
+        source = self.clone_source()
+        with (source / PAYLOAD / "AGENTS.md").open("a") as out:
+            out.write("changed\n")
+        self.assert_refused_unchanged("--apply", source=source)
+
+    def test_extra_payload_and_unsafe_duplicate_inventory_refuse(self):
+        source = self.clone_source()
+        (source / PAYLOAD / "extra.md").write_text("unreviewed")
+        self.assert_refused_unchanged("--apply", source=source)
+        (source / PAYLOAD / "extra.md").unlink()
+        inventory = source / INVENTORY
+        original = inventory.read_text()
+        for text in [original + original.splitlines()[1] + "\n", original.replace("AGENTS.md", "../escape", 1),
+                     original.replace("AGENTS.md", "agents.md", 1)]:
+            inventory.write_text(text)
+            self.assert_refused_unchanged("--apply", source=source)
+
+    def test_missing_source_refuses(self):
+        self.assert_refused_unchanged("--apply", source=self.base / "missing-source")
+
+    def test_self_consistent_redirected_inventory_refuses(self):
+        source = self.clone_source()
+        payload = source / PAYLOAD
+        (payload / "other.md").write_bytes((payload / "AGENTS.md").read_bytes())
+        (payload / "AGENTS.md").unlink()
+        inventory = source / INVENTORY
+        inventory.write_text(inventory.read_text().replace("AGENTS.md", "other.md"))
+        self.assert_refused_unchanged("--apply", source=source)
+
+    def test_enumeration_failure_refuses_even_after_all_known_entries(self):
+        fake = self.base / "bin"
+        fake.mkdir()
+        find = fake / "find"
+        find.write_text('#!/bin/sh\n/usr/bin/find "$@"\nexit 1\n')
+        find.chmod(0o755)
+        before = self.snapshot(self.target)
+        result = subprocess.run(["bash", str(INSTALLER), "--apply", str(self.target)],
+                                env=dict(os.environ, SCAFFOLD_SOURCE_DIR=str(ROOT),
+                                         PATH=str(fake) + os.pathsep + os.environ["PATH"]),
+                                capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def test_non_git_source_provenance_is_not_claimed_clean(self):
+        result = self.run_install("--dry-run", source=self.clone_source())
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("source-commit=unknown", result.stdout)
+
+    def test_windows_drive_source_and_target_use_existing_cygpath(self):
+        fake = self.base / "bin"
+        fake.mkdir()
+        converter = fake / "cygpath"
+        converter.write_text("""#!/bin/sh
+[ "$1" = -u ] && [ "$2" = -- ] || exit 1
+case "$3" in
+  C:/*) printf '%s\n' "$FIXTURE_SOURCE" ;;
+  D:*) printf '%s\n' "$FIXTURE_TARGET" ;;
+  *) exit 1 ;;
+esac
+""")
+        converter.chmod(0o755)
+        env = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"],
+                   SCAFFOLD_SOURCE_DIR="C:/reviewed/source", FIXTURE_SOURCE=str(ROOT),
+                   FIXTURE_TARGET=str(self.target))
+        git_before = self.snapshot(self.target / ".git")
+        result = subprocess.run(["/bin/bash", str(INSTALLER), "--apply", "D:\\adopter"],
+                                env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(git_before, self.snapshot(self.target / ".git"))
+        self.assertEqual((ROOT / PAYLOAD / "AGENTS.md").read_bytes(),
+                         (self.target / "AGENTS.md").read_bytes())
+
+    def test_windows_drive_conversion_unavailable_or_invalid_refuses(self):
+        fake = self.base / "bin"
+        fake.mkdir()
+        command = ["/bin/bash", str(INSTALLER), "--apply", "D:/adopter"]
+        env = dict(os.environ, PATH=str(fake), SCAFFOLD_SOURCE_DIR="C:/source")
+        before = self.snapshot(self.target)
+        result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("require Git Bash cygpath", result.stderr)
+        converter = fake / "cygpath"
+        for script in ("#!/bin/sh\nexit 1\n", "#!/bin/sh\nprintf 'relative-path\\n'\n"):
+            converter.write_text(script)
+            converter.chmod(0o755)
+            result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(0, result.returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def test_frontier_failure_never_becomes_empty_success(self):
+        fake = self.base / "bin"
+        fake.mkdir()
+        gh = fake / "gh"
+        gh.write_text("#!/bin/sh\nexit 1\n")
+        gh.chmod(0o755)
+        result = subprocess.run(["bash", str(ROOT / PAYLOAD / ".agents/skills/plan-management/scripts/frontier.sh")],
+                                env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"]),
+                                capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(0, result.returncode)
+        self.assertNotIn("No open Task", result.stdout)
+
+    def test_inventory_checker_accepts_tree_and_rejects_provenance_drift(self):
+        spec = importlib.util.spec_from_file_location("installer_checker", ROOT / ".github/scripts/check-installer.py")
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        self.assertEqual([], checker.validate(ROOT))
+        source = self.clone_source()
+        parity = source / ".github/distribution/source-parity.v1.json"
+        value = json.loads(parity.read_text())
+        value["source_commit"] = "0" * 40
+        parity.write_text(json.dumps(value))
+        self.assertTrue(checker.validate(source))
+
+    def test_frontier_keeps_ready_and_blocked_distinct_and_refuses_later_error(self):
+        fake = self.base / "bin"
+        fake.mkdir()
+        gh = fake / "gh"
+        gh.write_text("""#!/bin/sh
+case "$2" in
+  list) printf '1\tReady Task\n2\tDependent Task\n' ;;
+  view)
+    case "$3" in
+      1) exit 0 ;;
+      2) if [ "$FIXTURE_FAILURE" = yes ]; then exit 1; fi; printf '3\n' ;;
+      3) printf '%s\n' "$FIXTURE_STATE" ;;
+      *) exit 1 ;;
+    esac ;;
+  *) exit 1 ;;
+esac
+""")
+        gh.chmod(0o755)
+        command = ["bash", str(ROOT / PAYLOAD / ".agents/skills/plan-management/scripts/frontier.sh"), "--all"]
+        for state, failure, succeeds in (("OPEN", "no", True), ("CLOSED", "no", True),
+                                         ("UNKNOWN", "no", False), ("OPEN", "yes", False)):
+            with self.subTest(state=state, failure=failure):
+                result = subprocess.run(command, env=dict(os.environ,
+                    PATH=str(fake) + os.pathsep + os.environ["PATH"],
+                    FIXTURE_STATE=state, FIXTURE_FAILURE=failure),
+                    capture_output=True, text=True, timeout=5)
+                if succeeds:
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    self.assertIn("#1\tReady Task", result.stdout)
+                    self.assertIn("#2\tDependent Task", result.stdout)
+                    self.assertEqual(state == "OPEN", "== Blocked ==" in result.stdout)
+                else:
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertEqual("", result.stdout, "never publish a partial actionable frontier")
+
+    def test_checker_rejects_wrong_preservation_class_and_malformed_parity_row(self):
+        spec = importlib.util.spec_from_file_location("installer_checker", ROOT / ".github/scripts/check-installer.py")
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        source = self.clone_source()
+        inventory = source / INVENTORY
+        original = inventory.read_text()
+        inventory.write_text(original.replace("\tengine\t", "\ttuned\t", 1))
+        self.assertTrue(checker.validate(source))
+        self.assert_refused_unchanged("--apply", source=source)
+        inventory.write_text(original)
+        parity = source / ".github/distribution/source-parity.v1.json"
+        value = json.loads(parity.read_text())
+        value["files"][0] = "not-a-record"
+        parity.write_text(json.dumps(value))
+        self.assertTrue(checker.validate(source))
+
+
+if __name__ == "__main__":
+    unittest.main()
