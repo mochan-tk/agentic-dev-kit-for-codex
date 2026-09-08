@@ -117,6 +117,26 @@ claim exactly one backend model request. T11 claims only deterministic
 fixture-based receipt validation, dry-run, zero-write, idempotency, conflict,
 and read-back behavior.
 
+### Current offline compatibility integration
+
+The [2026-09-08 owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698)
+adds three existing paths to T12 (24 exact paths; accepted T11 retains 18).
+The original 21-path activation and both Phase/Task bases remain history.
+Closed shell/network v2 observations now distinguish observed socket-creation
+denial from connect denial, require launcher-qualified exact-cwd `PWD`, and
+bind the finite quiescent sandbox TMP transition to confirmed reap. Actual
+collector/classifier/profile/receipt wiring is tested with fake external
+operations and real temporary filesystem fixtures, not a new runtime attempt.
+
+`live_run_allowed` is a necessary authenticated profile-compatibility condition,
+not complete execution authority or receipt readiness. The production worker
+and receipt-actuation paths stop at `known-worker-tmp-unresolved`: the unchanged
+whole-worker TMP equality can reject a source-permitted cleaned registry
+lifecycle. No probe exception is silently extended to worker writes. Stage A
+remains 2/2 consumed; changing a head, schema, or helper creates no new allowance.
+The existing A1/A2 non-success evidence is unchanged. T12 and the repository
+remain incomplete, with empty release results and `release_blocked=true`.
+
 ## What remains outside the portable core
 
 - an installer or upgrade path;

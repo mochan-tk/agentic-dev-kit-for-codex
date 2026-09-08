@@ -110,6 +110,16 @@
       },
       "ownership": {
         "transferred_path_count": 21,
+        "current_owned_path_count": 24,
+        "compatibility_amendment": {
+          "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698",
+          "body_sha256": "ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b",
+          "transferred_paths": [
+            ".github/governance/codex-runtime-profile.v1.json",
+            "docs/agreements/runtime/runtime-profile.v1.schema.json",
+            "tests/runtime/fixtures/runtime-profile-valid.v1.json"
+          ]
+        },
         "path_transitions": [],
         "expansion_requires_replan": true
       },

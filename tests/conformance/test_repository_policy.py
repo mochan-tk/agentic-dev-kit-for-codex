@@ -526,7 +526,7 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.EXPECTED_T12_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(21, len(active[0]["owned_paths"]))
+        self.assertEqual(24, len(active[0]["owned_paths"]))
         t11 = next(task for task in payload["tasks"] if task["id"] == "T11")
         self.assertEqual("accepted", t11["state"])
         self.assertEqual(
@@ -743,7 +743,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                 lambda payload: next(
                     task for task in payload["tasks"] if task["id"] == "T12"
                 )["owned_paths"].append({"path": "unreviewed.txt", "mode": "100644"}),
-                "exactly the approved 21 paths",
+                "exactly the approved 24 paths",
             ),
         )
         for label, mutate, fragment in cases:
@@ -777,7 +777,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the approved 21 paths"
+            self.errors_for(fixture), "exactly the approved 24 paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -2024,6 +2024,26 @@ class RepositoryPolicyTest(unittest.TestCase):
                 self.assert_rejected(errors, "runtime import digest drifted")
                 self.assert_rejected(errors, "import-time executable syntax")
 
+    def test_runtime_reap_context_has_one_narrow_import_time_allocation(self):
+        safe = "_PROFILE_REAP_OBSERVATION = threading.local()\n"
+        errors = []
+        self.checker.validate_import_time_structure(
+            self.checker.ast.parse(safe), self.checker.RUNTIME_ADAPTER, errors,
+        )
+        self.assertEqual([], errors)
+        for source, label in (
+            (safe, self.checker.RUNTIME_RECEIPT_ACTUATOR),
+            (safe.replace("_PROFILE_REAP_OBSERVATION", "OTHER"), self.checker.RUNTIME_ADAPTER),
+            (safe.replace("threading.local()", "threading.local(1)"), self.checker.RUNTIME_ADAPTER),
+            (safe.replace("threading.local()", "threading.local(value=1)"), self.checker.RUNTIME_ADAPTER),
+            (safe.replace("threading.local()", "threading.Thread()"), self.checker.RUNTIME_ADAPTER),
+            (safe.replace(" = ", " = OTHER = "), self.checker.RUNTIME_ADAPTER),
+        ):
+            with self.subTest(source=source, label=label):
+                errors = []
+                self.checker.validate_import_time_structure(self.checker.ast.parse(source), label, errors)
+                self.assert_rejected(errors, "import-time assignment execution")
+
     def test_ci_cannot_invoke_live_runtime_or_receipt_actuator(self):
         for marker in (
             ".github/scripts/codex-exec-adapter.py",
@@ -2123,7 +2143,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the approved 21 paths"
+            self.errors_for(fixture), "exactly the approved 24 paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2432,7 +2452,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the approved 21 paths"
+                    self.errors_for(fixture), "exactly the approved 24 paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2444,7 +2464,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the approved 21 paths"
+            self.errors_for(fixture), "exactly the approved 24 paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):

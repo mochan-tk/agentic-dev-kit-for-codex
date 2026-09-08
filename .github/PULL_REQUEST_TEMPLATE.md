@@ -8,6 +8,9 @@ or claim full/runtime parity for K10 or K11. Their current repository status is 
 to the accepted minimal/partial offline T11 slice. T12 live evidence is external GitHub
 state and must be exact-head bound; opaque references do not prove validity, freshness,
 live execution, or acceptance.
+For the current T12 frontier, live_run_allowed is profile compatibility only.
+The mandatory known-worker-tmp-unresolved gate blocks worker/receipt readiness;
+offline collector tests do not renew the consumed Stage A allowance or prove a live run.
 Opaque runtime references are bounded linkage only. Only the locator grammar is parsed.
 The referenced target is neither resolved nor dereferenced, and the value proves neither
 target validity nor target freshness; it provides no evidence of implementation, execution,

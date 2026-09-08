@@ -434,6 +434,30 @@ def validate_documented_memory_overrides(overrides: Mapping[str, Any]) -> None:
             raise ContractError("documented memory override must be present and false: " + key)
 
 
+def compatibility_contract() -> Dict[str, Any]:
+    """Reviewed source/policy facts, never observations of the executing client."""
+    return {
+        "schema": "t12-compatibility-contract/v1",
+        "codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
+        "network_source_sha256": "eb59313c7cfdb7d003df3c1e3d766ad66e414061ef5065d89546a74c1dd658ed",
+        "launcher_source_sha256": "bf1d23f8020d4e73f7a3e235165f0953154170256a92cf0c8254e5ab32578f91",
+        "sandbox_source_sha256": "3be631c566fbd4cbd08eea042cf425164d01002951b0dcad927c674beb571134",
+        "ubuntu_source_orig_sha256": "c6347eaced49ac0141996f46bba3b089e5e6ea4408bc1c43bab9f2d05dd094e1",
+        "ubuntu_source_debian_sha256": "d253eccba8f6a8d636dd3df241c2d4d722785341c665c7817040aafa7ed3495e",
+        "launcher_binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+        "launcher_help_sha256": "2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d",
+        "launcher_package": APPROVED_BWRAP_PACKAGE_VERSION,
+        "launcher_key": "PWD", "launcher_value": "exact-bound-cwd-in-memory",
+        "executed_image_required": True, "sandbox_policy": ":read-only-restricted-no-proxy",
+        "socket_create_denials": ["EPERM", "EACCES"],
+        "connect_denials": list(APPROVED_NETWORK_DENIAL_ERRNOS),
+        "observation_max_age_ms": 300000, "capture_max_ms": 15000,
+        "housekeeping": "quiescent-private-root-registry-empty-lock-only",
+        "housekeeping_max_entries": 2, "housekeeping_file_bytes": 0,
+        "worker_boundary": "known-worker-tmp-unresolved",
+    }
+
+
 def runtime_configuration_intent() -> Dict[str, Any]:
     """Return stable adapter-authored intent, never effective-config proof.
 
@@ -458,6 +482,7 @@ def runtime_configuration_intent() -> Dict[str, Any]:
             "rules_path_relative_to_codex_home": REVIEWED_RULES_RELATIVE_PATH,
             "rules_profile_sha256": sha256_bytes(REVIEWED_RULES_BYTES),
         },
+        "compatibility_contract": compatibility_contract(),
     }
     return {
         "schema": "t11-runtime-configuration-intent/v1",
@@ -468,6 +493,7 @@ def runtime_configuration_intent() -> Dict[str, Any]:
         "dynamic_environment_values_excluded": list(DYNAMIC_ENVIRONMENT_NAMES),
         "reviewed_codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
         "reviewed_codex_source_blobs": dict(OFFICIAL_CODEX_0150_SOURCE_BLOBS),
+        "compatibility_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
         "reviewed_codex_injected_keys_sha256": sha256_bytes(canonical_bytes(
             list(REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS)
         )),
@@ -2870,7 +2896,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         (
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
             "shell_environment_behavior", "network_sandbox_behavior",
-            "bubblewrap_prerequisite",
+            "bubblewrap_prerequisite", "sandbox_housekeeping",
             "lane_statuses", "containment_provider",
         ),
         "runtime evidence",
@@ -2951,10 +2977,10 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     }
     if worker_argv_evidence["status"] in ("fail", "UNCHECKABLE") and failure_pairs.get(worker_argv_evidence["reason_code"]) != worker_argv_evidence["stage"]:
         raise ContractError("runtime worker argv failure stage/reason pair is invalid")
-    shell_evidence = validate_shell_environment_evidence(
+    shell_evidence = validate_compatibility_shell(
         evidence["shell_environment_behavior"]
     )
-    network_evidence = validate_network_sandbox_evidence(
+    network_evidence = validate_compatibility_network(
         evidence["network_sandbox_behavior"]
     )
     prerequisite_evidence = validate_stage_a1_prerequisite_evidence(
@@ -2963,6 +2989,35 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     containment_evidence = validate_containment_provider_evidence(
         evidence["containment_provider"], allow_fixture=allow_fixture,
     )
+    housekeeping = validate_compatibility_housekeeping(evidence["sandbox_housekeeping"])
+    observed_bindings = []
+    for record in (shell_evidence, housekeeping):
+        if record["observation_binding"] is not None:
+            observed_bindings.append(record["observation_binding"])
+    if network_evidence["observation"] is not None:
+        observed_bindings.append(network_evidence["observation"]["binding"])
+    if observed_bindings:
+        if containment_evidence["status"] != "pass":
+            raise ContractError("compatibility observations lack a validated provider")
+        expected_provider_digest = compatibility_provider_digest(containment_evidence, allow_fixture=allow_fixture)
+        for binding in observed_bindings:
+            if (binding["head"] != containment_evidence["public_head"]
+                    or binding["tree"] != containment_evidence["public_tree"]
+                    or binding["provider_attempt_sha256"] != expected_provider_digest
+                    or binding != observed_bindings[0]):
+                raise ContractError("compatibility same-attempt/head/tree binding drifted")
+        observed_ms = int(datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp() * 1000)
+        for started, finished in compatibility_observation_windows(profile):
+            # Native timestamps have whole-second precision; observations
+            # may finish inside that final second, never after it.
+            if not observed_ms - COMPATIBILITY_MAX_AGE_MS <= started <= finished <= observed_ms + 999:
+                raise ContractError("nested compatibility evidence is outside the native observation window")
+    if shell_evidence["status"] == "pass":
+        qualified_bwrap = prerequisite_evidence["bubblewrap"]
+        if (prerequisite_evidence["status"] != "pass"
+                or qualified_bwrap["binary_sha256"] != shell_evidence["launcher"]["binary_sha256"]
+                or qualified_bwrap["help_sha256"] != shell_evidence["launcher"]["help_sha256"]):
+            raise ContractError("executed launcher and prerequisite bindings disagree")
     lanes = evidence["lane_statuses"]
     if not isinstance(lanes, dict):
         raise ContractError("runtime evidence lanes must be an object")
@@ -3045,6 +3100,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         and worker_argv_evidence["status"] == "pass"
         and network_evidence["status"] == "pass"
         and prerequisite_evidence["status"] == "pass"
+        and housekeeping["status"] == "pass"
         and containment_evidence["status"] == "pass"
         and all(caps[field] for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
     )
@@ -3098,10 +3154,10 @@ PROFILE_STABLE_ROOTS = (
     "capabilities", "auth", "request", "shell_environment", "live_run_allowed",
 )
 PROFILE_STABLE_EVIDENCE = (
-    "configuration_intent", "exact_worker_argv", "shell_environment_behavior",
+    "configuration_intent", "exact_worker_argv",
     "bubblewrap_prerequisite", "lane_statuses",
 )
-PROFILE_FRESH_EVIDENCE = ("diagnostic_health", "network_sandbox_behavior")
+PROFILE_FRESH_EVIDENCE = ("diagnostic_health", "network_sandbox_behavior", "shell_environment_behavior", "sandbox_housekeeping")
 PROFILE_PROVIDER_STABLE = (
     "schema", "authority", "codex_authenticated_attestation", "status",
     "provider_kind", "vm_backend", "architecture", "native_architecture",
@@ -3120,6 +3176,21 @@ PROFILE_PROVIDER_ATTEMPT = (
     "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
     "control_plane", "lifecycle",
 )
+
+
+def compatibility_observation_windows(profile):
+    evidence = profile["evidence"]
+    windows = []
+    shell = evidence["shell_environment_behavior"]
+    if shell["window"] is not None:
+        windows.append((shell["window"]["started_ms"], shell["window"]["classified_ms"]))
+    network = evidence["network_sandbox_behavior"]
+    if network["context"] is not None:
+        windows.append((network["context"]["observation_started_ms"], network["classified_at_ms"]))
+    housekeeping = evidence["sandbox_housekeeping"]
+    if housekeeping["window"] is not None:
+        windows.append((housekeeping["window"]["started_ms"], housekeeping["window"]["finished_ms"]))
+    return windows
 
 
 def compare_runtime_profiles(
@@ -3148,6 +3219,12 @@ def compare_runtime_profiles(
     for key in PROFILE_STABLE_EVIDENCE:
         if supplied["evidence"][key] != fresh["evidence"][key]:
             raise ContractError("stable runtime evidence binding drifted")
+    for key in ("source_contract_sha256",):
+        if supplied["evidence"]["shell_environment_behavior"][key] != fresh["evidence"]["shell_environment_behavior"][key]:
+            raise ContractError("stable shell source binding drifted")
+    for key in ("binary_sha256", "help_sha256"):
+        if supplied["evidence"]["shell_environment_behavior"]["launcher"][key] != fresh["evidence"]["shell_environment_behavior"]["launcher"][key]:
+            raise ContractError("stable executed launcher binding drifted")
     for key in (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT):
         if supplied["evidence"]["containment_provider"][key] != fresh["evidence"]["containment_provider"][key]:
             raise ContractError("stable or same-attempt provider binding drifted")
@@ -3170,6 +3247,13 @@ def compare_runtime_profiles(
         or (current - finish).total_seconds() > 300
     ):
         raise ContractError("fresh semantic runtime sensor observation is stale, replayed, or outside its invocation")
+    old_binding = supplied["evidence"]["sandbox_housekeeping"]["observation_binding"]
+    fresh_binding = fresh["evidence"]["sandbox_housekeeping"]["observation_binding"]
+    if old_binding["observation_id_sha256"] == fresh_binding["observation_id_sha256"]:
+        raise ContractError("fresh compatibility observation identity was replayed")
+    start_ms, finish_ms = int(start.timestamp() * 1000), int(finish.timestamp() * 1000) + 999
+    if any(not start_ms <= left <= right <= finish_ms for left, right in compatibility_observation_windows(fresh)):
+        raise ContractError("fresh nested compatibility evidence is outside its actual sensor invocation")
     return runtime_profile_comparison_record(supplied, fresh, observation_started_at, observation_finished_at, "pass")
 
 
@@ -3492,11 +3576,12 @@ class DescendantTracker:
     separately proven containment primitive is introduced.
     """
 
-    def __init__(self, leader_pid: int, env: Mapping[str, str]):
+    def __init__(self, leader_pid: int, env: Mapping[str, str], launcher_observer=None):
         self.leader_pid = leader_pid
         self.env = dict(env)
         self.known: Dict[int, Tuple[int, int, str]] = {}
         self.failure: Optional[str] = None
+        self.launcher_observer = launcher_observer
         self.stop_event = threading.Event()
         self.ready = threading.Event()
         self.thread = threading.Thread(target=self._run, name="t11-descendant-tracker", daemon=True)
@@ -3524,6 +3609,13 @@ class DescendantTracker:
                 if pid not in self.known and identity[0] in known_pids:
                     self.known[pid] = identity
                     changed = True
+        if self.launcher_observer is not None:
+            # Read-only optional corroboration. Its failures never interrupt
+            # this tracker's established identity-bound cleanup path.
+            try:
+                self.launcher_observer.observe(self.leader_pid, leader_known, table)
+            except Exception:
+                self.launcher_observer.uncheckable = True
 
     def _run(self) -> None:
         try:
@@ -3610,7 +3702,29 @@ def live_containment_proven(evidence: Optional[Mapping[str, Any]] = None) -> boo
     )
 
 
-def run_bounded_process(
+_PROFILE_REAP_OBSERVATION = threading.local()
+
+
+def run_bounded_process(*args, **kwargs) -> ProcessResult:
+    """Observe existing profile calls without altering subprocess ownership."""
+    sample = getattr(_PROFILE_REAP_OBSERVATION, "sample", None)
+    if sample is not None:
+        sample["requested"] += 1
+    try:
+        result = _run_bounded_process(*args, **kwargs)
+    except BaseException:
+        if sample is not None:
+            sample["unconfirmed"] += 1
+        raise
+    if sample is not None:
+        if type(result.reaped) is bool and result.reaped:
+            sample["reaped"] += 1
+        else:
+            sample["unconfirmed"] += 1
+    return result
+
+
+def _run_bounded_process(
     argv: Sequence[str],
     cwd: Path,
     env: Mapping[str, str],
@@ -3620,6 +3734,7 @@ def run_bounded_process(
     stderr_limit: int,
     grace_seconds: float = 2.0,
     capture_stderr: bool = False,
+    launcher_observer=None,
 ) -> ProcessResult:
     require_runtime_fs_capabilities()
     if not argv or any(not isinstance(item, str) or "\x00" in item for item in argv):
@@ -3641,7 +3756,7 @@ def run_bounded_process(
         )
     except OSError:
         raise ProcessSpawnError("bounded process could not start") from None
-    tracker = DescendantTracker(process.pid, env)
+    tracker = DescendantTracker(process.pid, env, launcher_observer) if launcher_observer is not None else DescendantTracker(process.pid, env)
     try:
         tracker.start()
     except Exception:
@@ -4491,6 +4606,230 @@ def execution_root_inventory(root: Path, *, native_binary: Optional[Path] = None
     finally:
         os.close(descriptor)
     return {"content": sorted(content_rows, key=lambda row: row[1]), "binding": sorted(binding_rows, key=lambda row: row[1])}
+
+
+def sandbox_tmp_owner_metadata(root, inventory):
+    """Supplement missing uid/gid, VM-local only; no new inventory semantics."""
+    rows = {row[1]: row for row in inventory['binding']}
+    contents = {row[1]: row for row in inventory['content']}
+    if len(rows) > MAX_EXECUTION_ROOT_ENTRIES or set(rows) != set(contents):
+        raise ContractError('tmp-supplement-invalid')
+    descriptor, _ = _open_absolute_directory_nofollow(root)
+    owners = {}
+    try:
+        for path, row in rows.items():
+            parts = [] if path == '.' else path.split('/')
+            if any(part in ('', '.', '..') for part in parts) or len(parts) > 32:
+                raise ContractError('tmp-supplement-invalid')
+            fd = os.dup(descriptor)
+            try:
+                for index, part in enumerate(parts):
+                    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                    if index < len(parts) - 1 or row[0] == 'dir': flags |= os.O_DIRECTORY
+                    next_fd = os.open(part, flags, dir_fd=fd)
+                    os.close(fd); fd = next_fd
+                info = os.fstat(fd); content = contents[path]
+                observed_binding = ('dir' if stat.S_ISDIR(info.st_mode) else 'file' if stat.S_ISREG(info.st_mode)
+                                    else 'unsupported', path, info.st_dev, info.st_ino,
+                                    stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), info.st_nlink)
+                times = content[4:6] if row[0] == 'dir' else content[5:7]
+                if (tuple(row) != observed_binding or (info.st_mtime_ns, info.st_ctime_ns) != tuple(times)
+                        or (row[0] == 'file' and info.st_size != content[4])):
+                    raise ContractError('tmp-supplement-binding-drift')
+                owners[path] = (info.st_uid, info.st_gid)
+                after = os.fstat(fd)
+                fields = ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_gid', 'st_nlink', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+                if any(getattr(info, field) != getattr(after, field) for field in fields):
+                    raise ContractError('tmp-supplement-binding-drift')
+            finally: os.close(fd)
+        if inventory != execution_root_inventory(root):
+            raise ContractError('tmp-supplement-binding-drift')
+        named = os.stat(root, follow_symlinks=False); opened = os.fstat(descriptor)
+        if (named.st_dev, named.st_ino) != (opened.st_dev, opened.st_ino):
+            raise ContractError('tmp-supplement-binding-drift')
+    finally: os.close(descriptor)
+    return owners
+
+
+SANDBOX_HOUSEKEEPING_SOURCE_COMMIT = '90854393966b21e9ebfd21b122334eb09a20c93d'
+SANDBOX_EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+SANDBOX_MAX_NON_ROOT_ENTRIES = 2
+SANDBOX_REGISTRY_PREFIX = 'codex-bwrap-synthetic-mount-targets-'
+
+
+def observe_sandbox_housekeeping(root, *, expected_uid, expected_gid):
+    """Reuse frozen bounded/no-follow inventory and bound uid/gid supplement.
+
+The expected identity is an owner-controlled private-VM input, not a pathname
+extracted from untrusted content. Existing shared TMP roots are not eligible.
+"""
+    result = {'status': 'UNCHECKABLE', 'reason_code': 'observation-uncheckable',
+              'state': 'unclassified', 'inventory': None, 'owners': None,
+              'expected_uid': expected_uid, 'expected_gid': expected_gid}
+    if (type(expected_uid) is not int or not 0 < expected_uid <= 4294967295
+            or type(expected_gid) is not int or not 0 <= expected_gid <= 4294967295):
+        result['reason_code'] = 'identity-input-invalid'; return result
+    try:
+        inventory = execution_root_inventory(root)
+        result['inventory'] = inventory
+        # Reuse the existing read cap, then stop before additional per-node
+        # owner observation when even the finite entry count cannot qualify.
+        if len(inventory['content']) > SANDBOX_MAX_NON_ROOT_ENTRIES + 1 or len(inventory['binding']) > SANDBOX_MAX_NON_ROOT_ENTRIES + 1:
+            result.update(status='fail', reason_code='unclassified-or-incomplete-state'); return result
+        owners = sandbox_tmp_owner_metadata(root, inventory)
+        result.update(inventory=inventory, owners=owners)
+    except Exception: return result
+    registry = SANDBOX_REGISTRY_PREFIX + str(expected_uid)
+    content = {row[1]: row for row in inventory['content']}
+    bindings = {row[1]: row for row in inventory['binding']}
+    permitted_sets = ({'.'}, {'.', registry, registry + '/lock'})
+    if (set(content) not in permitted_sets or len(content) != len(inventory['content'])
+            or set(bindings) != set(content) or len(bindings) != len(inventory['binding'])
+            or set(owners) != set(content)):
+        result.update(status='non-success', reason_code='unclassified-or-incomplete-state'); return result
+    for path, row in content.items():
+        is_lock = path == registry + '/lock'
+        kind, mode = ('file', 0o600) if is_lock else ('dir', 0o700)
+        if (row[0] != kind or row[2] != mode or row[3] != 0 or row[-1] != ()
+                or owners[path] != (expected_uid, expected_gid)):
+            result.update(status='non-success', reason_code='metadata-policy-mismatch'); return result
+        binding = bindings[path]
+        if binding[0] != kind or binding[5] != mode or binding[2] != bindings['.'][2] or (is_lock and binding[6] != 1):
+            result.update(status='non-success', reason_code='binding-policy-mismatch'); return result
+        if path == registry and binding[6] != 2:
+            result.update(status='non-success', reason_code='registry-link-count-mismatch'); return result
+        if path == '.' and binding[6] != (2 if len(content) == 1 else 3):
+            result.update(status='non-success', reason_code='root-link-count-mismatch'); return result
+        if is_lock and (row[4] != 0 or row[7] != SANDBOX_EMPTY_SHA256):
+            result.update(status='non-success', reason_code='lock-content-mismatch'); return result
+    result.update(status='pass', reason_code='none', state='empty' if len(content) == 1 else 'registry-only')
+    return result
+
+
+def validate_sandbox_housekeeping_transition(before, after, *, process_reaped):
+    """Owner-adopted probe-only finite transition; worker equality is separate.
+
+Only the first complete registry+empty-lock appearance can change the TMP
+root's nlink/mtime/ctime. Existing registry-directory times may reflect fully
+cleaned transient markers. The lock remains byte/metadata/inode immutable.
+    """
+    output = {'schema': 't12-sandbox-housekeeping-evidence/v1', 'authority': 'adapter-authored', 'status': 'UNCHECKABLE', 'reason_code': 'observation-uncheckable',
+        'current_exact_predicate_equal': None, 'transition': 'unclassified',
+        'unknown_entries_accepted': False, 'historical_a2_identified': False,
+        'cleanup_required': 'existing-full-disposable-provider-destruction'}
+    if type(process_reaped) is not bool or process_reaped is not True:
+        output['reason_code'] = 'quiescence-not-proven'; return output
+    if before.get('inventory') is not None and after.get('inventory') is not None:
+        output['current_exact_predicate_equal'] = before['inventory'] == after['inventory']
+    if before.get('status') != 'pass' or after.get('status') != 'pass': return output
+    if (before['expected_uid'], before['expected_gid']) != (after['expected_uid'], after['expected_gid']):
+        output['reason_code'] = 'expected-identity-drift'; return output
+    old = {row[1]: row for row in before['inventory']['content']}
+    new = {row[1]: row for row in after['inventory']['content']}
+    old_bind = {row[1]: row for row in before['inventory']['binding']}
+    new_bind = {row[1]: row for row in after['inventory']['binding']}
+    if before['state'] == 'registry-only' and after['state'] == 'empty':
+        output['reason_code'] = 'unexpected-registry-removal'; return output
+    created = before['state'] == 'empty' and after['state'] == 'registry-only'
+    if (old_bind['.'][:6] != new_bind['.'][:6] or old['.'][:4] != new['.'][:4]
+            or old['.'][-1] != new['.'][-1] or before['owners']['.'] != after['owners']['.']):
+        output['reason_code'] = 'protected-root-drift'; return output
+    if created:
+        if new_bind['.'][6] != old_bind['.'][6] + 1:
+            output['reason_code'] = 'root-link-count-mismatch'; return output
+    elif old_bind['.'] != new_bind['.'] or old['.'] != new['.']:
+        output['reason_code'] = 'unexplained-root-metadata-drift'; return output
+    registry = SANDBOX_REGISTRY_PREFIX + str(before['expected_uid'])
+    if before['state'] == 'registry-only':
+        lock = registry + '/lock'
+        if (old[lock] != new[lock] or old_bind[lock] != new_bind[lock]
+                or before['owners'][lock] != after['owners'][lock]):
+            output['reason_code'] = 'existing-lock-drift'; return output
+        if (old_bind[registry] != new_bind[registry] or old[registry][:4] != new[registry][:4]
+                or old[registry][-1] != new[registry][-1]
+                or before['owners'][registry] != after['owners'][registry]):
+            output['reason_code'] = 'existing-registry-binding-drift'; return output
+    output.update(status='pass', reason_code='none', transition='registry-created' if created else 'quiescent-preserved')
+    return output
+
+
+HOUSEKEEPING_REASONS = (
+    "none", "not-run", "observation-uncheckable", "quiescence-not-proven",
+    "expected-identity-drift", "unexpected-registry-removal", "protected-root-drift",
+    "root-link-count-mismatch", "unexplained-root-metadata-drift", "existing-lock-drift",
+    "existing-registry-binding-drift",
+)
+
+
+def not_run_compatibility_housekeeping(status="not-run"):
+    return {"schema": "t12-sandbox-housekeeping-observation/v1", "authority": "adapter-authored",
+        "status": status, "reason_code": "not-run" if status == "not-run" else "observation-uncheckable",
+        "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+        "transition": None, "observation_binding": None, "window": None,
+        "process_calls": {"requested": 0, "reaped": 0, "unconfirmed": 0}}
+
+
+def compatibility_housekeeping_record(before, after, sample, context, finished_ms):
+    if context is None:
+        return not_run_compatibility_housekeeping("UNCHECKABLE")
+    proven = (0 < sample["requested"] <= 128 and sample["requested"] == sample["reaped"]
+        and sample["unconfirmed"] == 0)
+    transition = validate_sandbox_housekeeping_transition(before, after, process_reaped=proven)
+    value = {"schema": "t12-sandbox-housekeeping-observation/v1", "authority": "adapter-authored",
+        "status": transition["status"], "reason_code": transition["reason_code"],
+        "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+        "transition": transition, "observation_binding": dict(context["binding"]),
+        "window": {"started_ms": context["started_ms"], "finished_ms": finished_ms},
+        "process_calls": dict(sample)}
+    return validate_compatibility_housekeeping(value)
+
+
+def validate_compatibility_housekeeping(value):
+    exact_keys(value, tuple(not_run_compatibility_housekeeping()), "housekeeping observation")
+    if (value["schema"] != "t12-sandbox-housekeeping-observation/v1" or value["authority"] != "adapter-authored"
+            or value["source_contract_sha256"] != sha256_bytes(canonical_bytes(compatibility_contract()))):
+        raise ContractError("housekeeping version/source drift")
+    if value["transition"] is None:
+        if value not in (not_run_compatibility_housekeeping(), not_run_compatibility_housekeeping("UNCHECKABLE")):
+            raise ContractError("unobserved housekeeping contains claims")
+        return value
+    sample = value["process_calls"]
+    exact_keys(sample, ("requested", "reaped", "unconfirmed"), "housekeeping process observation")
+    if (any(type(number) is not int or not 0 <= number <= 128 for number in sample.values())
+            or sample["requested"] != sample["reaped"] + sample["unconfirmed"]):
+        raise ContractError("housekeeping process counts are invalid")
+    if not _compatibility_binding(value["observation_binding"]):
+        raise ContractError("housekeeping attempt binding is invalid")
+    window = value["window"]
+    exact_keys(window, ("started_ms", "finished_ms"), "housekeeping window")
+    if (any(not _compatibility_milliseconds(number) for number in window.values())
+            or not 0 <= window["finished_ms"] - window["started_ms"] <= COMPATIBILITY_MAX_AGE_MS):
+        raise ContractError("housekeeping window is invalid")
+    transition = value["transition"]
+    expected_keys = ("schema", "authority", "status", "reason_code", "current_exact_predicate_equal",
+        "transition", "unknown_entries_accepted", "historical_a2_identified", "cleanup_required")
+    exact_keys(transition, expected_keys, "finite housekeeping transition")
+    if (transition["schema"] != "t12-sandbox-housekeeping-evidence/v1" or transition["authority"] != "adapter-authored"
+            or transition["status"] not in ("pass", "UNCHECKABLE")
+            or transition["reason_code"] not in HOUSEKEEPING_REASONS
+            or transition["transition"] not in ("unclassified", "registry-created", "quiescent-preserved")
+            or transition["unknown_entries_accepted"] is not False
+            or transition["historical_a2_identified"] is not False
+            or transition["cleanup_required"] != "existing-full-disposable-provider-destruction"
+            or (transition["current_exact_predicate_equal"] is not None and type(transition["current_exact_predicate_equal"]) is not bool)):
+        raise ContractError("finite housekeeping transition is invalid")
+    if (value["status"], value["reason_code"]) != (transition["status"], transition["reason_code"]):
+        raise ContractError("housekeeping summary disagrees")
+    if transition["status"] == "pass" and not (
+            transition["reason_code"] == "none" and transition["transition"] != "unclassified"
+            and type(transition["current_exact_predicate_equal"]) is bool
+            and sample["requested"] > 0 and sample["unconfirmed"] == 0):
+        raise ContractError("passing housekeeping lacks quiescence")
+    if transition["status"] != "pass" and transition["reason_code"] == "none":
+        raise ContractError("non-success housekeeping lost its reason")
+    if transition["transition"] == "registry-created" and transition["current_exact_predicate_equal"] is not False:
+        raise ContractError("registry creation cannot be exact equality")
+    return value
 
 
 def native_codex_home_inventory(home: Path, binary: Path) -> Dict[str, List[Tuple[Any, ...]]]:
@@ -5361,10 +5700,20 @@ def worker_process_record(process: ProcessResult) -> Dict[str, Any]:
     }
 
 
+def require_worker_housekeeping_agreement():
+    """The probe amendment is not a worker-TMP or receipt-apply agreement."""
+    raise ContractError("known-worker-tmp-unresolved")
+
+
 def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict[str, Any], mode: str, fake_behavior: str = "valid", include_artifacts: bool = False, *, profile_observation_sink: Optional[Any] = None) -> Dict[str, Any]:
     require_runtime_fs_capabilities()
     validate_envelope(envelope)
     validate_runtime_profile(profile, allow_fixture=(mode == "offline"))
+    if mode == "live":
+        # The probe-only finite TMP amendment does not authorize the worker
+        # registry lifecycle. Keep the old worker equality below unchanged.
+        # Stop before any sensor, exclusive claim, or logical worker process.
+        require_worker_housekeeping_agreement()
     if envelope["worker"]["model"] != profile["request"]["model"] or envelope["worker"]["reasoning_effort"] != profile["request"]["reasoning_effort"]:
         raise ContractError("envelope and runtime profile request differ")
     if mode == "live" and (profile["status"] != "match" or profile["live_run_allowed"] is not True):
@@ -5641,10 +5990,12 @@ def bounded_capture(
     stdout_limit: int = 1_048_576,
     stderr_limit: int = 1_048_576,
     capture_stderr: bool = False,
+    launcher_observer=None,
 ) -> ProcessResult:
     return run_bounded_process(
         argv, cwd, env, stdin_bytes, timeout, stdout_limit, stderr_limit, 2,
         capture_stderr=capture_stderr,
+        **({"launcher_observer": launcher_observer} if launcher_observer is not None else {}),
     )
 
 
@@ -5788,10 +6139,14 @@ def validate_launch_diagnostics_wrapper(value: Any) -> Dict[str, Any]:
 
 def _capture_sandbox_probe(
     argv: Sequence[str], root: Path, env: Mapping[str, str], stdout_limit: int,
-    diagnostics: Optional[Dict[str, Any]], lane: str,
+    diagnostics: Optional[Dict[str, Any]], lane: str, launcher_observer=None,
 ) -> ProcessResult:
     """No extra invocation; scrub transient stderr before existing classifiers."""
     options = {"capture_stderr": True} if diagnostics is not None else {}
+    if launcher_observer is not None:
+        if lane != "shell":
+            raise ContractError("executed launcher observation is shell-probe-only")
+        options["launcher_observer"] = launcher_observer
     try:
         result = bounded_capture(
             argv, root, env, timeout=15, stdout_limit=stdout_limit,
@@ -6420,6 +6775,734 @@ def classify_network_sandbox_result(
     return network_sandbox_evidence("pass", "none", **observed)
 
 
+NETWORK_SOCKET_DENIALS_V2 = ("EPERM", "EACCES")
+NETWORK_CONNECT_DENIALS_V2 = ("EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED")
+NETWORK_MAX_CAPTURE_MS_V2 = 15_000
+COMPATIBILITY_MAX_AGE_MS = 300_000
+COMPATIBILITY_BINDING_KEYS = {"head", "tree", "provider_attempt_sha256", "observation_id_sha256"}
+NETWORK_CONTEXT_KEYS_V2 = {"expected_binding", "control_binding", "capture_binding",
+                "observation_started_ms", "observation_finished_ms"}
+NETWORK_OBSERVATION_KEYS_V2 = {
+    "binding", "control_connected", "control_accepted", "control_peer_matches", "control_closed",
+    "parent_netns_sha256", "sandbox_netns_sha256", "network_marker_status",
+    "socket_create_status", "socket_create_errno", "connect_status", "connect_errno",
+    "socket_close_status", "exit_code", "signal", "timed_out", "stdout_overflow",
+    "stderr_overflow", "stderr_size", "reaped", "control_closed_ms",
+    "probe_started_ms", "probe_finished_ms",
+}
+
+
+def _compatibility_exact_keys(value, keys):
+    return isinstance(value, dict) and set(value) == keys
+
+
+def _compatibility_digest(value, length=64):
+    return (isinstance(value, str) and re.fullmatch("[0-9a-f]{%d}" % length, value)
+            is not None and value != "0" * length)
+
+
+def _compatibility_binding(value):
+    return (_compatibility_exact_keys(value, COMPATIBILITY_BINDING_KEYS) and all(_compatibility_digest(value[key], 40 if key in
+            ("head", "tree") else 64) for key in COMPATIBILITY_BINDING_KEYS))
+
+
+def _compatibility_milliseconds(value):
+    return type(value) is int and 0 <= value <= 2 ** 53 - 1
+
+
+def _network_errno_name_v2(error, allowed):
+    value = getattr(error, "errno", None)
+    name = errno.errorcode.get(value) if type(value) is int else None
+    return name if name in allowed else "unapproved"
+
+
+def observe_network_socket_calls_v2(create_socket, configure_socket, connect_socket, close_socket):
+    """Closed socket stages; the collector owns fixed AF_INET/target/timeout.
+
+    Offline tests supply fakes only. No error text, private address, or arbitrary
+    errno name leaves this function. Configure failure is never connect denial.
+    """
+    result = {"socket_create_status": "UNCHECKABLE", "socket_create_errno": "unapproved",
+              "connect_status": "not-attempted", "connect_errno": "none",
+              "socket_close_status": "not-needed"}
+    try:
+        sock = create_socket()
+    except OSError as error:
+        result["socket_create_errno"] = _network_errno_name_v2(error, NETWORK_SOCKET_DENIALS_V2)
+        if result["socket_create_errno"] in NETWORK_SOCKET_DENIALS_V2:
+            result["socket_create_status"] = "denied"
+        return result
+    except Exception:
+        return result
+    result.update(socket_create_status="created", socket_create_errno="none")
+    try:
+        try:
+            configure_socket(sock)
+        except Exception:
+            result.update(connect_status="UNCHECKABLE", connect_errno="unapproved")
+            return result
+        try:
+            connect_socket(sock)
+        except OSError as error:
+            result.update(connect_status="denied", connect_errno=_network_errno_name_v2(error, NETWORK_CONNECT_DENIALS_V2))
+        except Exception:
+            result.update(connect_status="UNCHECKABLE", connect_errno="unapproved")
+        else:
+            result.update(connect_status="succeeded", connect_errno="none")
+    finally:
+        try:
+            close_socket(sock)
+        except Exception:
+            result["socket_close_status"] = "UNCHECKABLE"
+        else:
+            result["socket_close_status"] = "pass"
+    return result
+
+
+def classify_network_observation_v2(observation, context, now_ms):
+    """Classify only a complete closed observation; no runtime action.
+
+    The controller must independently establish the context; matching submitted
+    strings alone are not authenticity. Existing full-profile, containment,
+    exact-head and receipt checks remain mandatory in the production route.
+    """
+    safe = {"schema": "t12-network-predicate/v2", "authority": "adapter-authored",
+            "status": "UNCHECKABLE", "reason_code": "malformed-observation",
+            "proof_path": "none", "socket_create_status": "UNCHECKABLE",
+            "socket_create_errno": "unapproved", "connect_status": "UNCHECKABLE",
+            "connect_errno": "unapproved", "socket_close_status": "UNCHECKABLE"}
+
+    def done(reason, status="UNCHECKABLE", proof="none"):
+        return dict(safe, reason_code=reason, status=status, proof_path=proof)
+
+    if not _compatibility_exact_keys(observation, NETWORK_OBSERVATION_KEYS_V2) or not _compatibility_exact_keys(context, NETWORK_CONTEXT_KEYS_V2):
+        return done("malformed-observation")
+    if any(not _compatibility_binding(record) for record in (observation["binding"], context["expected_binding"],
+            context["control_binding"], context["capture_binding"])):
+        return done("binding-uncheckable")
+    if any(record != context["expected_binding"] for record in
+            (observation["binding"], context["control_binding"], context["capture_binding"])):
+        return done("attempt-binding-mismatch")
+    times = [context["observation_started_ms"], observation["control_closed_ms"],
+             observation["probe_started_ms"], observation["probe_finished_ms"],
+             context["observation_finished_ms"], now_ms]
+    if any(not _compatibility_milliseconds(value) for value in times) or times != sorted(times):
+        return done("freshness-uncheckable")
+    if (times[3] - times[2] > NETWORK_MAX_CAPTURE_MS_V2 or
+            times[5] - times[4] > COMPATIBILITY_MAX_AGE_MS or
+            times[5] - times[0] > COMPATIBILITY_MAX_AGE_MS):
+        return done("stale-observation")
+    boolean_keys = ("control_connected", "control_accepted", "control_peer_matches", "control_closed",
+                    "timed_out", "stdout_overflow", "stderr_overflow", "reaped")
+    if any(type(observation[key]) is not bool for key in boolean_keys):
+        return done("malformed-observation")
+    if not all(observation[key] for key in boolean_keys[:4]):
+        return done("control-unavailable")
+    if observation["timed_out"]:
+        return done("process-timeout")
+    if observation["stdout_overflow"] or observation["stderr_overflow"]:
+        return done("output-overflow")
+    if not observation["reaped"]:
+        return done("process-not-reaped")
+    if type(observation["exit_code"]) is not int or observation["exit_code"] != 0 or observation["signal"] is not None:
+        return done("process-nonzero-or-status-unavailable")
+    if type(observation["stderr_size"]) is not int or observation["stderr_size"] != 0:
+        return done("observation-uncheckable")
+    if not _compatibility_digest(observation["parent_netns_sha256"]) or not _compatibility_digest(observation["sandbox_netns_sha256"]):
+        return done("namespace-uncheckable")
+    if observation["parent_netns_sha256"] == observation["sandbox_netns_sha256"]:
+        return done("netns-not-separated", "fail")
+    marker = observation["network_marker_status"]
+    if marker in ("missing", "mismatch"):
+        return done("network-marker-" + marker, "fail")
+    if marker != "exact-1":
+        return done("network-marker-uncheckable")
+    socket_status, socket_errno = observation["socket_create_status"], observation["socket_create_errno"]
+    connection, connect_errno = observation["connect_status"], observation["connect_errno"]
+    closed = observation["socket_close_status"]
+    if (socket_status not in ("created", "denied", "UNCHECKABLE") or
+            socket_errno not in (*NETWORK_SOCKET_DENIALS_V2, "none", "unapproved") or
+            connection not in ("denied", "succeeded", "not-attempted", "UNCHECKABLE") or
+            connect_errno not in (*NETWORK_CONNECT_DENIALS_V2, "none", "unapproved") or
+            closed not in ("pass", "not-needed", "UNCHECKABLE")):
+        return done("malformed-observation")
+    if socket_status in ("denied", "UNCHECKABLE"):
+        if connection != "not-attempted" or connect_errno != "none" or closed != "not-needed":
+            return done("contradictory-operation-stages")
+        if ((socket_status == "denied" and socket_errno not in NETWORK_SOCKET_DENIALS_V2) or
+                (socket_status == "UNCHECKABLE" and socket_errno != "unapproved")):
+            return done("contradictory-operation-stages")
+    elif socket_errno != "none" or closed == "not-needed" or connection == "not-attempted":
+        return done("contradictory-operation-stages")
+    if ((connection == "succeeded" and connect_errno != "none") or
+            (connection == "denied" and connect_errno not in (*NETWORK_CONNECT_DENIALS_V2, "unapproved")) or
+            (connection == "UNCHECKABLE" and connect_errno != "unapproved")):
+        return done("contradictory-operation-stages")
+    for key in ("socket_create_status", "socket_create_errno", "connect_status", "connect_errno", "socket_close_status"):
+        safe[key] = observation[key]
+    if socket_status == "UNCHECKABLE":
+        return done("socket-creation-uncheckable")
+    if socket_status == "denied":
+        return done("none", "pass", "socket-create-denial")
+    if closed != "pass":
+        return done("socket-close-uncheckable")
+    if connection == "succeeded":
+        return done("sandbox-connection-succeeded", "fail")
+    if connection != "denied" or connect_errno not in NETWORK_CONNECT_DENIALS_V2:
+        return done("connect-denial-uncheckable")
+    return done("none", "pass", "connect-denial")
+
+
+def compatibility_provider_digest(provider: Mapping[str, Any], *, allow_fixture=False) -> str:
+    validate_containment_provider_evidence(dict(provider), allow_fixture=allow_fixture)
+    return sha256_bytes(canonical_bytes({
+        "configuration_intent": runtime_configuration_intent(),
+        "provider": {key: provider[key] for key in (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT)},
+    }))
+
+
+def _compatibility_clock_ms() -> int:
+    return time.time_ns() // 1000000
+
+
+def make_compatibility_context(provider, repository_root, work, env):
+    """Observe the actual provider/current checkout before collecting any lane.
+
+    Private paths/environment never enter the exported record. The context is
+    local call state, not an input envelope or caller-authenticated assertion.
+    """
+    if provider.get("status") != "pass":
+        raise ContractError("compatibility provider is not independently passing")
+    descriptor, info = _open_absolute_directory_nofollow(work)
+    os.close(descriptor)
+    if str(work.resolve()) != str(work) or not stat.S_ISDIR(info.st_mode):
+        raise ContractError("compatibility cwd is not an exact canonical binding")
+    result = {
+        "binding": {
+            "head": provider["public_head"], "tree": provider["public_tree"],
+            "provider_attempt_sha256": compatibility_provider_digest(provider),
+            "observation_id_sha256": sha256_bytes(os.urandom(32)),
+        },
+        "repository_root": repository_root, "work": work,
+        "work_binding": (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid),
+        "environment": dict(env),
+        "configuration": reviewed_runtime_configuration(env),
+        "started_ms": _compatibility_clock_ms(),
+    }
+    recheck_compatibility_context(result, work, env)
+    return result
+
+
+def recheck_compatibility_context(context, work, env):
+    if (not isinstance(context, dict) or not _compatibility_binding(context.get("binding"))
+            or context.get("work") != work or context.get("environment") != dict(env)
+            or context.get("configuration") != reviewed_runtime_configuration(env)):
+        raise ContractError("compatibility execution context is unavailable or changed")
+    descriptor, info = _open_absolute_directory_nofollow(work)
+    os.close(descriptor)
+    if (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid) != context["work_binding"]:
+        raise ContractError("compatibility cwd binding changed")
+    for field, ref in (("head", "HEAD"), ("tree", "HEAD^{tree}")):
+        observed = run_approved_provider_git(context["repository_root"],
+            ("rev-parse", "--verify", ref), env, max_bytes=128).decode("ascii").strip()
+        if observed != context["binding"][field]:
+            raise ContractError("compatibility exact current Git binding changed")
+    if run_approved_provider_git(context["repository_root"],
+            ("status", "--porcelain=v1", "-z", "--untracked-files=all"), env):
+        raise ContractError("compatibility current repository is not clean")
+    if not 0 <= _compatibility_clock_ms() - context["started_ms"] <= COMPATIBILITY_MAX_AGE_MS:
+        raise ContractError("compatibility observation window is stale")
+
+
+def _launcher_file_snapshot(root, env):
+    """Exact PATH order, no-follow directory/file binding, no source inference."""
+    snapshots = []
+    selected = None
+    for raw in env["PATH"].split(os.pathsep):
+        if not raw or not os.path.isabs(raw):
+            raise ContractError("launcher PATH entry is invalid")
+        path = Path(raw)
+        descriptor, info = _open_absolute_directory_nofollow(path)
+        try:
+            snapshots.append((raw, info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid,
+                info.st_mtime_ns, info.st_ctime_ns))
+            try:
+                child = os.stat("bwrap", dir_fd=descriptor, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISREG(child.st_mode) or not child.st_mode & 0o111 or child.st_mode & 0o022:
+                raise ContractError("launcher candidate is not a direct protected executable")
+            candidate = path / "bwrap"
+            if str(candidate.resolve()) != str(candidate):
+                raise ContractError("launcher candidate is not canonical")
+            if root != Path("/") and (candidate == root or root in candidate.parents):
+                continue
+            selected = candidate
+            if selected != Path("/usr/bin/bwrap"):
+                raise ContractError("launcher PATH is shadowed")
+            digest = hash_regular_file(selected, 16 * 1024 * 1024)
+            after = os.stat("bwrap", dir_fd=descriptor, follow_symlinks=False)
+            fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns")
+            if tuple(getattr(child, key) for key in fields) != tuple(getattr(after, key) for key in fields):
+                raise ContractError("launcher binding changed while inspecting")
+            if digest != compatibility_contract()["launcher_binary_sha256"]:
+                raise ContractError("launcher binary digest differs from reviewed baseline")
+            return {"directories": snapshots, "file": tuple(getattr(child, key) for key in fields), "digest": digest}
+        finally:
+            os.close(descriptor)
+    raise ContractError("reviewed launcher was not selected by PATH")
+
+
+def _read_owned_linux_image(pid, birth, expected):
+    """Only an already witnessed owned PID/birth; never signal or scan here.
+
+    The exe open deliberately follows one anchored kernel procfs magic link.
+    This does not relax no-follow rules for filesystem inputs/resources.
+    """
+    if sys.platform != "linux" or type(pid) is not int or pid <= 0 or not str(birth).startswith("linux:"):
+        raise ContractError("executed-image observation is unavailable")
+    proc_fd, _ = _open_absolute_directory_nofollow(Path("/proc"))
+    process_fd = image_fd = None
+    try:
+        process_fd = os.open(str(pid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=proc_fd)
+        process_info = os.fstat(process_fd)
+        def identity():
+            fd = os.open("stat", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=process_fd)
+            try:
+                data = os.read(fd, 8193)
+                if not data or len(data) > 8192:
+                    raise ContractError("owned process identity is incomplete")
+            finally: os.close(fd)
+            value = parse_linux_process_stat(data)
+            if value is None or value[0] != pid or value[3] != birth:
+                raise ContractError("owned process birth changed")
+        identity()
+        def command_role():
+            descriptor = os.open("cmdline", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=process_fd)
+            try:
+                data = os.read(descriptor, 65537)
+            finally:
+                os.close(descriptor)
+            if len(data) > 65536 or not data.endswith(b"\0"):
+                raise ContractError("owned launcher command role is uncheckable")
+            return data, sandbox_launcher_role(data)
+        command_before, role = command_role()
+        if not role:
+            return False
+        image_fd = os.open("exe", os.O_RDONLY | os.O_NONBLOCK, dir_fd=process_fd)
+        image = os.fstat(image_fd)
+        fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if tuple(getattr(image, key) for key in fields) != expected["file"]:
+            return False
+        if not stat.S_ISREG(image.st_mode) or image.st_size > 16 * 1024 * 1024:
+            raise ContractError("owned image is not bounded regular data")
+        digest = hashlib.sha256(); remaining = image.st_size
+        while remaining:
+            data = os.read(image_fd, min(65536, remaining))
+            if not data:
+                raise ContractError("owned image read was incomplete")
+            digest.update(data); remaining -= len(data)
+        if os.read(image_fd, 1):
+            raise ContractError("owned image size changed")
+        identity()
+        command_after, role_after = command_role()
+        if not role_after or command_before != command_after:
+            raise ContractError("owned launcher role changed")
+        current = os.open("exe", os.O_RDONLY | os.O_NONBLOCK, dir_fd=process_fd)
+        try:
+            if tuple(getattr(os.fstat(current), key) for key in fields) != expected["file"]:
+                raise ContractError("owned executed image changed")
+        finally: os.close(current)
+        named_process = os.stat(str(pid), dir_fd=proc_fd, follow_symlinks=False)
+        if (named_process.st_dev, named_process.st_ino) != (process_info.st_dev, process_info.st_ino):
+            raise ContractError("owned proc namespace changed")
+        return digest.hexdigest() == expected["digest"]
+    finally:
+        if image_fd is not None: os.close(image_fd)
+        if process_fd is not None: os.close(process_fd)
+        os.close(proc_fd)
+
+
+def sandbox_launcher_role(data):
+    """Pinned launcher exec role, excluding its --help and /bin/true probes.
+
+    Raw arguments remain local memory. Source inserts --as-pid-1 at argv[1]
+    and the inner seccomp command ends with the exact shell probe command.
+    """
+    if not isinstance(data, bytes) or len(data) > 65536 or not data.endswith(b"\0"):
+        return False
+    fields = data[:-1].split(b"\0")
+    separators = [index for index, value in enumerate(fields) if value == b"--"]
+    if len(separators) != 2:
+        return False
+    outer, inner = separators
+    return (6 <= len(fields) <= 2048 and fields[:2] == [b"bwrap", b"--as-pid-1"]
+        and all(flag in fields[2:outer] for flag in (b"--new-session", b"--unshare-user", b"--unshare-pid", b"--unshare-ipc", b"--unshare-net"))
+        and b"--apply-seccomp-then-exec" in fields[outer + 1:inner]
+        and fields[-3:] == [b"--", b"/usr/bin/env", b"-0"]
+        and b"--help" not in fields and b"--allow-network-for-proxy" not in fields)
+
+
+def _read_owned_linux_identity(pid):
+    if sys.platform != "linux" or type(pid) is not int or pid <= 0:
+        raise ContractError("owned identity is unavailable")
+    proc_fd, _ = _open_absolute_directory_nofollow(Path("/proc"))
+    pid_fd = data_fd = None
+    try:
+        pid_fd = os.open(str(pid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=proc_fd)
+        bound = os.fstat(pid_fd)
+        data_fd = os.open("stat", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=pid_fd)
+        data = os.read(data_fd, 8193)
+        value = parse_linux_process_stat(data) if 0 < len(data) <= 8192 else None
+        after = os.stat(str(pid), dir_fd=proc_fd, follow_symlinks=False)
+        if (value is None or value[0] != pid or
+                (bound.st_dev, bound.st_ino) != (after.st_dev, after.st_ino)):
+            raise ContractError("owned identity is incomplete or changed")
+        return value
+    finally:
+        if data_fd is not None: os.close(data_fd)
+        if pid_fd is not None: os.close(pid_fd)
+        os.close(proc_fd)
+
+
+class OwnedLauncherImageObserver:
+    """Bounded read-only sampler on the existing tracker, never cleanup owner."""
+    def __init__(self, expected):
+        self.expected = expected
+        self.witnessed = {}
+        self.observed = False
+        self.uncheckable = False
+        self.samples = 0
+        self.errors = 0
+
+    def observe(self, leader_pid, original_leader, table):
+        if self.observed or self.samples >= 256:
+            return
+        current = table.get(leader_pid)
+        if original_leader is not None and current is not None and current[2] == original_leader[2]:
+            try:
+                fresh = _read_owned_linux_identity(leader_pid)
+                if fresh[3] != original_leader[2]:
+                    raise ContractError("original leader birth changed")
+                self.witnessed.setdefault(leader_pid, fresh[3])
+            except (ContractError, OSError, ValueError, TypeError):
+                self.uncheckable = True; self.errors = min(256, self.errors + 1)
+        changed = True
+        while changed and len(self.witnessed) <= 1024:
+            changed = False
+            for pid, value in table.items():
+                parent = value[0]
+                parent_now = table.get(parent)
+                if (pid not in self.witnessed and parent in self.witnessed and parent_now is not None
+                        and parent_now[2] == self.witnessed[parent]):
+                    try:
+                        parent_before = _read_owned_linux_identity(parent)
+                        child = _read_owned_linux_identity(pid)
+                        parent_after = _read_owned_linux_identity(parent)
+                        if (parent_before[3] != self.witnessed[parent]
+                                or parent_after[3] != self.witnessed[parent]
+                                or child[1] != parent or child[3] != value[2]):
+                            raise ContractError("owned parent-child birth chain changed")
+                        self.witnessed[pid] = child[3]; changed = True
+                    except (ContractError, OSError, ValueError, TypeError):
+                        self.uncheckable = True; self.errors = min(256, self.errors + 1)
+        if len(self.witnessed) > 1024:
+            self.uncheckable = True; return
+        for pid, birth in tuple(self.witnessed.items()):
+            if self.samples >= 256 or self.observed:
+                break
+            current = table.get(pid)
+            if current is None or current[2] != birth:
+                continue
+            self.samples += 1
+            try:
+                self.observed = _read_owned_linux_image(pid, birth, self.expected)
+            except (ContractError, OSError, ValueError, TypeError):
+                self.uncheckable = True; self.errors = min(256, self.errors + 1)
+
+
+def not_run_compatibility_shell(status="not-run"):
+    legacy = shell_environment_evidence(status, "not-run" if status == "not-run" else "observation-uncheckable")
+    return {"schema": "t11-shell-environment-evidence/v2", "authority": "adapter-authored",
+        "status": status, "reason_code": legacy["reason_code"], "environment_predicate": legacy,
+        "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+        "launcher": {"status": "not-run" if status == "not-run" else "UNCHECKABLE",
+            "path_binding_stable": False, "binary_sha256": "0" * 64, "help_sha256": "0" * 64,
+            "help_required_flags": False, "actual_image_observed": False, "image_samples": 0,
+            "image_error_count": 0},
+        "observation_binding": None, "window": None,
+        "pwd_present": None, "pwd_matches_exact_cwd": None}
+
+
+def validate_compatibility_shell(value):
+    exact_keys(value, tuple(not_run_compatibility_shell()), "shell v2")
+    if value["schema"] != "t11-shell-environment-evidence/v2" or value["authority"] != "adapter-authored" or value["source_contract_sha256"] != sha256_bytes(canonical_bytes(compatibility_contract())):
+        raise ContractError("shell v2 source/version/authority binding is invalid")
+    legacy = validate_shell_environment_evidence(value["environment_predicate"])
+    launcher = value["launcher"]
+    exact_keys(launcher, tuple(not_run_compatibility_shell()["launcher"]), "launcher evidence")
+    for key in ("path_binding_stable", "help_required_flags", "actual_image_observed"):
+        require_bool(launcher[key], "launcher " + key)
+    for key in ("binary_sha256", "help_sha256"):
+        require_string(launcher[key], key, SHA256_RE)
+    for key in ("image_samples", "image_error_count"):
+        if type(launcher[key]) is not int or not 0 <= launcher[key] <= 256:
+            raise ContractError("launcher sample count is invalid")
+    if value["observation_binding"] is None:
+        if value not in (not_run_compatibility_shell(), not_run_compatibility_shell("UNCHECKABLE")):
+            raise ContractError("unobserved shell v2 contains claims")
+        return value
+    if not _compatibility_binding(value["observation_binding"]):
+        raise ContractError("shell observation binding is invalid")
+    window = value["window"]
+    exact_keys(window, ("started_ms", "capture_started_ms", "capture_finished_ms", "classified_ms"), "shell window")
+    values = [window[key] for key in ("started_ms", "capture_started_ms", "capture_finished_ms", "classified_ms")]
+    if (any(not _compatibility_milliseconds(item) for item in values) or values != sorted(values)
+            or values[-1] - values[0] > COMPATIBILITY_MAX_AGE_MS or values[2] - values[1] > NETWORK_MAX_CAPTURE_MS_V2):
+        raise ContractError("shell observation window is stale or invalid")
+    for key in ("pwd_present", "pwd_matches_exact_cwd"):
+        if value[key] is not None and type(value[key]) is not bool:
+            raise ContractError("shell PWD predicate is invalid")
+    qualified = (launcher["path_binding_stable"] and launcher["help_required_flags"]
+        and launcher["actual_image_observed"] and launcher["image_samples"] > 0
+        and launcher["binary_sha256"] == compatibility_contract()["launcher_binary_sha256"]
+        and launcher["help_sha256"] == compatibility_contract()["launcher_help_sha256"])
+    if launcher["status"] != ("pass" if qualified else "UNCHECKABLE"):
+        raise ContractError("launcher qualification disagrees with observations")
+    if value["pwd_present"] is False and value["pwd_matches_exact_cwd"] is not None:
+        raise ContractError("absent PWD has a fabricated value comparison")
+    expected = legacy["status"] if qualified else "UNCHECKABLE"
+    expected_reason = legacy["reason_code"] if qualified else "observation-uncheckable"
+    if (value["status"], value["reason_code"]) != (expected, expected_reason):
+        raise ContractError("shell v2 gate disagrees with observed launcher/environment")
+    if value["status"] == "pass" and (type(value["pwd_present"]) is not bool or (value["pwd_present"] is True and value["pwd_matches_exact_cwd"] is not True)):
+        raise ContractError("passing PWD does not match the bound cwd")
+    return value
+
+
+def collect_compatibility_shell(binary, root, env, required, context, launch_diagnostics=None):
+    if context is None:
+        return not_run_compatibility_shell("UNCHECKABLE")
+    try:
+        recheck_compatibility_context(context, root, env)
+        before = _launcher_file_snapshot(root, env)
+        help_result = bounded_capture(["/usr/bin/bwrap", "--help"], root, env, stdout_limit=65536, stderr_limit=4096)
+        if (help_result.exit_code != 0 or help_result.signal_number is not None or help_result.timed_out
+                or help_result.stdout_overflow or help_result.stderr_overflow or help_result.stderr_size or not help_result.reaped):
+            raise ContractError("launcher help observation is unavailable")
+        help_digest = sha256_bytes(help_result.stdout)
+        flags = all(flag in help_result.stdout for flag in (b"--as-pid-1", b"--perms"))
+        if help_digest != compatibility_contract()["launcher_help_sha256"] or not flags:
+            raise ContractError("launcher help differs from the reviewed selection contract")
+        observer = OwnedLauncherImageObserver(before)
+        probe_env = dict(env)
+        probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
+        probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        env_info = os.stat("/usr/bin/env", follow_symlinks=False)
+        if not stat.S_ISREG(env_info.st_mode):
+            raise ContractError("environment probe executable is invalid")
+        argv = sandbox_probe_argv(binary, env, ["/usr/bin/env", "-0"], root)
+        start = _compatibility_clock_ms()
+        result = _capture_sandbox_probe(argv, root, probe_env, 65536, launch_diagnostics, "shell", observer)
+        finish = _compatibility_clock_ms()
+        after = _launcher_file_snapshot(root, env)
+        recheck_compatibility_context(context, root, env)
+        original = classify_shell_environment_result(result, required["shell_environment_policy.set"])
+        present = matches = None
+        if original["status"] == "pass":
+            present = False
+        if original["reason_code"] == "unexpected-key-set":
+            pwd = next((entry[4:] for entry in result.stdout.split(b"\0") if entry.startswith(b"PWD=")), None)
+            present = pwd is not None
+            if present:
+                matches = pwd == str(root).encode("utf-8")
+                compared = dict(required["shell_environment_policy.set"]); compared["PWD"] = str(root)
+                original = classify_shell_environment_result(result, compared)
+        qualified = before == after and observer.observed and observer.samples > 0
+        value = {"schema": "t11-shell-environment-evidence/v2", "authority": "adapter-authored",
+            "status": original["status"] if qualified else "UNCHECKABLE",
+            "reason_code": original["reason_code"] if qualified else "observation-uncheckable",
+            "environment_predicate": original, "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+            "launcher": {"status": "pass" if qualified else "UNCHECKABLE", "path_binding_stable": before == after,
+                "binary_sha256": before["digest"], "help_sha256": help_digest, "help_required_flags": flags,
+                "actual_image_observed": observer.observed, "image_samples": observer.samples,
+                "image_error_count": observer.errors},
+            "observation_binding": dict(context["binding"]),
+            "window": {"started_ms": context["started_ms"], "capture_started_ms": start,
+                "capture_finished_ms": finish, "classified_ms": _compatibility_clock_ms()},
+            "pwd_present": present, "pwd_matches_exact_cwd": matches}
+        return validate_compatibility_shell(value)
+    except (ContractError, OSError, KeyError, TypeError, ValueError, UnicodeError, subprocess.SubprocessError):
+        return not_run_compatibility_shell("UNCHECKABLE")
+
+
+def not_run_compatibility_network(status="not-run"):
+    return {"schema": "t11-network-sandbox-evidence/v2", "authority": "adapter-authored",
+        "status": status, "reason_code": "not-run" if status == "not-run" else "observation-uncheckable",
+        "proof_path": "none", "observation": None, "context": None, "classified_at_ms": None}
+
+
+def compatibility_network_record(observation, context, now_ms):
+    result = classify_network_observation_v2(observation, context, now_ms)
+    return {"schema": "t11-network-sandbox-evidence/v2", "authority": "adapter-authored",
+        "status": result["status"], "reason_code": result["reason_code"], "proof_path": result["proof_path"],
+        "observation": observation, "context": context, "classified_at_ms": now_ms}
+
+
+def validate_compatibility_network(value):
+    exact_keys(value, tuple(not_run_compatibility_network()), "network v2")
+    if value["schema"] != "t11-network-sandbox-evidence/v2" or value["authority"] != "adapter-authored":
+        raise ContractError("network v2 authority/version is invalid")
+    if value["observation"] is None:
+        if value not in (not_run_compatibility_network(), not_run_compatibility_network("UNCHECKABLE")):
+            raise ContractError("unobserved network v2 contains claims")
+        return value
+    observation, context = value["observation"], value["context"]
+    if not _compatibility_exact_keys(observation, NETWORK_OBSERVATION_KEYS_V2) or not _compatibility_exact_keys(context, NETWORK_CONTEXT_KEYS_V2):
+        raise ContractError("network v2 closed observation shape is invalid")
+    # This complete structural guard also protects non-success export. The
+    # classifier alone is not a sanitizer for malformed raw caller values.
+    for key in ("binding",):
+        if not _compatibility_binding(observation[key]):
+            raise ContractError("network observation binding is invalid")
+    for key in ("expected_binding", "control_binding", "capture_binding"):
+        if not _compatibility_binding(context[key]):
+            raise ContractError("network context binding is invalid")
+    for key in ("control_closed_ms", "probe_started_ms", "probe_finished_ms"):
+        if not _compatibility_milliseconds(observation[key]):
+            raise ContractError("network observation time is invalid")
+    for key in ("observation_started_ms", "observation_finished_ms"):
+        if not _compatibility_milliseconds(context[key]):
+            raise ContractError("network context time is invalid")
+    if not _compatibility_milliseconds(value["classified_at_ms"]):
+        raise ContractError("network classification time is invalid")
+    for key in ("control_connected", "control_accepted", "control_peer_matches", "control_closed", "timed_out", "stdout_overflow", "stderr_overflow", "reaped"):
+        require_bool(observation[key], "network " + key)
+    for key in ("parent_netns_sha256", "sandbox_netns_sha256"):
+        require_string(observation[key], key, SHA256_RE)
+    enums = {"network_marker_status": ("exact-1", "missing", "mismatch", "UNCHECKABLE"),
+        "socket_create_status": ("created", "denied", "UNCHECKABLE"),
+        "socket_create_errno": (*NETWORK_SOCKET_DENIALS_V2, "none", "unapproved"),
+        "connect_status": ("denied", "succeeded", "not-attempted", "UNCHECKABLE"),
+        "connect_errno": (*NETWORK_CONNECT_DENIALS_V2, "none", "unapproved"),
+        "socket_close_status": ("pass", "not-needed", "UNCHECKABLE")}
+    for key, allowed in enums.items():
+        if not isinstance(observation[key], str) or observation[key] not in allowed:
+            raise ContractError("network enum is invalid")
+    for key, maximum in (("exit_code", 255), ("signal", 64)):
+        value_number = observation[key]
+        if value_number is not None and (type(value_number) is not int or not 0 <= value_number <= maximum):
+            raise ContractError("network process number is invalid")
+    if type(observation["stderr_size"]) is not int or not 0 <= observation["stderr_size"] <= 4097:
+        raise ContractError("network bounded stderr count is invalid")
+    derived = compatibility_network_record(observation, context, value["classified_at_ms"])
+    if value != derived:
+        raise ContractError("network v2 derived acceptance disagrees")
+    return value
+
+
+NETWORK_SANDBOX_PROBE_SCRIPT_V2 = (
+    "import errno,hashlib,json,os,re,socket,sys\n"
+    "ns='0'*64\n"
+    "try:\n"
+    " value=os.readlink('/proc/self/ns/net')\n"
+    " if re.fullmatch(r'net:\\[[0-9]+\\]',value): ns=hashlib.sha256(value.encode('ascii')).hexdigest()\n"
+    "except (OSError,UnicodeError): pass\n"
+    "marker=os.environ.get('CODEX_SANDBOX_NETWORK_DISABLED')\n"
+    "r={'sandbox_netns_sha256':ns,'network_marker_status':'exact-1' if marker=='1' else ('missing' if marker is None else 'mismatch'),'socket_create_status':'UNCHECKABLE','socket_create_errno':'unapproved','connect_status':'not-attempted','connect_errno':'none','socket_close_status':'not-needed'}\n"
+    "try: sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
+    "except OSError as e:\n"
+    " name=errno.errorcode.get(e.errno,'unapproved')\n"
+    " if name in ('EPERM','EACCES'): r.update(socket_create_status='denied',socket_create_errno=name)\n"
+    "else:\n"
+    " r.update(socket_create_status='created',socket_create_errno='none')\n"
+    " try:\n"
+    "  try: sock.settimeout(2)\n"
+    "  except OSError: r.update(connect_status='UNCHECKABLE',connect_errno='unapproved')\n"
+    "  else:\n"
+    "   try: sock.connect(('127.0.0.1',int(sys.argv[1])))\n"
+    "   except OSError as e:\n"
+    "    name=errno.errorcode.get(e.errno,'unapproved')\n"
+    "    r.update(connect_status='denied',connect_errno=name if name in ('EPERM','EACCES','ENETUNREACH','EHOSTUNREACH','ECONNREFUSED') else 'unapproved')\n"
+    "   else: r.update(connect_status='succeeded',connect_errno='none')\n"
+    " finally:\n"
+    "  try: sock.close()\n"
+    "  except OSError: r['socket_close_status']='UNCHECKABLE'\n"
+    "  else: r['socket_close_status']='pass'\n"
+    "sys.stdout.write(json.dumps(r,sort_keys=True,separators=(',',':'))+'\\n')\n"
+)
+
+
+def collect_compatibility_network(binary, root, env, context, launch_diagnostics=None):
+    if context is None:
+        return not_run_compatibility_network("UNCHECKABLE")
+    listener = control = accepted = None
+    try:
+        recheck_compatibility_context(context, root, env)
+        binding = dict(context["binding"])
+        parent_ns = _network_namespace_sha256()
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.settimeout(2)
+        listener.bind(("127.0.0.1", 0)); listener.listen(2)
+        port = listener.getsockname()[1]
+        control = socket.create_connection(("127.0.0.1", port), timeout=2)
+        peer = control.getsockname()
+        accepted, observed_peer = listener.accept()
+        if observed_peer != peer:
+            raise ContractError("network control peer mismatch")
+        accepted.close(); accepted = None
+        control.close(); control = None
+        control_closed = _compatibility_clock_ms()
+        control_binding = dict(context["binding"])
+        recheck_compatibility_context(context, root, env)
+        capture_binding = dict(context["binding"])
+        probe_env = dict(env); probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        argv = sandbox_probe_argv(binary, env,
+            [str(Path(sys.executable).resolve()), "-I", "-c", NETWORK_SANDBOX_PROBE_SCRIPT_V2, str(port)], root)
+        start = _compatibility_clock_ms()
+        captured = _capture_sandbox_probe(argv, root, probe_env, 4096, launch_diagnostics, "network")
+        finish = _compatibility_clock_ms()
+        child = {"sandbox_netns_sha256": "0" * 64, "network_marker_status": "UNCHECKABLE",
+            "socket_create_status": "UNCHECKABLE", "socket_create_errno": "unapproved",
+            "connect_status": "UNCHECKABLE", "connect_errno": "unapproved", "socket_close_status": "UNCHECKABLE"}
+        try:
+            decoded_child = decode_json_object(captured.stdout, "network v2 child", {"json_depth": 3, "json_nodes": 24, "json_string_bytes": 128})
+            exact_keys(decoded_child, tuple(child), "network child v2")
+            # Validate the closed vocabulary before retaining any child strings.
+            vocabulary = {"network_marker_status": ("exact-1", "missing", "mismatch", "UNCHECKABLE"),
+                "socket_create_status": ("created", "denied", "UNCHECKABLE"),
+                "socket_create_errno": (*NETWORK_SOCKET_DENIALS_V2, "none", "unapproved"),
+                "connect_status": ("denied", "succeeded", "not-attempted", "UNCHECKABLE"),
+                "connect_errno": (*NETWORK_CONNECT_DENIALS_V2, "none", "unapproved"),
+                "socket_close_status": ("pass", "not-needed", "UNCHECKABLE")}
+            if (all(type(decoded_child[key]) is str and decoded_child[key] in choices for key, choices in vocabulary.items())
+                    and isinstance(decoded_child["sandbox_netns_sha256"], str)
+                    and SHA256_RE.fullmatch(decoded_child["sandbox_netns_sha256"]) is not None):
+                child = decoded_child
+        except (ContractError, UnicodeError, ValueError, TypeError):
+            pass
+        recheck_compatibility_context(context, root, env)
+        observation = {**child, "binding": binding,
+            "control_connected": True, "control_accepted": True,
+            "control_peer_matches": observed_peer == peer, "control_closed": control is None and accepted is None,
+            "parent_netns_sha256": parent_ns, "exit_code": captured.exit_code,
+            "signal": captured.signal_number, "timed_out": captured.timed_out,
+            "stdout_overflow": captured.stdout_overflow, "stderr_overflow": captured.stderr_overflow,
+            "stderr_size": min(captured.stderr_size, 4097), "reaped": captured.reaped,
+            "control_closed_ms": control_closed, "probe_started_ms": start, "probe_finished_ms": finish}
+        public_context = {"expected_binding": binding, "control_binding": control_binding,
+            "capture_binding": capture_binding, "observation_started_ms": context["started_ms"],
+            "observation_finished_ms": _compatibility_clock_ms()}
+        return validate_compatibility_network(compatibility_network_record(observation, public_context, _compatibility_clock_ms()))
+    except (ContractError, OSError, subprocess.SubprocessError, UnicodeError, ValueError, TypeError, KeyError):
+        return not_run_compatibility_network("UNCHECKABLE")
+    finally:
+        for owned_socket in (accepted, control, listener):
+            if owned_socket is not None:
+                try: owned_socket.close()
+                except OSError: pass
+
+
 def _network_namespace_sha256() -> str:
     identity = os.readlink("/proc/self/ns/net")
     if re.fullmatch(r"net:\[[0-9]+\]", identity) is None:
@@ -6532,6 +7615,7 @@ def probe_runtime_evidence(
     prerequisite_evidence: Optional[Mapping[str, Any]] = None,
     require_private_projection: bool = False,
     launch_diagnostics: Optional[Dict[str, Any]] = None,
+    compatibility_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Collect bounded independent lanes; no lane claims effective config."""
     if launch_diagnostics is not None and auth_required:
@@ -6577,31 +7661,21 @@ def probe_runtime_evidence(
     )
     prerequisite_pass = prerequisite["status"] == "pass"
     if not prerequisite_pass:
-        shell_evidence = shell_environment_evidence("not-run", "not-run")
+        shell_evidence = not_run_compatibility_shell()
     elif required is None:
-        shell_evidence = shell_environment_evidence(
-            "UNCHECKABLE", "observation-uncheckable"
-        )
+        shell_evidence = not_run_compatibility_shell("UNCHECKABLE")
     else:
         try:
-            shell_evidence = shell_environment_probe(binary, root, env, required, **diagnostic_options)
+            shell_evidence = collect_compatibility_shell(binary, root, env, required, compatibility_context, **diagnostic_options)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-            shell_evidence = shell_environment_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
+            shell_evidence = not_run_compatibility_shell("UNCHECKABLE")
     if not prerequisite_pass:
-        network_evidence = network_sandbox_evidence(
-            "not-run", "not-run", marker_status="not-run",
-            connect_status="not-run", connect_errno="not-run",
-            process_cleanup_status="not-run",
-        )
+        network_evidence = not_run_compatibility_network()
     else:
         try:
-            network_evidence = network_sandbox_behavior_probe(binary, root, env, **diagnostic_options)
+            network_evidence = collect_compatibility_network(binary, root, env, compatibility_context, **diagnostic_options)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-            network_evidence = network_sandbox_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
+            network_evidence = not_run_compatibility_network("UNCHECKABLE")
     shell_status = shell_evidence["status"]
     network_status = network_evidence["status"]
     cleanup_status = process_cleanup_probe(root, env)
@@ -6624,6 +7698,7 @@ def probe_runtime_evidence(
             "shell_environment_behavior": shell_evidence,
             "network_sandbox_behavior": network_evidence,
             "bubblewrap_prerequisite": prerequisite,
+            "sandbox_housekeeping": not_run_compatibility_housekeeping(),
             "lane_statuses": {
                 "provider_isolation_status": "not-run",
                 "mount_boundary_status": "not-run",
@@ -6661,14 +7736,9 @@ def not_run_runtime_evidence() -> Dict[str, Any]:
             "rules_bypass_absent": False,
             "dynamic_task_data_stdin_only": False,
         },
-        "shell_environment_behavior": shell_environment_evidence(
-            "not-run", "not-run"
-        ),
-        "network_sandbox_behavior": network_sandbox_evidence(
-            "not-run", "not-run", marker_status="not-run",
-            connect_status="not-run", connect_errno="not-run",
-            process_cleanup_status="not-run",
-        ),
+        "shell_environment_behavior": not_run_compatibility_shell(),
+        "network_sandbox_behavior": not_run_compatibility_network(),
+        "sandbox_housekeeping": not_run_compatibility_housekeeping(),
         "bubblewrap_prerequisite": not_run_stage_a1_prerequisite_evidence(),
         "lane_statuses": {
             "provider_isolation_status": "not-run",
@@ -6821,9 +7891,7 @@ def observe_colima_provider_evidence(
 
 def _unavailable_runtime_profile(model: str, reasoning: str, probe_only: bool = False) -> Dict[str, Any]:
     evidence = not_run_runtime_evidence()
-    evidence["shell_environment_behavior"] = shell_environment_evidence(
-        "UNCHECKABLE", "observation-uncheckable"
-    )
+    evidence["shell_environment_behavior"] = not_run_compatibility_shell("UNCHECKABLE")
     evidence["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
     evidence["lane_statuses"]["config_status"] = "UNCHECKABLE"
     return {
@@ -6878,6 +7946,27 @@ def _observe_runtime_profile_bound_inner(
     probe_only: bool = False,
     launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    if getattr(_PROFILE_REAP_OBSERVATION, "sample", None) is not None:
+        raise ContractError("nested profile reap observation is unsupported")
+    sample = {"requested": 0, "reaped": 0, "unconfirmed": 0}
+    started_ms = _compatibility_clock_ms()
+    before = (observe_sandbox_housekeeping(Path(env["TMPDIR"]), expected_uid=os.getuid(), expected_gid=os.getgid())
+        if isinstance(env.get("TMPDIR"), str) else {"status": "UNCHECKABLE", "inventory": None})
+    _PROFILE_REAP_OBSERVATION.sample = sample
+    try:
+        return _observe_runtime_profile_measured(
+            repository_root, model, reasoning, binary, work, env,
+            provider_input, layout, probe_only, launch_diagnostics,
+            before, sample, started_ms,
+        )
+    finally:
+        del _PROFILE_REAP_OBSERVATION.sample
+
+
+def _observe_runtime_profile_measured(
+    repository_root, model, reasoning, binary, work, env, provider_input, layout,
+    probe_only, launch_diagnostics, housekeeping_before, process_sample, observation_started_ms,
+):
     # Diagnostics is strictly supplemental unauthenticated Stage A transport.
     # Authenticate nothing: the existing bounded status sensor is read-only.
     # Establish absence before capturing any sandbox stderr, and reuse that
@@ -6912,6 +8001,19 @@ def _observe_runtime_profile_bound_inner(
         raise ProfileProbeError(
             "client-evidence", "version-help-uncheckable",
         ) from None
+    compatibility_context = None
+    containment = not_run_containment_provider_evidence()
+    if release_class == "stable" and provider_input is not None and layout is not None:
+        try:
+            containment = observe_colima_provider_evidence(
+                repository_root, provider_input, layout, binary_sha256, version_output, env)
+            compatibility_context = make_compatibility_context(containment, repository_root, work, env)
+            compatibility_context["started_ms"] = observation_started_ms
+            recheck_compatibility_context(compatibility_context, work, env)
+        except PROFILE_BOUNDARY_EXCEPTIONS:
+            # Preserve independently collected provider facts even when an
+            # execution-binding predicate cannot be established.
+            compatibility_context = None
     if release_class == "stable":
         try:
             prerequisite = observe_stage_a1_prerequisite(work, env)
@@ -6920,6 +8022,7 @@ def _observe_runtime_profile_bound_inner(
                 binary, work, env, repository_root, auth_required=not probe_only,
                 prerequisite_evidence=prerequisite,
                 require_private_projection=provider_input is not None,
+                compatibility_context=compatibility_context,
                 **diagnostic_options,
             )
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
@@ -6930,12 +8033,8 @@ def _observe_runtime_profile_bound_inner(
             ):
                 uncheckable["lane_statuses"][lane] = "UNCHECKABLE"
             uncheckable["diagnostic_health"]["status"] = "UNCHECKABLE"
-            uncheckable["shell_environment_behavior"] = shell_environment_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
-            uncheckable["network_sandbox_behavior"] = network_sandbox_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
+            uncheckable["shell_environment_behavior"] = not_run_compatibility_shell("UNCHECKABLE")
+            uncheckable["network_sandbox_behavior"] = not_run_compatibility_network("UNCHECKABLE")
             probe = {
                 "documented_config_keys_probe": "UNCHECKABLE",
                 "shell_environment_probe": "UNCHECKABLE",
@@ -6944,22 +8043,15 @@ def _observe_runtime_profile_bound_inner(
         config_probe = probe["documented_config_keys_probe"]
         shell_probe = probe["shell_environment_probe"]
         evidence = probe["evidence"]
-        if provider_input is not None and layout is not None:
-            try:
-                containment = observe_colima_provider_evidence(
-                    repository_root, provider_input, layout, binary_sha256,
-                    version_output, env,
-                )
-            except PROFILE_BOUNDARY_EXCEPTIONS:
-                raise ProfileProbeError(
-                    "provider-evidence", "observation-invalid",
-                ) from None
-            evidence["containment_provider"] = containment
-            evidence["lane_statuses"]["provider_isolation_status"] = containment["status"]
-            evidence["lane_statuses"]["mount_boundary_status"] = mount_boundary_status_from_provider(containment)
-        else:
-            containment = not_run_containment_provider_evidence()
-            evidence["containment_provider"] = containment
+        if compatibility_context is None:
+            evidence["shell_environment_behavior"] = not_run_compatibility_shell("UNCHECKABLE")
+            evidence["network_sandbox_behavior"] = not_run_compatibility_network("UNCHECKABLE")
+            shell_probe = "UNCHECKABLE"
+            evidence["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
+            evidence["lane_statuses"]["codex_sandbox_network_status"] = "UNCHECKABLE"
+        evidence["containment_provider"] = containment
+        evidence["lane_statuses"]["provider_isolation_status"] = containment["status"]
+        evidence["lane_statuses"]["mount_boundary_status"] = mount_boundary_status_from_provider(containment)
     else:
         config_probe, shell_probe = "not-proven", "not-run"
         evidence = not_run_runtime_evidence()
@@ -6973,10 +8065,22 @@ def _observe_runtime_profile_bound_inner(
     else:
         observed_auth_class = "unavailable"
     evidence["lane_statuses"]["auth_status"] = observed_auth_class
+    if compatibility_context is not None:
+        try:
+            recheck_compatibility_context(compatibility_context, work, env)
+            after = (observe_sandbox_housekeeping(Path(env["TMPDIR"]), expected_uid=os.getuid(), expected_gid=os.getgid())
+                if isinstance(env.get("TMPDIR"), str) else {"status": "UNCHECKABLE", "inventory": None})
+            evidence["sandbox_housekeeping"] = compatibility_housekeeping_record(
+                housekeeping_before, after, process_sample, compatibility_context, _compatibility_clock_ms())
+        except PROFILE_BOUNDARY_EXCEPTIONS:
+            evidence["sandbox_housekeeping"] = not_run_compatibility_housekeeping("UNCHECKABLE")
+    elif release_class == "stable":
+        evidence["sandbox_housekeeping"] = not_run_compatibility_housekeeping("UNCHECKABLE")
     non_auth_lanes = [evidence["lane_statuses"][name] for name in RUNTIME_LANE_KEYS[:-1]]
     prerequisite_status = evidence["bubblewrap_prerequisite"]["status"]
     config_ok = (
         prerequisite_status == "pass"
+        and evidence["sandbox_housekeeping"]["status"] == "pass"
         and all(value == "pass" for value in non_auth_lanes)
     )
     caps = {
@@ -7002,6 +8106,8 @@ def _observe_runtime_profile_bound_inner(
         profile_status, reason = "UNCHECKABLE", "bubblewrap prerequisite qualification is uncheckable"
     elif prerequisite_status == "fail":
         profile_status, reason = "profile-drift", "bubblewrap prerequisite qualification failed"
+    elif evidence["sandbox_housekeeping"]["status"] != "pass":
+        profile_status, reason = "UNCHECKABLE", "sandbox TMP housekeeping is not quiescent or not qualified"
     elif any(value in ("not-run", "UNCHECKABLE") for value in non_auth_lanes):
         profile_status, reason = "UNCHECKABLE", "one or more independent Stage A runtime lanes are uncheckable"
     elif any(value == "fail" for value in non_auth_lanes):

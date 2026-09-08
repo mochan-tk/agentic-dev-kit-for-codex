@@ -229,6 +229,59 @@ sandbox/network, shell environment, configuration, or authentication status.
 
 ## Security and privacy consequences
 
+### T12 combined compatibility production integration (2026-09-08)
+
+The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698),
+canonical body SHA-256
+`ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b`,
+authorizes a supplementary ownership-only transfer of the declared runtime
+profile, its closed schema and its existing fixture from accepted T11 to T12.
+Current ownership is T12 24 paths / T11 18 paths; the original 21-path activation,
+all previous commits and Phase/Task bases remain unchanged.
+
+Adopt `t11-shell-environment-evidence/v2`, `t11-network-sandbox-evidence/v2` and
+`t12-sandbox-housekeeping-observation/v1` inside the existing closed
+`runtime-profile/v1`. Independently collected current head/tree, provider
+attempt, fixed configuration/source/binary/help bindings, process outcomes and
+observation windows accompany the pure classifiers. New records do not migrate
+historical observations or the declared non-success profile into measurements.
+The agreement companion defines the precise finite predicates and stable/fresh
+comparison; no unpinned JSON Schema validator dependency is introduced.
+
+Socket creation denied with observed EPERM/EACCES is distinct from an observed
+connect denial. Both require all outer isolation/control/freshness/reap facts;
+resource failures and missing errno never pass. Launcher-qualified PWD requires
+actual pinned bwrap image observation in the witnessed owned sandbox-launcher
+role, plus exact private cwd equality in memory. Package/PATH/help or source
+prediction alone cannot set the actual-image predicate. Kernel `/proc/PID/exe`
+is followed only after anchoring that owned process and checking its birth
+identity; this deliberate kernel-magic-link observation does not relax any
+resource-file or directory no-follow policy. A missed image remains uncheckable.
+
+The finite TMP allowance is only a quiescent probe transition: exact root and
+ownership, an optional complete UID registry plus empty immutable single-link
+lock, no unknown entry, and confirmed reap of every observed profile process.
+Actual runner results are aggregated within one observation, with exceptions,
+missing results and non-reap non-success. Provider/image/mount/inventory and
+B1/B2 cleanup policies are unchanged.
+
+Worker disposition: pinned source permits a conditional sandbox-launcher route
+whose cleaned marker lifecycle changes registry-directory timestamps. The
+offline real-filesystem regression demonstrates a possible conflict with the
+unchanged whole-worker TMP equality, not a measured worker failure. This probe
+amendment does not silently permit worker TMP changes. Keep that equality and
+the mandatory `known-worker-tmp-unresolved` gate before fresh live observation,
+claim or worker, and before runtime/lifecycle receipt application. Current CLI
+dry-run is also blocked; pure fixture validation/rendering is not readiness.
+`live_run_allowed` is only a necessary authenticated profile-compatibility gate.
+
+No new runtime allowance is granted. Stage A remains 2/2 consumed; old A1/A2
+non-success, missing errno, original profiles and digests remain historical.
+Future worker execution needs one source-grounded equivalent housekeeping
+agreement and finite authority naming the integrated execution set. The offline
+tests and new external guest/export glue are not T12 acceptance, runtime-profile
+match, live E2E, runtime receipt, repository completion or release evidence.
+
 ### T12 native-state and profile-comparison amendment (2026-09-08)
 
 The [owner amendment](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5577690456)

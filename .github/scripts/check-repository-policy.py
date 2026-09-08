@@ -50,16 +50,16 @@ FROZEN_PHASE1_WRAPPER_SHA256 = (
 FROZEN_PHASE1_COMMAND = f"python3 -I {FROZEN_PHASE1_WRAPPER}"
 RUNTIME_CONTRACT_CHECKER = ".github/scripts/check-runtime-contracts.py"
 RUNTIME_CONTRACT_CHECKER_SHA256 = (
-    "16b236db40262832ae12067fa26d04e0d12e1cc54159b3315b3b470262f47531"
+    "9a3bcbb0e3acde9767a2d3c82d7a734b6f99ebf15d0e77d15a06a767fed2b001"
 )
 RUNTIME_CONTRACT_COMMAND = f"python3 -I {RUNTIME_CONTRACT_CHECKER}"
 RUNTIME_ADAPTER = ".github/scripts/codex-exec-adapter.py"
 RUNTIME_ADAPTER_SHA256 = (
-    "93cd18a9f8d16527854c59f83a2582f48df524d388a35b8bc831e6cdc095ece8"
+    "1b541b04adbb7899bf2f42bcc0d49308f5a4f966d9f21455d2ca91409dd1685f"
 )
 RUNTIME_RECEIPT_ACTUATOR = ".github/scripts/post-runtime-receipt.py"
 RUNTIME_RECEIPT_ACTUATOR_SHA256 = (
-    "dcd524428bebf4781345a9880a753fa702673ed39984ffbf6288db731657e24a"
+    "bae3df79ecff1a0a9337660a4567c9e00d256fc91cce3717e3f4375537e9b333"
 )
 TARGET_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
 REVIEWED_INVARIANT_DIGEST = (
@@ -175,13 +175,11 @@ EXPECTED_T11_RESIDUAL_PATHS = (
     ".codex/agents/task_verifier.toml",
     ".codex/agents/task_worker.toml",
     ".github/ISSUE_TEMPLATE/ai-task.yml",
-    ".github/governance/codex-runtime-profile.v1.json",
     FROZEN_PHASE1_WRAPPER,
     ".github/workflows/ci.yml",
     "docs/agreements/runtime/codex-final-response.v1.schema.json",
     "docs/agreements/runtime/execution-result.v1.schema.json",
     "docs/agreements/runtime/loop-event.v1.schema.json",
-    "docs/agreements/runtime/runtime-profile.v1.schema.json",
     "tests/conformance/phase1-accepted-snapshot.v1.json",
     "tests/conformance/test_phase1_acceptance.py",
     "tests/conformance/test_phase1_accepted_snapshot.py",
@@ -191,10 +189,10 @@ EXPECTED_T11_RESIDUAL_PATHS = (
     "tests/runtime/fixtures/fake-codex.py",
     "tests/runtime/fixtures/loop-events-valid.v1.jsonl",
     "tests/runtime/fixtures/representative-task.v1.json",
-    "tests/runtime/fixtures/runtime-profile-valid.v1.json",
 )
 EXPECTED_T12_PATHS = (
     ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/governance/codex-runtime-profile.v1.json",
     ".github/governance/ledger-contracts.v1.json",
     ".github/governance/phase-task-ownership.v1.json",
     ".github/scripts/check-ledger-templates.py",
@@ -205,6 +203,7 @@ EXPECTED_T12_PATHS = (
     "README.md",
     "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md",
     "docs/agreements/runtime/minimal-codex-execution-loop.md",
+    "docs/agreements/runtime/runtime-profile.v1.schema.json",
     "docs/agreements/runtime/runtime-receipt.v1.schema.json",
     "docs/agreements/runtime/task-execution-envelope.v1.schema.json",
     "docs/known-limitations.md",
@@ -214,6 +213,7 @@ EXPECTED_T12_PATHS = (
     "tests/conformance/test_runtime_vertical_slice.py",
     "tests/runtime/fixtures/envelope-valid.v1.json",
     "tests/runtime/fixtures/execution-result-valid.v1.json",
+    "tests/runtime/fixtures/runtime-profile-valid.v1.json",
     "tests/runtime/fixtures/runtime-receipt-valid.v1.json",
 )
 
@@ -926,7 +926,7 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
         else ()
     )
     if actual_paths != EXPECTED_T11_RESIDUAL_PATHS:
-        errors.append("ownership T11 must retain exactly the reviewed residual 21 paths")
+        errors.append("ownership T11 must retain exactly the reviewed residual 18 paths")
     if not isinstance(entries, list) or any(
         not isinstance(entry, dict) or entry.get("mode") != "100644"
         for entry in entries
@@ -960,7 +960,7 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
         else ()
     )
     if t12_paths != EXPECTED_T12_PATHS:
-        errors.append("ownership T12 must declare exactly the approved 21 paths")
+        errors.append("ownership T12 must declare exactly the approved 24 paths")
     if not isinstance(t12_entries, list) or any(
         not isinstance(entry, dict) or entry.get("mode") != "100644"
         for entry in t12_entries
@@ -1621,6 +1621,16 @@ def validate_import_time_structure(
             continue
         if isinstance(statement, (ast.Assign, ast.AnnAssign)):
             calls = [item for item in ast.walk(statement) if isinstance(item, ast.Call)]
+            # The single reviewed thread-local observation holder performs no
+            # I/O, spawning, configuration change, or runtime measurement.
+            if (label == RUNTIME_ADAPTER and isinstance(statement, ast.Assign)
+                    and len(statement.targets) == 1
+                    and isinstance(statement.targets[0], ast.Name)
+                    and statement.targets[0].id == "_PROFILE_REAP_OBSERVATION"
+                    and isinstance(statement.value, ast.Call)
+                    and ast_qualified_name(statement.value.func) == "threading.local"
+                    and not statement.value.args and not statement.value.keywords):
+                continue
             if any(ast_qualified_name(call.func) != "re.compile" for call in calls):
                 errors.append(f"{label} contains unreviewed import-time assignment execution")
             continue
@@ -2645,6 +2655,16 @@ def validate_t11_agreement_v2(root: Path, errors: list[str]) -> None:
         errors.append("T12 owner amendment URL or digest drifted")
     if activation.get("ownership") != {
         "transferred_path_count": 21,
+        "current_owned_path_count": 24,
+        "compatibility_amendment": {
+            "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698",
+            "body_sha256": "ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b",
+            "transferred_paths": [
+                ".github/governance/codex-runtime-profile.v1.json",
+                "docs/agreements/runtime/runtime-profile.v1.schema.json",
+                "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+            ],
+        },
         "path_transitions": [],
         "expansion_requires_replan": True,
     }:

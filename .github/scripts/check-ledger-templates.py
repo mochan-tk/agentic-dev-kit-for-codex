@@ -187,6 +187,16 @@ def expected_runtime_frontier() -> dict[str, Any]:
             },
             "ownership": {
                 "transferred_path_count": 21,
+                "current_owned_path_count": 24,
+                "compatibility_amendment": {
+                    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698",
+                    "body_sha256": "ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b",
+                    "transferred_paths": [
+                        ".github/governance/codex-runtime-profile.v1.json",
+                        "docs/agreements/runtime/runtime-profile.v1.schema.json",
+                        "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+                    ],
+                },
                 "path_transitions": [],
                 "expansion_requires_replan": True,
             },
@@ -1406,6 +1416,9 @@ def render_pr_template(record: dict[str, Any]) -> str:
         "to the accepted minimal/partial offline T11 slice. T12 live evidence is external GitHub",
         "state and must be exact-head bound; opaque references do not prove validity, freshness,",
         "live execution, or acceptance.",
+        "For the current T12 frontier, live_run_allowed is profile compatibility only.",
+        "The mandatory known-worker-tmp-unresolved gate blocks worker/receipt readiness;",
+        "offline collector tests do not renew the consumed Stage A allowance or prove a live run.",
         "Opaque runtime references are bounded linkage only. Only the locator grammar is parsed.",
         "The referenced target is neither resolved nor dereferenced, and the value proves neither",
         "target validity nor target freshness; it provides no evidence of implementation, execution,",

@@ -30,6 +30,130 @@ this tree.
 
 ## Authority boundaries
 
+### Current combined compatibility contract (2026-09-08)
+
+The [supplementary owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698)
+(canonical body SHA-256 `ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b`)
+authorizes only bounded offline production integration. T12 owns 24 exact paths;
+accepted T11 retains 18. The original 21-path activation, Phase 2 origin and T12
+base above remain immutable history. Stage A remains 2/2 consumed: new code,
+record versions, helper hashes and heads create no controller/VM allowance.
+
+The outer `runtime-profile/v1` retains its name while its closed evidence now
+requires `t11-shell-environment-evidence/v2`, `t11-network-sandbox-evidence/v2`
+and `t12-sandbox-housekeeping-observation/v1`. Original historical observations
+are not rewritten under these new nested versions. The committed declared
+profile is policy intent/non-success, not a fresh measurement.
+
+Each actual collector binds current independently read Git head/tree, a complete
+validated provider identity, one sensor observation ID, the exact private cwd,
+reviewed configuration and explicitly supplied environment. Both before/after
+binding reads must hold. Historical candidate head/tree constants are review
+provenance only, never the production execution revision.
+
+#### Launcher-qualified shell environment
+
+Only `PWD` may extend the existing exact required-key/runtime-marker contract.
+Its value must equal the exact bound cwd in memory; no value is exported.
+Required values remain exact, the forbidden sentinel absent, and
+`CODEX_SANDBOX_NETWORK_DISABLED=1`; unknown or secret-shaped keys fail.
+
+Pin official Codex source `90854393966b21e9ebfd21b122334eb09a20c93d`, the existing
+qualified Ubuntu bubblewrap package `0.9.0-1ubuntu0.1`, binary SHA-256
+`ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8`, and help SHA-256
+`2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d`.
+The configuration-intent compatibility digest includes the exact reviewed
+source/package/help/policy contract. No version, PATH or package is changed to
+obtain a pass.
+
+Observe the actual PATH-selected file, stable no-follow directory/file bindings,
+binary digest and required help flags, then corroborate with the pinned source
+selection semantics. Those observations alone do not prove actual selection.
+An optional read-only callback on the existing owned descendant tracker must
+witness the actual pinned executable in its sandbox-launcher role. First
+admission of a child requires fresh same-birth parent/child/parent identity
+reads; an old process-table parent PID cannot establish ownership after reuse.
+The observed local argv must have the pinned outer namespace flags, two
+separators, inner seccomp-then-exec marker and exact final `/usr/bin/env -0`
+payload. Help/capability/preflight `/bin/true` processes do not count.
+
+Only anchored kernel `/proc/PID/exe` may be followed for this owned-process
+image observation, with birth, image and cmdline bindings rechecked. Resource
+paths remain no-follow. No raw PID, cmdline, environment or private path leaves
+memory. `image_samples` counts attempted observations and `image_error_count`
+retains observation failures. A later independent complete positive can prove
+existence without claiming every attempted sample succeeded. No positive,
+unreadable identity or missed short lifetime is `UNCHECKABLE`, not absence.
+
+#### Socket-stage-specific isolation
+
+The fixed restricted sandbox policy is unchanged. One independently successful
+unsandboxed connection must be accepted, peer-matched and closed before the
+sandbox probe. Bind parent and sandbox network namespace digests, require them
+to differ, require marker `1`, complete bounded capture, confirmed reap and
+same-attempt source/configuration bindings. Accept exactly either:
+
+- socket creation denied with newly observed `EPERM` or `EACCES`; connect is
+  `not-attempted`, connect errno null and socket close `not-needed`; or
+- socket creation and configuration successful, actual connect denied with
+  `EPERM`, `EACCES`, `ENETUNREACH`, `EHOSTUNREACH` or `ECONNREFUSED`, and socket closed.
+
+Successful connection, missing errno, arbitrary/resource errors, configuration
+failure, inconsistent stages, missing namespace/control facts, timeout,
+overflow, signal/nonzero process exit or uncertain reap never pass. Empty or
+malformed child output retains available safe capture diagnostics with unknown
+child facts; it never fabricates a denied connect. A2's missing errno remains
+unresolved historical evidence, not proof of this new socket-create path.
+
+#### Finite probe TMP housekeeping
+
+Observe the same no-follow private root before and after the actual profile
+process calls. Keep exact root device/inode/mode/owner, expected non-root Linux
+UID/GID, directory mode 0700, file mode 0600, zero flags/xattrs and finite bounds.
+Allow only an empty root or the complete exact UID-specific registry directory
+and one empty single-link lock: at most two non-root entries and zero file
+bytes. Reject unknown entries, incomplete state, symlinks/hardlinks/special
+files, wrong ownership/mode, namespace swaps and unstable descriptors.
+
+On first complete registry creation only the source-required root metadata/link
+transition may change. For an existing complete registry, its directory times
+may reflect a fully cleaned marker lifecycle while root and registry identity
+remain exact and the lock remains byte/metadata identical. Do not erase unknown
+state or move it outside observation. Each actual profile process result must
+confirm reap; the per-observation aggregate counts requested, reaped and
+unconfirmed calls, including exceptions. Missing/non-reaped calls fail closed.
+The full disposable-provider cleanup remains mandatory and unchanged.
+
+The safe transition records whether the old exact inventory predicate would
+have passed. `registry-created` necessarily records false; numeric 0/1 are not
+accepted as booleans. Freshness binds all three nested observations to the same
+profile sensor and current provider/head/tree. Whole observation age is at most
+300000 ms, sandbox capture at most 15000 ms. Native UTC timestamps have seconds
+precision; nested windows must lie between recorded time minus the maximum age
+and that recorded second plus 999 ms. Fresh comparison additionally bounds the
+records to the actual start/finish sensor window and rejects a reused observation
+ID. Namespace digest novelty is not required.
+
+#### Worker and receipt readiness remains blocked
+
+The exact whole-worker TMP inventory check is unchanged. Pinned source permits
+a conditional sandbox-launcher route whose cleaned registry-marker lifecycle
+can change directory times; real temporary filesystem tests model this conflict
+without claiming an actual worker failed. Probe housekeeping does not silently
+permit worker writes. `known-worker-tmp-unresolved` stops production before a
+fresh live sensor, claim or worker, and before runtime/lifecycle receipt apply.
+Current CLI dry-run also stops; pure synthetic validation/render/proof tests
+remain modeled structural tests, not actuation authorization.
+
+`live_run_allowed=true` means only that a complete authenticated profile meets
+the necessary compatibility predicates. It is not worker readiness, owner
+authorization, receipt eligibility or an available attempt. Future execution
+requires a bounded equivalent worker-housekeeping agreement and separately
+named finite runtime authority. New external guest/export glue validates the
+complete native profile and original digest, preserves safe non-success facts,
+and is frozen separately without resetting old claims or changing provider,
+mount, inventory or B1/B2 cleanup. No offline test establishes T12 completion.
+
 | Record | Author | May prove | Must not prove |
 |---|---|---|---|
 | `task-execution-envelope/v1` | human / Task supervisor | intended Task, ownership, limits, requested runtime | process or acceptance outcome |
@@ -514,15 +638,18 @@ still takes precedence over the individual class maxima.
 ### T12 complete runtime-profile comparison classification
 
 Every descendant of a listed group has the group's classification; no fallback
-classification exists. Each full observation first passes the unchanged closed
+classification exists. Each full observation first passes the current closed
 profile validator, including nested exact-key and derived-digest checks.
 
 | Exact field/group | Class and comparison |
 |---|---|
 | `schema`, `repository`, `scope`, `status`, `reason`, `platform`, `client`, `capabilities`, `auth`, `request`, `shell_environment`, `live_run_allowed` (all descendants) | stable compatibility/security: exact; includes binary/version/help, model/effort, auth class, sandbox/approval, environment intent, capability/status gates |
-| `evidence.configuration_intent`, `evidence.exact_worker_argv`, `evidence.shell_environment_behavior`, `evidence.bubblewrap_prerequisite`, `evidence.lane_statuses` (all descendants) | stable compatibility/security: exact; all source/config/rules/argv/prerequisite/key-name digests exact |
+| `evidence.configuration_intent`, `evidence.exact_worker_argv`, `evidence.bubblewrap_prerequisite`, `evidence.lane_statuses` (all descendants) | stable compatibility/security: exact; source/config/rules/argv/prerequisite digests exact |
+| `evidence.shell_environment_behavior.source_contract_sha256`, `launcher.binary_sha256`, `launcher.help_sha256` | stable compatibility/security: exact across independently valid full shell observations |
+| Remaining `evidence.shell_environment_behavior` descendants | fresh observation: exact required environment and qualified PWD predicates, actually observed pinned sandbox-launcher image, bounded attempted/error counts, same-attempt binding and current sensor window |
 | `evidence.diagnostic_health` (all descendants) | fresh observation: independently valid current required-category success; unrelated advisory status does not replace a required lane |
-| `evidence.network_sandbox_behavior` (all descendants) | fresh observation: independently valid accepted/closed control, nonzero unequal parent/sandbox namespace digests, exact marker, allowed denial, successful reap; no cross-observation identifier novelty/equality requirement |
+| `evidence.network_sandbox_behavior` (all descendants) | fresh observation: independently valid accepted/closed control, unequal namespace digests, exact marker, allowed socket-create/connect denial, successful reap and fresh same-attempt window; no namespace novelty requirement |
+| `evidence.sandbox_housekeeping` (all descendants) | fresh observation: independently valid finite quiescent TMP transition, complete reap counts and same sensor/attempt binding; exact-equality diagnostic is not normalized into success |
 | `evidence.containment_provider.schema`, `authority`, `codex_authenticated_attestation`, `status`, `provider_kind`, `vm_backend`, `architecture`, `native_architecture`, `guest_os`, `guest_kernel`, `host_mount_count`, `host_mount_classifications`, `all_host_mounts_read_only`, `provider_cache_only`, `host_sensitive_mounts_absent`, `unapproved_mounts_absent`, `ssh_agent_forwarding`, `dot_ssh_public_key_loading`, `user_ssh_config_modified`, `public_head`, `public_tree`, `repository_clean`, `repository_git_bootstrap`, `repository_git_bootstrap_runtime_match`, `repository_git_clone_contract_sha256`, `codex_version_output`, `approved_archive_sha256`, `observed_archive_sha256`, `extracted_binary_sha256` (all descendants) | stable compatibility/security: exact |
 | `evidence.containment_provider.profile_name`, `created_at`, `provider_configuration_sha256`, `effective_mount_inventory_sha256`, `provider_cache_mount_sha256`, `provider_cache_guest_mountpoint_sha256`, `vm_instance_identity_sha256`, `runtime_root_binding_sha256`, `dedicated_codex_home_binding_sha256`, `control_plane`, `lifecycle` (all descendants, including normalized control-plane digest and timestamps) | attempt/VM: exact within Stage B; Stage A identity never substitutes for Stage B; lifecycle remains pre-live until separately recorded teardown |
 | `observed_at` | fresh observation: the fresh observation is later than the supplied one, inside the local sensor start/finish window, neither stale nor future; replay/equal time fails closed |

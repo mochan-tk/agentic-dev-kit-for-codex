@@ -30,6 +30,24 @@ class RuntimeReceiptTest(unittest.TestCase):
         cls.receipt = load_module(SCRIPT, "runtime_receipt_tests")
         cls.fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
+    def setUp(self):
+        # Historical actuator mechanics below use mocked GitHub and synthetic
+        # artifacts. The new production gate is bypassed ONLY in these modeled
+        # tests; the dedicated current-readiness regression and subprocess CLI
+        # retain the real fail-closed gate.
+        if not self._testMethodName.startswith("test_current_readiness"):
+            patcher = mock.patch.object(self.receipt, "require_runtime_receipt_readiness")
+            patcher.start(); self.addCleanup(patcher.stop)
+
+    def test_current_readiness_blocks_api_and_cli_before_any_write_or_input(self):
+        with mock.patch.object(self.receipt, "run_gh", side_effect=AssertionError("no GitHub")), \
+                mock.patch.object(self.receipt, "read_stdin_bounded", side_effect=AssertionError("no input")):
+            self.assert_receipt_error(lambda: self.receipt.apply_comment({}, ""), "known-worker-tmp-unresolved")
+            self.assert_receipt_error(lambda: self.receipt.apply_lifecycle_comments({}, ""), "known-worker-tmp-unresolved")
+            for mode in ("--dry-run", "--apply", "--lifecycle-dry-run", "--lifecycle-apply"):
+                with mock.patch.object(sys, "stdout", mock.Mock(buffer=io.BytesIO())):
+                    self.assertEqual(1, self.receipt.main([mode]))
+
     def assert_receipt_error(self, callback, token=None):
         with self.assertRaises(self.receipt.ReceiptError) as raised:
             callback()
@@ -162,6 +180,7 @@ class RuntimeReceiptTest(unittest.TestCase):
         envelope = artifacts["envelope"]
         result = artifacts["execution_result"]
         verifier = artifacts["verifier"]
+        old_observed_at = profile["observed_at"]
         profile["observed_at"] = observed_at
         provider = profile["evidence"]["containment_provider"]
         provider["created_at"] = observed_at
@@ -170,6 +189,26 @@ class RuntimeReceiptTest(unittest.TestCase):
         control["post_create_observed_at"] = observed_at
         normalized = {key: value for key, value in control.items() if key != "normalized_control_plane_sha256"}
         control["normalized_control_plane_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(normalized))
+        adapter = self.receipt.load_adapter()
+        delta = int((datetime.datetime.strptime(observed_at, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(old_observed_at, "%Y-%m-%dT%H:%M:%SZ")).total_seconds() * 1000)
+        try:
+            binding_digest = adapter.compatibility_provider_digest(provider)
+        except adapter.ContractError:
+            # Malformed negative fixtures stay malformed; this builder must
+            # not intercept the rejection that the production receipt owns.
+            binding_digest = "0" * 64
+        pending = [profile["evidence"]]
+        while pending:
+            item = pending.pop()
+            if isinstance(item, dict):
+                if set(item) == set(adapter.COMPATIBILITY_BINDING_KEYS):
+                    item.update(head=provider["public_head"], tree=provider["public_tree"], provider_attempt_sha256=binding_digest)
+                for key in item:
+                    if key.endswith("_ms") and type(item[key]) is int:
+                        item[key] += delta
+                pending.extend(item.values())
+            elif isinstance(item, list):
+                pending.extend(item)
         result["digests"]["runtime_profile_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(profile))
         result["digests"]["envelope_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(envelope))
         result["verifier"]["record_sha256"] = self.receipt.sha256(self.receipt.canonical_bytes(verifier))
@@ -189,23 +228,14 @@ class RuntimeReceiptTest(unittest.TestCase):
             input=self.receipt.canonical_bytes(fresh), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             timeout=15,
         )
-        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual("pass", payload["status"])
-        self.assertEqual(25, payload["target_issue"])
+        self.assertEqual("fail", payload["status"])
         fresh_body = self.receipt.render_comment(self.receipt.validate_receipt(fresh))
-        self.assertEqual(fresh_body, payload["body"])
-        self.assertEqual(self.receipt.sha256(fresh_body.encode("utf-8")), payload["body_sha256"])
+        self.assertRegex(self.receipt.runtime_dry_run_proof_sha256(self.receipt.validate_receipt(fresh), fresh_body), r"^[0-9a-f]{64}$")
         fresh_receipt = self.receipt.validate_receipt(fresh)
-        self.assertEqual(
-            self.receipt.runtime_dry_run_proof_sha256(fresh_receipt, fresh_body),
-            payload["dry_run_proof_sha256"],
-        )
-        self.assertEqual(
-            "repository-generated-deterministic-binding",
-            payload["dry_run_proof_kind"],
-        )
-        self.assertFalse(payload["dry_run_proof_authenticated"])
+        self.assertRegex(self.receipt.runtime_dry_run_proof_sha256(fresh_receipt, fresh_body), r"^[0-9a-f]{64}$")
+        self.assertNotIn("dry_run_proof_sha256", payload)
 
     def test_receipt_rejects_stale_or_incomplete_check_bindings(self):
         mutations = (
@@ -1039,6 +1069,22 @@ class RuntimeReceiptTest(unittest.TestCase):
             self.receipt.canonical_bytes(normalized)
         )
         profile["observed_at"] = stamp(210)
+        adapter = self.receipt.load_adapter()
+        end_ms = int((now - datetime.timedelta(seconds=210)).timestamp() * 1000)
+        delta = end_ms - profile["evidence"]["sandbox_housekeeping"]["window"]["finished_ms"]
+        provider_digest = adapter.compatibility_provider_digest(provider)
+        pending = [profile["evidence"]]
+        while pending:
+            item = pending.pop()
+            if isinstance(item, dict):
+                if set(item) == set(adapter.COMPATIBILITY_BINDING_KEYS):
+                    item.update(provider_attempt_sha256=provider_digest)
+                for key in item:
+                    if key.endswith("_ms") and type(item[key]) is int:
+                        item[key] += delta
+                pending.extend(item.values())
+            elif isinstance(item, list):
+                pending.extend(item)
         fixture["chronology"] = {
             "probe_started_at": stamp(240),
             "probe_completed_at": stamp(180),
@@ -1123,12 +1169,11 @@ class RuntimeReceiptTest(unittest.TestCase):
             input=self.receipt.canonical_bytes(fixture), stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, timeout=15,
         )
-        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual("t12-colima-lifecycle-completion-dry-run/v1", payload["schema"])
-        self.assertEqual(25, payload["target_issue"])
-        self.assertEqual(body, payload["body"])
-        self.assertNotIn("pr_body", payload)
+        self.assertEqual("runtime-receipt-error/v1", payload["schema"])
+        self.assertEqual("fail", payload["status"])
+        self.assertNotIn("body", payload)
 
     def test_lifecycle_completion_requires_all_absence_lanes_and_one_task_target(self):
         fixture = self.lifecycle_fixture()

@@ -37,11 +37,21 @@
       "schema": "t11-runtime-configuration-intent/v1",
       "authority": "adapter-authored",
       "effective_configuration_proven": false,
-      "configuration_sha256": "17be962b3def2ca516a67792e3a1916732afef1dfdb1c627ecae7ae798ddc584",
+      "configuration_sha256": "7cb35ab91c101144299369053428e89a27bfb6f8ebdfdcdb0a0f62d8bddb6a9e",
       "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
-      "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
+      "dynamic_environment_values_excluded": [
+        "CODEX_HOME",
+        "HOME",
+        "PATH",
+        "TMPDIR"
+      ],
       "reviewed_codex_source_commit": "90854393966b21e9ebfd21b122334eb09a20c93d",
-      "reviewed_codex_source_blobs": {"debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79", "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e", "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c"},
+      "reviewed_codex_source_blobs": {
+        "debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79",
+        "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c",
+        "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e"
+      },
+      "compatibility_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
       "reviewed_codex_injected_keys_sha256": "8ef011e3681e8a597c368d97b2dcc36e9a4c75ec9260d11a2fd5c05f26129ea6"
     },
     "diagnostic_health": {
@@ -57,19 +67,100 @@
       "rules_bypass_absent": false,
       "dynamic_task_data_stdin_only": false
     },
-    "shell_environment_behavior": {"schema": "t11-shell-environment-evidence/v1", "authority": "adapter-authored", "status": "not-run", "reason_code": "not-run", "unexpected_key_count": 0, "unexpected_key_names_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "secret_shaped_key_count": 0},
-    "network_sandbox_behavior": {"schema": "t11-network-sandbox-evidence/v1", "authority": "adapter-authored", "status": "not-run", "reason_code": "not-run", "unsandboxed_control_accepted": false, "unsandboxed_control_closed": false, "parent_netns_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "sandbox_netns_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "netns_different": false, "network_marker_status": "not-run", "sandbox_connect_status": "not-run", "sandbox_connect_errno": "not-run", "process_cleanup_status": "not-run", "process_reaped": false, "raw_stdout_recorded": false, "raw_stderr_recorded": false},
+    "shell_environment_behavior": {
+      "schema": "t11-shell-environment-evidence/v2",
+      "authority": "adapter-authored",
+      "status": "not-run",
+      "reason_code": "not-run",
+      "environment_predicate": {
+        "schema": "t11-shell-environment-evidence/v1",
+        "authority": "adapter-authored",
+        "status": "not-run",
+        "reason_code": "not-run",
+        "unexpected_key_count": 0,
+        "unexpected_key_names_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "secret_shaped_key_count": 0
+      },
+      "source_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+      "launcher": {
+        "status": "not-run",
+        "path_binding_stable": false,
+        "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "help_required_flags": false,
+        "actual_image_observed": false,
+        "image_samples": 0,
+        "image_error_count": 0
+      },
+      "observation_binding": null,
+      "window": null,
+      "pwd_present": null,
+      "pwd_matches_exact_cwd": null
+    },
+    "network_sandbox_behavior": {
+      "schema": "t11-network-sandbox-evidence/v2",
+      "authority": "adapter-authored",
+      "status": "not-run",
+      "reason_code": "not-run",
+      "proof_path": "none",
+      "observation": null,
+      "context": null,
+      "classified_at_ms": null
+    },
     "bubblewrap_prerequisite": {
       "schema": "t11-bubblewrap-prerequisite-evidence/v1",
       "authority": "adapter/owner-authored",
       "status": "not-run",
       "reason_code": "not-run",
-      "guest": {"distribution_id": "not-run", "distribution_version": "not-run", "distribution_codename": "not-run", "kernel": "not-run", "architecture": "not-run"},
-      "apparmor": {"enabled": false, "unprivileged_userns_restriction": "not-run", "profile_required": false, "profile_source": "not-run", "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "installed_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "load_status": "not-run"},
-      "bubblewrap": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
-      "git": {"package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run"},
-      "controller": {"argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "shell": false, "model_invoked": false, "device_auth_performed": false, "legacy_landlock_enabled": false, "global_apparmor_userns_disabled": false},
-      "smoke": {"argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08", "status": "not-run", "reason_code": "not-run", "exit_code": null, "raw_stdout_recorded": false, "raw_stderr_recorded": false}
+      "guest": {
+        "distribution_id": "not-run",
+        "distribution_version": "not-run",
+        "distribution_codename": "not-run",
+        "kernel": "not-run",
+        "architecture": "not-run"
+      },
+      "apparmor": {
+        "enabled": false,
+        "unprivileged_userns_restriction": "not-run",
+        "profile_required": false,
+        "profile_source": "not-run",
+        "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "installed_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "load_status": "not-run"
+      },
+      "bubblewrap": {
+        "package_name": "not-run",
+        "package_version": "not-run",
+        "package_architecture": "not-run",
+        "install_status": "not-run",
+        "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "version_output": "not-run",
+        "help_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "git": {
+        "package_name": "not-run",
+        "package_version": "not-run",
+        "package_architecture": "not-run",
+        "install_status": "not-run",
+        "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "version_output": "not-run"
+      },
+      "controller": {
+        "argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff",
+        "shell": false,
+        "model_invoked": false,
+        "device_auth_performed": false,
+        "legacy_landlock_enabled": false,
+        "global_apparmor_userns_disabled": false
+      },
+      "smoke": {
+        "argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08",
+        "status": "not-run",
+        "reason_code": "not-run",
+        "exit_code": null,
+        "raw_stdout_recorded": false,
+        "raw_stderr_recorded": false
+      }
     },
     "containment_provider": {
       "schema": "t11-containment-provider-evidence/v1",
@@ -101,7 +192,20 @@
       "public_head": "0000000000000000000000000000000000000000",
       "public_tree": "0000000000000000000000000000000000000000",
       "repository_clean": false,
-      "repository_git_bootstrap": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "not-run", "package_version": "not-run", "package_architecture": "not-run", "install_status": "not-run", "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "version_output": "not-run", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false},
+      "repository_git_bootstrap": {
+        "schema": "t11-git-bootstrap-evidence/v1",
+        "authority": "owner/controller-authored",
+        "package_name": "not-run",
+        "package_version": "not-run",
+        "package_architecture": "not-run",
+        "install_status": "not-run",
+        "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "version_output": "not-run",
+        "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff",
+        "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc",
+        "raw_stdout_recorded": false,
+        "raw_stderr_recorded": false
+      },
       "repository_git_bootstrap_runtime_match": false,
       "repository_git_clone_contract_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "codex_version_output": "unavailable",
@@ -153,6 +257,21 @@
       "shell_environment_status": "not-run",
       "config_status": "not-run",
       "auth_status": "unavailable"
+    },
+    "sandbox_housekeeping": {
+      "schema": "t12-sandbox-housekeeping-observation/v1",
+      "authority": "adapter-authored",
+      "status": "not-run",
+      "reason_code": "not-run",
+      "source_contract_sha256": "9425c743d3732f8347ea7acd03f674883557658387fac8e1877dbc6aa1f7ba9f",
+      "transition": null,
+      "observation_binding": null,
+      "window": null,
+      "process_calls": {
+        "requested": 0,
+        "reaped": 0,
+        "unconfirmed": 0
+      }
     }
   },
   "auth": {

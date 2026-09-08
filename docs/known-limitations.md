@@ -11,6 +11,41 @@ not installable, and it is not a parity release. `release_blocked` remains `true
 
 ## The deterministic offline harness is not a live Codex runtime
 
+### Current compatibility amendment (2026-09-08)
+
+The [adopted production-integration decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698)
+authorizes offline work in 24 exact T12 paths, not another measurement. The
+original 21-path activation and accepted T11 history remain unchanged. New
+shell/network v2 and finite housekeeping records are adapter-authored evidence,
+not authenticated Codex/Colima attestations. Source-derived selection alone is
+insufficient: the shell collector must witness the pinned bwrap executable in
+the owned process lineage in the actual sandbox-launcher role. A short-lived,
+inaccessible, reused, or unobserved process can leave that proof `UNCHECKABLE`.
+An observed `bwrap --help` or inert prerequisite helper does not qualify it.
+
+The socket-create-denial proof requires a newly observed EPERM/EACCES plus the
+same-attempt successful accepted-and-closed control, differing namespace
+identities, exact network marker, bounded capture, freshness and confirmed reap.
+It never invents a connect attempt. A2's missing errno remains unknown rather
+than retroactively proving this new path. Missing or malformed child output
+preserves known safe exit/signal/reap diagnostics without exporting raw bytes.
+
+Probe-only finite TMP housekeeping does not authorize arbitrary worker TMP
+writes. A real-filesystem modeled registry-marker create/drop can preserve the
+finite quiescent contract while changing directory timestamps and failing the
+unchanged whole-worker TMP equality. The source route is conditional; no real
+worker failure is claimed. Production stops before a fresh live sensor, claim,
+or worker at `known-worker-tmp-unresolved`; runtime/lifecycle apply and current
+CLI dry-run stop at the same readiness boundary. Pure fixture validation,
+rendering and idempotency tests remain offline contract tests only.
+
+`live_run_allowed` retains its narrower profile-compatibility meaning, not
+whole-route readiness. Stage A remains 2/2 consumed. New code, schemas and
+external glue neither reset that allowance nor authorize authentication,
+VM/sandbox invocation, a live worker, runtime receipt, merge, or release.
+Future authority must name the integrated execution set and resolve the
+worker-TMP contract; all existing non-success observations remain unchanged.
+
 The 2026-09-05 T12 bounded remediation establishes one static launch defect:
 official Codex 0.150.1 source rejects `--strict-config` for `sandbox` before
 dispatch. The shared shell/network sandbox argv now omits only that flag;

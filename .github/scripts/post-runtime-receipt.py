@@ -1402,7 +1402,12 @@ def application_record(receipt: Mapping[str, Any], body: str, url: str, posted_a
     return {"schema": "runtime-receipt-application/v1", "status": "pass", "comment_url": url, "posted_at": posted_at, "body_sha256": digest, "readback_sha256": digest, "receipt_sha256": sha256(canonical_bytes(receipt)), "idempotent": idempotent, "reconciled_after_uncertain_post": reconciled}
 
 
+def require_runtime_receipt_readiness():
+    raise ReceiptError("known-worker-tmp-unresolved")
+
+
 def apply_comment(receipt: Mapping[str, Any], body: str) -> Dict[str, Any]:
+    require_runtime_receipt_readiness()
     verify_external_head(receipt)
     existing = preflight_existing_receipt(receipt, body)
     if existing is not None:
@@ -1530,6 +1535,7 @@ def apply_one_lifecycle_comment(receipt: Mapping[str, Any], body: str) -> Tuple[
 
 
 def apply_lifecycle_comments(receipt: Mapping[str, Any], body: str) -> Dict[str, Any]:
+    require_runtime_receipt_readiness()
     verify_external_head(receipt)
     verify_linked_runtime_receipt(receipt)
     issue_url, posted_at, idempotent, reconciled = apply_one_lifecycle_comment(
@@ -1677,6 +1683,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--dry-run-proof-sha256")
     args = parser.parse_args(argv)
     try:
+        if args.dry_run or args.lifecycle_dry_run or args.lifecycle_apply:
+            require_runtime_receipt_readiness()
+        if args.apply:
+            # Profile compatibility and structural fixture dry-runs do not
+            # resolve the distinct worker-TMP agreement or authorize apply.
+            require_runtime_receipt_readiness()
         if args.apply:
             if (
                 not isinstance(args.dry_run_proof_sha256, str)

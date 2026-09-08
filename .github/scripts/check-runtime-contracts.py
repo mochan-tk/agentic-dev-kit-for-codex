@@ -380,6 +380,16 @@ def expected_runtime_frontier() -> Dict[str, Any]:
             },
             "ownership": {
                 "transferred_path_count": 21,
+                "current_owned_path_count": 24,
+                "compatibility_amendment": {
+                    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698",
+                    "body_sha256": "ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b",
+                    "transferred_paths": [
+                        ".github/governance/codex-runtime-profile.v1.json",
+                        "docs/agreements/runtime/runtime-profile.v1.schema.json",
+                        "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+                    ],
+                },
                 "path_transitions": [],
                 "expansion_requires_replan": True,
             },
@@ -516,6 +526,30 @@ def canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode("utf-8")
 
 
+def expected_compatibility_contract() -> Dict[str, Any]:
+    """Reviewed source/policy facts, never observations of the executing client."""
+    return {
+        "schema": "t12-compatibility-contract/v1",
+        "codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
+        "network_source_sha256": "eb59313c7cfdb7d003df3c1e3d766ad66e414061ef5065d89546a74c1dd658ed",
+        "launcher_source_sha256": "bf1d23f8020d4e73f7a3e235165f0953154170256a92cf0c8254e5ab32578f91",
+        "sandbox_source_sha256": "3be631c566fbd4cbd08eea042cf425164d01002951b0dcad927c674beb571134",
+        "ubuntu_source_orig_sha256": "c6347eaced49ac0141996f46bba3b089e5e6ea4408bc1c43bab9f2d05dd094e1",
+        "ubuntu_source_debian_sha256": "d253eccba8f6a8d636dd3df241c2d4d722785341c665c7817040aafa7ed3495e",
+        "launcher_binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+        "launcher_help_sha256": "2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d",
+        "launcher_package": APPROVED_BWRAP_PACKAGE_VERSION,
+        "launcher_key": "PWD", "launcher_value": "exact-bound-cwd-in-memory",
+        "executed_image_required": True, "sandbox_policy": ":read-only-restricted-no-proxy",
+        "socket_create_denials": ["EPERM", "EACCES"],
+        "connect_denials": list(APPROVED_NETWORK_DENIAL_ERRNOS),
+        "observation_max_age_ms": 300000, "capture_max_ms": 15000,
+        "housekeeping": "quiescent-private-root-registry-empty-lock-only",
+        "housekeeping_max_entries": 2, "housekeeping_file_bytes": 0,
+        "worker_boundary": "known-worker-tmp-unresolved",
+    }
+
+
 def expected_runtime_configuration_intent() -> Dict[str, Any]:
     """Return the checker-owned T11 intent anchor, independent of the adapter."""
     rules_digest = sha256(REVIEWED_RULES_BYTES)
@@ -533,12 +567,14 @@ def expected_runtime_configuration_intent() -> Dict[str, Any]:
             "rules_path_relative_to_codex_home": REVIEWED_RULES_RELATIVE_PATH,
             "rules_profile_sha256": rules_digest,
         },
+        "compatibility_contract": expected_compatibility_contract(),
     }
     return {
         "schema": "t11-runtime-configuration-intent/v1",
         "authority": "adapter-authored",
         "effective_configuration_proven": False,
         "configuration_sha256": sha256(canonical_bytes(static_configuration)),
+        "compatibility_contract_sha256": sha256(canonical_bytes(expected_compatibility_contract())),
         "rules_profile_sha256": rules_digest,
         "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
         "reviewed_codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
@@ -1211,7 +1247,7 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
     }
 
 
-def expected_profile_evidence_schema() -> Dict[str, Any]:
+def _expected_profile_legacy_evidence_schema() -> Dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
@@ -1656,6 +1692,116 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
             },
         },
     }
+
+
+def expected_profile_evidence_schema() -> Dict[str, Any]:
+    """Independent closed transport schema; native arithmetic is also checked."""
+    def closed(properties):
+        return {"type": "object", "additionalProperties": False,
+                "required": list(properties), "properties": properties}
+    def nullable(value):
+        return {"anyOf": [{"type": "null"}, value]}
+    boolean = {"type": "boolean"}
+    digest = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    nonzero = {"type": "string", "pattern": "^(?!0{64}$)[0-9a-f]{64}$"}
+    number = {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+    binding = closed({"head": {"type": "string", "pattern": "^(?!0{40}$)[0-9a-f]{40}$"},
+        "tree": {"type": "string", "pattern": "^(?!0{40}$)[0-9a-f]{40}$"},
+        "provider_attempt_sha256": nonzero, "observation_id_sha256": nonzero})
+    source = {"const": sha256(canonical_bytes(expected_compatibility_contract()))}
+    legacy = _expected_profile_legacy_evidence_schema()
+    properties = legacy["properties"]
+    intent = properties["configuration_intent"]
+    intent["required"].append("compatibility_contract_sha256")
+    intent["properties"]["compatibility_contract_sha256"] = source
+    shell = closed({
+        "schema": {"const": "t11-shell-environment-evidence/v2"}, "authority": {"const": "adapter-authored"},
+        "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+        "reason_code": {"enum": list(SHELL_ENVIRONMENT_REASON_CODES)},
+        "environment_predicate": properties["shell_environment_behavior"], "source_contract_sha256": source,
+        "launcher": closed({"status": {"enum": ["pass", "not-run", "UNCHECKABLE"]},
+            "path_binding_stable": boolean, "binary_sha256": digest, "help_sha256": digest,
+            "help_required_flags": boolean, "actual_image_observed": boolean,
+            "image_samples": {"type": "integer", "minimum": 0, "maximum": 256},
+            "image_error_count": {"type": "integer", "minimum": 0, "maximum": 256}}),
+        "observation_binding": nullable(binding),
+        "window": nullable(closed({key: number for key in ("started_ms", "capture_started_ms", "capture_finished_ms", "classified_ms")})),
+        "pwd_present": nullable(boolean), "pwd_matches_exact_cwd": nullable(boolean),
+    })
+    shell["allOf"] = [{"if": {"properties": {"status": {"const": "pass"}}}, "then": {"properties": {
+        "observation_binding": binding, "pwd_present": boolean,
+        "environment_predicate": {"properties": {"status": {"const": "pass"}}},
+        "launcher": {"properties": {"status": {"const": "pass"}, "path_binding_stable": {"const": True},
+            "binary_sha256": {"const": APPROVED_BWRAP_BINARY_SHA256},
+            "help_sha256": {"const": expected_compatibility_contract()["launcher_help_sha256"]},
+            "help_required_flags": {"const": True}, "actual_image_observed": {"const": True},
+            "image_samples": {"minimum": 1}}}}}},
+        {"if": {"properties": {"status": {"const": "pass"}, "pwd_present": {"const": True}}},
+         "then": {"properties": {"pwd_matches_exact_cwd": {"const": True}}}}]
+    observation = closed({
+        "binding": binding,
+        **{key: boolean for key in ("control_connected", "control_accepted", "control_peer_matches", "control_closed")},
+        "parent_netns_sha256": digest, "sandbox_netns_sha256": digest,
+        "network_marker_status": {"enum": ["exact-1", "missing", "mismatch", "UNCHECKABLE"]},
+        "socket_create_status": {"enum": ["created", "denied", "UNCHECKABLE"]},
+        "socket_create_errno": {"enum": ["EPERM", "EACCES", "none", "unapproved"]},
+        "connect_status": {"enum": ["denied", "succeeded", "not-attempted", "UNCHECKABLE"]},
+        "connect_errno": {"enum": [*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "unapproved"]},
+        "socket_close_status": {"enum": ["pass", "not-needed", "UNCHECKABLE"]},
+        "exit_code": nullable({"type": "integer", "minimum": 0, "maximum": 255}),
+        "signal": nullable({"type": "integer", "minimum": 0, "maximum": 64}),
+        **{key: boolean for key in ("timed_out", "stdout_overflow", "stderr_overflow", "reaped")},
+        "stderr_size": {"type": "integer", "minimum": 0, "maximum": 4097},
+        **{key: number for key in ("control_closed_ms", "probe_started_ms", "probe_finished_ms")},
+    })
+    context = closed({"expected_binding": binding, "control_binding": binding, "capture_binding": binding,
+        "observation_started_ms": number, "observation_finished_ms": number})
+    network = closed({"schema": {"const": "t11-network-sandbox-evidence/v2"},
+        "authority": {"const": "adapter-authored"}, "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+        "reason_code": {"enum": ["none", "not-run", "observation-uncheckable", "malformed-observation",
+            "binding-uncheckable", "attempt-binding-mismatch", "freshness-uncheckable", "stale-observation",
+            "control-unavailable", "process-not-reaped", "process-timeout", "output-overflow",
+            "process-nonzero-or-status-unavailable", "namespace-uncheckable", "netns-not-separated",
+            "network-marker-missing", "network-marker-mismatch", "network-marker-uncheckable",
+            "contradictory-operation-stages", "socket-creation-uncheckable", "socket-close-uncheckable",
+            "sandbox-connection-succeeded", "connect-denial-uncheckable"]},
+        "proof_path": {"enum": ["none", "socket-create-denial", "connect-denial"]},
+        "observation": nullable(observation), "context": nullable(context), "classified_at_ms": nullable(number)})
+    network["allOf"] = [{"if": {"properties": {"status": {"const": "pass"}}}, "then": {"properties": {
+        "reason_code": {"const": "none"}, "proof_path": {"enum": ["socket-create-denial", "connect-denial"]},
+        "observation": {**observation, "allOf": [{"properties": {
+            **{key: {"const": True} for key in ("control_connected", "control_accepted", "control_peer_matches", "control_closed", "reaped")},
+            "parent_netns_sha256": nonzero, "sandbox_netns_sha256": nonzero,
+            "network_marker_status": {"const": "exact-1"}, "exit_code": {"const": 0}, "signal": {"type": "null"},
+            "timed_out": {"const": False}, "stdout_overflow": {"const": False}, "stderr_overflow": {"const": False}, "stderr_size": {"const": 0}}}]},
+        "context": context, "classified_at_ms": number}}}]
+    transition = closed({"schema": {"const": "t12-sandbox-housekeeping-evidence/v1"},
+        "authority": {"const": "adapter-authored"}, "status": {"enum": ["pass", "UNCHECKABLE"]},
+        "reason_code": {"enum": ["none", "not-run", "observation-uncheckable", "quiescence-not-proven",
+            "expected-identity-drift", "unexpected-registry-removal", "protected-root-drift", "root-link-count-mismatch",
+            "unexplained-root-metadata-drift", "existing-lock-drift", "existing-registry-binding-drift"]},
+        "current_exact_predicate_equal": nullable(boolean),
+        "transition": {"enum": ["unclassified", "registry-created", "quiescent-preserved"]},
+        "unknown_entries_accepted": {"const": False}, "historical_a2_identified": {"const": False},
+        "cleanup_required": {"const": "existing-full-disposable-provider-destruction"}})
+    transition["allOf"] = [{"if": {"properties": {"transition": {"const": "registry-created"}}},
+        "then": {"properties": {"current_exact_predicate_equal": {"const": False}}}}]
+    housekeeping = closed({"schema": {"const": "t12-sandbox-housekeeping-observation/v1"},
+        "authority": {"const": "adapter-authored"}, "status": {"enum": ["pass", "not-run", "UNCHECKABLE"]},
+        "reason_code": transition["properties"]["reason_code"], "source_contract_sha256": source,
+        "transition": nullable(transition), "observation_binding": nullable(binding),
+        "window": nullable(closed({"started_ms": number, "finished_ms": number})),
+        "process_calls": closed({key: {"type": "integer", "minimum": 0, "maximum": 128}
+            for key in ("requested", "reaped", "unconfirmed")})})
+    housekeeping["allOf"] = [{"if": {"properties": {"status": {"const": "pass"}}}, "then": {"properties": {
+        "reason_code": {"const": "none"}, "transition": {**transition, "allOf": transition["allOf"] + [{"properties": {
+            "status": {"const": "pass"}, "reason_code": {"const": "none"}, "current_exact_predicate_equal": boolean,
+            "transition": {"enum": ["registry-created", "quiescent-preserved"]}}}]},
+        "observation_binding": binding, "window": {"type": "object"},
+        "process_calls": {"properties": {"requested": {"minimum": 1}, "unconfirmed": {"const": 0}}}}}}]
+    properties.update(shell_environment_behavior=shell, network_sandbox_behavior=network, sandbox_housekeeping=housekeeping)
+    legacy["required"].append("sandbox_housekeeping")
+    return legacy
 
 
 def expected_not_run_control_plane() -> Dict[str, Any]:
@@ -2331,6 +2477,32 @@ def validate_network_sandbox_evidence(
     return value.get("status")
 
 
+def compatibility_shape_matches(value, schema, depth=0):
+    """Only the closed local compatibility-schema vocabulary, not a Draft validator."""
+    if depth > 24:
+        return False
+    if "anyOf" in schema and not any(compatibility_shape_matches(value, child, depth + 1) for child in schema["anyOf"]):
+        return False
+    if "allOf" in schema and not all(compatibility_shape_matches(value, child, depth + 1) for child in schema["allOf"]):
+        return False
+    if "if" in schema and compatibility_shape_matches(value, schema["if"], depth + 1):
+        if not compatibility_shape_matches(value, schema.get("then", {}), depth + 1): return False
+    if "const" in schema and (value != schema["const"] or type(value) is not type(schema["const"])): return False
+    if "enum" in schema and not any(value == item and type(value) is type(item) for item in schema["enum"]): return False
+    types = {"object": dict, "array": list, "string": str, "boolean": bool, "integer": int, "null": type(None)}
+    if "type" in schema and type(value) is not types[schema["type"]]: return False
+    if type(value) is int and not schema.get("minimum", value) <= value <= schema.get("maximum", value): return False
+    if isinstance(value, str):
+        if not schema.get("minLength", 0) <= len(value) <= schema.get("maxLength", len(value)): return False
+        if "pattern" in schema and re.search(schema["pattern"], value) is None: return False
+    if isinstance(value, dict):
+        properties = schema.get("properties", {})
+        if set(schema.get("required", ())) - set(value): return False
+        if schema.get("additionalProperties") is False and set(value) - set(properties): return False
+        if not all(compatibility_shape_matches(value[key], child, depth + 1) for key, child in properties.items() if key in value): return False
+    return True
+
+
 def validate_profile_evidence(
     value: Any,
     status: Any,
@@ -2341,7 +2513,7 @@ def validate_profile_evidence(
     if not isinstance(value, dict) or set(value) != {
         "configuration_intent", "diagnostic_health", "exact_worker_argv",
         "shell_environment_behavior", "network_sandbox_behavior",
-        "bubblewrap_prerequisite",
+        "bubblewrap_prerequisite", "sandbox_housekeeping",
         "containment_provider", "lane_statuses",
     }:
         errors.append(label + ": separated runtime evidence lanes drifted")
@@ -2400,9 +2572,15 @@ def validate_profile_evidence(
     ):
         errors.append(label + ": exact worker argv evidence is invalid")
     shell = value.get("shell_environment_behavior")
-    shell_status = validate_shell_environment_evidence(shell, label, errors)
+    shapes = expected_profile_evidence_schema()["properties"]
+    for key in ("shell_environment_behavior", "network_sandbox_behavior", "sandbox_housekeeping"):
+        if not compatibility_shape_matches(value[key], shapes[key]):
+            errors.append(label + ": closed compatibility evidence shape drifted: " + key)
+    shell_status = shell.get("status") if isinstance(shell, dict) else None
+    if isinstance(shell, dict):
+        validate_shell_environment_evidence(shell.get("environment_predicate"), label, errors)
     network = value.get("network_sandbox_behavior")
-    network_status = validate_network_sandbox_evidence(network, label, errors)
+    network_status = network.get("status") if isinstance(network, dict) else None
     validate_stage_a1_prerequisite(
         value.get("bubblewrap_prerequisite"), status, label, errors
     )
@@ -2453,6 +2631,7 @@ def validate_profile_evidence(
         or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
         or not isinstance(network, dict) or network.get("status") != "pass"
         or value.get("bubblewrap_prerequisite", {}).get("status") != "pass"
+        or value.get("sandbox_housekeeping", {}).get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
         or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
         or lanes.get("auth_status") != "signed-in-client"
@@ -2465,6 +2644,7 @@ def validate_profile_evidence(
         or not isinstance(network, dict) or network.get("status") != "pass"
         or value.get("bubblewrap_prerequisite", {}).get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
+        or value.get("sandbox_housekeeping", {}).get("status") != "pass"
         or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
         or lanes.get("auth_status") != "unavailable"
     ):
@@ -2900,7 +3080,7 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
     for key in (
         "exact_worker_argv", "shell_environment_behavior",
         "network_sandbox_behavior",
-        "bubblewrap_prerequisite", "containment_provider",
+        "bubblewrap_prerequisite", "containment_provider", "sandbox_housekeeping",
     ):
         if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
             errors.append(label + ": match does not require passing evidence lane " + key)

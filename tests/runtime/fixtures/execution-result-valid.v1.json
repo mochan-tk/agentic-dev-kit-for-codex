@@ -29,7 +29,9 @@
     "pre_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
     "post_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
     "worktree_tree": "ceb8f052e9f801dd1a7093dc2e6c408bf998508c",
-    "changed_paths": ["work-item.txt"],
+    "changed_paths": [
+      "work-item.txt"
+    ],
     "owned_paths_only": true,
     "expected_bytes": true,
     "other_changes": false
@@ -42,7 +44,7 @@
   },
   "digests": {
     "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637",
-    "runtime_profile_sha256": "9b1b51131c124f507cc35565afc57af61cf51a9e9e2958e89ec73faa656802ca"
+    "runtime_profile_sha256": "f264b2310c3305f6050ae041ef5040ae343fc640c4cd8ad7a2d3b03179f45b24"
   },
   "privacy": {
     "raw_jsonl_retained": false,
