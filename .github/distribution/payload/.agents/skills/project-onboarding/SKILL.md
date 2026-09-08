@@ -66,7 +66,13 @@ execution stay broken until the scaffold reaches the default branch.
 **No GitHub write — labels, ruleset, Epic — happens before the scaffold is
 reachable from the remote default branch.**
 
-Then run `.github/scripts/tuning-status.sh`. Exit 0 → already tuned; run in re-tune mode
+Record the exact adoption commit and tree after fetching the remote default
+branch. Preserve existing adopter AGENTS, README and SCAFFOLD-CHANGELOG bytes;
+do not insert an invented scaffold-version marker. The installed reviewed
+`frontier.sh` engine is the source-first payload anchor used by the optional
+ritual sensor, not an authenticated installer or runtime attestation.
+
+Then run `bash .github/scripts/tuning-status.sh`. Exit 0 → already tuned; run in re-tune mode
 (see Re-tuning) only if something changed. Otherwise the report is your
 worklist.
 
@@ -141,12 +147,12 @@ Ask in sequence, second step branching on the first answer:
 **Close P2 before starting P3** — verification is the long stretch, so
 give the adopter something to review during it:
 
-1. Run `.github/scripts/setup-labels.sh` (idempotent; the installer never
+1. Run `bash .github/scripts/setup-labels.sh` (idempotent; the installer never
    writes to GitHub — this is where the canonical label set is
    bootstrapped). Record its output in the evidence log.
 2. Ask the branch-protection consent question — one question, three
    choices — then act on the answer immediately with
-   `.github/scripts/setup-ruleset.sh --checks <actual-adopter-checks>` (idempotent: it promotes an
+   `bash .github/scripts/setup-ruleset.sh --checks <actual-adopter-checks>` (idempotent: it promotes an
    existing same-name ruleset's enforcement instead of duplicating).
    The question text must state both caveats: repository admins keep an
    explicit, audited *pull-request-only* bypass button (that is how a
@@ -203,7 +209,7 @@ unrun command.
 - If the adopter already uses CODEOWNERS, verify its owners and rules. No
   CODEOWNERS file is installed or made mandatory; adding one is an explicit
   adopter governance decision.
-- Run `.github/scripts/setup-sources.sh` to activate the connector chosen
+- Run `bash .github/scripts/setup-sources.sh` to activate the connector chosen
   in P2 step 1 (records it in the SOURCES.md registry); the
   `context-collection` skill is
   the follow-on that lands future context through it. Skip only when the
@@ -222,7 +228,7 @@ unrun command.
 
 ### P5 — Prove
 
-`.github/scripts/tuning-status.sh` exits 0; the new CI gates run green once end to
+`bash .github/scripts/tuning-status.sh` exits 0; the new CI gates run green once end to
 end (or documented-red with a linked issue); verify the documented local
 environment by running its actual commands. The kit does not install CI or
 a cloud setup workflow. Definition of tuned = these three measured results.
@@ -241,6 +247,17 @@ inventory table, the interview answers, and the P3 evidence log in the
 description. Append a `.github/docs/agreements/retro-log.md` row (failure class:
 `onboarding`). List any project-agnostic improvements you noticed as
 upstream candidates (see the retro skill, Upstreaming).
+
+Link the exact P0 adoption commit/tree and the evidence PR's base/head commits.
+If the adopter uses the optional sensor, run
+`bash .github/scripts/check-task-ritual.sh <pr-number>` read-only. Its Task-less
+onboarding exception requires complete exact-base/head trees, the reviewed
+payload anchor, base CUSTOMIZE markers actually removed from head instructions,
+and only tuning instructions, existing CI, context or retro evidence changes.
+A title alone, an unreadable proof or unrelated application change is not an
+exemption. Initial adoption separately requires confirmed absence in the exact
+base, never an API failure. Unsupported combinations follow an ordinary planned
+Task; do not invent a historical Task or rewrite adopter files to obtain a pass.
 
 Then write the **Deferred from onboarding ledger**: collect every item
 left undone or unverified across P0–P5 — commands that could not run

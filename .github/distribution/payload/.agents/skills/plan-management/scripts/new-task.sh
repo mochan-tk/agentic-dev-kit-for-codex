@@ -2,7 +2,7 @@
 # new-task.sh — create a Task issue wired into the plan graph in one step.
 #
 # Usage:
-#   new-task.sh -t "Title" -b body.md -p <epic-number> -e <cloud|app|cli|ide> \
+#   bash .agents/skills/plan-management/scripts/new-task.sh -t "Title" -b body.md -p <epic-number> -e <cloud|app|cli|ide> \
 #               [-d "14,15"] [-R owner/repo] [--ready]
 #
 #   -t  Task title (required)

@@ -38,13 +38,13 @@ this.
 0. **Own the roadmap decision here, before the first decomposition.** Look for
    `<repo> roadmap` with `gh project list --owner <owner>`. If it is absent
    and no Epic carries a comment beginning `Roadmap board: declined`, ask one
-   consent question; on yes run `.github/scripts/setup-project.sh init`, on no
+   consent question; on yes run `bash .github/scripts/setup-project.sh init`, on no
    post that exact marker on the current Epic and continue. The marker is a
    repository-wide decision: later decompositions search all `type:epic`
    issues (open and closed), so a human is not asked again after the first
    decline. A declined or unavailable board never blocks decomposition. Once
    the board exists, backfill every open `type:epic` issue returned by
-   `gh issue list --label type:epic --state open` with `setup-project.sh add`;
+   `gh issue list --label type:epic --state open` with `bash .github/scripts/setup-project.sh add`;
    onboarding created those sibling Epics before this first decomposition, so
    waiting for future creation would leave them invisible again.
 1. Create Epics for the whole outline up front — cheap, low detail, gives the
@@ -52,7 +52,7 @@ this.
    phase, all siblings: the graph is two levels, so an Epic is never a
    sub-issue of another Epic. Order them with `blocked-by`. When the roadmap
    exists, add every Epic as it is created with
-   `.github/scripts/setup-project.sh add --project <number> --issue <n>` —
+   `bash .github/scripts/setup-project.sh add --project <number> --issue <n>` —
    visibility must not wait for dates that rolling-wave planning deliberately
    has not invented.
 2. Decompose an Epic into Task sub-issues only when its phase is about to
@@ -79,7 +79,7 @@ this.
    an agent to its own **Task** issue, and the Epic is the plan it works
    from, not the work order it executes.
 6. When the round has real dates, schedule its Epic and Tasks with
-   `.github/scripts/setup-project.sh dates`. Dates are evidence, not board
+   `bash .github/scripts/setup-project.sh dates`. Dates are evidence, not board
    admission tickets: never invent them to make an issue visible.
 
 ## The frontier
@@ -87,7 +87,7 @@ this.
 **Frontier = open Task issues labeled `ai:ready` whose `blocked by` issues are
 all closed.** This is the set an orchestrator may dispatch right now.
 
-- Compute it with `.agents/skills/plan-management/scripts/frontier.sh`, or manually per issue:
+- Compute it with `bash .agents/skills/plan-management/scripts/frontier.sh`, or manually per issue:
   `gh issue view <n>` shows `Blocked by:` rows; each listed issue must be
   CLOSED. (Dependency data is also exposed as JSON fields in gh ≥ 2.94 — run
   `gh issue view <n> --json` with no field list to see the exact field names
@@ -137,14 +137,14 @@ fields `Start date` / `Target date` plus a single-select field `Kind`
 board:
 
 ```bash
-.github/scripts/setup-project.sh init      # creates "<repo> roadmap", owner = repo owner
+bash .github/scripts/setup-project.sh init      # creates "<repo> roadmap", owner = repo owner
 ```
 
 Put an Epic or Task on the board before it has dates (idempotent: reuses the
 existing item). The call sets `Kind` from the issue's canonical label:
 
 ```bash
-.github/scripts/setup-project.sh add --project <number> --issue <n>
+bash .github/scripts/setup-project.sh add --project <number> --issue <n>
 ```
 
 Projects v2 boards cannot be repo-owned — they always belong to a user or
@@ -161,7 +161,7 @@ automatically
 from the issue's labels — `type:epic` → Epic, `type:task` → Task:
 
 ```bash
-.github/scripts/setup-project.sh dates --project <number> \
+bash .github/scripts/setup-project.sh dates --project <number> \
   --issue <n> --start 2026-07-07 --target 2026-07-11
 ```
 

@@ -9,8 +9,8 @@
 # file it writes carries pin placeholders that are completed from inside
 # that PR.
 #
-# Usage: setup-sources.sh [--source builtin|speckit] [--yes] [--dry-run]
-#        setup-sources.sh -h|--help
+# Usage: bash .github/scripts/setup-sources.sh [--source builtin|speckit] [--yes] [--dry-run]
+#        bash .github/scripts/setup-sources.sh -h|--help
 #
 # All GitHub access goes through `gh api` (kept shim-testable). Exit
 # codes: 0 success or nothing to do, 1 preflight/runtime failure,
@@ -26,7 +26,7 @@ REGISTRY_REL=".github/docs/context/SOURCES.md"
 
 usage() {
   cat <<'EOF'
-Usage: setup-sources.sh [options]
+Usage: bash .github/scripts/setup-sources.sh [options]
 
 Connector activation wizard: preflight-checks the repository, picks a
 data-source connector, and writes the SOURCES.md registry (under

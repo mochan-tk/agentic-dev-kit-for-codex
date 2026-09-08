@@ -7,13 +7,13 @@
 # reuse the project item when the issue is already on the board.
 #
 # Usage:
-#   setup-project.sh init  [--owner <login>] [--title <title>] [-R owner/repo]
-#   setup-project.sh add   --project <number> --issue <n>
+#   bash .github/scripts/setup-project.sh init  [--owner <login>] [--title <title>] [-R owner/repo]
+#   bash .github/scripts/setup-project.sh add   --project <number> --issue <n>
 #                          [--owner <login>] [-R owner/repo]
-#   setup-project.sh dates --project <number> --issue <n>
+#   bash .github/scripts/setup-project.sh dates --project <number> --issue <n>
 #                          --start YYYY-MM-DD --target YYYY-MM-DD
 #                          [--owner <login>] [-R owner/repo]
-#   setup-project.sh --help
+#   bash .github/scripts/setup-project.sh --help
 #
 # Subcommands:
 #   init   Create (or reuse) a Projects v2 board titled "<repo> roadmap" by
@@ -69,7 +69,7 @@ fail() { echo "error: $*" >&2; exit 1; }
 
 usage_error() {
   echo "error: $*" >&2
-  echo "Run '$(basename "$0") --help' for usage." >&2
+  echo "Run 'bash .github/scripts/setup-project.sh --help' for usage." >&2
   exit 2
 }
 
@@ -164,7 +164,7 @@ apply_kind() {
   kind_field_id="$(field_id "$project" "$owner" "Kind")"
   if [[ -z "$kind_field_id" ]]; then
     echo "Note: project #$project has no 'Kind' field;" \
-      "re-run 'setup-project.sh init' to add it."
+      "re-run 'bash .github/scripts/setup-project.sh init' to add it."
     return 0
   fi
   kind_option_id="$(option_id "$project" "$owner" "Kind" "$kind")"
@@ -423,7 +423,7 @@ cmd_dates() {
   start_field_id="$(field_id "$project" "$owner" "Start date")"
   target_field_id="$(field_id "$project" "$owner" "Target date")"
   [[ -n "$start_field_id" && -n "$target_field_id" ]] \
-    || fail "project #$project has no 'Start date'/'Target date' fields — run 'setup-project.sh init' first"
+    || fail "project #$project has no 'Start date'/'Target date' fields — run 'bash .github/scripts/setup-project.sh init' first"
 
   ensure_project_item "$project" "$owner"
 

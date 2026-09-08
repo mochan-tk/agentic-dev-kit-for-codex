@@ -1,11 +1,14 @@
 """Disposable-adopter regressions derived from the frozen scaffold installer tests."""
 
 import hashlib
+import base64
 import importlib.util
 import json
 import os
 from pathlib import Path
 import shutil
+import re
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -36,6 +39,218 @@ class InstallerTests(unittest.TestCase):
         return {str(p.relative_to(root)): ("link", os.readlink(p)) if p.is_symlink()
                 else ("file", hashlib.sha256(p.read_bytes()).hexdigest()) if p.is_file()
                 else ("directory", "") for p in root.rglob("*")}
+
+    def git(self, *args):
+        return subprocess.check_output(["git", "-C", str(self.target), *args], text=True).strip()
+
+    def commit_adopter(self, message):
+        self.git("add", "--all")
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                 "commit", "-qm", message)
+        return self.git("rev-parse", "HEAD")
+
+    def adoption_fixture(self, *, initial=False, preserved=False, tune=True, application=False):
+        (self.target / "existing.txt").write_text("existing adopter file\n")
+        if preserved:
+            for name in ("AGENTS.md", "README.md", "SCAFFOLD-CHANGELOG.md"):
+                (self.target / name).write_text("adopter-owned " + name + "\n")
+        before_install = self.commit_adopter("before adoption")
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        adopted = self.commit_adopter("adopt reviewed local payload")
+        if initial:
+            return before_install, adopted
+        if tune:
+            path = self.target / ".github/codex-instructions.md"
+            path.write_text(path.read_text().replace("CUSTOMIZE", "CONFIGURED"))
+        if application:
+            (self.target / "application.py").write_text("print('application change')\n")
+        if not tune and not application:
+            (self.target / "existing.txt").write_text("ordinary work\n")
+        return adopted, self.commit_adopter("onboarding candidate")
+
+    def ritual(self, base, head, *, initial=False, defect=None, ordinary=False):
+        # GitHub projections are fixtures derived from real local Git objects.
+        # The fake transports data only; all proof decisions remain in the helper.
+        prefix = "repos/{owner}/{repo}"
+        replies = {}
+        def reply(endpoint, query, output, rc=0):
+            replies[endpoint + "\n" + query] = [rc, output]
+        meta = prefix + "/pulls/1"
+        for query, value in {
+            '[.user.login, .user.type] | @tsv': 'owner\tUser',
+            '.body // ""': ('Refs #2\nPlan: https://github.com/fixture/adopter/issues/2#issuecomment-3'
+                           if ordinary else ''), '.base.ref': 'main', '.base.sha': base,
+            '.head.sha': head, '.title // ""': 'adopt source-first kit' if initial else 'scaffold: onboard fixture',
+            '[.base.sha, .head.sha] | @tsv': base + '\t' + head,
+        }.items(): reply(meta, query, value)
+        for ref in (base, head):
+            tree = self.git("show", "-s", "--format=%T", ref)
+            reply(prefix + "/git/commits/" + ref, '.tree.sha', tree)
+            rows = []
+            for line in self.git("ls-tree", "-rt", ref).splitlines():
+                metadata, name = line.split("\t", 1)
+                mode, kind, oid = metadata.split()
+                rows.append("\t".join((name, mode, kind, oid)))
+                if kind == "blob":
+                    data = subprocess.check_output(["git", "-C", str(self.target), "cat-file", "blob", oid])
+                    reply(prefix + "/git/blobs/" + oid, '.encoding', 'base64')
+                    reply(prefix + "/git/blobs/" + oid, '.content | type', 'string')
+                    reply(prefix + "/git/blobs/" + oid, '.content', base64.b64encode(data).decode())
+            endpoint = prefix + "/git/trees/" + tree + "?recursive=1"
+            header = tree + "\tstring\tfalse\tboolean\tarray"
+            if ref == base and defect == "truncated": header = tree + "\tstring\ttrue\tboolean\tarray"
+            if ref == base and defect == "header-type": header = tree + "\tstring\tfalse\tstring\tarray"
+            if ref == base and defect == "duplicate": rows.append(rows[0])
+            if ref == base and defect == "symlink":
+                rows = [line.replace("\t100644\tblob\t", "\t120000\tblob\t")
+                        if line.startswith(".agents/skills/plan-management/scripts/frontier.sh\t") else line for line in rows]
+            if ref == base and defect == "missing-anchor":
+                rows = [line for line in rows if not line.startswith(
+                    ".agents/skills/plan-management/scripts/frontier.sh\t")]
+            reply(endpoint, '[.sha, (.sha | type), .truncated, (.truncated | type), (.tree | type)] | @tsv', header,
+                  1 if defect == "read-error" and ref == base else 0)
+            reply(endpoint, 'if all(.tree[]; ([.path, .mode, .type, .sha] | all(.[]; type == "string"))) then .tree[] | [.path, .mode, .type, .sha] | @tsv else error("invalid tree field type") end', "\n".join(rows),
+                  1 if ref == base and defect == "entry-type" else 0)
+        # Baseline consumer compatibility, including its incorrect error-as-absence path.
+        for name in ("AGENTS.md", "SCAFFOLD-CHANGELOG.md", ".github/codex-instructions.md"):
+            endpoint = prefix + "/contents/" + name + "?ref=main"
+            exists = subprocess.run(["git", "-C", str(self.target), "cat-file", "-e", base + ":" + name],
+                                    capture_output=True).returncode == 0
+            if exists:
+                data = subprocess.check_output(["git", "-C", str(self.target), "show", base + ":" + name])
+                reply(endpoint, '.content', base64.b64encode(data).decode())
+                reply(endpoint, '.sha', self.git("rev-parse", base + ":" + name),
+                      1 if defect == "read-error" and name == "AGENTS.md" else 0)
+            else:
+                reply(endpoint, '.content', '', 1); reply(endpoint, '.sha', '', 1)
+        added = self.git("diff", "--name-only", "--diff-filter=A", base, head).splitlines()
+        if defect == "read-error": added = ["AGENTS.md", ".github/codex-instructions.md"]
+        reply(meta + "/files?per_page=100", '[.[] | select(.status == "added") | .filename]', json.dumps(added))
+        if defect == "blob-error":
+            oid = self.git("rev-parse", base + ":.github/codex-instructions.md")
+            reply(prefix + "/git/blobs/" + oid, '.content', '', 1)
+        if defect in ("blob-type", "blob-content"):
+            oid = self.git("rev-parse", base + ":.github/codex-instructions.md")
+            reply(prefix + "/git/blobs/" + oid,
+                  '.content | type' if defect == "blob-type" else '.content',
+                  'array' if defect == "blob-type" else base64.b64encode(b"altered\n").decode())
+        if ordinary:
+            helper = (self.target / '.github/scripts/check-task-ritual.sh').read_text()
+            marker_query = helper.split('markers=$(api ', 1)[1].split("--jq '", 1)[1].split("'", 1)[0]
+            resolved_query = helper.split('elif resolved=$(api ', 1)[1].split("--jq '", 1)[1].split("'", 1)[0]
+            reply(prefix + '/issues/2/comments', marker_query,
+                  'CLAIM\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\n'
+                  'PLAN\t2026-01-01T00:01:00Z\t2026-01-01T00:01:00Z\n'
+                  'EXEMPT\t2026-01-01T00:01:00Z\t2026-01-01T00:01:00Z')
+            reply(meta + '/commits', '.[].commit | ((.committer.date // .author.date) // empty)',
+                  '2026-01-01T00:02:00Z')
+            reply(prefix + '/issues/2', '[.labels[].name] | join(" ")', 'type:task')
+            reply(prefix, '.full_name', 'fixture/adopter')
+            reply(prefix + '/issues/comments/3', resolved_query, '2\tplan')
+        fake = self.base / "ritual-bin"
+        fake.mkdir(exist_ok=True)
+        records = self.base / "github-fixture.json"
+        records.write_text(json.dumps(replies))
+        gh = fake / "gh"
+        gh.write_text("""#!/usr/bin/env python3
+import json, os, sys
+args=sys.argv[1:]
+if len(args)<4 or args[0]!='api' or '--jq' not in args: sys.exit(91)
+query=args[args.index('--jq')+1]
+value=json.load(open(os.environ['GITHUB_FIXTURE'])).get(args[1]+'\\n'+query)
+if value is None: sys.exit(92)
+print(value[1]); sys.exit(value[0])
+""")
+        gh.chmod(0o755)
+        if defect == "entry-error":
+            awk = fake / "awk"
+            base_oid = self.git("rev-parse", base + ":.github/codex-instructions.md")
+            awk.write_text("#!/usr/bin/env python3\nimport subprocess,sys\n"
+                "data=sys.stdin.buffer.read()\n"
+                "if any(arg in ('path=AGENTS.md','path=.github/codex-instructions.md') for arg in sys.argv[1:]) and "
+                + repr(base_oid.encode()) + " in data: sys.exit(93)\n"
+                "sys.exit(subprocess.run(['/usr/bin/awk',*sys.argv[1:]],input=data).returncode)\n")
+            awk.chmod(0o755)
+        return subprocess.run(["bash", ".github/scripts/check-task-ritual.sh", "1"],
+            cwd=self.target, env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"],
+                GITHUB_FIXTURE=str(records), RITUAL_API_RETRY_DELAY="0"),
+            capture_output=True, text=True, timeout=15)
+
+    def test_f1_installed_documented_invocations_use_0644_helpers(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        skill = (self.target / ".agents/skills/project-onboarding/SKILL.md").read_text()
+        command = re.search(r"Then run `([^`]+)`", skill).group(1)
+        helper = self.target / ".github/scripts/tuning-status.sh"
+        self.assertEqual(0o644, helper.stat().st_mode & 0o777)
+        try:
+            result = subprocess.run(shlex.split(command), cwd=self.target,
+                                    capture_output=True, text=True, timeout=5)
+        except PermissionError:
+            self.fail("documented direct execution fails against installed 0644 helper")
+        self.assertEqual(1, result.returncode, result.stderr)  # actually runs, reports untuned.
+        self.assertIn("CUSTOMIZE", result.stdout)
+        command = re.search(r"Run `([^`]*setup-labels\.sh)`", skill).group(1)
+        fake = self.base / "documented-bin"
+        fake.mkdir()
+        calls = self.base / "documented-calls"
+        gh = fake / "gh"
+        gh.write_text('#!/bin/sh\nprintf "called\\n" >> "$FIXTURE_CALLS"\nexit 1\n')
+        gh.chmod(0o755)
+        self.assertEqual(0o644, (self.target / '.github/scripts/setup-labels.sh').stat().st_mode & 0o777)
+        result = subprocess.run(shlex.split(command), cwd=self.target,
+            env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ['PATH'], FIXTURE_CALLS=str(calls)),
+            capture_output=True, text=True, timeout=5)
+        self.assertEqual(1, result.returncode)
+        self.assertEqual('called\n', calls.read_text())  # stopped at the fake authentication probe.
+
+    def test_f2_fresh_adoption_then_taskless_onboarding(self):
+        base, head = self.adoption_fixture()
+        result = self.ritual(base, head)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("onboarding evidence PR", result.stdout)
+
+    def test_f2_initial_adoption_read_error_is_not_absence(self):
+        base, head = self.adoption_fixture()
+        result = self.ritual(base, head, defect="read-error")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+
+    def test_f2_initial_adoption_has_complete_structural_proof(self):
+        base, head = self.adoption_fixture(initial=True)
+        self.assertEqual(0, self.ritual(base, head, initial=True).returncode)
+
+    def test_f2_preserved_adopter_records_do_not_block_real_adoption(self):
+        base, head = self.adoption_fixture(preserved=True)
+        for name in ("AGENTS.md", "README.md", "SCAFFOLD-CHANGELOG.md"):
+            self.assertEqual("adopter-owned " + name + "\n", (self.target / name).read_text())
+        result = self.ritual(base, head)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_f2_title_only_and_application_work_do_not_get_onboarding_exception(self):
+        base, head = self.adoption_fixture(tune=False, application=True)
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+        instructions = self.target / ".github/codex-instructions.md"
+        instructions.write_text(instructions.read_text().replace("CUSTOMIZE", "CONFIGURED"))
+        head = self.commit_adopter("tuning does not hide application work")
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+
+    def test_f2_invalid_or_unreadable_proof_is_non_success(self):
+        base, head = self.adoption_fixture()
+        for defect in ("truncated", "duplicate", "symlink", "blob-error", "missing-anchor",
+                       "blob-type", "blob-content", "entry-error", "header-type", "entry-type"):
+            with self.subTest(defect=defect):
+                self.assertNotEqual(0, self.ritual(base, head, defect=defect).returncode)
+
+    def test_f2_changed_output_symlink_does_not_get_onboarding_exception(self):
+        base, _ = self.adoption_fixture()
+        (self.target / '.github/docs/context/unsafe').symlink_to('../../../existing.txt')
+        head = self.commit_adopter('unsafe onboarding output')
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+
+    def test_f2_normal_task_uses_ritual_without_bootstrap_proof(self):
+        base, head = self.adoption_fixture(tune=False, application=True)
+        result = self.ritual(base, head, defect="read-error", ordinary=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn('ritual in order', result.stdout)
 
     def clone_source(self):
         source = self.base / "local source"

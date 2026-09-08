@@ -4,7 +4,7 @@
 set -u
 
 usage() {
-  echo "Usage: ownership-overlap.sh --validate-body <file>" >&2
+  echo "Usage: bash .github/scripts/ownership-overlap.sh --validate-body <file>" >&2
   echo "       ownership-overlap.sh -R owner/repo <issue> <issue> [...]" >&2
   exit 2
 }

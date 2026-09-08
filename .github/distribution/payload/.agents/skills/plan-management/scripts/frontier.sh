@@ -23,7 +23,7 @@
 #
 # Source-derived frontier: open type:task + ai:ready, all blockers CLOSED.
 # Requires gh with the blockedBy JSON field; unsupported/missing data refuses.
-# Usage: frontier.sh [-R owner/repo] [--all]
+# Usage: bash .agents/skills/plan-management/scripts/frontier.sh [-R owner/repo] [--all]
 set -euo pipefail
 REPO_ARGS=()
 SHOW_ALL=false
@@ -31,7 +31,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     -R|--repo) [ -n "${2:-}" ] || exit 2; REPO_ARGS=(--repo "$2"); shift 2 ;;
     --all) SHOW_ALL=true; shift ;;
-    -h|--help) printf '%s\n' 'Usage: frontier.sh [-R owner/repo] [--all]'; exit 0 ;;
+    -h|--help) printf '%s\n' 'Usage: bash .agents/skills/plan-management/scripts/frontier.sh [-R owner/repo] [--all]'; exit 0 ;;
     *) printf '%s\n' 'error: unknown option' >&2; exit 2 ;;
   esac
 done

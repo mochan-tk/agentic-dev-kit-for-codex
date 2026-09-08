@@ -7,12 +7,12 @@
 # (skills, prompts, README) are documentation, not findings.
 #
 # Usage:
-#   tuning-status.sh            human report; exit 1 if markers remain
-#   tuning-status.sh --ci       emit ::warning:: lines; always exit 0. When
+#   bash .github/scripts/tuning-status.sh            human report; exit 1 if markers remain
+#   bash .github/scripts/tuning-status.sh --ci       emit ::warning:: lines; always exit 0. When
 #                               GITHUB_STEP_SUMMARY names a file and findings
 #                               exist, also append a markdown summary block
 #                               there (tuned trees append nothing).
-#   tuning-status.sh --quiet    no output; exit code only (0 tuned / 1 not)
+#   bash .github/scripts/tuning-status.sh --quiet    no output; exit code only (0 tuned / 1 not)
 #
 # Used by: .agents/skills/project-onboarding/SKILL.md (P0/P5) and ci.yml.
 

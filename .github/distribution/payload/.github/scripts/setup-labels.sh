@@ -3,7 +3,7 @@
 # relies on (plan-management, task-routing, session-orchestration skills).
 # Idempotent: uses `gh label create --force`.
 #
-# Usage: setup-labels.sh [-R owner/repo] | setup-labels.sh -h|--help
+# Usage: bash .github/scripts/setup-labels.sh [-R owner/repo] | bash .github/scripts/setup-labels.sh -h|--help
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: setup-labels.sh [options]
+Usage: bash .github/scripts/setup-labels.sh [options]
 
 Create or refresh the 12 canonical scaffold labels on a repository.
 Idempotent: existing labels are updated in place (gh label create --force).

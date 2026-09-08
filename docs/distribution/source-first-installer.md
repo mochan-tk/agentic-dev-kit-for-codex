@@ -32,6 +32,17 @@ remote-default-before-GitHub-write, clean-checkout verify-by-running,
 evidence-PR, and durable deferred-work ledger gates from the source workflow.
 The installer itself runs none of the optional GitHub setup helpers.
 
+Installed shell files retain mode 0644: invoke the documented helpers with
+`bash`, or the existing PowerShell Git Bash entrypoint. The optional ritual
+sensor binds Task-less bootstrap exceptions to complete trees at the PR's
+exact base/head commits and an exact installed frontier-engine blob. It does
+not depend on a changelog marker: existing adopter changelog, README and AGENTS
+remain preserved. P0 records the adoption commit/tree; P6 links those records
+and verifies actual CUSTOMIZE removal plus bounded onboarding-only outputs.
+Initial adoption requires confirmed file absence, never a failed API read.
+An unrelated or unsupported PR uses the ordinary Task ritual. These are
+structural Git fixture checks, not proof of live GitHub or native Codex runtime.
+
 ## Exact payload and preservation
 
 `payload.v1.tsv` records the closed 47-file payload, preservation class, and

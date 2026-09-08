@@ -24,7 +24,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: setup-ruleset.sh [options]
+Usage: bash .github/scripts/setup-ruleset.sh [options]
 
 Create a branch ruleset targeting the repository's default branch that
 requires:
@@ -57,9 +57,9 @@ Options:
   -h, --help               Show this help and exit.
 
 Examples:
-  setup-ruleset.sh --dry-run | jq .
-  setup-ruleset.sh -R owner/repo
-  setup-ruleset.sh -R owner/repo --checks lint,test --enforcement active
+  bash .github/scripts/setup-ruleset.sh --dry-run | jq .
+  bash .github/scripts/setup-ruleset.sh -R owner/repo
+  bash .github/scripts/setup-ruleset.sh -R owner/repo --checks lint,test --enforcement active
 
 Inspect or remove a created ruleset:
   gh api repos/<owner>/<repo>/rulesets --jq '.[] | {id, name, enforcement}'

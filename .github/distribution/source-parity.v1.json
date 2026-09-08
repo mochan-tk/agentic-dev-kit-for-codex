@@ -25,27 +25,30 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "326fb44e119ae445a79e748b7bccf4480e84035724494466a52a3ee0ed9034a9",
+      "target_sha256": "c88b2fe20240fa31aa34628e3937e972278c8a59c88a99b1a57e8ade42a5a7e2",
       "adaptations": [
-        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
       "destination": ".agents/skills/plan-management/scripts/frontier.sh",
       "source_path": ".github/skills/plan-management/scripts/frontier.sh",
       "source_blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
-      "target_sha256": "5bf1671721bdae472b48a917227a08fbf580c2a7ea27397df54c052c605da348",
+      "target_sha256": "a6d451092bd963f988e311876f8c2062a978e29b1b9d9a5fe2b1ab02a30f32b6",
       "adaptations": [
-        "Retain Task/frontier computation; fail closed on list/dependency/state errors and truncation; no unchecked text fallback; embed original MIT notice."
+        "Retain Task/frontier computation; fail closed on list/dependency/state errors and truncation; no unchecked text fallback; embed original MIT notice.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
       "destination": ".agents/skills/plan-management/scripts/new-task.sh",
       "source_path": ".github/skills/plan-management/scripts/new-task.sh",
       "source_blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
-      "target_sha256": "876095fb0dbd52bcef3529b1a1a67c23d30c113639326521f62f78f3316059bf",
+      "target_sha256": "f96952a901917918f1cec29485a7bd12dc078d30a90c691b6dd943e8c43c486d",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
@@ -70,9 +73,10 @@
       "destination": ".agents/skills/project-onboarding/SKILL.md",
       "source_path": ".github/skills/project-onboarding/SKILL.md",
       "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
-      "target_sha256": "28a0698c4fd96a4af99a2e5a9f00c759e2fb73a92f34f9ac0d249f0791c7fdb6",
+      "target_sha256": "878563511e78dced8f32ef507c7af964990134755a85d727316b237cd831387a",
       "adaptations": [
-        "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff."
+        "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff.",
+        "Use explicit Bash for 0644 helpers; P0/P6 bind preserved adopter adoption and optional ritual proof to exact commits/trees rather than a changelog marker."
       ]
     },
     {
@@ -115,9 +119,10 @@
       "destination": ".codex/agents/orchestrator.toml",
       "source_path": ".github/agents/orchestrator.agent.md",
       "source_blob": "5574a1422f53651330a204dce08dce49ea4c1f59",
-      "target_sha256": "ebeb390c7086eed880e410428936fb155d82782f31a00c91f73c754836b17b3f",
+      "target_sha256": "516ac001433c8bae32c8c3ed3cfef26b4c08abaecf4a2ed85d4772b416b6bac9",
       "adaptations": [
-        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee."
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
@@ -313,18 +318,20 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "78bec6b897ead9a954f11eb9cb6e6a6d8b258d50ef7dcbcd8cdc031f76f71a46",
+      "target_sha256": "07ace9e8432d5fd01faa85e0c0f221b8c4f13a4f0142fbf9c042534dc61673bb",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records."
       ]
     },
     {
       "destination": ".github/scripts/ownership-overlap.sh",
       "source_path": ".github/scripts/ownership-overlap.sh",
       "source_blob": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
-      "target_sha256": "b32265006b5d979199fea8ff338f947d604cae6e1b3712dda65309557f8e1086",
+      "target_sha256": "b0599e051b1782b78cd3df809eae80168ec2cdb86207ab996badb3fbcfd9907c",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
@@ -340,45 +347,50 @@
       "destination": ".github/scripts/setup-labels.sh",
       "source_path": ".github/scripts/setup-labels.sh",
       "source_blob": "f76b67dcbe9563cfb61bd56451f7c51a68f8afca",
-      "target_sha256": "328491ff1d0a5be0ace6512b4a674b20d31f3693db8cd764561d0c5867bf6a75",
+      "target_sha256": "b47319fc5c5afded9f6babe178e1682a0fcbc539933435a31ef64eb28035daa1",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
       "destination": ".github/scripts/setup-project.sh",
       "source_path": ".github/scripts/setup-project.sh",
       "source_blob": "4dd5b61186b8488e5e8fff143e5b40d3958087ca",
-      "target_sha256": "a92e71104e6058c0562d62514f0f8964db3745f86b856f7560232d3f49ab548b",
+      "target_sha256": "3cf882ba6d557b13417c518d02f3828dfb0a4b5de37c754a64afe14cd47e5b5f",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
       "destination": ".github/scripts/setup-ruleset.sh",
       "source_path": ".github/scripts/setup-ruleset.sh",
       "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
-      "target_sha256": "a5b992a50ccbf64f6db08c9cb01dd46cd62cdc89f71ebb052685a8270a469a7f",
+      "target_sha256": "7575657f7c399eb28e2ad019a8ca493243b4078ffd3f22e4568cae25ccdd97bc",
       "adaptations": [
-        "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer."
+        "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
       "destination": ".github/scripts/setup-sources.sh",
       "source_path": ".github/scripts/setup-sources.sh",
       "source_blob": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff",
-      "target_sha256": "d442d5eb6b359734f9a9ee51b5ab256db7e90a8ec3ff1bf77686b6b4217b9289",
+      "target_sha256": "9286fd7c6ff51664b903bc62bf3317fa3a9288dc6efc414d122a3f2b9b135e8c",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {
       "destination": ".github/scripts/tuning-status.sh",
       "source_path": ".github/scripts/tuning-status.sh",
       "source_blob": "1b764f3bd67e897e64c11c98503e5750d73746dd",
-      "target_sha256": "509fd711d809fc1db0d052499f966b09607e92667b8c64fc3aaa1e2117668730",
+      "target_sha256": "10be82b1fd8c169e5fa605b78f20b6e219dd96e7177c58354757835ebf116c41",
       "adaptations": [
-        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof."
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
     {

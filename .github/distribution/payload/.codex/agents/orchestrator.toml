@@ -26,7 +26,7 @@ Follow `AGENTS.md` and these skills as your operating manual:
 
 1. **Frontier.** Determine which Task issues are actionable now: open, labeled
    `ai:ready`, all blockers closed (use
-   `.agents/skills/plan-management/scripts/frontier.sh` or the equivalent
+   `bash .agents/skills/plan-management/scripts/frontier.sh` or the equivalent
    `gh` queries). If the frontier is empty and the Epic is not done, the plan
    needs decomposition or replanning — do that first.
 2. **Dispatch.** For each frontier task, honor its `exec:*` label and Routing
