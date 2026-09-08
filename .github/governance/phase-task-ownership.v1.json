@@ -220,13 +220,11 @@
         {"path": ".codex/agents/task_verifier.toml", "mode": "100644"},
         {"path": ".codex/agents/task_worker.toml", "mode": "100644"},
         {"path": ".github/ISSUE_TEMPLATE/ai-task.yml", "mode": "100644"},
-        {"path": ".github/governance/codex-runtime-profile.v1.json", "mode": "100644"},
         {"path": ".github/scripts/check-phase1-accepted-snapshot.py", "mode": "100644"},
         {"path": ".github/workflows/ci.yml", "mode": "100644"},
         {"path": "docs/agreements/runtime/codex-final-response.v1.schema.json", "mode": "100644"},
         {"path": "docs/agreements/runtime/execution-result.v1.schema.json", "mode": "100644"},
         {"path": "docs/agreements/runtime/loop-event.v1.schema.json", "mode": "100644"},
-        {"path": "docs/agreements/runtime/runtime-profile.v1.schema.json", "mode": "100644"},
         {"path": "tests/conformance/phase1-accepted-snapshot.v1.json", "mode": "100644"},
         {"path": "tests/conformance/test_phase1_acceptance.py", "mode": "100644"},
         {"path": "tests/conformance/test_phase1_accepted_snapshot.py", "mode": "100644"},
@@ -235,8 +233,7 @@
         {"path": "tests/runtime/fixtures/codex-jsonl-valid.jsonl", "mode": "100644"},
         {"path": "tests/runtime/fixtures/fake-codex.py", "mode": "100644"},
         {"path": "tests/runtime/fixtures/loop-events-valid.v1.jsonl", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/representative-task.v1.json", "mode": "100644"},
-        {"path": "tests/runtime/fixtures/runtime-profile-valid.v1.json", "mode": "100644"}
+        {"path": "tests/runtime/fixtures/representative-task.v1.json", "mode": "100644"}
       ]
     },
     {
@@ -249,6 +246,7 @@
       "path_transitions": [],
       "owned_paths": [
         {"path": ".github/PULL_REQUEST_TEMPLATE.md", "mode": "100644"},
+        {"path": ".github/governance/codex-runtime-profile.v1.json", "mode": "100644"},
         {"path": ".github/governance/ledger-contracts.v1.json", "mode": "100644"},
         {"path": ".github/governance/phase-task-ownership.v1.json", "mode": "100644"},
         {"path": ".github/scripts/check-ledger-templates.py", "mode": "100644"},
@@ -259,6 +257,7 @@
         {"path": "README.md", "mode": "100644"},
         {"path": "docs/agreements/adr/ADR-0008-minimal-codex-execution-loop.md", "mode": "100644"},
         {"path": "docs/agreements/runtime/minimal-codex-execution-loop.md", "mode": "100644"},
+        {"path": "docs/agreements/runtime/runtime-profile.v1.schema.json", "mode": "100644"},
         {"path": "docs/agreements/runtime/runtime-receipt.v1.schema.json", "mode": "100644"},
         {"path": "docs/agreements/runtime/task-execution-envelope.v1.schema.json", "mode": "100644"},
         {"path": "docs/known-limitations.md", "mode": "100644"},
@@ -268,6 +267,7 @@
         {"path": "tests/conformance/test_runtime_vertical_slice.py", "mode": "100644"},
         {"path": "tests/runtime/fixtures/envelope-valid.v1.json", "mode": "100644"},
         {"path": "tests/runtime/fixtures/execution-result-valid.v1.json", "mode": "100644"},
+        {"path": "tests/runtime/fixtures/runtime-profile-valid.v1.json", "mode": "100644"},
         {"path": "tests/runtime/fixtures/runtime-receipt-valid.v1.json", "mode": "100644"}
       ]
     }
