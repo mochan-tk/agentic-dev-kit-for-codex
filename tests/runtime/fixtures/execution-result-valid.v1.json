@@ -29,7 +29,9 @@
     "pre_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
     "post_tree": "fde54bf076ca83895acbd8bca2bba3f1b5378205",
     "worktree_tree": "ceb8f052e9f801dd1a7093dc2e6c408bf998508c",
-    "changed_paths": ["work-item.txt"],
+    "changed_paths": [
+      "work-item.txt"
+    ],
     "owned_paths_only": true,
     "expected_bytes": true,
     "other_changes": false
@@ -41,8 +43,8 @@
     "record_sha256": "eadf6a4de1854f600255940213aebc966ecfe5185d48a9f34c83db3e2ce0af12"
   },
   "digests": {
-    "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
-    "runtime_profile_sha256": "9b1b51131c124f507cc35565afc57af61cf51a9e9e2958e89ec73faa656802ca"
+    "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637",
+    "runtime_profile_sha256": "1b66d8eccafd1cded894c5ce7380534d3596841cc6eafd97e61d61b6906974d7"
   },
   "privacy": {
     "raw_jsonl_retained": false,

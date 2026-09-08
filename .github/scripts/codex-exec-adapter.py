@@ -18,6 +18,7 @@ import math
 import os
 import re
 import signal
+import shutil
 import socket
 import stat
 import subprocess
@@ -31,8 +32,9 @@ from typing import Any, Dict, Iterable, List, Mapping, NamedTuple, Optional, Seq
 
 
 REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
-T11_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
-TASK_ISSUE = 23
+T11_ACCEPTED_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
+T12_PUBLIC_BRANCH = "codex/phase-2-live-codex-runtime"
+TASK_ISSUE = 25
 ATTEMPT_RE = re.compile(r"ATTEMPT-[0-9a-f]{16}\Z")
 OID_RE = re.compile(r"[0-9a-f]{40}\Z")
 SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
@@ -433,6 +435,30 @@ def validate_documented_memory_overrides(overrides: Mapping[str, Any]) -> None:
             raise ContractError("documented memory override must be present and false: " + key)
 
 
+def compatibility_contract() -> Dict[str, Any]:
+    """Reviewed source/policy facts, never observations of the executing client."""
+    return {
+        "schema": "t12-compatibility-contract/v1",
+        "codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
+        "network_source_sha256": "eb59313c7cfdb7d003df3c1e3d766ad66e414061ef5065d89546a74c1dd658ed",
+        "launcher_source_sha256": "bf1d23f8020d4e73f7a3e235165f0953154170256a92cf0c8254e5ab32578f91",
+        "sandbox_source_sha256": "3be631c566fbd4cbd08eea042cf425164d01002951b0dcad927c674beb571134",
+        "ubuntu_source_orig_sha256": "c6347eaced49ac0141996f46bba3b089e5e6ea4408bc1c43bab9f2d05dd094e1",
+        "ubuntu_source_debian_sha256": "d253eccba8f6a8d636dd3df241c2d4d722785341c665c7817040aafa7ed3495e",
+        "launcher_binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+        "launcher_help_sha256": "2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d",
+        "launcher_package": APPROVED_BWRAP_PACKAGE_VERSION,
+        "launcher_key": "PWD", "launcher_value": "exact-bound-cwd-in-memory",
+        "executed_image_required": True, "sandbox_policy": ":read-only-restricted-no-proxy",
+        "socket_create_denials": ["EPERM", "EACCES"],
+        "connect_denials": list(APPROVED_NETWORK_DENIAL_ERRNOS),
+        "observation_max_age_ms": 300000, "capture_max_ms": 15000,
+        "housekeeping": "quiescent-private-root-registry-empty-lock-only",
+        "housekeeping_max_entries": 2, "housekeeping_file_bytes": 0,
+        "worker_boundary": "same-private-tmp-observed-worker-linux-helper-quiescent-only",
+    }
+
+
 def runtime_configuration_intent() -> Dict[str, Any]:
     """Return stable adapter-authored intent, never effective-config proof.
 
@@ -457,6 +483,7 @@ def runtime_configuration_intent() -> Dict[str, Any]:
             "rules_path_relative_to_codex_home": REVIEWED_RULES_RELATIVE_PATH,
             "rules_profile_sha256": sha256_bytes(REVIEWED_RULES_BYTES),
         },
+        "compatibility_contract": compatibility_contract(),
     }
     return {
         "schema": "t11-runtime-configuration-intent/v1",
@@ -467,6 +494,7 @@ def runtime_configuration_intent() -> Dict[str, Any]:
         "dynamic_environment_values_excluded": list(DYNAMIC_ENVIRONMENT_NAMES),
         "reviewed_codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
         "reviewed_codex_source_blobs": dict(OFFICIAL_CODEX_0150_SOURCE_BLOBS),
+        "compatibility_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
         "reviewed_codex_injected_keys_sha256": sha256_bytes(canonical_bytes(
             list(REVIEWED_CODEX_INJECTED_ENVIRONMENT_KEYS)
         )),
@@ -875,10 +903,16 @@ def validate_control_plane_evidence(value: Any, allow_not_run: bool = True) -> D
     return value
 
 
-def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
+def stage_a1_git_clone_contract(
+    head: str,
+    tree: str,
+    public_branch: str = T12_PUBLIC_BRANCH,
+) -> Dict[str, Any]:
     """Return the reviewed shell-free public-clone contract for one exact head."""
     require_string(head, "Git clone contract head", OID_RE)
     require_string(tree, "Git clone contract tree", OID_RE)
+    if public_branch not in (T11_ACCEPTED_PUBLIC_BRANCH, T12_PUBLIC_BRANCH):
+        raise ContractError("Git clone contract branch is not reviewed")
     repository_url = "https://github.com/{}.git".format(REPOSITORY)
     target = "<private-vm-repository>"
     prefix = [
@@ -893,7 +927,7 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "schema": "t11-git-clone-contract/v1",
         "authority": "reviewed-static-contract",
         "repository_url": repository_url,
-        "branch": T11_PUBLIC_BRANCH,
+        "branch": public_branch,
         "head": head,
         "tree": tree,
         "git_binary": STAGE_A1_GIT_BINARY,
@@ -919,7 +953,7 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "argv_templates": [
             umask_wrapper + prefix + [
                 "clone", "--no-checkout", "--single-branch", "--branch",
-                T11_PUBLIC_BRANCH, repository_url, target,
+                public_branch, repository_url, target,
             ],
             umask_wrapper + prefix + [
                 "-C", target, "checkout", "--detach", head,
@@ -943,8 +977,14 @@ def stage_a1_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
     }
 
 
-def stage_a1_git_clone_contract_sha256(head: str, tree: str) -> str:
-    return sha256_bytes(canonical_bytes(stage_a1_git_clone_contract(head, tree)))
+def stage_a1_git_clone_contract_sha256(
+    head: str,
+    tree: str,
+    public_branch: str = T12_PUBLIC_BRANCH,
+) -> str:
+    return sha256_bytes(
+        canonical_bytes(stage_a1_git_clone_contract(head, tree, public_branch))
+    )
 
 
 def expected_git_bootstrap_evidence() -> Dict[str, Any]:
@@ -2182,6 +2222,7 @@ def run_claimed_live_worker(
     target_root: Path,
     environment: Mapping[str, str],
     prompt: bytes,
+    *, launcher_observer=None,
 ) -> ProcessResult:
     if not worker_argv or any(not isinstance(item, str) or "\0" in item for item in worker_argv):
         raise ContractError("live worker argv is invalid before claim")
@@ -2202,6 +2243,7 @@ def run_claimed_live_worker(
         envelope["limits"]["stdout_bytes"],
         envelope["limits"]["stderr_bytes"],
         2,
+        **({"launcher_observer": launcher_observer} if launcher_observer is not None else {}),
     )
 
 
@@ -2218,7 +2260,7 @@ def validate_shell_free_command(command: Any) -> None:
     argv = command["argv"]
     if not isinstance(argv, list) or not 1 <= len(argv) <= 64 or any(not isinstance(x, str) or not x or len(x.encode("utf-8")) > 4096 for x in argv):
         raise ContractError("verification command argv is invalid")
-    if any("status=pending" in x or "status=complete" in x or "Issue #23" in x for x in argv):
+    if any("status=pending" in x or "status=complete" in x or "Issue #25" in x for x in argv):
         raise ContractError("dynamic Task/context bytes must not appear in argv")
     cwd = command["cwd"]
     if not isinstance(cwd, dict):
@@ -2459,11 +2501,18 @@ def validate_containment_provider_evidence(value: Any, allow_fixture: bool = Fal
             raise ContractError("passing containment provider guest platform is invalid")
         if value["profile_name"] != "t11-e2e-{}-01".format(value["public_head"][:12]):
             raise ContractError("containment provider profile/public-head binding drifted")
-        if value["repository_git_clone_contract_sha256"] != (
+        clone_branches = (
+            (T11_ACCEPTED_PUBLIC_BRANCH, T12_PUBLIC_BRANCH)
+            if allow_fixture
+            else (T12_PUBLIC_BRANCH,)
+        )
+        expected_clone_digests = {
             stage_a1_git_clone_contract_sha256(
-                value["public_head"], value["public_tree"],
+                value["public_head"], value["public_tree"], clone_branch,
             )
-        ):
+            for clone_branch in clone_branches
+        }
+        if value["repository_git_clone_contract_sha256"] not in expected_clone_digests:
             raise ContractError("containment provider clone contract binding drifted")
         if control_plane["status"] != "pass":
             raise ContractError("passing containment provider evidence lacks passing control-plane evidence")
@@ -2850,7 +2899,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         (
             "configuration_intent", "diagnostic_health", "exact_worker_argv",
             "shell_environment_behavior", "network_sandbox_behavior",
-            "bubblewrap_prerequisite",
+            "bubblewrap_prerequisite", "sandbox_housekeeping",
             "lane_statuses", "containment_provider",
         ),
         "runtime evidence",
@@ -2931,10 +2980,10 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     }
     if worker_argv_evidence["status"] in ("fail", "UNCHECKABLE") and failure_pairs.get(worker_argv_evidence["reason_code"]) != worker_argv_evidence["stage"]:
         raise ContractError("runtime worker argv failure stage/reason pair is invalid")
-    shell_evidence = validate_shell_environment_evidence(
+    shell_evidence = validate_compatibility_shell(
         evidence["shell_environment_behavior"]
     )
-    network_evidence = validate_network_sandbox_evidence(
+    network_evidence = validate_compatibility_network(
         evidence["network_sandbox_behavior"]
     )
     prerequisite_evidence = validate_stage_a1_prerequisite_evidence(
@@ -2943,6 +2992,35 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     containment_evidence = validate_containment_provider_evidence(
         evidence["containment_provider"], allow_fixture=allow_fixture,
     )
+    housekeeping = validate_compatibility_housekeeping(evidence["sandbox_housekeeping"])
+    observed_bindings = []
+    for record in (shell_evidence, housekeeping):
+        if record["observation_binding"] is not None:
+            observed_bindings.append(record["observation_binding"])
+    if network_evidence["observation"] is not None:
+        observed_bindings.append(network_evidence["observation"]["binding"])
+    if observed_bindings:
+        if containment_evidence["status"] != "pass":
+            raise ContractError("compatibility observations lack a validated provider")
+        expected_provider_digest = compatibility_provider_digest(containment_evidence, allow_fixture=allow_fixture)
+        for binding in observed_bindings:
+            if (binding["head"] != containment_evidence["public_head"]
+                    or binding["tree"] != containment_evidence["public_tree"]
+                    or binding["provider_attempt_sha256"] != expected_provider_digest
+                    or binding != observed_bindings[0]):
+                raise ContractError("compatibility same-attempt/head/tree binding drifted")
+        observed_ms = int(datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp() * 1000)
+        for started, finished in compatibility_observation_windows(profile):
+            # Native timestamps have whole-second precision; observations
+            # may finish inside that final second, never after it.
+            if not observed_ms - COMPATIBILITY_MAX_AGE_MS <= started <= finished <= observed_ms + 999:
+                raise ContractError("nested compatibility evidence is outside the native observation window")
+    if shell_evidence["status"] == "pass":
+        qualified_bwrap = prerequisite_evidence["bubblewrap"]
+        if (prerequisite_evidence["status"] != "pass"
+                or qualified_bwrap["binary_sha256"] != shell_evidence["launcher"]["binary_sha256"]
+                or qualified_bwrap["help_sha256"] != shell_evidence["launcher"]["help_sha256"]):
+            raise ContractError("executed launcher and prerequisite bindings disagree")
     lanes = evidence["lane_statuses"]
     if not isinstance(lanes, dict):
         raise ContractError("runtime evidence lanes must be an object")
@@ -3025,6 +3103,7 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
         and worker_argv_evidence["status"] == "pass"
         and network_evidence["status"] == "pass"
         and prerequisite_evidence["status"] == "pass"
+        and housekeeping["status"] == "pass"
         and containment_evidence["status"] == "pass"
         and all(caps[field] for field in ("exec_json", "ephemeral", "strict_config", "ignore_user_config", "workspace_write", "approval_never", "model", "reasoning", "sandbox", "approval", "overrides"))
     )
@@ -3073,6 +3152,151 @@ def validate_runtime_profile(profile: Any, allow_fixture: bool = False) -> Dict[
     return profile
 
 
+PROFILE_STABLE_ROOTS = (
+    "schema", "repository", "scope", "status", "reason", "platform", "client",
+    "capabilities", "auth", "request", "shell_environment", "live_run_allowed",
+)
+PROFILE_STABLE_EVIDENCE = (
+    "configuration_intent", "exact_worker_argv",
+    "bubblewrap_prerequisite", "lane_statuses",
+)
+PROFILE_FRESH_EVIDENCE = ("diagnostic_health", "network_sandbox_behavior", "shell_environment_behavior", "sandbox_housekeeping")
+PROFILE_PROVIDER_STABLE = (
+    "schema", "authority", "codex_authenticated_attestation", "status",
+    "provider_kind", "vm_backend", "architecture", "native_architecture",
+    "guest_os", "guest_kernel", "host_mount_count", "host_mount_classifications",
+    "all_host_mounts_read_only", "provider_cache_only", "host_sensitive_mounts_absent",
+    "unapproved_mounts_absent", "ssh_agent_forwarding", "dot_ssh_public_key_loading",
+    "user_ssh_config_modified", "public_head", "public_tree", "repository_clean",
+    "repository_git_bootstrap", "repository_git_bootstrap_runtime_match",
+    "repository_git_clone_contract_sha256", "codex_version_output",
+    "approved_archive_sha256", "observed_archive_sha256", "extracted_binary_sha256",
+)
+PROFILE_PROVIDER_ATTEMPT = (
+    "profile_name", "created_at", "provider_configuration_sha256",
+    "effective_mount_inventory_sha256", "provider_cache_mount_sha256",
+    "provider_cache_guest_mountpoint_sha256", "vm_instance_identity_sha256",
+    "runtime_root_binding_sha256", "dedicated_codex_home_binding_sha256",
+    "control_plane", "lifecycle",
+)
+
+
+def compatibility_observation_windows(profile):
+    evidence = profile["evidence"]
+    windows = []
+    shell = evidence["shell_environment_behavior"]
+    if shell["window"] is not None:
+        windows.append((shell["window"]["started_ms"], shell["window"]["classified_ms"]))
+    network = evidence["network_sandbox_behavior"]
+    if network["context"] is not None:
+        windows.append((network["context"]["observation_started_ms"], network["classified_at_ms"]))
+    housekeeping = evidence["sandbox_housekeeping"]
+    if housekeeping["window"] is not None:
+        windows.append((housekeeping["window"]["started_ms"], housekeeping["window"]["finished_ms"]))
+    return windows
+
+
+def compare_runtime_profiles(
+    supplied: Dict[str, Any], fresh: Dict[str, Any],
+    observation_started_at: datetime.datetime,
+    observation_finished_at: datetime.datetime,
+    *, allow_fixture: bool = False, now: Optional[datetime.datetime] = None,
+) -> Dict[str, Any]:
+    """Compare complete native profiles without normalizing away fresh proof.
+
+    The caller must own the actual new sensor invocation. Timestamps or a
+    changed namespace alone cannot authenticate an arbitrary caller artifact.
+    """
+    for profile in (supplied, fresh):
+        validate_runtime_profile(profile, allow_fixture=allow_fixture)
+        exact_keys(profile, (*PROFILE_STABLE_ROOTS, "observed_at", "evidence"), "classified profile")
+        exact_keys(profile["evidence"], (*PROFILE_STABLE_EVIDENCE, *PROFILE_FRESH_EVIDENCE, "containment_provider"), "classified profile evidence")
+        exact_keys(profile["evidence"]["containment_provider"], (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT), "classified provider")
+        if profile["status"] != "match" or profile["live_run_allowed"] is not True:
+            raise ContractError("profile comparison requires independently passing live profiles")
+        if not allow_fixture and profile["scope"] != "exact-head-live-sensor":
+            raise ContractError("profile comparison requires the exact live sensor")
+    for key in PROFILE_STABLE_ROOTS:
+        if supplied[key] != fresh[key]:
+            raise ContractError("stable runtime profile binding drifted")
+    for key in PROFILE_STABLE_EVIDENCE:
+        if supplied["evidence"][key] != fresh["evidence"][key]:
+            raise ContractError("stable runtime evidence binding drifted")
+    for key in ("source_contract_sha256",):
+        if supplied["evidence"]["shell_environment_behavior"][key] != fresh["evidence"]["shell_environment_behavior"][key]:
+            raise ContractError("stable shell source binding drifted")
+    for key in ("binary_sha256", "help_sha256"):
+        if supplied["evidence"]["shell_environment_behavior"]["launcher"][key] != fresh["evidence"]["shell_environment_behavior"]["launcher"][key]:
+            raise ContractError("stable executed launcher binding drifted")
+    for key in (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT):
+        if supplied["evidence"]["containment_provider"][key] != fresh["evidence"]["containment_provider"][key]:
+            raise ContractError("stable or same-attempt provider binding drifted")
+    # Every fresh network/doctor predicate was checked above by the complete
+    # native validator. Do not require cross-observation namespace novelty.
+    def timestamp(value: str) -> datetime.datetime:
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+
+    current = now or datetime.datetime.now(datetime.timezone.utc)
+    dates = (observation_started_at, observation_finished_at, current)
+    if any(not isinstance(value, datetime.datetime) or value.utcoffset() != datetime.timedelta(0) for value in dates):
+        raise ContractError("profile sensor invocation window is invalid")
+    start = observation_started_at.replace(microsecond=0)
+    finish = observation_finished_at.replace(microsecond=0)
+    old_time, new_time = timestamp(supplied["observed_at"]), timestamp(fresh["observed_at"])
+    if (
+        not old_time < new_time
+        or not start <= new_time <= finish <= current
+        or (current - old_time).total_seconds() > 900
+        or (current - finish).total_seconds() > 300
+    ):
+        raise ContractError("fresh semantic runtime sensor observation is stale, replayed, or outside its invocation")
+    old_binding = supplied["evidence"]["sandbox_housekeeping"]["observation_binding"]
+    fresh_binding = fresh["evidence"]["sandbox_housekeeping"]["observation_binding"]
+    if old_binding["observation_id_sha256"] == fresh_binding["observation_id_sha256"]:
+        raise ContractError("fresh compatibility observation identity was replayed")
+    start_ms, finish_ms = int(start.timestamp() * 1000), int(finish.timestamp() * 1000) + 999
+    if any(not start_ms <= left <= right <= finish_ms for left, right in compatibility_observation_windows(fresh)):
+        raise ContractError("fresh nested compatibility evidence is outside its actual sensor invocation")
+    return runtime_profile_comparison_record(supplied, fresh, observation_started_at, observation_finished_at, "pass")
+
+
+def runtime_profile_comparison_record(
+    supplied: Dict[str, Any], fresh: Dict[str, Any],
+    observation_started_at: datetime.datetime,
+    observation_finished_at: datetime.datetime, status_value: str,
+) -> Dict[str, Any]:
+    # Native shape validation alone does not make arbitrary bounded prose safe
+    # to export. Refuse known private-path/credential forms in either original.
+    pending: List[Any] = [supplied, fresh]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+        elif isinstance(item, str) and (
+            PRIVATE_PATH_RE.search(item)
+            or any(pattern.search(item) for pattern in SENSITIVE_VALUE_PATTERNS)
+        ):
+            raise ContractError("runtime profile observation cannot be safely exported")
+    # A canonical roundtrip prevents caller mutation after validation. Native
+    # artifacts stay unchanged; this supplemental record retains both originals.
+    return {
+        "schema": "t12-runtime-profile-comparison/v1",
+        "authority": "adapter-authored",
+        "status": status_value,
+        "stable_bindings": "exact" if status_value == "pass" else "not-established",
+        "same_attempt_bindings": "exact" if status_value == "pass" else "not-established",
+        "fresh_lanes": "independently-validated" if status_value == "pass" else "comparison-non-success",
+        "supplied_profile": json.loads(canonical_bytes(supplied)),
+        "fresh_profile": json.loads(canonical_bytes(fresh)),
+        "supplied_profile_sha256": sha256_bytes(canonical_bytes(supplied)),
+        "fresh_profile_sha256": sha256_bytes(canonical_bytes(fresh)),
+        "sensor_started_at": observation_started_at.isoformat(),
+        "sensor_finished_at": observation_finished_at.isoformat(),
+    }
+
+
 def validate_verifier_record(value: Any, attempt_id: str) -> Dict[str, Any]:
     if not isinstance(value, dict):
         raise ContractError("verifier artifact must be an object")
@@ -3105,7 +3329,10 @@ def validate_execution_result(
         raise ContractError("execution result worker evidence is invalid")
     exact_keys(worker, ("logical_invocations", "exit_code", "timed_out", "signal", "stdout_bytes", "stderr_bytes"), "execution result worker")
     if worker["logical_invocations"] != 1 or worker["exit_code"] != 0 or worker["timed_out"] is not False or worker["signal"] is not None or type(worker["stdout_bytes"]) is not int or not 0 <= worker["stdout_bytes"] <= DEFAULT_LIMITS["stdout_bytes"] or type(worker["stderr_bytes"]) is not int or not 0 <= worker["stderr_bytes"] <= DEFAULT_LIMITS["stderr_bytes"]:
-        raise ContractError("execution result worker is not one bounded successful invocation")
+        raise ContractError(
+            "execution result worker is not exactly one logical invocation "
+            "with a bounded successful process result"
+        )
     events = value.get("events")
     if not isinstance(events, dict) or set(events) != {"count", "terminal_count", "terminal_state", "canonical_sha256"} or type(events["count"]) is not int or not 1 <= events["count"] <= DEFAULT_LIMITS["event_count"] or events["terminal_count"] != 1 or events["terminal_state"] != "completed" or SHA256_RE.fullmatch(str(events["canonical_sha256"])) is None:
         raise ContractError("execution result terminal event evidence is invalid")
@@ -3179,6 +3406,10 @@ class ProcessResult(NamedTuple):
     # Raw stderr is retained only for a dedicated bounded in-memory probe.
     # Callers must opt in, classify it immediately, and persist no bytes.
     stderr: bytes = b""
+
+
+class ProcessSpawnError(ContractError):
+    """A fixed safe failure raised only at the direct Popen boundary."""
 
 
 def parse_linux_process_stat(data: bytes) -> Optional[Tuple[int, int, int, str]]:
@@ -3348,11 +3579,12 @@ class DescendantTracker:
     separately proven containment primitive is introduced.
     """
 
-    def __init__(self, leader_pid: int, env: Mapping[str, str]):
+    def __init__(self, leader_pid: int, env: Mapping[str, str], launcher_observer=None):
         self.leader_pid = leader_pid
         self.env = dict(env)
         self.known: Dict[int, Tuple[int, int, str]] = {}
         self.failure: Optional[str] = None
+        self.launcher_observer = launcher_observer
         self.stop_event = threading.Event()
         self.ready = threading.Event()
         self.thread = threading.Thread(target=self._run, name="t11-descendant-tracker", daemon=True)
@@ -3380,6 +3612,13 @@ class DescendantTracker:
                 if pid not in self.known and identity[0] in known_pids:
                     self.known[pid] = identity
                     changed = True
+        if self.launcher_observer is not None:
+            # Read-only optional corroboration. Its failures never interrupt
+            # this tracker's established identity-bound cleanup path.
+            try:
+                self.launcher_observer.observe(self.leader_pid, leader_known, table)
+            except Exception:
+                self.launcher_observer.uncheckable = True
 
     def _run(self) -> None:
         try:
@@ -3466,7 +3705,29 @@ def live_containment_proven(evidence: Optional[Mapping[str, Any]] = None) -> boo
     )
 
 
-def run_bounded_process(
+_PROFILE_REAP_OBSERVATION = threading.local()
+
+
+def run_bounded_process(*args, **kwargs) -> ProcessResult:
+    """Observe existing profile calls without altering subprocess ownership."""
+    sample = getattr(_PROFILE_REAP_OBSERVATION, "sample", None)
+    if sample is not None:
+        sample["requested"] += 1
+    try:
+        result = _run_bounded_process(*args, **kwargs)
+    except BaseException:
+        if sample is not None:
+            sample["unconfirmed"] += 1
+        raise
+    if sample is not None:
+        if type(result.reaped) is bool and result.reaped:
+            sample["reaped"] += 1
+        else:
+            sample["unconfirmed"] += 1
+    return result
+
+
+def _run_bounded_process(
     argv: Sequence[str],
     cwd: Path,
     env: Mapping[str, str],
@@ -3476,6 +3737,7 @@ def run_bounded_process(
     stderr_limit: int,
     grace_seconds: float = 2.0,
     capture_stderr: bool = False,
+    launcher_observer=None,
 ) -> ProcessResult:
     require_runtime_fs_capabilities()
     if not argv or any(not isinstance(item, str) or "\x00" in item for item in argv):
@@ -3484,17 +3746,20 @@ def run_bounded_process(
         raise ContractError("process stdin exceeds its limit")
     if any(SECRET_NAME_RE.search(name) for name in env):
         raise ContractError("minimal environment contains a forbidden secret-like name")
-    process = subprocess.Popen(
-        list(argv),
-        cwd=str(cwd),
-        env=dict(env),
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=False,
-        start_new_session=True,
-    )
-    tracker = DescendantTracker(process.pid, env)
+    try:
+        process = subprocess.Popen(
+            list(argv),
+            cwd=str(cwd),
+            env=dict(env),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            start_new_session=True,
+        )
+    except OSError:
+        raise ProcessSpawnError("bounded process could not start") from None
+    tracker = DescendantTracker(process.pid, env, launcher_observer) if launcher_observer is not None else DescendantTracker(process.pid, env)
     try:
         tracker.start()
     except Exception:
@@ -3514,11 +3779,11 @@ def run_bounded_process(
 
     def drain(stream, name: str, limit: int) -> None:
         while True:
-            chunk = stream.read(65_536)
+            chunk = stream.read(min(65_536, max(limit, 1)))
             if not chunk:
                 return
             sizes[name] += len(chunk)
-            remaining = max(0, limit + 1 - len(buffers[name]))
+            remaining = max(0, limit - len(buffers[name]))
             if remaining:
                 buffers[name].extend(chunk[:remaining])
             if sizes[name] > limit:
@@ -3836,7 +4101,7 @@ def create_synthetic_repository(container: Path, env: Mapping[str, str]) -> Path
         [str(git), "--no-replace-objects", "-c", "init.defaultBranch=" + EXPECTED_BRANCH, "init", "-q", "-b", EXPECTED_BRANCH, str(root)],
         container, env, b"", 30, 262_144, 262_144,
     )
-    if init.exit_code != 0 or init.timed_out or init.stdout_overflow or init.stderr_overflow:
+    if init.exit_code != 0 or init.signal_number is not None or init.timed_out or init.stdout_overflow or init.stderr_overflow or init.reaped is not True:
         raise ContractError("synthetic Git initialization failed")
     target = root / EXPECTED_PATH
     target.write_bytes(EXPECTED_INITIAL)
@@ -3968,7 +4233,183 @@ def descriptor_xattr_inventory(descriptor: int) -> Tuple[Tuple[str, int, str], .
     return first
 
 
-def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
+NATIVE_BUILTIN_ROOT = ".codex/skills/.system"
+NATIVE_BUILTIN_MARKER = NATIVE_BUILTIN_ROOT + "/.codex-system-skills.marker"
+# Exact untransformed embedded samples tree dd83abff11d7be56fc9fc10330fc686d1a48ab01.
+NATIVE_BUILTIN_ASSETS = {
+    "imagegen/LICENSE.txt": (10776, "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"),
+    "imagegen/SKILL.md": (19201, "681ddb4ad6d06a2acc78a3535b583f8d0c1ea800ecda3d56370d3310fd2cd4ba"),
+    "imagegen/agents/openai.yaml": (275, "9ca574af14580dc7a2a3dc37a1796d17f93cb8850be66501f0799ef8603e9dc0"),
+    "imagegen/assets/imagegen-small.svg": (2889, "cff5f34f57ff60b3ee92eaedd17b15e96dd4b9e776df3e78936c9e00d42be294"),
+    "imagegen/assets/imagegen.png": (1711, "95952f644064eb9e890f98d8db07216347186526e4c41ad66d3420629eb86e20"),
+    "imagegen/references/cli.md": (9655, "ecfc2e09261a0feb3482517a5fa0ff410cb7d1958e3cbd2ac6b61586f5b81405"),
+    "imagegen/references/codex-network.md": (1779, "c88298ca4481f6116a16fa7987434fc977f8b311c1bbc0c3d862ffd0c5981148"),
+    "imagegen/references/image-api.md": (6072, "dc975d7af8a4888967251a0276014b4a71ea30455294944b762256373ce3e569"),
+    "imagegen/references/prompting.md": (8282, "b210b051c775860267080941eba968212bf0ac7fce581d75c5dcc217d8293f8b"),
+    "imagegen/references/sample-prompts.md": (17617, "70474177d151855b175c6133de2aae1d90b7f146b0dab50ec830972c47d72183"),
+    "imagegen/scripts/image_gen.py": (34271, "35e8f9fa47deca111e46c63c4ac2008e09198ef664c0926a9dfdcd6745aa37ed"),
+    "imagegen/scripts/remove_chroma_key.py": (13836, "3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e"),
+    "openai-docs/LICENSE.txt": (10776, "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"),
+    "openai-docs/SKILL.md": (5446, "7cb8fa1b2a0c635b5c61ffe1da7b8594a7ea0fce5b71e8d523e2025d88b2a05e"),
+    "openai-docs/agents/openai.yaml": (370, "44b9efac6be1bae32d869aa2942fecbe4dcae82682ee03e4120f2f9b7d4658ec"),
+    "openai-docs/assets/openai-small.svg": (1091, "45be1f0757eb18889eefb1e7db79668ef46a275dc4e0e78e8df5ebd7f6cdeadc"),
+    "openai-docs/assets/openai.png": (1429, "156cc84d7332bfe95b310350bd470b690d22aa33d65340cc6c2e06022946194c"),
+    "openai-docs/references/codex-self-knowledge.md": (7417, "8c8fb00e6e5cb1977924f5164684a6095427fa828bbc765225f17d9aeb79a912"),
+    "openai-docs/references/latest-model.md": (2094, "f25e351e522dd6e30e82d482f31f44c992e794b11031cdcb6ac7c0e6b20c9d5d"),
+    "openai-docs/references/mcp-diagnostics.md": (2318, "49bbd2f73df7bbd7f86c80425dea4da2d301c22046080399a36bfc0ca49509e9"),
+    "openai-docs/references/model-migration.md": (5054, "5f20c38fbbb10319767b216d91ba74bae49c68fc1bfd6d1abd7c9b4cc9cb9ab0"),
+    "openai-docs/references/model-selection.md": (1344, "ba2d164abbca30435a460a0bc3a7d82398dce2bdf092705c98ba55b3f3af38a8"),
+    "openai-docs/references/official-docs.md": (3337, "7962f2dce55089b93bde4115bb89fd42f20993c1597a2b13edd4956f463875b9"),
+    "openai-docs/references/prompting-guide.md": (15747, "db913884cfe0fabf29bee1a139918f56e299decfa0a14d61c48596f23f76621d"),
+    "openai-docs/references/upgrade-guide.md": (1050, "ed1b75a89b8ec4d67787774ef6c4e8b98eace16c63348f42e969e6ffa67cb656"),
+    "openai-docs/references/upgrading-to-gpt-5p6-sol.md": (23093, "9a918a0c8dd051d574f2fd0309201afa8a9b9c08241c11ca1fb0ac2f4724e7ac"),
+    "openai-docs/scripts/fetch-codex-manual.mjs": (16085, "f53eb6d2f286e9efcc397e8bee93a938e37296c90953e4e06e94899ef1b6c363"),
+    "openai-docs/scripts/resolve-latest-model-info": (1038, "7354dbb030ca0736dd633a7ca1b930cf640abd40370725dea3a458cb51d49523"),
+    "openai-docs/scripts/resolve-latest-model-info.cjs": (3937, "eeb1bb486018e16b37edfc06b1a37179dbc672982d501040d4f7142f29dd2e64"),
+    "plugin-creator/SKILL.md": (11467, "71b95b8219644f95d633721e7f7cd3c469edfc8fe50f8415d400dfb2d74bc7b9"),
+    "plugin-creator/agents/openai.yaml": (339, "fecaf35d692bd3d33d1a065648258d12e393afa9055d78adf6e57b42f4142f6d"),
+    "plugin-creator/assets/plugin-creator-small.svg": (1319, "6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb"),
+    "plugin-creator/assets/plugin-creator.png": (1563, "a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162"),
+    "plugin-creator/references/installing-and-updating.md": (6000, "91c4781d48568fcc708b45566b08fb610ad1c88672720ae512f9525a1cf9cb20"),
+    "plugin-creator/references/plugin-json-spec.md": (9179, "eeb640130f69636affaa299d4170d5a7ae6a0ff978296ddf75c409ce6dd87b91"),
+    "plugin-creator/scripts/create_basic_plugin.py": (11495, "46f532721079f6de6443f30f9362d77f1d879f57c0559250ef9433867414eb93"),
+    "plugin-creator/scripts/identifier_validation.py": (784, "a6d51ce4a9a7e8f85626ff5808a467a67574e7f8cdf1167ffb467c5f67e57223"),
+    "plugin-creator/scripts/read_marketplace_name.py": (1644, "ba24e6d91eed6f778bde022a967be335c6253983b5ecd1c5e30c8483385887fd"),
+    "plugin-creator/scripts/update_plugin_cachebuster.py": (3043, "97c5ecab5ad85d871f0ebfc9bdf25d4b9e1a1680128fd3deb18a8c64f15f85c5"),
+    "plugin-creator/scripts/validate_plugin.py": (21533, "6ff4bc1cc8ca94827c30c8299951efdac900ff38a5069c03e9a6554fc194a723"),
+    "review-agent/SKILL.md": (2661, "07079efd0dc76f05fade424e5dfb048dce1de2df7626e1a4f56292a4f3f92228"),
+    "review-agent/agents/openai.yaml": (252, "4d867a46d15e36ac880176484aae160f59855340c6059b2ea6ab9fbc9af084de"),
+    "skill-creator/SKILL.md": (15311, "6656e54755638e8efcf275a472b9672eaa8a9a1b9e59dc210e275b03b59e1e66"),
+    "skill-creator/agents/openai.yaml": (183, "d07d21b93fcf3d4dc8d9a3399c05fc226a49a333a96d3e1c68b451b8dd9eade6"),
+    "skill-creator/assets/skill-creator-small.svg": (1319, "6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb"),
+    "skill-creator/assets/skill-creator.png": (1563, "a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162"),
+    "skill-creator/license.txt": (11358, "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"),
+    "skill-creator/references/openai_yaml.md": (2356, "ffac39318e408108141d40f820968e59f70434a891694f9bf1d25be8237b150c"),
+    "skill-creator/scripts/generate_openai_yaml.py": (6619, "ddaf9abdfb3e762ed3c82571e9c607ce964188f49f2146281beb2cb8a553a93d"),
+    "skill-creator/scripts/init_skill.py": (10160, "bc04fae1e671aa1e5104212674e7f22c9665a791fafa2fc2b3897187a89801b2"),
+    "skill-creator/scripts/quick_validate.py": (4227, "1fd66498c219616fd9249eacdf16c458412ea9065a9d887fd716aeef03907762"),
+    "skill-installer/LICENSE.txt": (11358, "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"),
+    "skill-installer/SKILL.md": (3367, "d68b77e5bbb34dedab89d134da52855f140fc4b4299b80104f534e3b9e98f8ee"),
+    "skill-installer/agents/openai.yaml": (221, "5ce223d8b1070b82c42298538f1b8d376f788eb9e7a42a987e8c094070d73f0e"),
+    "skill-installer/assets/skill-installer-small.svg": (923, "3928703ff00dc1a681e7a22401843b7edcbd4b2051651ce4c43b75f7e140504e"),
+    "skill-installer/assets/skill-installer.png": (1086, "d0a230b1a79b71b858b7c215a0fbb0768d6459c14ea4ef80c61592629bf0e605"),
+    "skill-installer/scripts/github_utils.py": (659, "61c1bbe2ae217433b4b6f9f09f21aca4df52c12598068343ade719f706e4859b"),
+    "skill-installer/scripts/install-skill-from-github.py": (11790, "3569ac8c0b3a525515c2e0e27c4f48e6aef9f2ff04029dcb3f622b280fa8c25e"),
+    "skill-installer/scripts/list-skills.py": (2967, "e4e1f78ca3d045827f2a05cfd99fae57cc7c1a1bfeba8704029108834debff35"),
+}
+
+NATIVE_DATABASES = (
+    "state_5.sqlite", "logs_2.sqlite", "goals_1.sqlite",
+    "memories_1.sqlite", "queue_1.sqlite",
+)
+NATIVE_ARG0_DIRECTORY_RE = re.compile(r"\.codex/tmp/arg0/codex-arg0[A-Za-z0-9]{6}\Z")
+NATIVE_SNAPSHOT_RE = re.compile(
+    r"\.codex/shell_snapshots/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}"
+    r"(?:\.[0-9]{1,39}\.sh|\.tmp-[0-9]{1,39})\Z"
+)
+NATIVE_HELPER_NAMES = ("apply_patch", "applypatch", "codex-linux-sandbox", "codex-execve-wrapper")
+NATIVE_MUTABLE_DIRECTORIES = (".codex", ".codex/tmp", ".codex/tmp/arg0", ".codex/shell_snapshots")
+MAX_NATIVE_STATE_ENTRIES = 128
+MAX_NATIVE_STATE_BYTES = 67_108_864
+
+
+def native_builtin_cache_directories() -> List[str]:
+    directories = {".codex/skills", NATIVE_BUILTIN_ROOT}
+    for relative in NATIVE_BUILTIN_ASSETS:
+        pieces = relative.split("/")
+        for count in range(1, len(pieces)):
+            directories.add(NATIVE_BUILTIN_ROOT + "/" + "/".join(pieces[:count]))
+    return sorted(directories)
+
+
+def validate_native_builtin_cache(inventory: Mapping[str, Any]) -> None:
+    content = {row[1]: row for row in inventory["content"]}
+    observed = {path for path in content if path == ".codex/skills" or path.startswith(".codex/skills/")}
+    if not observed:
+        return
+    directories = set(native_builtin_cache_directories())
+    files = {NATIVE_BUILTIN_ROOT + "/" + path for path in NATIVE_BUILTIN_ASSETS}
+    if observed != directories | files | {NATIVE_BUILTIN_MARKER}:
+        raise ContractError("native builtin cache is not the complete exact pinned set")
+    for path in directories:
+        row = content[path]
+        if row[0] != "dir" or row[2:4] != (0o700, 0) or row[-1] != ():
+            raise ContractError("native builtin directory metadata drifted")
+    for path, (size, digest) in NATIVE_BUILTIN_ASSETS.items():
+        row = content[NATIVE_BUILTIN_ROOT + "/" + path]
+        if row[0] != "file" or row[2:5] != (0o600, 0, size) or row[7] != digest or row[-1] != ():
+            raise ContractError("native builtin asset bytes or metadata drifted")
+    marker = content[NATIVE_BUILTIN_MARKER]
+    if marker[0] != "file" or marker[2:4] != (0o600, 0) or not 2 <= marker[4] <= 17 or marker[-1] != ():
+        raise ContractError("native builtin marker metadata is invalid")
+
+
+def native_state_class(relative: str) -> Tuple[str, int, int, str]:
+    """Finite source-grounded type/mode/byte cap/lifecycle; no default allow."""
+    if relative in (".", ".codex/rules"):
+        return "dir", 0o700, 0, "protected"
+    if relative in NATIVE_MUTABLE_DIRECTORIES:
+        return "dir", 0o700, 0, "directory"
+    if relative == ".codex/" + REVIEWED_RULES_RELATIVE_PATH:
+        return "file", 0o600, len(REVIEWED_RULES_BYTES), "protected"
+    if relative == ".codex/auth.json":
+        return "file", 0o600, 1_048_576, "protected"
+    if relative == ".codex/installation_id":
+        return "file", 0o644, 36, "create-once"
+    if relative in native_builtin_cache_directories():
+        return "dir", 0o700, 0, "immutable-directory"
+    if relative == NATIVE_BUILTIN_MARKER:
+        return "file", 0o600, 17, "create-once"
+    if relative.startswith(NATIVE_BUILTIN_ROOT + "/"):
+        source_relative = relative[len(NATIVE_BUILTIN_ROOT) + 1:]
+        if source_relative in NATIVE_BUILTIN_ASSETS:
+            return "file", 0o600, NATIVE_BUILTIN_ASSETS[source_relative][0], "create-once"
+    if relative == ".codex/models_cache.json":
+        return "file", 0o600, 4_194_304, "update"
+    for database in NATIVE_DATABASES:
+        if relative == ".codex/" + database:
+            return "file", 0o600, 16_777_216, "update"
+        if relative == ".codex/" + database + "-wal":
+            return "file", 0o600, 16_777_216, "ephemeral"
+        if relative == ".codex/" + database + "-shm":
+            return "file", 0o600, 1_048_576, "ephemeral"
+    if NATIVE_ARG0_DIRECTORY_RE.fullmatch(relative):
+        return "dir", 0o700, 0, "ephemeral-directory"
+    parent, _, name = relative.rpartition("/")
+    if NATIVE_ARG0_DIRECTORY_RE.fullmatch(parent):
+        if name == ".lock":
+            return "file", 0o600, 0, "ephemeral"
+        if name in NATIVE_HELPER_NAMES:
+            return "link", 0o777, 0, "ephemeral"
+    if NATIVE_SNAPSHOT_RE.fullmatch(relative):
+        nanos = relative.rsplit("/", 1)[1].split(".", 1)[1]
+        nanos = nanos[4:] if nanos.startswith("tmp-") else nanos[:-3]
+        if int(nanos) > 2 ** 128 - 1:
+            raise ContractError("native shell snapshot timestamp exceeds unsigned 128-bit bound")
+        return "file", 0o600, 1_048_576, "ephemeral"
+    raise ContractError("unclassified native runtime state")
+
+
+def native_helper_link_xattr_size(path: Path) -> int:
+    """No-follow link-metadata observation; retain neither names nor values."""
+    try:
+        library = _runtime_libc()
+        if sys.platform == "darwin":
+            function = library.listxattr
+            function.argtypes = [ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+            function.restype = ctypes.c_ssize_t
+            return function(os.fsencode(path), None, 0, 1)  # XATTR_NOFOLLOW
+        if sys.platform.startswith("linux"):
+            function = library.llistxattr
+            function.argtypes = [ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t]
+            function.restype = ctypes.c_ssize_t
+            return function(os.fsencode(path), None, 0)
+    except (OSError, TypeError, NotImplementedError, AttributeError):
+        pass
+    raise ContractError("native helper link metadata is uncheckable")
+
+
+def execution_root_inventory(root: Path, *, native_binary: Optional[Path] = None) -> Dict[str, List[Tuple[Any, ...]]]:
     """Inventory the private execution root without following any link.
 
     This bounds the adapter-owned target, HOME, and TMPDIR namespace. It is a
@@ -3976,7 +4417,11 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
     kernel write-confinement primitive.
     """
     require_runtime_fs_capabilities()
-    descriptor, root_binding = bound_directory(root)
+    if native_binary is None:
+        descriptor, root_binding = bound_directory(root)
+    else:
+        descriptor, root_info = _open_absolute_directory_nofollow(root)
+        root_binding = (root_info.st_dev, root_info.st_ino)
     content_rows: List[Tuple[Any, ...]] = []
     binding_rows: List[Tuple[Any, ...]] = []
     counters = {"entries": 0, "bytes": 0}
@@ -3987,13 +4432,17 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
         directory_before = os.fstat(directory_descriptor)
         if not stat.S_ISDIR(directory_before.st_mode):
             raise ContractError("execution root contains a non-directory binding")
+        if native_binary is not None:
+            expected_kind, expected_mode, _cap, _lifecycle = native_state_class(relative)
+            if expected_kind != "dir" or directory_before.st_uid != os.getuid() or directory_before.st_gid != os.getgid() or stat.S_IMODE(directory_before.st_mode) != expected_mode:
+                raise ContractError("native directory type, owner or mode drifted")
         xattrs = descriptor_xattr_inventory(directory_descriptor)
         names: List[str] = []
         with os.scandir(directory_descriptor) as entries:
             for entry in entries:
                 names.append(entry.name)
                 counters["entries"] += 1
-                if counters["entries"] > MAX_EXECUTION_ROOT_ENTRIES:
+                if counters["entries"] > (MAX_NATIVE_STATE_ENTRIES if native_binary is not None else MAX_EXECUTION_ROOT_ENTRIES):
                     raise ContractError("execution root exceeds its entry bound")
         if len(names) != len(set(names)) or any(
             not name or name in (".", "..") or "/" in name or "\0" in name
@@ -4005,6 +4454,13 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
             child_relative = name if relative == "." else relative + "/" + name
             info = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
             kind = stat.S_IFMT(info.st_mode)
+            native = native_state_class(child_relative) if native_binary is not None else None
+            if native is not None:
+                actual_kind = "dir" if stat.S_ISDIR(info.st_mode) else "file" if stat.S_ISREG(info.st_mode) else "link" if stat.S_ISLNK(info.st_mode) else "special"
+                if actual_kind != native[0] or stat.S_IMODE(info.st_mode) != native[1] or info.st_uid != os.getuid() or info.st_gid != os.getgid():
+                    raise ContractError("native state type, owner or mode drifted")
+                if actual_kind == "file" and info.st_size > native[2]:
+                    raise ContractError("native state exceeds its class byte limit")
             if stat.S_ISDIR(info.st_mode):
                 flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
                 child_descriptor = os.open(name, flags, dir_fd=directory_descriptor)
@@ -4038,30 +4494,50 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
                         opened.st_dev, opened.st_ino, stat.S_IFMT(opened.st_mode), opened.st_size
                     ) != (info.st_dev, info.st_ino, kind, info.st_size):
                         raise ContractError("execution-root file binding changed before read")
+                    if native is not None and (
+                        opened.st_mode, opened.st_uid, opened.st_gid, opened.st_nlink,
+                        opened.st_mtime_ns, opened.st_ctime_ns,
+                    ) != (
+                        info.st_mode, info.st_uid, info.st_gid, info.st_nlink,
+                        info.st_mtime_ns, info.st_ctime_ns,
+                    ):
+                        raise ContractError("native file metadata changed before descriptor binding")
                     digest = hashlib.sha256()
                     read_size = 0
+                    native_scalar_bytes = bytearray()
                     while True:
                         chunk = os.read(child_descriptor, 65_536)
                         if not chunk:
                             break
                         read_size += len(chunk)
                         counters["bytes"] += len(chunk)
-                        if read_size > MAX_EXECUTION_ROOT_FILE_BYTES or counters["bytes"] > MAX_EXECUTION_ROOT_TOTAL_BYTES:
+                        if read_size > MAX_EXECUTION_ROOT_FILE_BYTES or counters["bytes"] > (MAX_NATIVE_STATE_BYTES if native is not None else MAX_EXECUTION_ROOT_TOTAL_BYTES):
                             raise ContractError("execution root exceeds its content bound")
+                        if native is not None and read_size > native[2]:
+                            raise ContractError("native state grew beyond its class byte limit")
+                        if native is not None and child_relative in (".codex/installation_id", NATIVE_BUILTIN_MARKER):
+                            native_scalar_bytes.extend(chunk)
                         digest.update(chunk)
+                    if native is not None and child_relative == ".codex/installation_id" and re.fullmatch(rb"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}", bytes(native_scalar_bytes)) is None:
+                        raise ContractError("native installation identity is malformed")
+                    if native is not None and child_relative == NATIVE_BUILTIN_MARKER and re.fullmatch(rb"[0-9a-f]{1,16}\n", bytes(native_scalar_bytes)) is None:
+                        raise ContractError("native builtin marker is malformed")
                     child_xattrs = descriptor_xattr_inventory(child_descriptor)
                     after = os.fstat(child_descriptor)
                     named_after = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
                     before_state = (
                         opened.st_dev, opened.st_ino, opened.st_size,
                         opened.st_mtime_ns, opened.st_ctime_ns,
+                        opened.st_mode, opened.st_uid, opened.st_gid, opened.st_nlink,
                     )
                     if (
                         after.st_dev, after.st_ino, after.st_size,
                         after.st_mtime_ns, after.st_ctime_ns,
+                        after.st_mode, after.st_uid, after.st_gid, after.st_nlink,
                     ) != before_state or (
                         named_after.st_dev, named_after.st_ino, named_after.st_size,
                         named_after.st_mtime_ns, named_after.st_ctime_ns,
+                        named_after.st_mode, named_after.st_uid, named_after.st_gid, named_after.st_nlink,
                     ) != before_state:
                         raise ContractError("execution-root file namespace changed during read")
                     content_rows.append((
@@ -4074,12 +4550,38 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
                         "file", child_relative, opened.st_dev, opened.st_ino,
                         stat.S_IFMT(opened.st_mode), stat.S_IMODE(opened.st_mode),
                         opened.st_nlink,
-                    ))
+                    ) + ((opened.st_gid,) if native is not None else ()))
                 finally:
                     os.close(child_descriptor)
+            elif native is not None and native[0] == "link":
+                # Read link text without traversing it. Only four source-defined
+                # arg0 aliases may name the exact already pinned executable.
+                if info.st_nlink != 1 or native_binary is None or not native_binary.is_absolute():
+                    raise ContractError("native helper link binding is invalid")
+                target = os.readlink(name, dir_fd=directory_descriptor)
+                if target != str(native_binary):
+                    raise ContractError("native helper target escapes the pinned executable")
+                link_xattrs = native_helper_link_xattr_size(root / child_relative)
+                if link_xattrs < 0:
+                    raise ContractError("native helper link metadata is uncheckable")
+                if link_xattrs != 0 or descriptor_stat_flags(info):
+                    raise ContractError("native helper link metadata is unapproved")
+                named_after = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+                if (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_uid, info.st_gid, info.st_nlink, info.st_mode) != (named_after.st_dev, named_after.st_ino, named_after.st_mtime_ns, named_after.st_ctime_ns, named_after.st_uid, named_after.st_gid, named_after.st_nlink, named_after.st_mode):
+                    raise ContractError("native helper link namespace changed")
+                content_rows.append(("link", child_relative, 0o777, descriptor_stat_flags(info), info.st_size, info.st_mtime_ns, info.st_ctime_ns, sha256_bytes(target.encode("utf-8")), ()))
+                binding_rows.append(("link", child_relative, info.st_dev, info.st_ino, kind, 0o777, 1, info.st_gid))
             else:
                 raise ContractError("execution root contains a symlink or special file")
         directory_after = os.fstat(directory_descriptor)
+        if native_binary is not None and (
+            directory_after.st_uid != directory_before.st_uid
+            or directory_after.st_gid != directory_before.st_gid
+            or directory_after.st_mode != directory_before.st_mode
+            or descriptor_stat_flags(directory_after) != descriptor_stat_flags(directory_before)
+            or descriptor_xattr_inventory(directory_descriptor) != xattrs
+        ):
+            raise ContractError("native directory metadata changed during inventory")
         if (
             directory_after.st_dev, directory_after.st_ino,
             directory_after.st_mtime_ns, directory_after.st_ctime_ns,
@@ -4097,7 +4599,7 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
             "dir", relative, directory_after.st_dev, directory_after.st_ino,
             stat.S_IFMT(directory_after.st_mode), stat.S_IMODE(directory_after.st_mode),
             directory_after.st_nlink,
-        ))
+        ) + ((directory_after.st_gid,) if native_binary is not None else ()))
 
     try:
         walk(descriptor, ".", 1)
@@ -4107,6 +4609,288 @@ def execution_root_inventory(root: Path) -> Dict[str, List[Tuple[Any, ...]]]:
     finally:
         os.close(descriptor)
     return {"content": sorted(content_rows, key=lambda row: row[1]), "binding": sorted(binding_rows, key=lambda row: row[1])}
+
+
+def sandbox_tmp_owner_metadata(root, inventory):
+    """Supplement missing uid/gid, VM-local only; no new inventory semantics."""
+    rows = {row[1]: row for row in inventory['binding']}
+    contents = {row[1]: row for row in inventory['content']}
+    if len(rows) > MAX_EXECUTION_ROOT_ENTRIES or set(rows) != set(contents):
+        raise ContractError('tmp-supplement-invalid')
+    descriptor, _ = _open_absolute_directory_nofollow(root)
+    owners = {}
+    try:
+        for path, row in rows.items():
+            parts = [] if path == '.' else path.split('/')
+            if any(part in ('', '.', '..') for part in parts) or len(parts) > 32:
+                raise ContractError('tmp-supplement-invalid')
+            fd = os.dup(descriptor)
+            try:
+                for index, part in enumerate(parts):
+                    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                    if index < len(parts) - 1 or row[0] == 'dir': flags |= os.O_DIRECTORY
+                    next_fd = os.open(part, flags, dir_fd=fd)
+                    os.close(fd); fd = next_fd
+                info = os.fstat(fd); content = contents[path]
+                observed_binding = ('dir' if stat.S_ISDIR(info.st_mode) else 'file' if stat.S_ISREG(info.st_mode)
+                                    else 'unsupported', path, info.st_dev, info.st_ino,
+                                    stat.S_IFMT(info.st_mode), stat.S_IMODE(info.st_mode), info.st_nlink)
+                times = content[4:6] if row[0] == 'dir' else content[5:7]
+                if (tuple(row) != observed_binding or (info.st_mtime_ns, info.st_ctime_ns) != tuple(times)
+                        or (row[0] == 'file' and info.st_size != content[4])):
+                    raise ContractError('tmp-supplement-binding-drift')
+                owners[path] = (info.st_uid, info.st_gid)
+                after = os.fstat(fd)
+                fields = ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_gid', 'st_nlink', 'st_size', 'st_mtime_ns', 'st_ctime_ns')
+                if any(getattr(info, field) != getattr(after, field) for field in fields):
+                    raise ContractError('tmp-supplement-binding-drift')
+            finally: os.close(fd)
+        if inventory != execution_root_inventory(root):
+            raise ContractError('tmp-supplement-binding-drift')
+        named = os.stat(root, follow_symlinks=False); opened = os.fstat(descriptor)
+        if (named.st_dev, named.st_ino) != (opened.st_dev, opened.st_ino):
+            raise ContractError('tmp-supplement-binding-drift')
+    finally: os.close(descriptor)
+    return owners
+
+
+SANDBOX_HOUSEKEEPING_SOURCE_COMMIT = '90854393966b21e9ebfd21b122334eb09a20c93d'
+SANDBOX_EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+SANDBOX_MAX_NON_ROOT_ENTRIES = 2
+SANDBOX_REGISTRY_PREFIX = 'codex-bwrap-synthetic-mount-targets-'
+
+
+def observe_sandbox_housekeeping(root, *, expected_uid, expected_gid):
+    """Reuse frozen bounded/no-follow inventory and bound uid/gid supplement.
+
+The expected identity is an owner-controlled private-VM input, not a pathname
+extracted from untrusted content. Existing shared TMP roots are not eligible.
+"""
+    result = {'status': 'UNCHECKABLE', 'reason_code': 'observation-uncheckable',
+              'state': 'unclassified', 'inventory': None, 'owners': None,
+              'expected_uid': expected_uid, 'expected_gid': expected_gid}
+    if (type(expected_uid) is not int or not 0 < expected_uid <= 4294967295
+            or type(expected_gid) is not int or not 0 <= expected_gid <= 4294967295):
+        result['reason_code'] = 'identity-input-invalid'; return result
+    try:
+        inventory = execution_root_inventory(root)
+        result['inventory'] = inventory
+        # Reuse the existing read cap, then stop before additional per-node
+        # owner observation when even the finite entry count cannot qualify.
+        if len(inventory['content']) > SANDBOX_MAX_NON_ROOT_ENTRIES + 1 or len(inventory['binding']) > SANDBOX_MAX_NON_ROOT_ENTRIES + 1:
+            result.update(status='fail', reason_code='unclassified-or-incomplete-state'); return result
+        owners = sandbox_tmp_owner_metadata(root, inventory)
+        result.update(inventory=inventory, owners=owners)
+    except Exception: return result
+    registry = SANDBOX_REGISTRY_PREFIX + str(expected_uid)
+    content = {row[1]: row for row in inventory['content']}
+    bindings = {row[1]: row for row in inventory['binding']}
+    permitted_sets = ({'.'}, {'.', registry, registry + '/lock'})
+    if (set(content) not in permitted_sets or len(content) != len(inventory['content'])
+            or set(bindings) != set(content) or len(bindings) != len(inventory['binding'])
+            or set(owners) != set(content)):
+        result.update(status='non-success', reason_code='unclassified-or-incomplete-state'); return result
+    for path, row in content.items():
+        is_lock = path == registry + '/lock'
+        kind, mode = ('file', 0o600) if is_lock else ('dir', 0o700)
+        if (row[0] != kind or row[2] != mode or row[3] != 0 or row[-1] != ()
+                or owners[path] != (expected_uid, expected_gid)):
+            result.update(status='non-success', reason_code='metadata-policy-mismatch'); return result
+        binding = bindings[path]
+        if binding[0] != kind or binding[5] != mode or binding[2] != bindings['.'][2] or (is_lock and binding[6] != 1):
+            result.update(status='non-success', reason_code='binding-policy-mismatch'); return result
+        if path == registry and binding[6] != 2:
+            result.update(status='non-success', reason_code='registry-link-count-mismatch'); return result
+        if path == '.' and binding[6] != (2 if len(content) == 1 else 3):
+            result.update(status='non-success', reason_code='root-link-count-mismatch'); return result
+        if is_lock and (row[4] != 0 or row[7] != SANDBOX_EMPTY_SHA256):
+            result.update(status='non-success', reason_code='lock-content-mismatch'); return result
+    result.update(status='pass', reason_code='none', state='empty' if len(content) == 1 else 'registry-only')
+    return result
+
+
+def validate_sandbox_housekeeping_transition(before, after, *, process_reaped):
+    """Owner-adopted probe-only finite transition; worker equality is separate.
+
+Only the first complete registry+empty-lock appearance can change the TMP
+root's nlink/mtime/ctime. Existing registry-directory times may reflect fully
+cleaned transient markers. The lock remains byte/metadata/inode immutable.
+    """
+    output = {'schema': 't12-sandbox-housekeeping-evidence/v1', 'authority': 'adapter-authored', 'status': 'UNCHECKABLE', 'reason_code': 'observation-uncheckable',
+        'current_exact_predicate_equal': None, 'transition': 'unclassified',
+        'unknown_entries_accepted': False, 'historical_a2_identified': False,
+        'cleanup_required': 'existing-full-disposable-provider-destruction'}
+    if type(process_reaped) is not bool or process_reaped is not True:
+        output['reason_code'] = 'quiescence-not-proven'; return output
+    if before.get('inventory') is not None and after.get('inventory') is not None:
+        output['current_exact_predicate_equal'] = before['inventory'] == after['inventory']
+    if before.get('status') != 'pass' or after.get('status') != 'pass': return output
+    if (before['expected_uid'], before['expected_gid']) != (after['expected_uid'], after['expected_gid']):
+        output['reason_code'] = 'expected-identity-drift'; return output
+    old = {row[1]: row for row in before['inventory']['content']}
+    new = {row[1]: row for row in after['inventory']['content']}
+    old_bind = {row[1]: row for row in before['inventory']['binding']}
+    new_bind = {row[1]: row for row in after['inventory']['binding']}
+    if before['state'] == 'registry-only' and after['state'] == 'empty':
+        output['reason_code'] = 'unexpected-registry-removal'; return output
+    created = before['state'] == 'empty' and after['state'] == 'registry-only'
+    if (old_bind['.'][:6] != new_bind['.'][:6] or old['.'][:4] != new['.'][:4]
+            or old['.'][-1] != new['.'][-1] or before['owners']['.'] != after['owners']['.']):
+        output['reason_code'] = 'protected-root-drift'; return output
+    if created:
+        if new_bind['.'][6] != old_bind['.'][6] + 1:
+            output['reason_code'] = 'root-link-count-mismatch'; return output
+    elif old_bind['.'] != new_bind['.'] or old['.'] != new['.']:
+        output['reason_code'] = 'unexplained-root-metadata-drift'; return output
+    registry = SANDBOX_REGISTRY_PREFIX + str(before['expected_uid'])
+    if before['state'] == 'registry-only':
+        lock = registry + '/lock'
+        if (old[lock] != new[lock] or old_bind[lock] != new_bind[lock]
+                or before['owners'][lock] != after['owners'][lock]):
+            output['reason_code'] = 'existing-lock-drift'; return output
+        if (old_bind[registry] != new_bind[registry] or old[registry][:4] != new[registry][:4]
+                or old[registry][-1] != new[registry][-1]
+                or before['owners'][registry] != after['owners'][registry]):
+            output['reason_code'] = 'existing-registry-binding-drift'; return output
+    output.update(status='pass', reason_code='none', transition='registry-created' if created else 'quiescent-preserved')
+    return output
+
+
+HOUSEKEEPING_REASONS = (
+    "none", "not-run", "observation-uncheckable", "quiescence-not-proven",
+    "expected-identity-drift", "unexpected-registry-removal", "protected-root-drift",
+    "root-link-count-mismatch", "unexplained-root-metadata-drift", "existing-lock-drift",
+    "existing-registry-binding-drift",
+)
+
+
+def not_run_compatibility_housekeeping(status="not-run"):
+    return {"schema": "t12-sandbox-housekeeping-observation/v1", "authority": "adapter-authored",
+        "status": status, "reason_code": "not-run" if status == "not-run" else "observation-uncheckable",
+        "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+        "transition": None, "observation_binding": None, "window": None,
+        "process_calls": {"requested": 0, "reaped": 0, "unconfirmed": 0}}
+
+
+def compatibility_housekeeping_record(before, after, sample, context, finished_ms):
+    if context is None:
+        return not_run_compatibility_housekeeping("UNCHECKABLE")
+    proven = (0 < sample["requested"] <= 128 and sample["requested"] == sample["reaped"]
+        and sample["unconfirmed"] == 0)
+    transition = validate_sandbox_housekeeping_transition(before, after, process_reaped=proven)
+    value = {"schema": "t12-sandbox-housekeeping-observation/v1", "authority": "adapter-authored",
+        "status": transition["status"], "reason_code": transition["reason_code"],
+        "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+        "transition": transition, "observation_binding": dict(context["binding"]),
+        "window": {"started_ms": context["started_ms"], "finished_ms": finished_ms},
+        "process_calls": dict(sample)}
+    return validate_compatibility_housekeeping(value)
+
+
+def validate_compatibility_housekeeping(value):
+    exact_keys(value, tuple(not_run_compatibility_housekeeping()), "housekeeping observation")
+    if (value["schema"] != "t12-sandbox-housekeeping-observation/v1" or value["authority"] != "adapter-authored"
+            or value["source_contract_sha256"] != sha256_bytes(canonical_bytes(compatibility_contract()))):
+        raise ContractError("housekeeping version/source drift")
+    if value["transition"] is None:
+        if value not in (not_run_compatibility_housekeeping(), not_run_compatibility_housekeeping("UNCHECKABLE")):
+            raise ContractError("unobserved housekeeping contains claims")
+        return value
+    sample = value["process_calls"]
+    exact_keys(sample, ("requested", "reaped", "unconfirmed"), "housekeeping process observation")
+    if (any(type(number) is not int or not 0 <= number <= 128 for number in sample.values())
+            or sample["requested"] != sample["reaped"] + sample["unconfirmed"]):
+        raise ContractError("housekeeping process counts are invalid")
+    if not _compatibility_binding(value["observation_binding"]):
+        raise ContractError("housekeeping attempt binding is invalid")
+    window = value["window"]
+    exact_keys(window, ("started_ms", "finished_ms"), "housekeeping window")
+    if (any(not _compatibility_milliseconds(number) for number in window.values())
+            or not 0 <= window["finished_ms"] - window["started_ms"] <= COMPATIBILITY_MAX_AGE_MS):
+        raise ContractError("housekeeping window is invalid")
+    transition = value["transition"]
+    expected_keys = ("schema", "authority", "status", "reason_code", "current_exact_predicate_equal",
+        "transition", "unknown_entries_accepted", "historical_a2_identified", "cleanup_required")
+    exact_keys(transition, expected_keys, "finite housekeeping transition")
+    if (transition["schema"] != "t12-sandbox-housekeeping-evidence/v1" or transition["authority"] != "adapter-authored"
+            or transition["status"] not in ("pass", "UNCHECKABLE")
+            or transition["reason_code"] not in HOUSEKEEPING_REASONS
+            or transition["transition"] not in ("unclassified", "registry-created", "quiescent-preserved")
+            or transition["unknown_entries_accepted"] is not False
+            or transition["historical_a2_identified"] is not False
+            or transition["cleanup_required"] != "existing-full-disposable-provider-destruction"
+            or (transition["current_exact_predicate_equal"] is not None and type(transition["current_exact_predicate_equal"]) is not bool)):
+        raise ContractError("finite housekeeping transition is invalid")
+    if (value["status"], value["reason_code"]) != (transition["status"], transition["reason_code"]):
+        raise ContractError("housekeeping summary disagrees")
+    if transition["status"] == "pass" and not (
+            transition["reason_code"] == "none" and transition["transition"] != "unclassified"
+            and type(transition["current_exact_predicate_equal"]) is bool
+            and sample["requested"] > 0 and sample["unconfirmed"] == 0):
+        raise ContractError("passing housekeeping lacks quiescence")
+    if transition["status"] != "pass" and transition["reason_code"] == "none":
+        raise ContractError("non-success housekeeping lost its reason")
+    if transition["transition"] == "registry-created" and transition["current_exact_predicate_equal"] is not False:
+        raise ContractError("registry creation cannot be exact equality")
+    return value
+
+
+def native_codex_home_inventory(home: Path, binary: Path) -> Dict[str, List[Tuple[Any, ...]]]:
+    """VM-local only: never export this potentially sensitive path inventory."""
+    binary_digest = hash_regular_file(binary)
+    inventory = execution_root_inventory(home, native_binary=binary)
+    for row in inventory["content"]:
+        if native_state_class(row[1])[3] != "protected" and (row[3] != 0 or row[-1] != ()):
+            raise ContractError("native state contains unapproved flags or xattrs")
+    validate_native_builtin_cache(inventory)
+    paths = [row[1] for row in inventory["content"]]
+    if sum(bool(NATIVE_ARG0_DIRECTORY_RE.fullmatch(path)) for path in paths) > 4:
+        raise ContractError("native arg0 directory count exceeds its bound")
+    if sum(bool(NATIVE_SNAPSHOT_RE.fullmatch(path)) for path in paths) > 8:
+        raise ContractError("native shell snapshot count exceeds its bound")
+    if hash_regular_file(binary) != binary_digest:
+        raise ContractError("native helper executable binding drifted")
+    return inventory
+
+
+def validate_native_codex_home_transition(before: Mapping[str, Any], after: Mapping[str, Any]) -> None:
+    """Protect credentials/rules and stable identities; permit finite native data."""
+    maps = []
+    for inventory in (before, after):
+        exact_keys(inventory, ("content", "binding"), "native inventory")
+        content = {row[1]: tuple(row) for row in inventory["content"]}
+        bindings = {row[1]: tuple(row) for row in inventory["binding"]}
+        if len(content) != len(inventory["content"]) or len(bindings) != len(inventory["binding"]) or set(content) != set(bindings):
+            raise ContractError("native inventory membership is malformed")
+        for path in content:
+            native_state_class(path)
+        maps.append((content, bindings))
+    (old, old_binding), (new, new_binding) = maps
+    for path in set(old) | set(new):
+        _kind, _mode, _cap, lifecycle = native_state_class(path)
+        if lifecycle == "protected":
+            if old.get(path) != new.get(path) or old_binding.get(path) != new_binding.get(path):
+                raise ContractError("protected native configuration or credential lifecycle changed")
+            continue
+        if path not in old or path not in new:
+            if path in old and lifecycle not in ("ephemeral", "ephemeral-directory"):
+                raise ContractError("persistent native state disappeared")
+            continue
+        left, right = old[path], new[path]
+        if left[0] != right[0] or left[2:4] != right[2:4] or left[-1] != right[-1]:
+            raise ContractError("native state metadata drifted")
+        if left[0] == "dir":
+            # Child directory creation/removal may alter nlink and timestamps,
+            # never the original directory identity/type/mode/owner.
+            if old_binding[path][:6] != new_binding[path][:6] or old_binding[path][7:] != new_binding[path][7:]:
+                raise ContractError("native directory binding drifted")
+            if lifecycle == "immutable-directory" and (left != right or old_binding[path] != new_binding[path]):
+                raise ContractError("immutable native builtin directory changed")
+        elif lifecycle not in ("ephemeral",):
+            if old_binding[path] != new_binding[path]:
+                raise ContractError("persistent native file binding drifted")
+            if lifecycle == "create-once" and left != right:
+                raise ContractError("native installation identity changed")
 
 
 def validate_execution_root_transition(
@@ -4655,7 +5439,7 @@ def build_live_argv(
     for key in sorted(REQUIRED_OVERRIDES):
         argv.extend(["-c", "{}={}".format(key, toml_literal(REQUIRED_OVERRIDES[key]))])
     argv.append("-")
-    dynamic_markers = (envelope["attempt_id"], "Issue #23")
+    dynamic_markers = (envelope["attempt_id"], "Issue #25")
     if any(any(marker in argument for marker in dynamic_markers) for argument in argv):
         raise ContractError("dynamic Task/context data leaked into worker argv")
     validate_runtime_argv_policy(argv, require_memory_overrides=True)
@@ -4919,10 +5703,176 @@ def worker_process_record(process: ProcessResult) -> Dict[str, Any]:
     }
 
 
-def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict[str, Any], mode: str, fake_behavior: str = "valid", include_artifacts: bool = False) -> Dict[str, Any]:
+WORKER_BOUNDARY_OWNER_URL = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437"
+WORKER_BOUNDARY_OWNER_SHA256 = "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1"
+WORKER_BOUNDARY_REASONS = (
+    "none", "worker-observation-uncheckable", "worker-process-not-started",
+    "worker-process-unknown", "worker-reap-unconfirmed", "worker-process-non-success",
+    "worker-backend-unobserved", "worker-launcher-binding-drift", "worker-tmp-non-success",
+    "worker-window-exceeded",
+)
+
+
+def require_worker_housekeeping_agreement():
+    """Static adopted agreement is necessary, never evidence or an attempt grant."""
+    if compatibility_contract()["worker_boundary"] != "same-private-tmp-observed-worker-linux-helper-quiescent-only":
+        raise ContractError("worker-housekeeping-agreement-unavailable")
+
+
+def worker_boundary_binding(envelope, profile):
+    return {"attempt_id": envelope["attempt_id"], "head": envelope["harness"]["commit"],
+        "tree": envelope["harness"]["tree"],
+        "provider_attempt_sha256": compatibility_provider_digest(profile["evidence"]["containment_provider"], allow_fixture=profile["scope"] == "fixture"),
+        "runtime_profile_sha256": sha256_bytes(canonical_bytes(profile)),
+        "envelope_sha256": sha256_bytes(canonical_bytes(envelope))}
+
+
+def validate_worker_boundary(value, envelope, profile, result=None, *, require_success=True):
+    """Closed supplemental native proof; no event/result/profile field is rewritten."""
+    exact_keys(value, ("schema", "authority", "status", "reason_code", "agreement", "binding",
+        "window", "process", "launcher", "housekeeping", "tmp_observations", "execution_result_sha256"), "worker boundary")
+    if (value["schema"] != "t12-worker-boundary/v1" or value["authority"] != "adapter-authored"
+            or value["agreement"] != {"url": WORKER_BOUNDARY_OWNER_URL, "body_sha256": WORKER_BOUNDARY_OWNER_SHA256}
+            or value["binding"] != worker_boundary_binding(envelope, profile)
+            or value["status"] not in ("pass", "UNCHECKABLE") or value["reason_code"] not in WORKER_BOUNDARY_REASONS):
+        raise ContractError("worker boundary authority/binding is invalid")
+    window = value["window"]
+    exact_keys(window, ("started_ms", "finished_ms"), "worker window")
+    if any(not _compatibility_milliseconds(number) for number in window.values()) or window["finished_ms"] < window["started_ms"]:
+        raise ContractError("worker boundary window is invalid")
+    bounded_window = window["finished_ms"] - window["started_ms"] <= (envelope["limits"]["worker_timeout_seconds"] + 30) * 1000
+    observed_ms = int(datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp() * 1000)
+    fresh_start = observed_ms <= window["started_ms"] <= observed_ms + 900000
+    tmp = value["tmp_observations"]
+    exact_keys(tmp, ("before_sha256", "after_sha256", "before_status", "after_status"), "worker TMP observations")
+    for key in ("before_sha256", "after_sha256"):
+        if tmp[key] is not None: require_string(tmp[key], key, SHA256_RE)
+    for key in ("before_status", "after_status"):
+        if tmp[key] not in ("pass", "non-success", "UNCHECKABLE"): raise ContractError("worker TMP observation status is invalid")
+    tmp_complete = all(tmp[key] is not None for key in ("before_sha256", "after_sha256")) and tmp["before_status"] == tmp["after_status"] == "pass"
+    process = value["process"]
+    if process is not None:
+        exact_keys(process, ("logical_invocations", "exit_code", "signal", "timed_out", "stdout_overflow", "stderr_overflow", "reaped"), "worker observed process")
+        if type(process["logical_invocations"]) is not int or process["logical_invocations"] != 1:
+            raise ContractError("worker process invocation count is invalid")
+        for key in ("timed_out", "stdout_overflow", "stderr_overflow", "reaped"):
+            require_bool(process[key], "worker " + key)
+        if (process["exit_code"] is not None and (type(process["exit_code"]) is not int or not 0 <= process["exit_code"] <= 255)
+                or process["signal"] is not None and (type(process["signal"]) is not int or not 1 <= process["signal"] <= 64)
+                or process["exit_code"] is not None and process["signal"] is not None):
+            raise ContractError("worker process exit status is invalid")
+    launcher = value["launcher"]
+    exact_keys(launcher, ("role", "actual_image_observed", "binding_stable", "image_samples", "image_error_count", "budget_exhausted", "binary_sha256", "source_commit"), "worker launcher")
+    if (launcher["role"] != "same-tmp-worker-linux-sandbox" or launcher["source_commit"] != OFFICIAL_CODEX_0150_SOURCE_COMMIT
+            or launcher["binary_sha256"] != APPROVED_BWRAP_BINARY_SHA256):
+        raise ContractError("worker launcher source/binary is invalid")
+    for key in ("actual_image_observed", "binding_stable", "budget_exhausted"):
+        require_bool(launcher[key], "worker launcher " + key)
+    for key in ("image_samples", "image_error_count"):
+        if type(launcher[key]) is not int or not 0 <= launcher[key] <= 4096:
+            raise ContractError("worker launcher count is invalid")
+    # Reuse the native transition validator only for its closed finite record.
+    # The worker's longer time window above is independent of the probe window.
+    transition = value["housekeeping"]
+    observation = not_run_compatibility_housekeeping("UNCHECKABLE")
+    observation.update(status=transition.get("status"), reason_code=transition.get("reason_code"), transition=transition,
+        observation_binding={"head": envelope["harness"]["commit"], "tree": envelope["harness"]["tree"],
+            "provider_attempt_sha256": value["binding"]["provider_attempt_sha256"], "observation_id_sha256": "1" * 64},
+        window={"started_ms": window["started_ms"], "finished_ms": window["started_ms"]},
+        process_calls={"requested": 1, "reaped": int(process is not None and process["reaped"]), "unconfirmed": int(process is None or not process["reaped"])})
+    validate_compatibility_housekeeping(observation)
+    passing = (bounded_window and fresh_start and tmp_complete and process is not None and process["exit_code"] == 0 and process["signal"] is None
+        and process["reaped"] and not any(process[key] for key in ("timed_out", "stdout_overflow", "stderr_overflow"))
+        and launcher["actual_image_observed"] and launcher["binding_stable"] and launcher["image_samples"] > 0
+        and not launcher["budget_exhausted"] and transition["status"] == "pass")
+    if (value["status"] == "pass") != passing or (value["reason_code"] == "none") != passing:
+        raise ContractError("worker boundary success disagrees with actual evidence")
+    if value["execution_result_sha256"] is not None:
+        require_string(value["execution_result_sha256"], "worker result digest", SHA256_RE)
+    if result is not None and (value["execution_result_sha256"] != sha256_bytes(canonical_bytes(result))
+            or process is None or result["worker"]["logical_invocations"] != process["logical_invocations"]
+            or result["worker"]["exit_code"] != process["exit_code"] or result["worker"]["signal"] != process["signal"]
+            or result["worker"]["timed_out"] != process["timed_out"]):
+        raise ContractError("worker boundary result binding is invalid")
+    if require_success and (not passing or result is not None and value["execution_result_sha256"] is None):
+        raise ContractError("worker boundary evidence is non-success")
+    return value
+
+
+def observe_worker_boundary(private_tmp, target_root, binary, environment, envelope, profile, invoke, sink, *, expected_before=None):
+    """One actual worker call; retain safe facts before later parsing/verification.
+
+    No cleanup ownership is added. The existing bounded runner supplies the
+    original process result; exceptions are unknown, never a zero-call claim.
+    """
+    if not callable(sink):
+        raise ContractError("live execution requires a retained worker observation sink")
+    before = observe_sandbox_housekeeping(private_tmp, expected_uid=os.geteuid(), expected_gid=os.getegid())
+    if before["status"] != "pass":
+        raise ContractError("worker TMP preflight is non-success")
+    if expected_before is not None and before["inventory"] != expected_before:
+        raise ContractError("dedicated private TMPDIR changed before the worker boundary")
+    binding = _launcher_file_snapshot(target_root, environment)
+    observer = worker_launcher_observer(binding, binary, target_root, private_tmp, environment)
+    started = _compatibility_clock_ms()
+    observed_ms = int(datetime.datetime.strptime(profile["observed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp() * 1000)
+    if not observed_ms <= started <= observed_ms + 900000:
+        raise ContractError("worker pre-launch runtime profile is stale")
+    process = None
+    reason = "worker-process-unknown"
+    try:
+        process = invoke(observer)
+        reason = "none"
+    except ProcessSpawnError:
+        reason = "worker-process-not-started"
+        raise
+    finally:
+        after = observe_sandbox_housekeeping(private_tmp, expected_uid=os.geteuid(), expected_gid=os.getegid())
+        transition = validate_sandbox_housekeeping_transition(before, after, process_reaped=process is not None and process.reaped is True)
+        stable = False
+        try:
+            stable = _launcher_file_snapshot(target_root, environment) == binding
+        except (ContractError, OSError, ValueError, TypeError):
+            pass
+        if process is not None:
+            if not process.reaped: reason = "worker-reap-unconfirmed"
+            elif process.exit_code != 0 or process.signal_number is not None or process.timed_out or process.stdout_overflow or process.stderr_overflow: reason = "worker-process-non-success"
+            elif not observer.observed or observer.exhausted: reason = "worker-backend-unobserved"
+            elif not stable: reason = "worker-launcher-binding-drift"
+            elif transition["status"] != "pass": reason = "worker-tmp-non-success"
+        finished = _compatibility_clock_ms()
+        if finished - started > (envelope["limits"]["worker_timeout_seconds"] + 30) * 1000:
+            reason = "worker-window-exceeded"
+        record = {"schema": "t12-worker-boundary/v1", "authority": "adapter-authored",
+            "status": "pass" if reason == "none" else "UNCHECKABLE", "reason_code": reason,
+            "agreement": {"url": WORKER_BOUNDARY_OWNER_URL, "body_sha256": WORKER_BOUNDARY_OWNER_SHA256},
+            "binding": worker_boundary_binding(envelope, profile),
+            "window": {"started_ms": started, "finished_ms": finished},
+            "process": None if process is None else {"logical_invocations": 1, "exit_code": process.exit_code,
+                "signal": process.signal_number, "timed_out": process.timed_out, "stdout_overflow": process.stdout_overflow,
+                "stderr_overflow": process.stderr_overflow, "reaped": process.reaped},
+            "launcher": {"role": "same-tmp-worker-linux-sandbox", "actual_image_observed": observer.observed,
+                "binding_stable": stable, "image_samples": observer.samples, "image_error_count": observer.errors,
+                "budget_exhausted": observer.exhausted, "binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+                "source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT},
+            "housekeeping": transition,
+            "tmp_observations": {"before_sha256": sha256_bytes(canonical_bytes(before)) if before.get("inventory") is not None else None,
+                "after_sha256": sha256_bytes(canonical_bytes(after)) if after.get("inventory") is not None else None,
+                "before_status": before["status"], "after_status": after["status"]},
+            "execution_result_sha256": None}
+        validate_worker_boundary(record, envelope, profile, require_success=False)
+        sink(record)
+    return process, record, after.get("inventory")
+
+
+def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict[str, Any], mode: str, fake_behavior: str = "valid", include_artifacts: bool = False, *, profile_observation_sink: Optional[Any] = None, worker_observation_sink: Optional[Any] = None) -> Dict[str, Any]:
     require_runtime_fs_capabilities()
     validate_envelope(envelope)
     validate_runtime_profile(profile, allow_fixture=(mode == "offline"))
+    if mode == "live":
+        require_worker_housekeeping_agreement()
+        if not callable(worker_observation_sink):
+            raise ContractError("live execution requires a retained worker observation sink")
     if envelope["worker"]["model"] != profile["request"]["model"] or envelope["worker"]["reasoning_effort"] != profile["request"]["reasoning_effort"]:
         raise ContractError("envelope and runtime profile request differ")
     if mode == "live" and (profile["status"] != "match" or profile["live_run_allowed"] is not True):
@@ -4942,17 +5892,30 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
         age = (datetime.datetime.now(datetime.timezone.utc) - observed).total_seconds()
         if age < -300 or age > 900:
             raise ContractError("live runtime profile is stale or future-dated")
+        if not callable(profile_observation_sink):
+            raise ContractError("live execution requires a retained profile observation sink")
+        sensor_started = datetime.datetime.now(datetime.timezone.utc)
         fresh_profile = observe_runtime_profile(
             repository_root,
             envelope["worker"]["model"],
             envelope["worker"]["reasoning_effort"],
             provider_input,
         )
+        sensor_finished = datetime.datetime.now(datetime.timezone.utc)
         validate_runtime_profile(fresh_profile)
-        supplied_semantics = {key: value for key, value in profile.items() if key != "observed_at"}
-        fresh_semantics = {key: value for key, value in fresh_profile.items() if key != "observed_at"}
-        if fresh_profile["status"] != "match" or fresh_profile["live_run_allowed"] is not True or fresh_semantics != supplied_semantics:
-            raise ContractError("fresh semantic runtime sensor does not match the approved profile")
+        try:
+            comparison = compare_runtime_profiles(profile, fresh_profile, sensor_started, sensor_finished)
+        except ContractError:
+            # Retain both valid, sanitized native records even when their
+            # comparison rejects. Invalid native records are not exported.
+            profile_observation_sink(runtime_profile_comparison_record(
+                profile, fresh_profile, sensor_started, sensor_finished, "fail",
+            ))
+            raise
+        profile_observation_sink(comparison)
+        # Native result/receipt binding follows the actual immediate pre-worker
+        # observation. The separately retained comparison preserves both inputs.
+        profile = fresh_profile
     if mode not in ("offline", "live"):
         raise ContractError("unsupported execution mode")
 
@@ -4963,7 +5926,15 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             names_before = sorted(entry.name for entry in os.scandir(layout.work))
             if names_before:
                 raise ContractError("private Colima work root is not empty before execution")
-            temporary = stack.enter_context(tempfile.TemporaryDirectory(prefix="execution-", dir=str(layout.work)))
+            # No TemporaryDirectory finalizer may delete a tree while worker
+            # absence is unconfirmed. The outer provider retains responsibility
+            # for a retained tree; a failed observation is never absence.
+            temporary = tempfile.mkdtemp(prefix="execution-", dir=str(layout.work))
+            live_cleanup = {"absence_confirmed": False}
+            def cleanup_live_container():
+                if live_cleanup["absence_confirmed"]:
+                    shutil.rmtree(temporary)
+            stack.callback(cleanup_live_container)
             private_home = layout.home
             private_tmp = layout.tmp
             executable = layout.binary
@@ -4988,14 +5959,19 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             if hash_regular_file(executable) != profile["client"]["binary_sha256"]:
                 raise ContractError("Codex binary digest drifted after the runtime sensor")
             binary_before = hash_regular_file(executable)
-            version_result = bounded_capture([str(executable), "--version"], container, environment)
-            help_result = bounded_capture([str(executable), "exec", "--help"], container, environment)
-            if version_result.exit_code != 0 or help_result.exit_code != 0 or version_result.timed_out or help_result.timed_out or version_result.stdout_overflow or help_result.stdout_overflow:
-                raise ContractError("Codex version/help evidence became uncheckable before execution")
+            setup_results = []
+            for setup_argv in ([str(executable), "--version"], [str(executable), "exec", "--help"]):
+                setup_result = bounded_capture(setup_argv, container, environment)
+                if (setup_result.exit_code != 0 or setup_result.signal_number is not None
+                        or setup_result.timed_out or setup_result.stdout_overflow
+                        or setup_result.stderr_overflow or setup_result.reaped is not True):
+                    raise ContractError("Codex version/help evidence became uncheckable before execution")
+                setup_results.append(setup_result)
+            version_result, help_result = setup_results
             if version_result.stdout.decode("utf-8", errors="strict").strip() != profile["client"]["version_output"] or sha256_bytes(help_result.stdout) != profile["client"]["exec_help_sha256"]:
                 raise ContractError("Codex version/help evidence drifted after the runtime sensor")
             harness_binding = verify_harness_state(repository_root, envelope, environment)
-            persistent_home_before = execution_root_inventory(private_home)
+            persistent_home_before = native_codex_home_inventory(private_home, executable)
             persistent_tmp_before = execution_root_inventory(private_tmp)
         target_root = create_synthetic_repository(container, environment)
         before = git_snapshot(target_root, environment)
@@ -5010,11 +5986,19 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
                 environment, require_private_projection=True,
             )
         prompt = static_prompt(envelope)
+        worker_boundary = None
+        post_worker_tmp = None
         if mode == "live":
             assert layout is not None
-            process = run_claimed_live_worker(
-                layout, envelope, profile, worker_argv, target_root, environment, prompt,
+            live_cleanup["absence_confirmed"] = False
+            process, worker_boundary, post_worker_tmp = observe_worker_boundary(
+                private_tmp, target_root, executable, environment, envelope, profile,
+                lambda observer: run_claimed_live_worker(
+                    layout, envelope, profile, worker_argv, target_root, environment, prompt,
+                    launcher_observer=observer,
+                ), worker_observation_sink, expected_before=persistent_tmp_before,
             )
+            validate_worker_boundary(worker_boundary, envelope, profile)
         else:
             process = run_bounded_process(
                 worker_argv,
@@ -5046,10 +6030,11 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             assert harness_binding is not None
             verify_harness_state(repository_root, envelope, environment, harness_binding)
             assert persistent_home_before is not None and persistent_tmp_before is not None and binary_before is not None
-            if execution_root_inventory(private_home) != persistent_home_before:
-                raise ContractError("dedicated Codex HOME changed during the live worker")
-            if execution_root_inventory(private_tmp) != persistent_tmp_before:
-                raise ContractError("dedicated private TMPDIR changed during the live worker")
+            validate_native_codex_home_transition(
+                persistent_home_before, native_codex_home_inventory(private_home, executable),
+            )
+            if execution_root_inventory(private_tmp) != post_worker_tmp:
+                raise ContractError("dedicated private TMPDIR changed after the observed worker boundary")
             if hash_regular_file(executable) != binary_before:
                 raise ContractError("Codex binary changed during the live worker")
             assert layout is not None
@@ -5095,6 +6080,12 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
             },
         }
         validate_execution_result(result, envelope, profile, verifier)
+        if mode == "live":
+            worker_boundary = {**worker_boundary, "execution_result_sha256": sha256_bytes(canonical_bytes(result))}
+            validate_worker_boundary(worker_boundary, envelope, profile, result)
+            # Worker reap alone does not prove the later verifier/Git calls
+            # finished safely. Every non-success retains this one live tree.
+            live_cleanup["absence_confirmed"] = True
         if include_artifacts:
             return {
                 "schema": "t11-runtime-artifact-bundle/v1",
@@ -5102,6 +6093,7 @@ def execute_slice(repository_root: Path, envelope: Dict[str, Any], profile: Dict
                 "envelope": envelope,
                 "execution_result": result,
                 "verifier": verifier,
+                **({"worker_boundary": worker_boundary} if mode == "live" else {}),
             }
         return result
 
@@ -5185,10 +6177,12 @@ def bounded_capture(
     stdout_limit: int = 1_048_576,
     stderr_limit: int = 1_048_576,
     capture_stderr: bool = False,
+    launcher_observer=None,
 ) -> ProcessResult:
     return run_bounded_process(
         argv, cwd, env, stdin_bytes, timeout, stdout_limit, stderr_limit, 2,
         capture_stderr=capture_stderr,
+        **({"launcher_observer": launcher_observer} if launcher_observer is not None else {}),
     )
 
 
@@ -5224,6 +6218,142 @@ def auth_class(binary: Path, cwd: Path, env: Mapping[str, str]) -> str:
     return classification
 
 
+LAUNCH_DIAGNOSTIC_STDERR_LIMIT = 4096
+LAUNCH_DIAGNOSTIC_SCHEMA = "t12-sandbox-launch-diagnostics/v1"
+# Closed, adapter-authored classifications, never exception/stderr text.
+LAUNCH_DIAGNOSTIC_CLASSES = {
+    "not-run": ("not-run", "not-run"),
+    "none": ("pass", "process-execution"),
+    "unsupported-strict-config": ("fail", "cli-dispatch"),
+    "process-nonzero": ("fail", "unclassified"),
+    "unrecognized-stderr": ("fail", "unclassified"),
+    "process-signal": ("fail", "process-execution"),
+    "process-timeout": ("UNCHECKABLE", "process-execution"),
+    "output-overflow": ("UNCHECKABLE", "process-execution"),
+    "process-not-reaped": ("UNCHECKABLE", "process-cleanup"),
+    "process-spawn-failed": ("UNCHECKABLE", "process-spawn"),
+    "argv-policy-failed": ("UNCHECKABLE", "argv-policy"),
+    "probe-preflight-uncheckable": ("UNCHECKABLE", "probe-preflight"),
+    "process-observation-uncheckable": ("UNCHECKABLE", "unclassified"),
+}
+# Exact pinned-source diagnostic, not captured historical runtime output.
+STRICT_SANDBOX_REJECTION = b"Error: `--strict-config` is not supported for `codex sandbox`\n"
+
+
+def launch_diagnostic_record(
+    reason_code: str = "not-run", *, exit_code: Optional[int] = None,
+    signal_number: Optional[int] = None,
+) -> Dict[str, Any]:
+    if reason_code not in LAUNCH_DIAGNOSTIC_CLASSES:
+        raise ContractError("sandbox launch diagnostic reason is invalid")
+    for value, low, high in ((exit_code, 0, 255), (signal_number, 1, 64)):
+        if value is not None and (type(value) is not int or not low <= value <= high):
+            raise ContractError("sandbox launch diagnostic number is invalid")
+    if exit_code is not None and signal_number is not None:
+        raise ContractError("sandbox launch diagnostic exit/signal conflict")
+    status_value, stage = LAUNCH_DIAGNOSTIC_CLASSES[reason_code]
+    return {
+        "status": status_value, "stage": stage, "reason_code": reason_code,
+        "exit_code": exit_code, "signal": signal_number,
+    }
+
+
+def classify_sandbox_launch(result: ProcessResult) -> Dict[str, Any]:
+    """Examine at most 4096 transient bytes; export only enums/numbers."""
+    exit_code, signum = result.exit_code, result.signal_number
+    if (
+        (exit_code is not None and (type(exit_code) is not int or not 0 <= exit_code <= 255))
+        or (signum is not None and (type(signum) is not int or not 1 <= signum <= 64))
+        or (exit_code is not None and signum is not None)
+    ):
+        return launch_diagnostic_record("process-observation-uncheckable")
+    numbers = {"exit_code": exit_code, "signal_number": signum}
+    if not result.reaped:
+        reason = "process-not-reaped"
+    elif result.timed_out:
+        reason = "process-timeout"
+    elif (
+        result.stdout_overflow or result.stderr_overflow
+        or result.stderr_size > LAUNCH_DIAGNOSTIC_STDERR_LIMIT
+        or len(result.stderr) > LAUNCH_DIAGNOSTIC_STDERR_LIMIT
+    ):
+        reason = "output-overflow"
+    elif signum is not None:
+        reason = "process-signal"
+    elif exit_code is None or len(result.stderr) != result.stderr_size:
+        reason = "process-observation-uncheckable"
+    elif exit_code != 0 and result.stderr == STRICT_SANDBOX_REJECTION:
+        reason = "unsupported-strict-config"
+    elif result.stderr:
+        reason = "unrecognized-stderr"
+    elif exit_code != 0:
+        reason = "process-nonzero"
+    else:
+        reason = "none"
+    return launch_diagnostic_record(reason, **numbers)
+
+
+def validate_launch_diagnostics_wrapper(value: Any) -> Dict[str, Any]:
+    """Separate transport: never broaden runtime-profile/v1's closed shape."""
+    exact_keys(value, ("schema", "authority", "runtime_profile", "launch_diagnostics"), "launch diagnostics wrapper")
+    if value["schema"] != LAUNCH_DIAGNOSTIC_SCHEMA or value["authority"] != "adapter-authored":
+        raise ContractError("launch diagnostics wrapper identity is invalid")
+    profile = validate_runtime_profile(value["runtime_profile"])
+    if (
+        profile["scope"] != "exact-head-probe-only-sensor"
+        or profile["auth"]["class"] != "unavailable"
+        or profile["live_run_allowed"] is not False
+    ):
+        raise ContractError("launch diagnostics requires unauthenticated probe-only evidence")
+    lanes = value["launch_diagnostics"]
+    exact_keys(lanes, ("shell", "network"), "launch diagnostic lanes")
+    for lane in lanes.values():
+        exact_keys(lane, ("status", "stage", "reason_code", "exit_code", "signal"), "launch diagnostic lane")
+        if lane != launch_diagnostic_record(
+            lane["reason_code"], exit_code=lane["exit_code"], signal_number=lane["signal"],
+        ):
+            raise ContractError("launch diagnostic classification is inconsistent")
+        reason = lane["reason_code"]
+        if (
+            (reason == "none" and (lane["exit_code"] != 0 or lane["signal"] is not None))
+            or (reason in ("unsupported-strict-config", "process-nonzero") and (lane["exit_code"] in (None, 0) or lane["signal"] is not None))
+            or (reason == "process-signal" and lane["signal"] is None)
+            or (reason in ("not-run", "process-spawn-failed", "argv-policy-failed", "probe-preflight-uncheckable") and (lane["exit_code"] is not None or lane["signal"] is not None))
+        ):
+            raise ContractError("launch diagnostic numeric facts conflict with classification")
+    return value
+
+
+def _capture_sandbox_probe(
+    argv: Sequence[str], root: Path, env: Mapping[str, str], stdout_limit: int,
+    diagnostics: Optional[Dict[str, Any]], lane: str, launcher_observer=None,
+) -> ProcessResult:
+    """No extra invocation; scrub transient stderr before existing classifiers."""
+    options = {"capture_stderr": True} if diagnostics is not None else {}
+    if launcher_observer is not None:
+        if lane != "shell":
+            raise ContractError("executed launcher observation is shell-probe-only")
+        options["launcher_observer"] = launcher_observer
+    try:
+        result = bounded_capture(
+            argv, root, env, timeout=15, stdout_limit=stdout_limit,
+            stderr_limit=LAUNCH_DIAGNOSTIC_STDERR_LIMIT, **options,
+        )
+    except ProcessSpawnError:
+        if diagnostics is not None:
+            diagnostics[lane] = launch_diagnostic_record("process-spawn-failed")
+        raise
+    except (ContractError, OSError, subprocess.SubprocessError):
+        if diagnostics is not None:
+            diagnostics[lane] = launch_diagnostic_record("process-observation-uncheckable")
+        raise
+    if diagnostics is not None:
+        diagnostics[lane] = classify_sandbox_launch(result)
+    # No retained stderr reaches the existing lane or runtime-profile record.
+    result = result._replace(stderr=b"")
+    return result
+
+
 def sandbox_probe_argv(
     binary: Path,
     env: Mapping[str, str],
@@ -5238,7 +6368,7 @@ def sandbox_probe_argv(
         root = Path(home_value).parent
     if not root.is_absolute() or not command_argv:
         raise ContractError("sandbox probe argv root or command is invalid")
-    argv = runtime_configuration_argv(binary, env) + [
+    argv = runtime_configuration_argv(binary, env, surface="sandbox") + [
         "sandbox", "--permission-profile", ":read-only",
         "-C", str(root), "--", *list(command_argv),
     ]
@@ -5252,6 +6382,8 @@ def validate_sandbox_probe_argv(argv: Sequence[str]) -> None:
     if argv.count("sandbox") != 1:
         raise ContractError("sandbox probe argv must contain one sandbox subcommand")
     index = argv.index("sandbox")
+    if "--strict-config" in argv[:index]:
+        raise ContractError("sandbox probe argv has unsupported strict configuration")
     tail = list(argv[index:])
     if len(tail) < 7 or tail[:4] != [
         "sandbox", "--permission-profile", ":read-only", "-C",
@@ -5285,12 +6417,17 @@ def reviewed_runtime_configuration(env: Mapping[str, str]) -> Dict[str, Any]:
     }
 
 
-def runtime_configuration_argv(binary: Path, env: Mapping[str, str]) -> List[str]:
+def runtime_configuration_argv(
+    binary: Path, env: Mapping[str, str], *, surface: str = "doctor",
+) -> List[str]:
     values = reviewed_runtime_configuration(env)
-    # doctor and sandbox accept the global strict/config flags, but
-    # --ignore-user-config is an exec-specific option. The private CODEX_HOME
-    # contains no config.toml, so these no-model probes do not need that bypass.
-    argv = [str(binary), "--strict-config"]
+    if surface not in ("doctor", "sandbox"):
+        raise ContractError("runtime configuration surface is unsupported")
+    # Official 0.150.1 cli/src/main.rs rejects strict_config + Sandbox before
+    # dispatch; debug_sandbox intentionally builds strict_config=false. Doctor
+    # and the separately built live exec argv retain strict configuration.
+    # Every reviewed -c value and the configuration-intent digest is unchanged.
+    argv = [str(binary)] + (["--strict-config"] if surface == "doctor" else [])
     for key in ("approval_policy", "model_reasoning_effort"):
         argv.extend(["-c", "{}={}".format(key, toml_literal(values[key]))])
     argv.extend(["-c", 'shell_environment_policy.inherit="none"'])
@@ -5642,7 +6779,10 @@ def shell_environment_probe(
     root: Path,
     env: Mapping[str, str],
     required: Mapping[str, Any],
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    if launch_diagnostics is not None:
+        launch_diagnostics["shell"] = launch_diagnostic_record("probe-preflight-uncheckable")
     try:
         probe_env = dict(env)
         probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
@@ -5652,10 +6792,11 @@ def shell_environment_probe(
         info = os.stat(str(env_program), follow_symlinks=False)
         if not stat.S_ISREG(info.st_mode):
             raise ContractError("environment probe executable is invalid")
+        if launch_diagnostics is not None:
+            launch_diagnostics["shell"] = launch_diagnostic_record("argv-policy-failed")
         argv = sandbox_probe_argv(binary, env, [str(env_program), "-0"], root)
-        result = bounded_capture(
-            argv, root, probe_env, timeout=15,
-            stdout_limit=65_536, stderr_limit=4_096,
+        result = _capture_sandbox_probe(
+            argv, root, probe_env, 65_536, launch_diagnostics, "shell",
         )
         return classify_shell_environment_result(result, set_values)
     except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
@@ -5821,6 +6962,924 @@ def classify_network_sandbox_result(
     return network_sandbox_evidence("pass", "none", **observed)
 
 
+NETWORK_SOCKET_DENIALS_V2 = ("EPERM", "EACCES")
+NETWORK_CONNECT_DENIALS_V2 = ("EPERM", "EACCES", "ENETUNREACH", "EHOSTUNREACH", "ECONNREFUSED")
+NETWORK_MAX_CAPTURE_MS_V2 = 15_000
+COMPATIBILITY_MAX_AGE_MS = 300_000
+COMPATIBILITY_BINDING_KEYS = {"head", "tree", "provider_attempt_sha256", "observation_id_sha256"}
+NETWORK_CONTEXT_KEYS_V2 = {"expected_binding", "control_binding", "capture_binding",
+                "observation_started_ms", "observation_finished_ms"}
+NETWORK_OBSERVATION_KEYS_V2 = {
+    "binding", "control_connected", "control_accepted", "control_peer_matches", "control_closed",
+    "parent_netns_sha256", "sandbox_netns_sha256", "network_marker_status",
+    "socket_create_status", "socket_create_errno", "connect_status", "connect_errno",
+    "socket_close_status", "exit_code", "signal", "timed_out", "stdout_overflow",
+    "stderr_overflow", "stderr_size", "reaped", "control_closed_ms",
+    "probe_started_ms", "probe_finished_ms",
+}
+
+
+def _compatibility_exact_keys(value, keys):
+    return isinstance(value, dict) and set(value) == keys
+
+
+def _compatibility_digest(value, length=64):
+    return (isinstance(value, str) and re.fullmatch("[0-9a-f]{%d}" % length, value)
+            is not None and value != "0" * length)
+
+
+def _compatibility_binding(value):
+    return (_compatibility_exact_keys(value, COMPATIBILITY_BINDING_KEYS) and all(_compatibility_digest(value[key], 40 if key in
+            ("head", "tree") else 64) for key in COMPATIBILITY_BINDING_KEYS))
+
+
+def _compatibility_milliseconds(value):
+    return type(value) is int and 0 <= value <= 2 ** 53 - 1
+
+
+def _network_errno_name_v2(error, allowed):
+    value = getattr(error, "errno", None)
+    name = errno.errorcode.get(value) if type(value) is int else None
+    return name if name in allowed else "unapproved"
+
+
+def observe_network_socket_calls_v2(create_socket, configure_socket, connect_socket, close_socket):
+    """Closed socket stages; the collector owns fixed AF_INET/target/timeout.
+
+    Offline tests supply fakes only. No error text, private address, or arbitrary
+    errno name leaves this function. Configure failure is never connect denial.
+    """
+    result = {"socket_create_status": "UNCHECKABLE", "socket_create_errno": "unapproved",
+              "connect_status": "not-attempted", "connect_errno": "none",
+              "socket_close_status": "not-needed"}
+    try:
+        sock = create_socket()
+    except OSError as error:
+        result["socket_create_errno"] = _network_errno_name_v2(error, NETWORK_SOCKET_DENIALS_V2)
+        if result["socket_create_errno"] in NETWORK_SOCKET_DENIALS_V2:
+            result["socket_create_status"] = "denied"
+        return result
+    except Exception:
+        return result
+    result.update(socket_create_status="created", socket_create_errno="none")
+    try:
+        try:
+            configure_socket(sock)
+        except Exception:
+            result.update(connect_status="UNCHECKABLE", connect_errno="unapproved")
+            return result
+        try:
+            connect_socket(sock)
+        except OSError as error:
+            result.update(connect_status="denied", connect_errno=_network_errno_name_v2(error, NETWORK_CONNECT_DENIALS_V2))
+        except Exception:
+            result.update(connect_status="UNCHECKABLE", connect_errno="unapproved")
+        else:
+            result.update(connect_status="succeeded", connect_errno="none")
+    finally:
+        try:
+            close_socket(sock)
+        except Exception:
+            result["socket_close_status"] = "UNCHECKABLE"
+        else:
+            result["socket_close_status"] = "pass"
+    return result
+
+
+def classify_network_observation_v2(observation, context, now_ms):
+    """Classify only a complete closed observation; no runtime action.
+
+    The controller must independently establish the context; matching submitted
+    strings alone are not authenticity. Existing full-profile, containment,
+    exact-head and receipt checks remain mandatory in the production route.
+    """
+    safe = {"schema": "t12-network-predicate/v2", "authority": "adapter-authored",
+            "status": "UNCHECKABLE", "reason_code": "malformed-observation",
+            "proof_path": "none", "socket_create_status": "UNCHECKABLE",
+            "socket_create_errno": "unapproved", "connect_status": "UNCHECKABLE",
+            "connect_errno": "unapproved", "socket_close_status": "UNCHECKABLE"}
+
+    def done(reason, status="UNCHECKABLE", proof="none"):
+        return dict(safe, reason_code=reason, status=status, proof_path=proof)
+
+    if not _compatibility_exact_keys(observation, NETWORK_OBSERVATION_KEYS_V2) or not _compatibility_exact_keys(context, NETWORK_CONTEXT_KEYS_V2):
+        return done("malformed-observation")
+    if any(not _compatibility_binding(record) for record in (observation["binding"], context["expected_binding"],
+            context["control_binding"], context["capture_binding"])):
+        return done("binding-uncheckable")
+    if any(record != context["expected_binding"] for record in
+            (observation["binding"], context["control_binding"], context["capture_binding"])):
+        return done("attempt-binding-mismatch")
+    times = [context["observation_started_ms"], observation["control_closed_ms"],
+             observation["probe_started_ms"], observation["probe_finished_ms"],
+             context["observation_finished_ms"], now_ms]
+    if any(not _compatibility_milliseconds(value) for value in times) or times != sorted(times):
+        return done("freshness-uncheckable")
+    if (times[3] - times[2] > NETWORK_MAX_CAPTURE_MS_V2 or
+            times[5] - times[4] > COMPATIBILITY_MAX_AGE_MS or
+            times[5] - times[0] > COMPATIBILITY_MAX_AGE_MS):
+        return done("stale-observation")
+    boolean_keys = ("control_connected", "control_accepted", "control_peer_matches", "control_closed",
+                    "timed_out", "stdout_overflow", "stderr_overflow", "reaped")
+    if any(type(observation[key]) is not bool for key in boolean_keys):
+        return done("malformed-observation")
+    if not all(observation[key] for key in boolean_keys[:4]):
+        return done("control-unavailable")
+    if observation["timed_out"]:
+        return done("process-timeout")
+    if observation["stdout_overflow"] or observation["stderr_overflow"]:
+        return done("output-overflow")
+    if not observation["reaped"]:
+        return done("process-not-reaped")
+    if type(observation["exit_code"]) is not int or observation["exit_code"] != 0 or observation["signal"] is not None:
+        return done("process-nonzero-or-status-unavailable")
+    if type(observation["stderr_size"]) is not int or observation["stderr_size"] != 0:
+        return done("observation-uncheckable")
+    if not _compatibility_digest(observation["parent_netns_sha256"]) or not _compatibility_digest(observation["sandbox_netns_sha256"]):
+        return done("namespace-uncheckable")
+    if observation["parent_netns_sha256"] == observation["sandbox_netns_sha256"]:
+        return done("netns-not-separated", "fail")
+    marker = observation["network_marker_status"]
+    if marker in ("missing", "mismatch"):
+        return done("network-marker-" + marker, "fail")
+    if marker != "exact-1":
+        return done("network-marker-uncheckable")
+    socket_status, socket_errno = observation["socket_create_status"], observation["socket_create_errno"]
+    connection, connect_errno = observation["connect_status"], observation["connect_errno"]
+    closed = observation["socket_close_status"]
+    if (socket_status not in ("created", "denied", "UNCHECKABLE") or
+            socket_errno not in (*NETWORK_SOCKET_DENIALS_V2, "none", "unapproved") or
+            connection not in ("denied", "succeeded", "not-attempted", "UNCHECKABLE") or
+            connect_errno not in (*NETWORK_CONNECT_DENIALS_V2, "none", "unapproved") or
+            closed not in ("pass", "not-needed", "UNCHECKABLE")):
+        return done("malformed-observation")
+    if socket_status in ("denied", "UNCHECKABLE"):
+        if connection != "not-attempted" or connect_errno != "none" or closed != "not-needed":
+            return done("contradictory-operation-stages")
+        if ((socket_status == "denied" and socket_errno not in NETWORK_SOCKET_DENIALS_V2) or
+                (socket_status == "UNCHECKABLE" and socket_errno != "unapproved")):
+            return done("contradictory-operation-stages")
+    elif socket_errno != "none" or closed == "not-needed" or connection == "not-attempted":
+        return done("contradictory-operation-stages")
+    if ((connection == "succeeded" and connect_errno != "none") or
+            (connection == "denied" and connect_errno not in (*NETWORK_CONNECT_DENIALS_V2, "unapproved")) or
+            (connection == "UNCHECKABLE" and connect_errno != "unapproved")):
+        return done("contradictory-operation-stages")
+    for key in ("socket_create_status", "socket_create_errno", "connect_status", "connect_errno", "socket_close_status"):
+        safe[key] = observation[key]
+    if socket_status == "UNCHECKABLE":
+        return done("socket-creation-uncheckable")
+    if socket_status == "denied":
+        return done("none", "pass", "socket-create-denial")
+    if closed != "pass":
+        return done("socket-close-uncheckable")
+    if connection == "succeeded":
+        return done("sandbox-connection-succeeded", "fail")
+    if connection != "denied" or connect_errno not in NETWORK_CONNECT_DENIALS_V2:
+        return done("connect-denial-uncheckable")
+    return done("none", "pass", "connect-denial")
+
+
+def compatibility_provider_digest(provider: Mapping[str, Any], *, allow_fixture=False) -> str:
+    validate_containment_provider_evidence(dict(provider), allow_fixture=allow_fixture)
+    return sha256_bytes(canonical_bytes({
+        "configuration_intent": runtime_configuration_intent(),
+        "provider": {key: provider[key] for key in (*PROFILE_PROVIDER_STABLE, *PROFILE_PROVIDER_ATTEMPT)},
+    }))
+
+
+def _compatibility_clock_ms() -> int:
+    return time.time_ns() // 1000000
+
+
+def make_compatibility_context(provider, repository_root, work, env):
+    """Observe the actual provider/current checkout before collecting any lane.
+
+    Private paths/environment never enter the exported record. The context is
+    local call state, not an input envelope or caller-authenticated assertion.
+    """
+    if provider.get("status") != "pass":
+        raise ContractError("compatibility provider is not independently passing")
+    descriptor, info = _open_absolute_directory_nofollow(work)
+    os.close(descriptor)
+    if str(work.resolve()) != str(work) or not stat.S_ISDIR(info.st_mode):
+        raise ContractError("compatibility cwd is not an exact canonical binding")
+    result = {
+        "binding": {
+            "head": provider["public_head"], "tree": provider["public_tree"],
+            "provider_attempt_sha256": compatibility_provider_digest(provider),
+            "observation_id_sha256": sha256_bytes(os.urandom(32)),
+        },
+        "repository_root": repository_root, "work": work,
+        "work_binding": (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid),
+        "environment": dict(env),
+        "configuration": reviewed_runtime_configuration(env),
+        "started_ms": _compatibility_clock_ms(),
+    }
+    recheck_compatibility_context(result, work, env)
+    return result
+
+
+def recheck_compatibility_context(context, work, env):
+    if (not isinstance(context, dict) or not _compatibility_binding(context.get("binding"))
+            or context.get("work") != work or context.get("environment") != dict(env)
+            or context.get("configuration") != reviewed_runtime_configuration(env)):
+        raise ContractError("compatibility execution context is unavailable or changed")
+    descriptor, info = _open_absolute_directory_nofollow(work)
+    os.close(descriptor)
+    if (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid) != context["work_binding"]:
+        raise ContractError("compatibility cwd binding changed")
+    for field, ref in (("head", "HEAD"), ("tree", "HEAD^{tree}")):
+        observed = run_approved_provider_git(context["repository_root"],
+            ("rev-parse", "--verify", ref), env, max_bytes=128).decode("ascii").strip()
+        if observed != context["binding"][field]:
+            raise ContractError("compatibility exact current Git binding changed")
+    if run_approved_provider_git(context["repository_root"],
+            ("status", "--porcelain=v1", "-z", "--untracked-files=all"), env):
+        raise ContractError("compatibility current repository is not clean")
+    if not 0 <= _compatibility_clock_ms() - context["started_ms"] <= COMPATIBILITY_MAX_AGE_MS:
+        raise ContractError("compatibility observation window is stale")
+
+
+def _launcher_file_snapshot(root, env):
+    """Exact PATH order, no-follow directory/file binding, no source inference."""
+    snapshots = []
+    selected = None
+    for raw in env["PATH"].split(os.pathsep):
+        if not raw or not os.path.isabs(raw):
+            raise ContractError("launcher PATH entry is invalid")
+        path = Path(raw)
+        descriptor, info = _open_absolute_directory_nofollow(path)
+        try:
+            snapshots.append((raw, info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid,
+                info.st_mtime_ns, info.st_ctime_ns))
+            try:
+                child = os.stat("bwrap", dir_fd=descriptor, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISREG(child.st_mode) or not child.st_mode & 0o111 or child.st_mode & 0o022:
+                raise ContractError("launcher candidate is not a direct protected executable")
+            candidate = path / "bwrap"
+            if str(candidate.resolve()) != str(candidate):
+                raise ContractError("launcher candidate is not canonical")
+            if root != Path("/") and (candidate == root or root in candidate.parents):
+                continue
+            selected = candidate
+            if selected != Path("/usr/bin/bwrap"):
+                raise ContractError("launcher PATH is shadowed")
+            digest = hash_regular_file(selected, 16 * 1024 * 1024)
+            after = os.stat("bwrap", dir_fd=descriptor, follow_symlinks=False)
+            fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns")
+            if tuple(getattr(child, key) for key in fields) != tuple(getattr(after, key) for key in fields):
+                raise ContractError("launcher binding changed while inspecting")
+            if digest != compatibility_contract()["launcher_binary_sha256"]:
+                raise ContractError("launcher binary digest differs from reviewed baseline")
+            return {"directories": snapshots, "file": tuple(getattr(child, key) for key in fields), "digest": digest}
+        finally:
+            os.close(descriptor)
+    raise ContractError("reviewed launcher was not selected by PATH")
+
+
+def _read_owned_linux_image(pid, birth, expected):
+    """Only an already witnessed owned PID/birth; never signal or scan here.
+
+    The exe open deliberately follows one anchored kernel procfs magic link.
+    This does not relax no-follow rules for filesystem inputs/resources.
+    """
+    if sys.platform != "linux" or type(pid) is not int or pid <= 0 or not str(birth).startswith("linux:"):
+        raise ContractError("executed-image observation is unavailable")
+    proc_fd, _ = _open_absolute_directory_nofollow(Path("/proc"))
+    process_fd = image_fd = None
+    try:
+        process_fd = os.open(str(pid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=proc_fd)
+        process_info = os.fstat(process_fd)
+        def identity():
+            fd = os.open("stat", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=process_fd)
+            try:
+                data = os.read(fd, 8193)
+                if not data or len(data) > 8192:
+                    raise ContractError("owned process identity is incomplete")
+            finally: os.close(fd)
+            value = parse_linux_process_stat(data)
+            if value is None or value[0] != pid or value[3] != birth:
+                raise ContractError("owned process birth changed")
+        identity()
+        def command_role():
+            descriptor = os.open("cmdline", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=process_fd)
+            try:
+                data = os.read(descriptor, 65537)
+            finally:
+                os.close(descriptor)
+            if len(data) > 65536 or not data.endswith(b"\0"):
+                raise ContractError("owned launcher command role is uncheckable")
+            return data, expected.get("role_validator", sandbox_launcher_role)(data)
+        def environment_role():
+            validator = expected.get("environment_validator")
+            if validator is None:
+                return None
+            descriptor = os.open("environ", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=process_fd)
+            try:
+                data = os.read(descriptor, 65537)
+            finally:
+                os.close(descriptor)
+            if len(data) > 65536 or not data.endswith(b"\0") or not validator(data):
+                raise ContractError("worker launcher private environment binding is uncheckable")
+            return data
+        command_before, role = command_role()
+        if not role:
+            return False
+        environment_before = environment_role()
+        image_fd = os.open("exe", os.O_RDONLY | os.O_NONBLOCK, dir_fd=process_fd)
+        image = os.fstat(image_fd)
+        fields = ("st_dev", "st_ino", "st_mode", "st_uid", "st_gid", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if tuple(getattr(image, key) for key in fields) != expected["file"]:
+            return False
+        if not stat.S_ISREG(image.st_mode) or image.st_size > 16 * 1024 * 1024:
+            raise ContractError("owned image is not bounded regular data")
+        digest = hashlib.sha256(); remaining = image.st_size
+        while remaining:
+            data = os.read(image_fd, min(65536, remaining))
+            if not data:
+                raise ContractError("owned image read was incomplete")
+            digest.update(data); remaining -= len(data)
+        if os.read(image_fd, 1):
+            raise ContractError("owned image size changed")
+        identity()
+        command_after, role_after = command_role()
+        if not role_after or command_before != command_after or environment_before != environment_role():
+            raise ContractError("owned launcher role changed")
+        current = os.open("exe", os.O_RDONLY | os.O_NONBLOCK, dir_fd=process_fd)
+        try:
+            if tuple(getattr(os.fstat(current), key) for key in fields) != expected["file"]:
+                raise ContractError("owned executed image changed")
+        finally: os.close(current)
+        named_process = os.stat(str(pid), dir_fd=proc_fd, follow_symlinks=False)
+        if (named_process.st_dev, named_process.st_ino) != (process_info.st_dev, process_info.st_ino):
+            raise ContractError("owned proc namespace changed")
+        return digest.hexdigest() == expected["digest"]
+    finally:
+        if image_fd is not None: os.close(image_fd)
+        if process_fd is not None: os.close(process_fd)
+        os.close(proc_fd)
+
+
+def sandbox_launcher_role(data):
+    """Pinned launcher exec role, excluding its --help and /bin/true probes.
+
+    Raw arguments remain local memory. Source inserts --as-pid-1 at argv[1]
+    and the inner seccomp command ends with the exact shell probe command.
+    """
+    if not isinstance(data, bytes) or len(data) > 65536 or not data.endswith(b"\0"):
+        return False
+    fields = data[:-1].split(b"\0")
+    separators = [index for index, value in enumerate(fields) if value == b"--"]
+    if len(separators) != 2:
+        return False
+    outer, inner = separators
+    return (6 <= len(fields) <= 2048 and fields[:2] == [b"bwrap", b"--as-pid-1"]
+        and all(flag in fields[2:outer] for flag in (b"--new-session", b"--unshare-user", b"--unshare-pid", b"--unshare-ipc", b"--unshare-net"))
+        and b"--apply-seccomp-then-exec" in fields[outer + 1:inner]
+        and fields[-3:] == [b"--", b"/usr/bin/env", b"-0"]
+        and b"--help" not in fields and b"--allow-network-for-proxy" not in fields)
+
+
+def _read_owned_linux_identity(pid):
+    if sys.platform != "linux" or type(pid) is not int or pid <= 0:
+        raise ContractError("owned identity is unavailable")
+    proc_fd, _ = _open_absolute_directory_nofollow(Path("/proc"))
+    pid_fd = data_fd = None
+    try:
+        pid_fd = os.open(str(pid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=proc_fd)
+        bound = os.fstat(pid_fd)
+        data_fd = os.open("stat", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=pid_fd)
+        data = os.read(data_fd, 8193)
+        value = parse_linux_process_stat(data) if 0 < len(data) <= 8192 else None
+        after = os.stat(str(pid), dir_fd=proc_fd, follow_symlinks=False)
+        if (value is None or value[0] != pid or
+                (bound.st_dev, bound.st_ino) != (after.st_dev, after.st_ino)):
+            raise ContractError("owned identity is incomplete or changed")
+        return value
+    finally:
+        if data_fd is not None: os.close(data_fd)
+        if pid_fd is not None: os.close(pid_fd)
+        os.close(proc_fd)
+
+
+class OwnedLauncherImageObserver:
+    """Bounded read-only sampler on the existing tracker, never cleanup owner."""
+    def __init__(self, expected):
+        self.expected = expected
+        self.witnessed = {}
+        self.observed = False
+        self.uncheckable = False
+        self.samples = 0
+        self.errors = 0
+        self.sample_limit = 256
+        self.exhausted = False
+
+    def candidate(self, pid, birth):
+        return True
+
+    def observe(self, leader_pid, original_leader, table):
+        if self.observed or self.samples >= self.sample_limit:
+            self.exhausted = not self.observed
+            return
+        current = table.get(leader_pid)
+        if original_leader is not None and current is not None and current[2] == original_leader[2]:
+            try:
+                fresh = _read_owned_linux_identity(leader_pid)
+                if fresh[3] != original_leader[2]:
+                    raise ContractError("original leader birth changed")
+                self.witnessed.setdefault(leader_pid, fresh[3])
+            except (ContractError, OSError, ValueError, TypeError):
+                self.uncheckable = True; self.errors = min(self.sample_limit, self.errors + 1)
+        changed = True
+        while changed and len(self.witnessed) <= 1024:
+            changed = False
+            for pid, value in table.items():
+                parent = value[0]
+                parent_now = table.get(parent)
+                if (pid not in self.witnessed and parent in self.witnessed and parent_now is not None
+                        and parent_now[2] == self.witnessed[parent]):
+                    try:
+                        parent_before = _read_owned_linux_identity(parent)
+                        child = _read_owned_linux_identity(pid)
+                        parent_after = _read_owned_linux_identity(parent)
+                        if (parent_before[3] != self.witnessed[parent]
+                                or parent_after[3] != self.witnessed[parent]
+                                or child[1] != parent or child[3] != value[2]):
+                            raise ContractError("owned parent-child birth chain changed")
+                        self.witnessed[pid] = child[3]; changed = True
+                    except (ContractError, OSError, ValueError, TypeError):
+                        self.uncheckable = True; self.errors = min(self.sample_limit, self.errors + 1)
+        if len(self.witnessed) > 1024:
+            self.uncheckable = True; return
+        for pid, birth in tuple(self.witnessed.items()):
+            if self.samples >= self.sample_limit or self.observed:
+                break
+            current = table.get(pid)
+            if current is None or current[2] != birth:
+                continue
+            try:
+                if not self.candidate(pid, birth):
+                    continue
+                self.samples += 1
+                self.observed = _read_owned_linux_image(pid, birth, self.expected)
+            except (ContractError, OSError, ValueError, TypeError):
+                self.uncheckable = True; self.errors = min(self.sample_limit, self.errors + 1)
+        self.exhausted = not self.observed and self.samples >= self.sample_limit
+
+
+def worker_permission_profile_matches(value, target_root):
+    """Only the pinned workspace-write default, symbolic or exact materialized cwd."""
+    if not isinstance(value, dict) or set(value) != {"type", "file_system", "network"} or value["type"] != "managed" or value["network"] != "restricted":
+        return False
+    filesystem = value["file_system"]
+    if not isinstance(filesystem, dict) or set(filesystem) != {"type", "entries"} or filesystem["type"] != "restricted":
+        return False
+    entries = filesystem["entries"]
+    if not isinstance(entries, list) or len(entries) != 7:
+        return False
+    normalized = []
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) not in ({"path", "access"}, {"path", "access", "missing_path_behavior"}):
+            return False
+        path = entry["path"]
+        if not isinstance(path, dict): return False
+        if set(path) == {"type", "path"} and path["type"] == "path":
+            mapping = {str(target_root): "project_roots", **{str(target_root / name): "project_roots/" + name for name in (".git", ".agents", ".codex")}}
+            label = mapping.get(path["path"])
+        elif set(path) == {"type", "value"} and path["type"] == "special" and isinstance(path["value"], dict):
+            special = path["value"]
+            if set(special) not in ({"kind"}, {"kind", "subpath"}): return False
+            label = special["kind"] + ("/" + special["subpath"] if "subpath" in special else "")
+        else: return False
+        normalized.append((label, entry["access"], entry.get("missing_path_behavior")))
+    return set(normalized) == {("root", "read", None), ("project_roots", "write", None), ("slash_tmp", "write", None),
+        ("tmpdir", "write", None), *(("project_roots/" + name, "read", "skip") for name in (".git", ".agents", ".codex"))}
+
+
+def worker_native_helper_binding(program, binary, codex_home):
+    """Exact protected arg0 alias, descriptor-bound; no general link allowance."""
+    try:
+        relative = Path(program).relative_to(codex_home)
+        if re.fullmatch(r"tmp/arg0/codex-arg0[A-Za-z0-9]{6}/codex-linux-sandbox", str(relative)) is None:
+            return False
+        root, root_info = _open_absolute_directory_nofollow(codex_home)
+        stack = [(root, None, root_info)]
+        fields = ("st_dev", "st_ino", "st_uid", "st_gid", "st_mode", "st_nlink", "st_mtime_ns", "st_ctime_ns")
+        try:
+            for part in relative.parts[:-1]:
+                parent = stack[-1][0]
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+                stack.append((child, part, os.fstat(child)))
+            for descriptor, _name, info in stack:
+                if (info.st_uid != os.geteuid() or info.st_gid != os.getegid() or stat.S_IMODE(info.st_mode) != 0o700
+                        or descriptor_stat_flags(info) or descriptor_xattr_inventory(descriptor)):
+                    return False
+            parent = stack[-1][0]; leaf = relative.name
+            before = os.stat(leaf, dir_fd=parent, follow_symlinks=False)
+            if (not stat.S_ISLNK(before.st_mode) or stat.S_IMODE(before.st_mode) != 0o777
+                    or before.st_uid != os.geteuid() or before.st_gid != os.getegid() or before.st_nlink != 1
+                    or descriptor_stat_flags(before) or native_helper_link_xattr_size(Path(program)) != 0): return False
+            if os.readlink(leaf, dir_fd=parent) != str(binary): return False
+            after = os.stat(leaf, dir_fd=parent, follow_symlinks=False)
+            if any(getattr(before, key) != getattr(after, key) for key in fields): return False
+            for index, (descriptor, name, info) in enumerate(stack):
+                current = os.fstat(descriptor)
+                named = os.stat(codex_home, follow_symlinks=False) if index == 0 else os.stat(name, dir_fd=stack[index-1][0], follow_symlinks=False)
+                if any(getattr(current, key) != getattr(info, key) or getattr(named, key) != getattr(info, key) for key in fields): return False
+            return True
+        finally:
+            for descriptor, _name, _info in reversed(stack): os.close(descriptor)
+    except (ContractError, OSError, ValueError, TypeError):
+        return False
+
+
+def worker_sandbox_launcher_role(data, binary, target_root, private_tmp, environment):
+    """Pinned inner seccomp worker role, not shell/help/proc-mount evidence.
+
+    Parse only source-defined prefixes; the arbitrary command after the inner
+    delimiter is neither inspected nor exported as evidence of authorship.
+    """
+    try:
+        if not isinstance(data, bytes) or len(data) > 65536 or not data.endswith(b"\0"): return False
+        args = [part.decode("utf-8", errors="strict") for part in data[:-1].split(b"\0")]
+        if not 12 <= len(args) <= 2048 or args[:2] != ["bwrap", "--as-pid-1"]: return False
+        split = args.index("--")
+        outer, inner = args[2:split], args[split + 1:]
+        inner_split = inner.index("--")
+        prefix = inner[:inner_split]
+        if not inner[inner_split + 1:]: return False
+        program = prefix.pop(0)
+        if program != str(binary) and not worker_native_helper_binding(program, binary, Path(environment["CODEX_HOME"])):
+            return False
+        while prefix[:1] == ["--verify-fd-mount"]:
+            if len(prefix) < 2 or re.fullmatch(r"[0-9]{1,9}:/[^\0]*", prefix[1]) is None: return False
+            del prefix[:2]
+        if prefix[:2] != ["--sandbox-policy-cwd", str(target_root)]: return False
+        del prefix[:2]
+        if prefix[:1] == ["--command-cwd"]:
+            if prefix[:2] != ["--command-cwd", str(target_root)]: return False
+            del prefix[:2]
+        if len(prefix) != 3 or prefix[0] != "--permission-profile" or prefix[-1] != "--apply-seccomp-then-exec": return False
+        if not worker_permission_profile_matches(decode_json_object(prefix[1].encode(), "worker private permission profile"), target_root): return False
+        zero = {"--new-session", "--die-with-parent", "--unshare-user", "--unshare-pid", "--unshare-ipc", "--unshare-net"}
+        one = {"--cap-drop", "--chdir", "--dev", "--dir", "--perms", "--proc", "--remount-ro", "--tmpfs", "--argv0"}
+        two = {"--bind", "--bind-try", "--ro-bind", "--ro-bind-data", "--ro-bind-fd"}
+        seen = set(); mounts = []; index = 0
+        while index < len(outer):
+            option = outer[index]; count = 0 if option in zero else 1 if option in one else 2 if option in two else -1
+            if count < 0 or index + count >= len(outer): return False
+            values = outer[index + 1:index + 1 + count]; seen.add(option)
+            if option == "--cap-drop" and values != ["ALL"]: return False
+            if option == "--chdir" and values != [str(target_root)]: return False
+            if option == "--argv0" and values != ["codex-linux-sandbox"]: return False
+            if option in two: mounts.append((option, values[0], values[1]))
+            elif option in {"--dev", "--dir", "--proc", "--remount-ro", "--tmpfs"}:
+                mounts.append((option, None, values[0]))
+            index += count + 1
+        if not zero.issubset(seen) or "--cap-drop" not in seen or (program == str(binary) and "--argv0" not in seen): return False
+        registry = private_tmp / (SANDBOX_REGISTRY_PREFIX + str(os.geteuid()))
+        overlaps = lambda path: path == registry or path in registry.parents or registry in path.parents
+        exposure = "unqualified"
+        for index, (option, source, destination) in enumerate(mounts):
+            if not Path(destination).is_absolute() or os.path.normpath(destination) != destination or destination.startswith("//"): return False
+            if not overlaps(Path(destination)): continue
+            if option == "--ro-bind" and source == str(registry) and destination == str(registry) and exposure == "writable-host":
+                exposure = "exact-read-only"
+            elif option in ("--bind", "--bind-try") and source == destination and destination in (str(private_tmp), "/tmp"):
+                exposure = "writable-host"
+            elif exposure == "exact-read-only":
+                # A later covering mount/mask cannot inherit the earlier proof.
+                return False
+            else:
+                exposure = "unqualified"
+        return exposure == "exact-read-only"
+    except (ContractError, OSError, ValueError, TypeError, KeyError, IndexError, UnicodeError):
+        return False
+
+
+def _owned_linux_image_candidate(pid, birth, expected):
+    """Cheap same-birth inode filter; does not consume the expensive image cap."""
+    if _read_owned_linux_identity(pid)[3] != birth: raise ContractError("worker image candidate birth drift")
+    proc, _ = _open_absolute_directory_nofollow(Path("/proc"))
+    directory = image = None
+    try:
+        directory = os.open(str(pid), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=proc)
+        image = os.open("exe", os.O_RDONLY | os.O_NONBLOCK, dir_fd=directory)
+        info = os.fstat(image)
+        if _read_owned_linux_identity(pid)[3] != birth: raise ContractError("worker image candidate birth drift")
+        return (info.st_dev, info.st_ino) == tuple(expected["file"][:2])
+    finally:
+        if image is not None: os.close(image)
+        if directory is not None: os.close(directory)
+        os.close(proc)
+
+
+class WorkerLauncherImageObserver(OwnedLauncherImageObserver):
+    def __init__(self, expected):
+        super().__init__(expected)
+        self.sample_limit = 4096
+
+    def candidate(self, pid, birth):
+        return _owned_linux_image_candidate(pid, birth, self.expected)
+
+
+def worker_launcher_observer(binding, binary, target_root, private_tmp, environment):
+    expected = dict(binding)
+    expected["role_validator"] = lambda data: worker_sandbox_launcher_role(data, binary, target_root, private_tmp, environment)
+    def environment_matches(data):
+        pairs = data[:-1].split(b"\0"); found = []
+        for pair in pairs:
+            if pair.startswith(b"TMPDIR="): found.append(pair[7:])
+        return found == [os.fsencode(private_tmp)]
+    expected["environment_validator"] = environment_matches
+    return WorkerLauncherImageObserver(expected)
+
+
+def not_run_compatibility_shell(status="not-run"):
+    legacy = shell_environment_evidence(status, "not-run" if status == "not-run" else "observation-uncheckable")
+    return {"schema": "t11-shell-environment-evidence/v2", "authority": "adapter-authored",
+        "status": status, "reason_code": legacy["reason_code"], "environment_predicate": legacy,
+        "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+        "launcher": {"status": "not-run" if status == "not-run" else "UNCHECKABLE",
+            "path_binding_stable": False, "binary_sha256": "0" * 64, "help_sha256": "0" * 64,
+            "help_required_flags": False, "actual_image_observed": False, "image_samples": 0,
+            "image_error_count": 0},
+        "observation_binding": None, "window": None,
+        "pwd_present": None, "pwd_matches_exact_cwd": None}
+
+
+def validate_compatibility_shell(value):
+    exact_keys(value, tuple(not_run_compatibility_shell()), "shell v2")
+    if value["schema"] != "t11-shell-environment-evidence/v2" or value["authority"] != "adapter-authored" or value["source_contract_sha256"] != sha256_bytes(canonical_bytes(compatibility_contract())):
+        raise ContractError("shell v2 source/version/authority binding is invalid")
+    legacy = validate_shell_environment_evidence(value["environment_predicate"])
+    launcher = value["launcher"]
+    exact_keys(launcher, tuple(not_run_compatibility_shell()["launcher"]), "launcher evidence")
+    for key in ("path_binding_stable", "help_required_flags", "actual_image_observed"):
+        require_bool(launcher[key], "launcher " + key)
+    for key in ("binary_sha256", "help_sha256"):
+        require_string(launcher[key], key, SHA256_RE)
+    for key in ("image_samples", "image_error_count"):
+        if type(launcher[key]) is not int or not 0 <= launcher[key] <= 256:
+            raise ContractError("launcher sample count is invalid")
+    if value["observation_binding"] is None:
+        if value not in (not_run_compatibility_shell(), not_run_compatibility_shell("UNCHECKABLE")):
+            raise ContractError("unobserved shell v2 contains claims")
+        return value
+    if not _compatibility_binding(value["observation_binding"]):
+        raise ContractError("shell observation binding is invalid")
+    window = value["window"]
+    exact_keys(window, ("started_ms", "capture_started_ms", "capture_finished_ms", "classified_ms"), "shell window")
+    values = [window[key] for key in ("started_ms", "capture_started_ms", "capture_finished_ms", "classified_ms")]
+    if (any(not _compatibility_milliseconds(item) for item in values) or values != sorted(values)
+            or values[-1] - values[0] > COMPATIBILITY_MAX_AGE_MS or values[2] - values[1] > NETWORK_MAX_CAPTURE_MS_V2):
+        raise ContractError("shell observation window is stale or invalid")
+    for key in ("pwd_present", "pwd_matches_exact_cwd"):
+        if value[key] is not None and type(value[key]) is not bool:
+            raise ContractError("shell PWD predicate is invalid")
+    qualified = (launcher["path_binding_stable"] and launcher["help_required_flags"]
+        and launcher["actual_image_observed"] and launcher["image_samples"] > 0
+        and launcher["binary_sha256"] == compatibility_contract()["launcher_binary_sha256"]
+        and launcher["help_sha256"] == compatibility_contract()["launcher_help_sha256"])
+    if launcher["status"] != ("pass" if qualified else "UNCHECKABLE"):
+        raise ContractError("launcher qualification disagrees with observations")
+    if value["pwd_present"] is False and value["pwd_matches_exact_cwd"] is not None:
+        raise ContractError("absent PWD has a fabricated value comparison")
+    expected = legacy["status"] if qualified else "UNCHECKABLE"
+    expected_reason = legacy["reason_code"] if qualified else "observation-uncheckable"
+    if (value["status"], value["reason_code"]) != (expected, expected_reason):
+        raise ContractError("shell v2 gate disagrees with observed launcher/environment")
+    if value["status"] == "pass" and (type(value["pwd_present"]) is not bool or (value["pwd_present"] is True and value["pwd_matches_exact_cwd"] is not True)):
+        raise ContractError("passing PWD does not match the bound cwd")
+    return value
+
+
+def collect_compatibility_shell(binary, root, env, required, context, launch_diagnostics=None):
+    if context is None:
+        return not_run_compatibility_shell("UNCHECKABLE")
+    try:
+        recheck_compatibility_context(context, root, env)
+        before = _launcher_file_snapshot(root, env)
+        help_result = bounded_capture(["/usr/bin/bwrap", "--help"], root, env, stdout_limit=65536, stderr_limit=4096)
+        if (help_result.exit_code != 0 or help_result.signal_number is not None or help_result.timed_out
+                or help_result.stdout_overflow or help_result.stderr_overflow or help_result.stderr_size or not help_result.reaped):
+            raise ContractError("launcher help observation is unavailable")
+        help_digest = sha256_bytes(help_result.stdout)
+        flags = all(flag in help_result.stdout for flag in (b"--as-pid-1", b"--perms"))
+        if help_digest != compatibility_contract()["launcher_help_sha256"] or not flags:
+            raise ContractError("launcher help differs from the reviewed selection contract")
+        observer = OwnedLauncherImageObserver(before)
+        probe_env = dict(env)
+        probe_env["T11_FORBIDDEN_SENTINEL"] = "must-not-survive"
+        probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        env_info = os.stat("/usr/bin/env", follow_symlinks=False)
+        if not stat.S_ISREG(env_info.st_mode):
+            raise ContractError("environment probe executable is invalid")
+        argv = sandbox_probe_argv(binary, env, ["/usr/bin/env", "-0"], root)
+        start = _compatibility_clock_ms()
+        result = _capture_sandbox_probe(argv, root, probe_env, 65536, launch_diagnostics, "shell", observer)
+        finish = _compatibility_clock_ms()
+        after = _launcher_file_snapshot(root, env)
+        recheck_compatibility_context(context, root, env)
+        original = classify_shell_environment_result(result, required["shell_environment_policy.set"])
+        present = matches = None
+        if original["status"] == "pass":
+            present = False
+        if original["reason_code"] == "unexpected-key-set":
+            pwd = next((entry[4:] for entry in result.stdout.split(b"\0") if entry.startswith(b"PWD=")), None)
+            present = pwd is not None
+            if present:
+                matches = pwd == str(root).encode("utf-8")
+                compared = dict(required["shell_environment_policy.set"]); compared["PWD"] = str(root)
+                original = classify_shell_environment_result(result, compared)
+        qualified = before == after and observer.observed and observer.samples > 0
+        value = {"schema": "t11-shell-environment-evidence/v2", "authority": "adapter-authored",
+            "status": original["status"] if qualified else "UNCHECKABLE",
+            "reason_code": original["reason_code"] if qualified else "observation-uncheckable",
+            "environment_predicate": original, "source_contract_sha256": sha256_bytes(canonical_bytes(compatibility_contract())),
+            "launcher": {"status": "pass" if qualified else "UNCHECKABLE", "path_binding_stable": before == after,
+                "binary_sha256": before["digest"], "help_sha256": help_digest, "help_required_flags": flags,
+                "actual_image_observed": observer.observed, "image_samples": observer.samples,
+                "image_error_count": observer.errors},
+            "observation_binding": dict(context["binding"]),
+            "window": {"started_ms": context["started_ms"], "capture_started_ms": start,
+                "capture_finished_ms": finish, "classified_ms": _compatibility_clock_ms()},
+            "pwd_present": present, "pwd_matches_exact_cwd": matches}
+        return validate_compatibility_shell(value)
+    except (ContractError, OSError, KeyError, TypeError, ValueError, UnicodeError, subprocess.SubprocessError):
+        return not_run_compatibility_shell("UNCHECKABLE")
+
+
+def not_run_compatibility_network(status="not-run"):
+    return {"schema": "t11-network-sandbox-evidence/v2", "authority": "adapter-authored",
+        "status": status, "reason_code": "not-run" if status == "not-run" else "observation-uncheckable",
+        "proof_path": "none", "observation": None, "context": None, "classified_at_ms": None}
+
+
+def compatibility_network_record(observation, context, now_ms):
+    result = classify_network_observation_v2(observation, context, now_ms)
+    return {"schema": "t11-network-sandbox-evidence/v2", "authority": "adapter-authored",
+        "status": result["status"], "reason_code": result["reason_code"], "proof_path": result["proof_path"],
+        "observation": observation, "context": context, "classified_at_ms": now_ms}
+
+
+def validate_compatibility_network(value):
+    exact_keys(value, tuple(not_run_compatibility_network()), "network v2")
+    if value["schema"] != "t11-network-sandbox-evidence/v2" or value["authority"] != "adapter-authored":
+        raise ContractError("network v2 authority/version is invalid")
+    if value["observation"] is None:
+        if value not in (not_run_compatibility_network(), not_run_compatibility_network("UNCHECKABLE")):
+            raise ContractError("unobserved network v2 contains claims")
+        return value
+    observation, context = value["observation"], value["context"]
+    if not _compatibility_exact_keys(observation, NETWORK_OBSERVATION_KEYS_V2) or not _compatibility_exact_keys(context, NETWORK_CONTEXT_KEYS_V2):
+        raise ContractError("network v2 closed observation shape is invalid")
+    # This complete structural guard also protects non-success export. The
+    # classifier alone is not a sanitizer for malformed raw caller values.
+    for key in ("binding",):
+        if not _compatibility_binding(observation[key]):
+            raise ContractError("network observation binding is invalid")
+    for key in ("expected_binding", "control_binding", "capture_binding"):
+        if not _compatibility_binding(context[key]):
+            raise ContractError("network context binding is invalid")
+    for key in ("control_closed_ms", "probe_started_ms", "probe_finished_ms"):
+        if not _compatibility_milliseconds(observation[key]):
+            raise ContractError("network observation time is invalid")
+    for key in ("observation_started_ms", "observation_finished_ms"):
+        if not _compatibility_milliseconds(context[key]):
+            raise ContractError("network context time is invalid")
+    if not _compatibility_milliseconds(value["classified_at_ms"]):
+        raise ContractError("network classification time is invalid")
+    for key in ("control_connected", "control_accepted", "control_peer_matches", "control_closed", "timed_out", "stdout_overflow", "stderr_overflow", "reaped"):
+        require_bool(observation[key], "network " + key)
+    for key in ("parent_netns_sha256", "sandbox_netns_sha256"):
+        require_string(observation[key], key, SHA256_RE)
+    enums = {"network_marker_status": ("exact-1", "missing", "mismatch", "UNCHECKABLE"),
+        "socket_create_status": ("created", "denied", "UNCHECKABLE"),
+        "socket_create_errno": (*NETWORK_SOCKET_DENIALS_V2, "none", "unapproved"),
+        "connect_status": ("denied", "succeeded", "not-attempted", "UNCHECKABLE"),
+        "connect_errno": (*NETWORK_CONNECT_DENIALS_V2, "none", "unapproved"),
+        "socket_close_status": ("pass", "not-needed", "UNCHECKABLE")}
+    for key, allowed in enums.items():
+        if not isinstance(observation[key], str) or observation[key] not in allowed:
+            raise ContractError("network enum is invalid")
+    for key, maximum in (("exit_code", 255), ("signal", 64)):
+        value_number = observation[key]
+        if value_number is not None and (type(value_number) is not int or not 0 <= value_number <= maximum):
+            raise ContractError("network process number is invalid")
+    if type(observation["stderr_size"]) is not int or not 0 <= observation["stderr_size"] <= 4097:
+        raise ContractError("network bounded stderr count is invalid")
+    derived = compatibility_network_record(observation, context, value["classified_at_ms"])
+    if value != derived:
+        raise ContractError("network v2 derived acceptance disagrees")
+    return value
+
+
+NETWORK_SANDBOX_PROBE_SCRIPT_V2 = (
+    "import errno,hashlib,json,os,re,socket,sys\n"
+    "ns='0'*64\n"
+    "try:\n"
+    " value=os.readlink('/proc/self/ns/net')\n"
+    " if re.fullmatch(r'net:\\[[0-9]+\\]',value): ns=hashlib.sha256(value.encode('ascii')).hexdigest()\n"
+    "except (OSError,UnicodeError): pass\n"
+    "marker=os.environ.get('CODEX_SANDBOX_NETWORK_DISABLED')\n"
+    "r={'sandbox_netns_sha256':ns,'network_marker_status':'exact-1' if marker=='1' else ('missing' if marker is None else 'mismatch'),'socket_create_status':'UNCHECKABLE','socket_create_errno':'unapproved','connect_status':'not-attempted','connect_errno':'none','socket_close_status':'not-needed'}\n"
+    "try: sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)\n"
+    "except OSError as e:\n"
+    " name=errno.errorcode.get(e.errno,'unapproved')\n"
+    " if name in ('EPERM','EACCES'): r.update(socket_create_status='denied',socket_create_errno=name)\n"
+    "else:\n"
+    " r.update(socket_create_status='created',socket_create_errno='none')\n"
+    " try:\n"
+    "  try: sock.settimeout(2)\n"
+    "  except OSError: r.update(connect_status='UNCHECKABLE',connect_errno='unapproved')\n"
+    "  else:\n"
+    "   try: sock.connect(('127.0.0.1',int(sys.argv[1])))\n"
+    "   except OSError as e:\n"
+    "    name=errno.errorcode.get(e.errno,'unapproved')\n"
+    "    r.update(connect_status='denied',connect_errno=name if name in ('EPERM','EACCES','ENETUNREACH','EHOSTUNREACH','ECONNREFUSED') else 'unapproved')\n"
+    "   else: r.update(connect_status='succeeded',connect_errno='none')\n"
+    " finally:\n"
+    "  try: sock.close()\n"
+    "  except OSError: r['socket_close_status']='UNCHECKABLE'\n"
+    "  else: r['socket_close_status']='pass'\n"
+    "sys.stdout.write(json.dumps(r,sort_keys=True,separators=(',',':'))+'\\n')\n"
+)
+
+
+def collect_compatibility_network(binary, root, env, context, launch_diagnostics=None):
+    if context is None:
+        return not_run_compatibility_network("UNCHECKABLE")
+    listener = control = accepted = None
+    try:
+        recheck_compatibility_context(context, root, env)
+        binding = dict(context["binding"])
+        parent_ns = _network_namespace_sha256()
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.settimeout(2)
+        listener.bind(("127.0.0.1", 0)); listener.listen(2)
+        port = listener.getsockname()[1]
+        control = socket.create_connection(("127.0.0.1", port), timeout=2)
+        peer = control.getsockname()
+        accepted, observed_peer = listener.accept()
+        if observed_peer != peer:
+            raise ContractError("network control peer mismatch")
+        accepted.close(); accepted = None
+        control.close(); control = None
+        control_closed = _compatibility_clock_ms()
+        control_binding = dict(context["binding"])
+        recheck_compatibility_context(context, root, env)
+        capture_binding = dict(context["binding"])
+        probe_env = dict(env); probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        argv = sandbox_probe_argv(binary, env,
+            [str(Path(sys.executable).resolve()), "-I", "-c", NETWORK_SANDBOX_PROBE_SCRIPT_V2, str(port)], root)
+        start = _compatibility_clock_ms()
+        captured = _capture_sandbox_probe(argv, root, probe_env, 4096, launch_diagnostics, "network")
+        finish = _compatibility_clock_ms()
+        child = {"sandbox_netns_sha256": "0" * 64, "network_marker_status": "UNCHECKABLE",
+            "socket_create_status": "UNCHECKABLE", "socket_create_errno": "unapproved",
+            "connect_status": "UNCHECKABLE", "connect_errno": "unapproved", "socket_close_status": "UNCHECKABLE"}
+        try:
+            decoded_child = decode_json_object(captured.stdout, "network v2 child", {"json_depth": 3, "json_nodes": 24, "json_string_bytes": 128})
+            exact_keys(decoded_child, tuple(child), "network child v2")
+            # Validate the closed vocabulary before retaining any child strings.
+            vocabulary = {"network_marker_status": ("exact-1", "missing", "mismatch", "UNCHECKABLE"),
+                "socket_create_status": ("created", "denied", "UNCHECKABLE"),
+                "socket_create_errno": (*NETWORK_SOCKET_DENIALS_V2, "none", "unapproved"),
+                "connect_status": ("denied", "succeeded", "not-attempted", "UNCHECKABLE"),
+                "connect_errno": (*NETWORK_CONNECT_DENIALS_V2, "none", "unapproved"),
+                "socket_close_status": ("pass", "not-needed", "UNCHECKABLE")}
+            if (all(type(decoded_child[key]) is str and decoded_child[key] in choices for key, choices in vocabulary.items())
+                    and isinstance(decoded_child["sandbox_netns_sha256"], str)
+                    and SHA256_RE.fullmatch(decoded_child["sandbox_netns_sha256"]) is not None):
+                child = decoded_child
+        except (ContractError, UnicodeError, ValueError, TypeError):
+            pass
+        recheck_compatibility_context(context, root, env)
+        observation = {**child, "binding": binding,
+            "control_connected": True, "control_accepted": True,
+            "control_peer_matches": observed_peer == peer, "control_closed": control is None and accepted is None,
+            "parent_netns_sha256": parent_ns, "exit_code": captured.exit_code,
+            "signal": captured.signal_number, "timed_out": captured.timed_out,
+            "stdout_overflow": captured.stdout_overflow, "stderr_overflow": captured.stderr_overflow,
+            "stderr_size": min(captured.stderr_size, 4097), "reaped": captured.reaped,
+            "control_closed_ms": control_closed, "probe_started_ms": start, "probe_finished_ms": finish}
+        public_context = {"expected_binding": binding, "control_binding": control_binding,
+            "capture_binding": capture_binding, "observation_started_ms": context["started_ms"],
+            "observation_finished_ms": _compatibility_clock_ms()}
+        return validate_compatibility_network(compatibility_network_record(observation, public_context, _compatibility_clock_ms()))
+    except (ContractError, OSError, subprocess.SubprocessError, UnicodeError, ValueError, TypeError, KeyError):
+        return not_run_compatibility_network("UNCHECKABLE")
+    finally:
+        for owned_socket in (accepted, control, listener):
+            if owned_socket is not None:
+                try: owned_socket.close()
+                except OSError: pass
+
+
 def _network_namespace_sha256() -> str:
     identity = os.readlink("/proc/self/ns/net")
     if re.fullmatch(r"net:\[[0-9]+\]", identity) is None:
@@ -5828,8 +7887,13 @@ def _network_namespace_sha256() -> str:
     return sha256_bytes(identity.encode("ascii"))
 
 
-def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, str]) -> Dict[str, Any]:
+def network_sandbox_behavior_probe(
+    binary: Path, root: Path, env: Mapping[str, str],
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Bind control acceptance, namespace separation, marker, and denial."""
+    if launch_diagnostics is not None:
+        launch_diagnostics["network"] = launch_diagnostic_record("probe-preflight-uncheckable")
     try:
         parent_namespace_sha256 = _network_namespace_sha256()
     except (ContractError, OSError, UnicodeError):
@@ -5892,6 +7956,8 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
     try:
         probe_env = dict(env)
         probe_env[SANDBOX_NETWORK_MARKER] = "must-be-overridden"
+        if launch_diagnostics is not None:
+            launch_diagnostics["network"] = launch_diagnostic_record("argv-policy-failed")
         argv = sandbox_probe_argv(
             binary, env,
             [
@@ -5900,9 +7966,8 @@ def network_sandbox_behavior_probe(binary: Path, root: Path, env: Mapping[str, s
             ],
             root,
         )
-        result = bounded_capture(
-            argv, root, probe_env, timeout=15,
-            stdout_limit=4_096, stderr_limit=4_096,
+        result = _capture_sandbox_probe(
+            argv, root, probe_env, 4_096, launch_diagnostics, "network",
         )
     except (ContractError, OSError, subprocess.SubprocessError, ValueError):
         return network_sandbox_evidence(
@@ -5926,8 +7991,13 @@ def probe_runtime_evidence(
     auth_required: bool = True,
     prerequisite_evidence: Optional[Mapping[str, Any]] = None,
     require_private_projection: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
+    compatibility_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Collect bounded independent lanes; no lane claims effective config."""
+    if launch_diagnostics is not None and auth_required:
+        raise ContractError("launch diagnostics is unavailable to authenticated probes")
+    diagnostic_options = {"launch_diagnostics": launch_diagnostics} if launch_diagnostics is not None else {}
     prerequisite = validate_stage_a1_prerequisite_evidence(
         dict(prerequisite_evidence)
         if prerequisite_evidence is not None
@@ -5968,31 +8038,21 @@ def probe_runtime_evidence(
     )
     prerequisite_pass = prerequisite["status"] == "pass"
     if not prerequisite_pass:
-        shell_evidence = shell_environment_evidence("not-run", "not-run")
+        shell_evidence = not_run_compatibility_shell()
     elif required is None:
-        shell_evidence = shell_environment_evidence(
-            "UNCHECKABLE", "observation-uncheckable"
-        )
+        shell_evidence = not_run_compatibility_shell("UNCHECKABLE")
     else:
         try:
-            shell_evidence = shell_environment_probe(binary, root, env, required)
+            shell_evidence = collect_compatibility_shell(binary, root, env, required, compatibility_context, **diagnostic_options)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-            shell_evidence = shell_environment_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
+            shell_evidence = not_run_compatibility_shell("UNCHECKABLE")
     if not prerequisite_pass:
-        network_evidence = network_sandbox_evidence(
-            "not-run", "not-run", marker_status="not-run",
-            connect_status="not-run", connect_errno="not-run",
-            process_cleanup_status="not-run",
-        )
+        network_evidence = not_run_compatibility_network()
     else:
         try:
-            network_evidence = network_sandbox_behavior_probe(binary, root, env)
+            network_evidence = collect_compatibility_network(binary, root, env, compatibility_context, **diagnostic_options)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
-            network_evidence = network_sandbox_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
+            network_evidence = not_run_compatibility_network("UNCHECKABLE")
     shell_status = shell_evidence["status"]
     network_status = network_evidence["status"]
     cleanup_status = process_cleanup_probe(root, env)
@@ -6015,6 +8075,7 @@ def probe_runtime_evidence(
             "shell_environment_behavior": shell_evidence,
             "network_sandbox_behavior": network_evidence,
             "bubblewrap_prerequisite": prerequisite,
+            "sandbox_housekeeping": not_run_compatibility_housekeeping(),
             "lane_statuses": {
                 "provider_isolation_status": "not-run",
                 "mount_boundary_status": "not-run",
@@ -6052,14 +8113,9 @@ def not_run_runtime_evidence() -> Dict[str, Any]:
             "rules_bypass_absent": False,
             "dynamic_task_data_stdin_only": False,
         },
-        "shell_environment_behavior": shell_environment_evidence(
-            "not-run", "not-run"
-        ),
-        "network_sandbox_behavior": network_sandbox_evidence(
-            "not-run", "not-run", marker_status="not-run",
-            connect_status="not-run", connect_errno="not-run",
-            process_cleanup_status="not-run",
-        ),
+        "shell_environment_behavior": not_run_compatibility_shell(),
+        "network_sandbox_behavior": not_run_compatibility_network(),
+        "sandbox_housekeeping": not_run_compatibility_housekeeping(),
         "bubblewrap_prerequisite": not_run_stage_a1_prerequisite_evidence(),
         "lane_statuses": {
             "provider_isolation_status": "not-run",
@@ -6212,9 +8268,7 @@ def observe_colima_provider_evidence(
 
 def _unavailable_runtime_profile(model: str, reasoning: str, probe_only: bool = False) -> Dict[str, Any]:
     evidence = not_run_runtime_evidence()
-    evidence["shell_environment_behavior"] = shell_environment_evidence(
-        "UNCHECKABLE", "observation-uncheckable"
-    )
+    evidence["shell_environment_behavior"] = not_run_compatibility_shell("UNCHECKABLE")
     evidence["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
     evidence["lane_statuses"]["config_status"] = "UNCHECKABLE"
     return {
@@ -6242,11 +8296,12 @@ def _observe_runtime_profile_bound(
     provider_input: Optional[Mapping[str, Any]],
     layout: Optional[ColimaRuntimeLayout],
     probe_only: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     try:
         return _observe_runtime_profile_bound_inner(
             repository_root, model, reasoning, binary, work, env,
-            provider_input, layout, probe_only,
+            provider_input, layout, probe_only, launch_diagnostics,
         )
     except ProfileProbeError:
         raise
@@ -6266,7 +8321,40 @@ def _observe_runtime_profile_bound_inner(
     provider_input: Optional[Mapping[str, Any]],
     layout: Optional[ColimaRuntimeLayout],
     probe_only: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    if getattr(_PROFILE_REAP_OBSERVATION, "sample", None) is not None:
+        raise ContractError("nested profile reap observation is unsupported")
+    sample = {"requested": 0, "reaped": 0, "unconfirmed": 0}
+    started_ms = _compatibility_clock_ms()
+    before = (observe_sandbox_housekeeping(Path(env["TMPDIR"]), expected_uid=os.getuid(), expected_gid=os.getgid())
+        if isinstance(env.get("TMPDIR"), str) else {"status": "UNCHECKABLE", "inventory": None})
+    _PROFILE_REAP_OBSERVATION.sample = sample
+    try:
+        return _observe_runtime_profile_measured(
+            repository_root, model, reasoning, binary, work, env,
+            provider_input, layout, probe_only, launch_diagnostics,
+            before, sample, started_ms,
+        )
+    finally:
+        del _PROFILE_REAP_OBSERVATION.sample
+
+
+def _observe_runtime_profile_measured(
+    repository_root, model, reasoning, binary, work, env, provider_input, layout,
+    probe_only, launch_diagnostics, housekeeping_before, process_sample, observation_started_ms,
+):
+    # Diagnostics is strictly supplemental unauthenticated Stage A transport.
+    # Authenticate nothing: the existing bounded status sensor is read-only.
+    # Establish absence before capturing any sandbox stderr, and reuse that
+    # one auth observation below rather than invoking another auth process.
+    diagnostic_auth = None
+    if launch_diagnostics is not None:
+        if not probe_only or provider_input is None or layout is None:
+            raise ContractError("launch diagnostics requires the approved probe-only provider")
+        diagnostic_auth = auth_class(binary, work, env)
+        if diagnostic_auth != "unavailable":
+            raise ContractError("launch diagnostics requires unavailable authentication")
     try:
         version_result = bounded_capture([str(binary), "--version"], work, env)
         help_result = bounded_capture([str(binary), "exec", "--help"], work, env)
@@ -6290,13 +8378,29 @@ def _observe_runtime_profile_bound_inner(
         raise ProfileProbeError(
             "client-evidence", "version-help-uncheckable",
         ) from None
+    compatibility_context = None
+    containment = not_run_containment_provider_evidence()
+    if release_class == "stable" and provider_input is not None and layout is not None:
+        try:
+            containment = observe_colima_provider_evidence(
+                repository_root, provider_input, layout, binary_sha256, version_output, env)
+            compatibility_context = make_compatibility_context(containment, repository_root, work, env)
+            compatibility_context["started_ms"] = observation_started_ms
+            recheck_compatibility_context(compatibility_context, work, env)
+        except PROFILE_BOUNDARY_EXCEPTIONS:
+            # Preserve independently collected provider facts even when an
+            # execution-binding predicate cannot be established.
+            compatibility_context = None
     if release_class == "stable":
         try:
             prerequisite = observe_stage_a1_prerequisite(work, env)
+            diagnostic_options = {"launch_diagnostics": launch_diagnostics} if launch_diagnostics is not None else {}
             probe = probe_runtime_evidence(
                 binary, work, env, repository_root, auth_required=not probe_only,
                 prerequisite_evidence=prerequisite,
                 require_private_projection=provider_input is not None,
+                compatibility_context=compatibility_context,
+                **diagnostic_options,
             )
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
             uncheckable = not_run_runtime_evidence()
@@ -6306,12 +8410,8 @@ def _observe_runtime_profile_bound_inner(
             ):
                 uncheckable["lane_statuses"][lane] = "UNCHECKABLE"
             uncheckable["diagnostic_health"]["status"] = "UNCHECKABLE"
-            uncheckable["shell_environment_behavior"] = shell_environment_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
-            uncheckable["network_sandbox_behavior"] = network_sandbox_evidence(
-                "UNCHECKABLE", "observation-uncheckable"
-            )
+            uncheckable["shell_environment_behavior"] = not_run_compatibility_shell("UNCHECKABLE")
+            uncheckable["network_sandbox_behavior"] = not_run_compatibility_network("UNCHECKABLE")
             probe = {
                 "documented_config_keys_probe": "UNCHECKABLE",
                 "shell_environment_probe": "UNCHECKABLE",
@@ -6320,26 +8420,21 @@ def _observe_runtime_profile_bound_inner(
         config_probe = probe["documented_config_keys_probe"]
         shell_probe = probe["shell_environment_probe"]
         evidence = probe["evidence"]
-        if provider_input is not None and layout is not None:
-            try:
-                containment = observe_colima_provider_evidence(
-                    repository_root, provider_input, layout, binary_sha256,
-                    version_output, env,
-                )
-            except PROFILE_BOUNDARY_EXCEPTIONS:
-                raise ProfileProbeError(
-                    "provider-evidence", "observation-invalid",
-                ) from None
-            evidence["containment_provider"] = containment
-            evidence["lane_statuses"]["provider_isolation_status"] = containment["status"]
-            evidence["lane_statuses"]["mount_boundary_status"] = mount_boundary_status_from_provider(containment)
-        else:
-            containment = not_run_containment_provider_evidence()
-            evidence["containment_provider"] = containment
+        if compatibility_context is None:
+            evidence["shell_environment_behavior"] = not_run_compatibility_shell("UNCHECKABLE")
+            evidence["network_sandbox_behavior"] = not_run_compatibility_network("UNCHECKABLE")
+            shell_probe = "UNCHECKABLE"
+            evidence["lane_statuses"]["shell_environment_status"] = "UNCHECKABLE"
+            evidence["lane_statuses"]["codex_sandbox_network_status"] = "UNCHECKABLE"
+        evidence["containment_provider"] = containment
+        evidence["lane_statuses"]["provider_isolation_status"] = containment["status"]
+        evidence["lane_statuses"]["mount_boundary_status"] = mount_boundary_status_from_provider(containment)
     else:
         config_probe, shell_probe = "not-proven", "not-run"
         evidence = not_run_runtime_evidence()
-    if release_class == "stable":
+    if diagnostic_auth is not None:
+        observed_auth_class = diagnostic_auth
+    elif release_class == "stable":
         try:
             observed_auth_class = auth_class(binary, work, env)
         except (ContractError, OSError, subprocess.SubprocessError, KeyError, TypeError, ValueError):
@@ -6347,10 +8442,22 @@ def _observe_runtime_profile_bound_inner(
     else:
         observed_auth_class = "unavailable"
     evidence["lane_statuses"]["auth_status"] = observed_auth_class
+    if compatibility_context is not None:
+        try:
+            recheck_compatibility_context(compatibility_context, work, env)
+            after = (observe_sandbox_housekeeping(Path(env["TMPDIR"]), expected_uid=os.getuid(), expected_gid=os.getgid())
+                if isinstance(env.get("TMPDIR"), str) else {"status": "UNCHECKABLE", "inventory": None})
+            evidence["sandbox_housekeeping"] = compatibility_housekeeping_record(
+                housekeeping_before, after, process_sample, compatibility_context, _compatibility_clock_ms())
+        except PROFILE_BOUNDARY_EXCEPTIONS:
+            evidence["sandbox_housekeeping"] = not_run_compatibility_housekeeping("UNCHECKABLE")
+    elif release_class == "stable":
+        evidence["sandbox_housekeeping"] = not_run_compatibility_housekeeping("UNCHECKABLE")
     non_auth_lanes = [evidence["lane_statuses"][name] for name in RUNTIME_LANE_KEYS[:-1]]
     prerequisite_status = evidence["bubblewrap_prerequisite"]["status"]
     config_ok = (
         prerequisite_status == "pass"
+        and evidence["sandbox_housekeeping"]["status"] == "pass"
         and all(value == "pass" for value in non_auth_lanes)
     )
     caps = {
@@ -6376,6 +8483,8 @@ def _observe_runtime_profile_bound_inner(
         profile_status, reason = "UNCHECKABLE", "bubblewrap prerequisite qualification is uncheckable"
     elif prerequisite_status == "fail":
         profile_status, reason = "profile-drift", "bubblewrap prerequisite qualification failed"
+    elif evidence["sandbox_housekeeping"]["status"] != "pass":
+        profile_status, reason = "UNCHECKABLE", "sandbox TMP housekeeping is not quiescent or not qualified"
     elif any(value in ("not-run", "UNCHECKABLE") for value in non_auth_lanes):
         profile_status, reason = "UNCHECKABLE", "one or more independent Stage A runtime lanes are uncheckable"
     elif any(value == "fail" for value in non_auth_lanes):
@@ -6409,7 +8518,13 @@ def _observe_runtime_profile_bound_inner(
     return profile
 
 
-def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, provider_input: Optional[Mapping[str, Any]] = None, probe_only: bool = False) -> Dict[str, Any]:
+def observe_runtime_profile(
+    repository_root: Path, model: str, reasoning: str,
+    provider_input: Optional[Mapping[str, Any]] = None, probe_only: bool = False,
+    launch_diagnostics: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    if launch_diagnostics is not None and (not probe_only or provider_input is None):
+        raise ContractError("launch diagnostics requires the approved probe-only provider")
     try:
         require_runtime_fs_capabilities()
     except PROFILE_BOUNDARY_EXCEPTIONS:
@@ -6432,7 +8547,7 @@ def observe_runtime_profile(repository_root: Path, model: str, reasoning: str, p
             return _unavailable_runtime_profile(model, reasoning, probe_only)
         env = minimal_environment(binary, layout.home, layout.tmp)
         return _observe_runtime_profile_bound(
-            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout, probe_only,
+            repository_root, model, reasoning, binary, layout.work, env, provider_input, layout, probe_only, launch_diagnostics,
         )
     resolved = resolve_executable_from_path("codex", {"PATH": REVIEWED_SENSOR_PATH})
     if resolved is None:
@@ -6505,6 +8620,9 @@ def cli_verify(repository_root: Path) -> Dict[str, Any]:
 
 
 def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, Any]:
+    diagnostic_requested = getattr(args, "launch_diagnostics", False)
+    if diagnostic_requested and not args.probe_only:
+        raise ContractError("launch diagnostics requires probe-only mode")
     try:
         require_runtime_fs_capabilities()
     except PROFILE_BOUNDARY_EXCEPTIONS:
@@ -6518,10 +8636,19 @@ def cli_profile(args: argparse.Namespace, repository_root: Path) -> Dict[str, An
         validate_colima_provider_input(provider_input)
     except PROFILE_BOUNDARY_EXCEPTIONS:
         raise ProfileProbeError("provider-input", "input-invalid") from None
-    return observe_runtime_profile(
+    diagnostics = {name: launch_diagnostic_record() for name in ("shell", "network")} if diagnostic_requested else None
+    diagnostic_options = {"launch_diagnostics": diagnostics} if diagnostics is not None else {}
+    profile = observe_runtime_profile(
         repository_root, args.model, args.reasoning_effort, provider_input,
         probe_only=args.probe_only,
+        **diagnostic_options,
     )
+    if diagnostics is None:
+        return profile
+    return validate_launch_diagnostics_wrapper({
+        "schema": LAUNCH_DIAGNOSTIC_SCHEMA, "authority": "adapter-authored",
+        "runtime_profile": profile, "launch_diagnostics": diagnostics,
+    })
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -6542,6 +8669,10 @@ def build_parser() -> argparse.ArgumentParser:
     profile_parser.add_argument(
         "--probe-only", action="store_true",
         help="observe unauthenticated Stage A lanes; never authorize live execution",
+    )
+    profile_parser.add_argument(
+        "--launch-diagnostics", action="store_true",
+        help="opt in to safe supplemental launch classifications; requires unauthenticated probe-only",
     )
     return parser
 

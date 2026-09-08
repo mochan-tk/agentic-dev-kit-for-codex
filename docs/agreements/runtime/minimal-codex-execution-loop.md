@@ -1,12 +1,14 @@
 # Minimal Codex execution loop
 
-This document is the human-readable companion to the T11 runtime schemas and
-deterministic offline harness. The machine schemas are authoritative for
+This document is the human-readable companion to the accepted T11 deterministic
+offline harness and active T12 live-qualification frontier. The machine schemas are authoritative for
 record shape; deterministic code and current Git/GitHub evidence are
 authoritative for execution facts. The approved
 [T11 agreement v2](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734)
-defers live Codex compatibility and runtime-receipt application to planning-only
-[T12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25).
+deferred live Codex compatibility and runtime-receipt application to
+[T12](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25), which
+is the sole active frontier in this tree under its
+[activation amendment](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5480062206).
 
 ```text
 runtime_harness = minimal-offline-implemented
@@ -18,7 +20,217 @@ repository = incomplete
 release_blocked = true
 ```
 
+That block is the immutable accepted T11 history. The Phase 2 origin remains
+commit `36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2`, tree
+`1c1f46ad20dd289a713663c84eaf1dbb62840deb`; only T12 uses accepted T11 merge
+`4a85a007ed62795b48bcbce04f6b7e5482e71e82`, tree
+`49afe003de2bbb04249d6f4c36ea6462c271c26f`, as its Task base. Current T12
+live outcomes are external GitHub state rather than mutable truth embedded in
+this tree.
+
 ## Authority boundaries
+
+### Current finite worker and completion amendment (2026-09-08)
+
+The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437),
+canonical body SHA-256 `764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1`,
+supersedes only the prior worker-TMP equality/latch described below. It keeps
+the same 24 owned paths, Phase/Task bases, all prior commits and historical
+observations. The earlier 2/2 Stage A ledger remains consumed.
+
+Apply the existing finite root/UID registry/empty-lock table to the same private
+TMP immediately before and after the actual logical worker. Keep root, lock,
+owner, mode, link, byte, xattr/flag and no-follow bindings unchanged except the
+already enumerated registry creation or cleaned-marker directory times. Require
+the original bounded worker process result to confirm reap. Setup before this
+interval and verification after it still require exact TMP equality with the
+actual respective endpoint; a later snapshot cannot absorb unknown changes.
+Unknown markers, partial state, links, special files, binding drift or cleanup
+uncertainty never pass, and no data is deleted or relocated to obtain a pass.
+The live synthetic execution directory has no automatic finalizer: it is
+retained on every non-success, including setup, worker or later verifier
+uncertainty. Only a completely validated success after those subprocesses
+enables its normal inner cleanup; otherwise the unchanged outer provider owns
+cleanup/absence decisions. A retained record alone never enables deletion.
+
+Qualification is worker-specific: an optional read-only observation on its
+original owned-process lineage must witness the pinned bwrap image with the
+source-defined inner seccomp worker role, exact private cwd/TMP binding and the
+closed restricted-network workspace-write permission set. Allow only the
+source-equivalent symbolic/project-root-to-exact-cwd materialization. A pinned
+native arg0 fallback alias must pass its exact no-follow parent/link binding.
+Validate ordered source-equal writable TMP exposure followed by its exact
+read-only registry bind; a later covering bind/mask invalidates that proof.
+Do not inspect the model-selected payload as an authorship assertion. Source:
+official Codex `90854393966b21e9ebfd21b122334eb09a20c93d`,
+`protocol/src/models.rs`, `protocol/src/permissions.rs`,
+`linux-sandbox/src/linux_run_main.rs`, `bwrap.rs` and `launcher.rs`.
+
+The shell `env -0`, help and inert preflight witnesses do not prove a worker
+backend. Cheap owned-image candidate checks do not exhaust the qualified image
+budget while the Codex leader waits; at most 4096 qualified image attempts are
+retained as bounded counts. No positive, a missed lifetime or another unexamined
+backend is non-success. The witness is existential, not an all-tool execution
+trace. The owner accepts bounded pre/post evidence, not authenticated authorship
+or full intermediate-write/process-lifetime tracing. Do not force a worker tool,
+prompt or backend to manufacture a passing witness.
+
+The closed supplemental `t12-worker-boundary/v1` record is the fifth live native
+artifact under the owned receipt schema; the pre-worker profile and unowned
+event/result schemas are unchanged. It binds the original full profile,
+envelope, provider attempt and public head/tree, finite observation digests,
+worker-specific launcher facts, original process status/reap and final result
+digest. Its mandatory durable sink retains provisional safe facts before JSONL
+parsing/Git/verifier operations, including non-success and unknown process
+outcomes; null counts/digests are never reported as measured zero. Only a
+successful final result binds the result digest. The worker window uses the
+existing 600-second timeout plus at most 30 seconds for existing cleanup,
+without changing any command timeout/grace. Native receipt validation requires
+this complete proof regardless of an entry-point readiness helper.
+
+The new external successor has a distinct owner-decision-bound ledger: at most
+one Stage A orchestration (consumed at entry even before VM preflight), and only
+after its exact execution-set-bound full unauthenticated qualification plus
+cleanup, at most one different fresh Stage B VM. Stage B pauses for manual owner
+device authentication and explicit one-worker confirmation, then requires exact
+auth classification and a fresh complete profile. The existing 600-second human
+pause limit, 600-second worker bound, model/effort, capture limits and B1/B2
+cleanup remain. No preparation test consumes an allowance; no automatic retry
+or new source directory resets one. Frozen sources/inputs and exact public CI
+must match. Missing account-setting observation or less than 8 GiB free space
+blocks actuation. This tree contains no measured success claim.
+
+Preserve receipt chronology: worker, deterministic verification, dry-run,
+exact head/tree/check read-back, one logical apply with uncertain-POST read-back
+reconciliation, canonical receipt read-back, provider/runtime destruction,
+all absence observations, and one separate lifecycle-completion comment.
+Cancellation or expired authentication pause still performs protected cleanup;
+observation errors are not absence. VM destruction is not account revocation.
+T12 remains incomplete until its actual durable evidence and owner judgment.
+
+### Prior combined compatibility contract (2026-09-08)
+
+The [supplementary owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698)
+(canonical body SHA-256 `ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b`)
+authorizes only bounded offline production integration. T12 owns 24 exact paths;
+accepted T11 retains 18. The original 21-path activation, Phase 2 origin and T12
+base above remain immutable history. Stage A remains 2/2 consumed: new code,
+record versions, helper hashes and heads create no controller/VM allowance.
+
+The outer `runtime-profile/v1` retains its name while its closed evidence now
+requires `t11-shell-environment-evidence/v2`, `t11-network-sandbox-evidence/v2`
+and `t12-sandbox-housekeeping-observation/v1`. Original historical observations
+are not rewritten under these new nested versions. The committed declared
+profile is policy intent/non-success, not a fresh measurement.
+
+Each actual collector binds current independently read Git head/tree, a complete
+validated provider identity, one sensor observation ID, the exact private cwd,
+reviewed configuration and explicitly supplied environment. Both before/after
+binding reads must hold. Historical candidate head/tree constants are review
+provenance only, never the production execution revision.
+
+#### Launcher-qualified shell environment
+
+Only `PWD` may extend the existing exact required-key/runtime-marker contract.
+Its value must equal the exact bound cwd in memory; no value is exported.
+Required values remain exact, the forbidden sentinel absent, and
+`CODEX_SANDBOX_NETWORK_DISABLED=1`; unknown or secret-shaped keys fail.
+
+Pin official Codex source `90854393966b21e9ebfd21b122334eb09a20c93d`, the existing
+qualified Ubuntu bubblewrap package `0.9.0-1ubuntu0.1`, binary SHA-256
+`ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8`, and help SHA-256
+`2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d`.
+The configuration-intent compatibility digest includes the exact reviewed
+source/package/help/policy contract. No version, PATH or package is changed to
+obtain a pass.
+
+Observe the actual PATH-selected file, stable no-follow directory/file bindings,
+binary digest and required help flags, then corroborate with the pinned source
+selection semantics. Those observations alone do not prove actual selection.
+An optional read-only callback on the existing owned descendant tracker must
+witness the actual pinned executable in its sandbox-launcher role. First
+admission of a child requires fresh same-birth parent/child/parent identity
+reads; an old process-table parent PID cannot establish ownership after reuse.
+The observed local argv must have the pinned outer namespace flags, two
+separators, inner seccomp-then-exec marker and exact final `/usr/bin/env -0`
+payload. Help/capability/preflight `/bin/true` processes do not count.
+
+Only anchored kernel `/proc/PID/exe` may be followed for this owned-process
+image observation, with birth, image and cmdline bindings rechecked. Resource
+paths remain no-follow. No raw PID, cmdline, environment or private path leaves
+memory. `image_samples` counts attempted observations and `image_error_count`
+retains observation failures. A later independent complete positive can prove
+existence without claiming every attempted sample succeeded. No positive,
+unreadable identity or missed short lifetime is `UNCHECKABLE`, not absence.
+
+#### Socket-stage-specific isolation
+
+The fixed restricted sandbox policy is unchanged. One independently successful
+unsandboxed connection must be accepted, peer-matched and closed before the
+sandbox probe. Bind parent and sandbox network namespace digests, require them
+to differ, require marker `1`, complete bounded capture, confirmed reap and
+same-attempt source/configuration bindings. Accept exactly either:
+
+- socket creation denied with newly observed `EPERM` or `EACCES`; connect is
+  `not-attempted`, connect errno null and socket close `not-needed`; or
+- socket creation and configuration successful, actual connect denied with
+  `EPERM`, `EACCES`, `ENETUNREACH`, `EHOSTUNREACH` or `ECONNREFUSED`, and socket closed.
+
+Successful connection, missing errno, arbitrary/resource errors, configuration
+failure, inconsistent stages, missing namespace/control facts, timeout,
+overflow, signal/nonzero process exit or uncertain reap never pass. Empty or
+malformed child output retains available safe capture diagnostics with unknown
+child facts; it never fabricates a denied connect. A2's missing errno remains
+unresolved historical evidence, not proof of this new socket-create path.
+
+#### Finite probe TMP housekeeping
+
+Observe the same no-follow private root before and after the actual profile
+process calls. Keep exact root device/inode/mode/owner, expected non-root Linux
+UID/GID, directory mode 0700, file mode 0600, zero flags/xattrs and finite bounds.
+Allow only an empty root or the complete exact UID-specific registry directory
+and one empty single-link lock: at most two non-root entries and zero file
+bytes. Reject unknown entries, incomplete state, symlinks/hardlinks/special
+files, wrong ownership/mode, namespace swaps and unstable descriptors.
+
+On first complete registry creation only the source-required root metadata/link
+transition may change. For an existing complete registry, its directory times
+may reflect a fully cleaned marker lifecycle while root and registry identity
+remain exact and the lock remains byte/metadata identical. Do not erase unknown
+state or move it outside observation. Each actual profile process result must
+confirm reap; the per-observation aggregate counts requested, reaped and
+unconfirmed calls, including exceptions. Missing/non-reaped calls fail closed.
+The full disposable-provider cleanup remains mandatory and unchanged.
+
+The safe transition records whether the old exact inventory predicate would
+have passed. `registry-created` necessarily records false; numeric 0/1 are not
+accepted as booleans. Freshness binds all three nested observations to the same
+profile sensor and current provider/head/tree. Whole observation age is at most
+300000 ms, sandbox capture at most 15000 ms. Native UTC timestamps have seconds
+precision; nested windows must lie between recorded time minus the maximum age
+and that recorded second plus 999 ms. Fresh comparison additionally bounds the
+records to the actual start/finish sensor window and rejects a reused observation
+ID. Namespace digest novelty is not required.
+
+#### Prior worker disposition (superseded only by the amendment above)
+
+The exact whole-worker TMP inventory check is unchanged. Pinned source permits
+a conditional sandbox-launcher route whose cleaned registry-marker lifecycle
+can change directory times; real temporary filesystem tests model this conflict
+without claiming an actual worker failed. Probe housekeeping does not silently
+permit worker writes. `known-worker-tmp-unresolved` stops production before a
+fresh live sensor, claim or worker, and before runtime/lifecycle receipt apply.
+Current CLI dry-run also stops; pure synthetic validation/render/proof tests
+remain modeled structural tests, not actuation authorization.
+
+`live_run_allowed=true` means only that a complete authenticated profile meets
+the necessary compatibility predicates. It is not worker readiness, owner
+authorization, receipt eligibility or an available attempt. Future execution
+requires a bounded equivalent worker-housekeeping agreement and separately
+named finite runtime authority. New external guest/export glue validates the
+complete native profile and original digest, preserves safe non-success facts,
+and is frozen separately without resetting old claims or changing provider,
+mount, inventory or B1/B2 cleanup. No offline test establishes T12 completion.
 
 | Record | Author | May prove | Must not prove |
 |---|---|---|---|
@@ -116,6 +328,48 @@ API-key success form maps to `api-key`. A nonzero exit maps to `unavailable`;
 a zero exit with any other output maps to `unknown`. The adapter records only
 the safe classification. It never persists raw stdout/stderr, authentication
 files, credential material, or private paths.
+
+### T12 sandbox-launch diagnosis, not runtime acceptance
+
+The 2026-09-05 [bounded remediation](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5550009263)
+is offline only. Official 0.150.1 source commit
+`90854393966b21e9ebfd21b122334eb09a20c93d` rejects global `--strict-config`
+for `sandbox` before dispatch; `debug_sandbox` intentionally sets
+`strict_config=false`. The sandbox prefix therefore omits that flag, while
+doctor and live exec keep it. Reviewed overrides and their intent digest,
+Option B, environment, image/provider, network, and AppArmor/bubblewrap
+contracts are unchanged. This fixes a source-demonstrated incompatibility;
+prior discarded stderr is unknown, and real sandbox compatibility remains
+unproven by offline checks.
+
+The opt-in command `profile --probe-only --launch-diagnostics` retains the
+existing closed `runtime-profile/v1` unchanged inside a separate
+`t12-sandbox-launch-diagnostics/v1` wrapper. Its only outer fields are
+`schema`, `authority` (`adapter-authored`), `runtime_profile`, and
+`launch_diagnostics` (exactly `shell` and `network`). Each diagnostic lane
+contains only `status`, fixed `stage`, fixed `reason_code`, `exit_code`
+(integer 0-255 or null), and `signal` (integer 1-64 or null). Exit and signal
+cannot both be present. This wrapper is not a runtime profile, receipt,
+attestation, or replacement acceptance gate.
+
+An unavailable-auth status is checked before enabling capture, then reused;
+diagnostics is rejected outside probe-only mode or with available/unknown
+auth. All existing provider and prerequisite gates remain. There is no extra
+sandbox launch: the same one process per lane temporarily captures at most
+4096 stderr bytes, classifies them in memory, and strips them before the
+original lane classifier. No bytes, environment values, paths, exception
+text, or raw argv are exported. A source-exact strict-flag rejection maps to
+`cli-dispatch` / `unsupported-strict-config`; unrecognized errors stay
+`unclassified`, without a guessed config-loader or sandbox-launcher cause.
+Signal, timeout, overflow, spawn failure, and incomplete reap are distinct
+safe classifications. Supplemental launch success cannot promote environment,
+network, or profile results. Normal profile output is unchanged.
+
+Both T12 Stage A attempts remain non-success and no third attempt is
+authorized. A future measurement using this option requires a separate owner
+replan against the exhausted retry allowance; calling it a diagnostic run
+does not bypass that limit. This correction executes no VM, Codex probe,
+authentication, model, live worker, receipt, or Stage B.
 
 The qualification boundary is one fresh, attempt-only Colima
 Linux VM using the VZ backend and native `aarch64`. Its profile name is
@@ -325,6 +579,173 @@ or Codex is touched. `st_flags` is also recorded where the platform exposes it.
 
 ## Bounded execution and normalization
 
+### T12 finite native-state boundary (owner amendment, 2026-09-08)
+
+This table supersedes private-HOME byte/metadata equality only for the named
+native classes. Paths are relative to the private HOME; `.codex` is the exact
+CODEX_HOME. All are current-uid/current-gid, descriptor-relative/no-follow, bounded, and
+inside the approved disposable VM. They are not adopter payload or durable
+artifacts. Unknown entries fail; the adapter never deletes entries to pass.
+
+| Relative path / finite pattern | Source at official 0.150.1 commit `90854393966b21e9ebfd21b122334eb09a20c93d` | Type / mode / limits | Allowed lifecycle and cleanup |
+|---|---|---|---|
+| `.codex/tmp`, `.codex/tmp/arg0` | `codex-rs/arg0/src/lib.rs`, startup helper dispatch | directories `0700` | creation; child-induced time/link-count changes only; existing inode/owner/mode/flags/xattrs remain exact; whole VM destruction |
+| `.codex/tmp/arg0/codex-arg0[A-Za-z0-9]{6}` | arg0 `tempfile::Builder` prefix and default six-character suffix | at most 4 directories `0700` | create/drop; names are never used as authority; whole VM destruction |
+| each arg0 directory's `.lock` | arg0 process guard | one regular file `0600`, exactly zero bytes | create/drop under its bounded parent; never written; whole VM destruction |
+| each arg0 directory's `apply_patch`, `applypatch`, `codex-linux-sandbox`, `codex-execve-wrapper` | arg0 helper aliases | four single-link symlinks, current-uid, exact target equals the already pinned Codex executable | create/drop; no general symlink traversal or alternate target; whole VM destruction |
+| `.codex/state_5.sqlite`, `.codex/logs_2.sqlite`, `.codex/goals_1.sqlite`, `.codex/memories_1.sqlite`, `.codex/queue_1.sqlite` | `codex-rs/state/src/sqlite.rs` versioned filenames; `state/src/runtime.rs` eager initialization | each single-link regular `0600`, at most 16 MiB | create/update; stable inode if persistent; whole VM destruction |
+| each of those five exact filenames plus `-wal` | SQLite WAL mode in `state/src/sqlite.rs` | five distinct single-link regular `0600`, at most 16 MiB each | create/update/drop, never an arbitrary database; whole VM destruction |
+| each of those five exact filenames plus `-shm` | SQLite WAL shared-memory sidecar | five distinct single-link regular `0600`, at most 1 MiB each | create/update/drop; whole VM destruction |
+| `.codex/models_cache.json` | `codex-rs/models-manager/src/manager.rs` and `cache.rs`, direct model catalog cache write | one regular `0600`, at most 4 MiB | create/update; whole VM destruction |
+| `.codex/installation_id` | `core/src/installation_id.rs`, explicitly forces `0644` | one regular `0644`, exactly 36 UUID bytes; still enclosed by `0700` HOME/CODEX_HOME | create once; existing bytes and inode exact; whole VM destruction |
+| `.codex/shell_snapshots` | `core/src/shell_snapshot.rs`, default shell-snapshot feature | directory `0700` | creation and bounded child lifecycle; existing identity/mode exact; whole VM destruction |
+| `.codex/shell_snapshots/<lowercase UUID>.<decimal nanoseconds>.sh` and `<lowercase UUID>.tmp-<decimal nanoseconds>` | `core/src/shell_snapshot.rs`, session snapshot temporary/write/rename/drop | at most 8 files total, each single-link regular `0600`, at most 1 MiB | create/update/rename/drop inside this one directory; whole VM destruction |
+| `.codex`, private HOME `.` | existing dedicated root plus above child lifecycle | directories `0700` | existing identities/owners/modes/flags/xattrs exact; `.codex` times/link count may reflect approved children; HOME remains exact |
+| `.codex/rules`, `.codex/rules/t11-reviewed.rules` | existing reviewed rules materializer | `0700` / single-link regular `0600`, exact reviewed bytes | protected, not native mutable state; whole VM destruction |
+| `.codex/auth.json`, when separately owner-authenticated | existing device-auth lifecycle, not ordinary state | single-link regular `0600`, at most 1 MiB | baseline only after manual authentication; exact presence/bytes/inode/metadata throughout probes and worker; whole VM destruction |
+
+The whole inventory remains capped at 128 entries and 64 MiB of regular data.
+Count and byte caps are this repository's fail-closed safety policy, not an
+upstream promise that every Codex session fits them. Snapshot nanoseconds also
+must fit the source's unsigned 128-bit integer. The six-character arg0 suffix
+is grounded in pinned `tempfile` 3.27.0 default generation, not a broad glob.
+Mutable native classes require zero platform flags and no xattrs. Protected
+baseline metadata remains exact. Offline macOS fixture tests explicitly model
+the approved Linux empty-xattr condition; that seam is not runtime evidence.
+All unknown paths, arbitrary TMPDIR output, config changes, credential changes,
+history/session rollout paths, lazy thread-history databases, special files,
+hardlinks, escaping links, excess counts/sizes, and namespace drift fail.
+Directory timestamp changes are allowed only for declared mutable directories;
+directories are never silently rebound. Source behavior can put prompts, tool
+or diagnostic content in internal SQLite data, and shell snapshots can contain
+environment/shell values. History `none`, ephemeral sessions, disabled memory
+generation/use, and export exclusions remain mandatory but are not claims that
+these files are non-sensitive. No native bytes, filenames, private paths, or
+native inventory leave the VM; only bounded classification/count/digest evidence
+may do so. This is pre/post persistence observation, not transient-write proof.
+
+### Immutable pinned-client builtin cache (same native-state amendment)
+
+The exact default embedded Skills cache is classified as protected pinned-client
+contents, not mutable runtime data, new project Skills, a configuration override,
+or authorization to install anything. Official source `codex-rs/core/src/thread_manager.rs`
+loads the host Skills service; `codex-rs/ext/skills/src/host_service.rs` and
+`codex-rs/config/src/skills_config.rs` default bundled Skills on. The pinned
+`codex-rs/skills/src/lib.rs` writes embedded bytes without transformations;
+`skills/build.rs` only marks source inputs for rebuild. The source
+[embedded tree](https://github.com/openai/codex/tree/90854393966b21e9ebfd21b122334eb09a20c93d/codex-rs/skills/src/assets/samples)
+is Git tree `dd83abff11d7be56fc9fc10330fc686d1a48ab01`.
+
+If any cache path exists, the complete set must exist: exactly the following
+59 regular files (384736 total bytes), their 26 directory ancestors, the private
+`.codex/skills` and `.codex/skills/.system` roots, and the one marker. Files are
+single-link `0600`, directories `0700`, current-uid/current-gid, no flags/xattrs,
+with exact file lengths and SHA-256 below. Paths are relative to
+`.codex/skills/.system/`. There is no `skills/**` wildcard permission. The cache
+may be created once; after its first complete inventory all content, membership,
+bindings and metadata are immutable. Cleanup is the existing whole-VM deletion.
+The marker `.codex-system-skills.marker` is one single-link `0600` file of
+1–16 lowercase hex characters plus LF. Its implementation-specific hash is
+explicitly non-authoritative: its presence/value NEVER bypasses complete asset
+hashing, and its bytes remain exact after the first baseline. No external source
+is installed or loaded by this allowance. The aggregate 128-entry/64-MiB bound
+still takes precedence over the individual class maxima.
+
+| Exact relative path | Bytes | SHA-256 |
+|---|---:|---|
+| `imagegen/LICENSE.txt` | 10776 | `4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9` |
+| `imagegen/SKILL.md` | 19201 | `681ddb4ad6d06a2acc78a3535b583f8d0c1ea800ecda3d56370d3310fd2cd4ba` |
+| `imagegen/agents/openai.yaml` | 275 | `9ca574af14580dc7a2a3dc37a1796d17f93cb8850be66501f0799ef8603e9dc0` |
+| `imagegen/assets/imagegen-small.svg` | 2889 | `cff5f34f57ff60b3ee92eaedd17b15e96dd4b9e776df3e78936c9e00d42be294` |
+| `imagegen/assets/imagegen.png` | 1711 | `95952f644064eb9e890f98d8db07216347186526e4c41ad66d3420629eb86e20` |
+| `imagegen/references/cli.md` | 9655 | `ecfc2e09261a0feb3482517a5fa0ff410cb7d1958e3cbd2ac6b61586f5b81405` |
+| `imagegen/references/codex-network.md` | 1779 | `c88298ca4481f6116a16fa7987434fc977f8b311c1bbc0c3d862ffd0c5981148` |
+| `imagegen/references/image-api.md` | 6072 | `dc975d7af8a4888967251a0276014b4a71ea30455294944b762256373ce3e569` |
+| `imagegen/references/prompting.md` | 8282 | `b210b051c775860267080941eba968212bf0ac7fce581d75c5dcc217d8293f8b` |
+| `imagegen/references/sample-prompts.md` | 17617 | `70474177d151855b175c6133de2aae1d90b7f146b0dab50ec830972c47d72183` |
+| `imagegen/scripts/image_gen.py` | 34271 | `35e8f9fa47deca111e46c63c4ac2008e09198ef664c0926a9dfdcd6745aa37ed` |
+| `imagegen/scripts/remove_chroma_key.py` | 13836 | `3f7b9b14ad5c90f37618bc1c16a039a2076abca12ddc41b3ae470e2b1cad6c0e` |
+| `openai-docs/LICENSE.txt` | 10776 | `4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9` |
+| `openai-docs/SKILL.md` | 5446 | `7cb8fa1b2a0c635b5c61ffe1da7b8594a7ea0fce5b71e8d523e2025d88b2a05e` |
+| `openai-docs/agents/openai.yaml` | 370 | `44b9efac6be1bae32d869aa2942fecbe4dcae82682ee03e4120f2f9b7d4658ec` |
+| `openai-docs/assets/openai-small.svg` | 1091 | `45be1f0757eb18889eefb1e7db79668ef46a275dc4e0e78e8df5ebd7f6cdeadc` |
+| `openai-docs/assets/openai.png` | 1429 | `156cc84d7332bfe95b310350bd470b690d22aa33d65340cc6c2e06022946194c` |
+| `openai-docs/references/codex-self-knowledge.md` | 7417 | `8c8fb00e6e5cb1977924f5164684a6095427fa828bbc765225f17d9aeb79a912` |
+| `openai-docs/references/latest-model.md` | 2094 | `f25e351e522dd6e30e82d482f31f44c992e794b11031cdcb6ac7c0e6b20c9d5d` |
+| `openai-docs/references/mcp-diagnostics.md` | 2318 | `49bbd2f73df7bbd7f86c80425dea4da2d301c22046080399a36bfc0ca49509e9` |
+| `openai-docs/references/model-migration.md` | 5054 | `5f20c38fbbb10319767b216d91ba74bae49c68fc1bfd6d1abd7c9b4cc9cb9ab0` |
+| `openai-docs/references/model-selection.md` | 1344 | `ba2d164abbca30435a460a0bc3a7d82398dce2bdf092705c98ba55b3f3af38a8` |
+| `openai-docs/references/official-docs.md` | 3337 | `7962f2dce55089b93bde4115bb89fd42f20993c1597a2b13edd4956f463875b9` |
+| `openai-docs/references/prompting-guide.md` | 15747 | `db913884cfe0fabf29bee1a139918f56e299decfa0a14d61c48596f23f76621d` |
+| `openai-docs/references/upgrade-guide.md` | 1050 | `ed1b75a89b8ec4d67787774ef6c4e8b98eace16c63348f42e969e6ffa67cb656` |
+| `openai-docs/references/upgrading-to-gpt-5p6-sol.md` | 23093 | `9a918a0c8dd051d574f2fd0309201afa8a9b9c08241c11ca1fb0ac2f4724e7ac` |
+| `openai-docs/scripts/fetch-codex-manual.mjs` | 16085 | `f53eb6d2f286e9efcc397e8bee93a938e37296c90953e4e06e94899ef1b6c363` |
+| `openai-docs/scripts/resolve-latest-model-info` | 1038 | `7354dbb030ca0736dd633a7ca1b930cf640abd40370725dea3a458cb51d49523` |
+| `openai-docs/scripts/resolve-latest-model-info.cjs` | 3937 | `eeb1bb486018e16b37edfc06b1a37179dbc672982d501040d4f7142f29dd2e64` |
+| `plugin-creator/SKILL.md` | 11467 | `71b95b8219644f95d633721e7f7cd3c469edfc8fe50f8415d400dfb2d74bc7b9` |
+| `plugin-creator/agents/openai.yaml` | 339 | `fecaf35d692bd3d33d1a065648258d12e393afa9055d78adf6e57b42f4142f6d` |
+| `plugin-creator/assets/plugin-creator-small.svg` | 1319 | `6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb` |
+| `plugin-creator/assets/plugin-creator.png` | 1563 | `a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162` |
+| `plugin-creator/references/installing-and-updating.md` | 6000 | `91c4781d48568fcc708b45566b08fb610ad1c88672720ae512f9525a1cf9cb20` |
+| `plugin-creator/references/plugin-json-spec.md` | 9179 | `eeb640130f69636affaa299d4170d5a7ae6a0ff978296ddf75c409ce6dd87b91` |
+| `plugin-creator/scripts/create_basic_plugin.py` | 11495 | `46f532721079f6de6443f30f9362d77f1d879f57c0559250ef9433867414eb93` |
+| `plugin-creator/scripts/identifier_validation.py` | 784 | `a6d51ce4a9a7e8f85626ff5808a467a67574e7f8cdf1167ffb467c5f67e57223` |
+| `plugin-creator/scripts/read_marketplace_name.py` | 1644 | `ba24e6d91eed6f778bde022a967be335c6253983b5ecd1c5e30c8483385887fd` |
+| `plugin-creator/scripts/update_plugin_cachebuster.py` | 3043 | `97c5ecab5ad85d871f0ebfc9bdf25d4b9e1a1680128fd3deb18a8c64f15f85c5` |
+| `plugin-creator/scripts/validate_plugin.py` | 21533 | `6ff4bc1cc8ca94827c30c8299951efdac900ff38a5069c03e9a6554fc194a723` |
+| `review-agent/SKILL.md` | 2661 | `07079efd0dc76f05fade424e5dfb048dce1de2df7626e1a4f56292a4f3f92228` |
+| `review-agent/agents/openai.yaml` | 252 | `4d867a46d15e36ac880176484aae160f59855340c6059b2ea6ab9fbc9af084de` |
+| `skill-creator/SKILL.md` | 15311 | `6656e54755638e8efcf275a472b9672eaa8a9a1b9e59dc210e275b03b59e1e66` |
+| `skill-creator/agents/openai.yaml` | 183 | `d07d21b93fcf3d4dc8d9a3399c05fc226a49a333a96d3e1c68b451b8dd9eade6` |
+| `skill-creator/assets/skill-creator-small.svg` | 1319 | `6591bf8ea9bb9435890dbdea299e0d2bd05f3aa893a335d26e4c535e93c8e7fb` |
+| `skill-creator/assets/skill-creator.png` | 1563 | `a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162` |
+| `skill-creator/license.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
+| `skill-creator/references/openai_yaml.md` | 2356 | `ffac39318e408108141d40f820968e59f70434a891694f9bf1d25be8237b150c` |
+| `skill-creator/scripts/generate_openai_yaml.py` | 6619 | `ddaf9abdfb3e762ed3c82571e9c607ce964188f49f2146281beb2cb8a553a93d` |
+| `skill-creator/scripts/init_skill.py` | 10160 | `bc04fae1e671aa1e5104212674e7f22c9665a791fafa2fc2b3897187a89801b2` |
+| `skill-creator/scripts/quick_validate.py` | 4227 | `1fd66498c219616fd9249eacdf16c458412ea9065a9d887fd716aeef03907762` |
+| `skill-installer/LICENSE.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` |
+| `skill-installer/SKILL.md` | 3367 | `d68b77e5bbb34dedab89d134da52855f140fc4b4299b80104f534e3b9e98f8ee` |
+| `skill-installer/agents/openai.yaml` | 221 | `5ce223d8b1070b82c42298538f1b8d376f788eb9e7a42a987e8c094070d73f0e` |
+| `skill-installer/assets/skill-installer-small.svg` | 923 | `3928703ff00dc1a681e7a22401843b7edcbd4b2051651ce4c43b75f7e140504e` |
+| `skill-installer/assets/skill-installer.png` | 1086 | `d0a230b1a79b71b858b7c215a0fbb0768d6459c14ea4ef80c61592629bf0e605` |
+| `skill-installer/scripts/github_utils.py` | 659 | `61c1bbe2ae217433b4b6f9f09f21aca4df52c12598068343ade719f706e4859b` |
+| `skill-installer/scripts/install-skill-from-github.py` | 11790 | `3569ac8c0b3a525515c2e0e27c4f48e6aef9f2ff04029dcb3f622b280fa8c25e` |
+| `skill-installer/scripts/list-skills.py` | 2967 | `e4e1f78ca3d045827f2a05cfd99fae57cc7c1a1bfeba8704029108834debff35` |
+
+### T12 complete runtime-profile comparison classification
+
+Every descendant of a listed group has the group's classification; no fallback
+classification exists. Each full observation first passes the current closed
+profile validator, including nested exact-key and derived-digest checks.
+
+| Exact field/group | Class and comparison |
+|---|---|
+| `schema`, `repository`, `scope`, `status`, `reason`, `platform`, `client`, `capabilities`, `auth`, `request`, `shell_environment`, `live_run_allowed` (all descendants) | stable compatibility/security: exact; includes binary/version/help, model/effort, auth class, sandbox/approval, environment intent, capability/status gates |
+| `evidence.configuration_intent`, `evidence.exact_worker_argv`, `evidence.bubblewrap_prerequisite`, `evidence.lane_statuses` (all descendants) | stable compatibility/security: exact; source/config/rules/argv/prerequisite digests exact |
+| `evidence.shell_environment_behavior.source_contract_sha256`, `launcher.binary_sha256`, `launcher.help_sha256` | stable compatibility/security: exact across independently valid full shell observations |
+| Remaining `evidence.shell_environment_behavior` descendants | fresh observation: exact required environment and qualified PWD predicates, actually observed pinned sandbox-launcher image, bounded attempted/error counts, same-attempt binding and current sensor window |
+| `evidence.diagnostic_health` (all descendants) | fresh observation: independently valid current required-category success; unrelated advisory status does not replace a required lane |
+| `evidence.network_sandbox_behavior` (all descendants) | fresh observation: independently valid accepted/closed control, unequal namespace digests, exact marker, allowed socket-create/connect denial, successful reap and fresh same-attempt window; no namespace novelty requirement |
+| `evidence.sandbox_housekeeping` (all descendants) | fresh observation: independently valid finite quiescent TMP transition, complete reap counts and same sensor/attempt binding; exact-equality diagnostic is not normalized into success |
+| `evidence.containment_provider.schema`, `authority`, `codex_authenticated_attestation`, `status`, `provider_kind`, `vm_backend`, `architecture`, `native_architecture`, `guest_os`, `guest_kernel`, `host_mount_count`, `host_mount_classifications`, `all_host_mounts_read_only`, `provider_cache_only`, `host_sensitive_mounts_absent`, `unapproved_mounts_absent`, `ssh_agent_forwarding`, `dot_ssh_public_key_loading`, `user_ssh_config_modified`, `public_head`, `public_tree`, `repository_clean`, `repository_git_bootstrap`, `repository_git_bootstrap_runtime_match`, `repository_git_clone_contract_sha256`, `codex_version_output`, `approved_archive_sha256`, `observed_archive_sha256`, `extracted_binary_sha256` (all descendants) | stable compatibility/security: exact |
+| `evidence.containment_provider.profile_name`, `created_at`, `provider_configuration_sha256`, `effective_mount_inventory_sha256`, `provider_cache_mount_sha256`, `provider_cache_guest_mountpoint_sha256`, `vm_instance_identity_sha256`, `runtime_root_binding_sha256`, `dedicated_codex_home_binding_sha256`, `control_plane`, `lifecycle` (all descendants, including normalized control-plane digest and timestamps) | attempt/VM: exact within Stage B; Stage A identity never substitutes for Stage B; lifecycle remains pre-live until separately recorded teardown |
+| `observed_at` | fresh observation: the fresh observation is later than the supplied one, inside the local sensor start/finish window, neither stale nor future; replay/equal time fails closed |
+| Original full-observation canonical SHA-256 values (comparison evidence only, not new profile fields) | derived fresh bindings: each recomputed from its complete unmodified profile; both are retained, not replaced by normalized/constants-only profiles |
+
+The adapter executes the sensor again immediately before the one worker and
+emits both original observations through a required live comparison-evidence
+sink. The external integration must retain that sanitized record even on a
+later failure. Independently valid profiles are also retained on comparison
+failure; invalid/unsanitized profile records are not exported. After comparison
+succeeds, the native result and receipt bind the immediate pre-worker fresh
+profile, while comparison evidence retains both original canonical digests.
+This record does not extend or substitute for native profile,
+event, result or receipt schemas. Failed/missing lanes, unknown fields, old
+timestamps, supplied/replayed observations, or stable/same-VM drift block the
+worker. Identifiers alone do not authenticate freshness; the adapter-owned
+sensor call window and finite attempt claim supply the execution chronology.
+
 The controller drains stdout and stderr concurrently under independent byte
 limits, bounds every JSONL line and total event count, rejects invalid UTF-8,
 partial JSON, scalar events, excessive JSON depth/nodes/string size, unknown
@@ -343,11 +764,16 @@ setsid/reparented descendant remains identifiable. Missing birth-identity
 support is `UNCHECKABLE` for the process-cleanup lane. This process-table
 sensor is best-effort cleanup evidence, not kernel-enforced containment. T11
 does not claim full escaped-descendant process-lifetime containment; that
-stronger control is deferred to T12. The approved disposable Colima VM is the
+stronger control is deferred to T13. The approved disposable Colima VM is the
 outer containment boundary. No raw output is copied into the durable result.
 
-Immediately around the worker, one private execution root contains only the
-target repository, private HOME, and private TMPDIR. A bounded descriptor-
+Immediately around the offline worker, one private execution root contains only the
+target repository, private HOME, and private TMPDIR. The live path uses a separate
+target execution root and the existing persistent private HOME/TMPDIR. The
+native-state amendment supersedes whole-HOME equality, and the current worker
+amendment above permits only its finite observed private-TMP interval. The
+target root remains exact outside its single owned byte change; TMP setup and
+post-worker verification still bind the respective exact endpoints. A bounded descriptor-
 relative, no-follow pre/post inventory covers its membership, file bytes,
 device/inode bindings, mode, timestamps, xattr names and bounded value digests,
 and platform `st_flags`; only the exact `work-item.txt` initial-to-final byte
@@ -370,7 +796,7 @@ reasserts the exact base/branch/tree/index/ref/object facts itself and compares
 against a private canonical baseline; it does not trust caller pre-state as
 base truth. Worker/event/final/exit/verifier inconsistency is failure.
 
-## Runtime profile states for deferred T12 qualification
+## Runtime profile states for active T12 qualification
 
 Only `match` permits live execution. `profile-drift`, `unsupported-client`,
 `UNKNOWN`, and `UNCHECKABLE` are non-success. An unapproved alpha, beta, release
@@ -397,9 +823,11 @@ sandbox/network, auth, and best-effort process-cleanup statuses remain separate
 and cannot degrade or upgrade the provider-isolation claim. The historical
 task-start profile uses an exact `not-run` sentinel with zero digests and no
 fabricated provider, VM, or creation-time observation.
-Immediately before a later T12
-live worker, the full sensor runs again and must equal the supplied semantic
-profile except for its observation timestamp.
+Immediately before a T12
+live worker, the full sensor runs again and follows the complete comparison
+classification above, superseding whole-profile equality except timestamp.
+The T12 integration calls `execute_slice` with a durable comparison-evidence
+sink; a live caller without that sink fails before the fresh sensor or worker.
 
 Exact-worker-argv construction fails safely with a fixed `stage` and
 `reason_code`, never exception text, raw argv, or a private path. The only
@@ -407,7 +835,7 @@ allowed stages are `load-envelope`, `load-static-role`,
 `environment-contract`, `build-argv`, `argv-policy`, `schema-binding`, and
 `filesystem-binding`.
 
-## T11 offline acceptance and T12 deferred live evidence
+## T11 offline acceptance and active T12 live-evidence boundary
 
 Required CI uses only fixtures, a fake process, private synthetic Git
 repositories, schemas, and deterministic tests. It has no Codex authentication,
@@ -419,7 +847,7 @@ The single Stage A.2 attempt completed with aggregate status `UNCHECKABLE`.
 Provider isolation, mount boundary, process cleanup, and configuration passed;
 shell environment failed with `process-nonzero`; sandbox/network was
 `UNCHECKABLE` with `process-nonzero`; authentication was unavailable. Device
-authentication remained disabled, and no model, live worker, runtime-receipt
+authentication remained disabled, and no logical `codex exec` worker process, runtime-receipt
 dry-run, or receipt application ran. The VM, runtime data, and tracked
 processes were destroyed and absence was read back. Stage A.2 remains bounded
 non-success evidence; it is not converted to runtime-profile `match`, sandbox
@@ -429,14 +857,20 @@ A.3.
 AC-13 is `deferred-to-T12-by-approved-agreement-replan`, not pass and not
 omitted. T12 owns shell-environment and sandbox/network compatibility,
 supported runtime-profile qualification, unauthenticated Stage A success,
-authenticated Stage B, exactly one live Codex E2E, receipt dry-run/apply/read-
-back, and exact head/tree/check binding. Stage B requires later review and a
-different fresh Colima VM. Only
+authenticated Stage B, exactly one owner-triggered logical `codex exec` worker-
+process invocation, receipt dry-run/apply/read-
+back, and exact head/tree/check binding. Stage B is conditionally authorized
+only after Stage A fully passes and must use a different fresh Colima VM. Only
 for that attempt may device-code authentication be enabled temporarily. The
 adapter must classify authentication through the exact allowlist above and
-must observe the complete profile as `match` before starting exactly one live
-worker. Receipt dry-run/application and destruction follow only that live
-success, after which device-code authentication is disabled again.
+must observe the complete profile as `match` before starting that one logical
+worker process. This does not claim exactly one backend model request. After
+the worker, the governed sequence is deterministic verification, receipt dry-
+run, exact head/tree/check read-back, exactly one runtime-receipt apply,
+canonical receipt read-back, provider/runtime destruction, profile/runtime-
+data/process absence read-back, and one append-only lifecycle-completion
+evidence comment. The lifecycle comment is not a second runtime receipt.
+Device-code authentication is disabled after the attempt.
 
 The offline-tested receipt actuator reads one `runtime-receipt-request/v1` on
 stdin containing the actual bounded `runtime-profile/v1`, `task-execution-envelope/v1`,
@@ -448,7 +882,10 @@ projections are rejected. The artifacts are unsigned JSON, so their provenance
 is explicitly `unsigned-unverified`; this slice does not claim authentication
 or attestation. The actuator rejects private/raw material including raw JSONL
 and requires a fresh matching runtime observation. Limitations
-are a closed structured object, not arbitrary prose. Dry-run is canonical.
+are a closed structured object, not arbitrary prose. Dry-run is canonical and
+emits a deterministic binding digest. Runtime `--apply` requires that exact
+digest through `--dry-run-proof-sha256`; the digest binds the same validated
+receipt and rendered body but is not an authenticated attestation.
 The receipt projects only safe provider classifications, booleans, public Git
 bindings, timestamps, and digests. It excludes raw mount inventories and
 paths, doctor reports, environment values, credentials, JSONL, stderr,
@@ -468,22 +905,34 @@ comments are never edited or deleted. Exact read-back and a second post-write
 head/tree/check read are required. The receipt does not change
 `release_blocked`, scenario states, a Ruleset, a tag, or a release.
 
-The current T11 lifecycle actuator is fixture-tested against Issue #23 and PR
-#24 and is not applied. T12 must bind its own exact Task and PR before any live
-actuation. The tested `t11-colima-lifecycle-receipt-request/v1` path uses
-`--lifecycle-dry-run` to render canonical target copies and
-`--lifecycle-apply` to append each copy with a target-specific stable marker
-and idempotent read-back. Its input
-includes the original validated native runtime-receipt request. The lifecycle
-validator regenerates the safe canonical `runtime-receipt/v1` projection and
-its exact rendered comment rather than trusting caller-authored marker/body
-bytes, then retains only that safe projection and request digest. It binds the
-exact runtime-receipt URL, body/record digests and GitHub `created_at`, the
-same attempt/profile/instance/control-plane digest, PR head/tree/checks,
-destroy request/completion timestamps, and both profile/runtime-data absence
-read-backs. Validation requires runtime-receipt posting before destroy request,
-then destroy completion before both absence observations. Every timestamp is
-bounded to at most 300 seconds in the future and the latest absence read-back
-must be at most 3600 seconds old when the actuator validates it. Raw provider state,
-paths, credentials, auth files, device codes, environment, JSONL, stderr,
-transcripts, and reasoning are rejected.
+The T11 lifecycle actuator was fixture-tested against Issue #23 and PR #24 and
+was not applied. T12 dynamically binds its own exact Task plus a same-
+repository, non-fork PR on `codex/phase-2-live-codex-runtime` through GitHub
+read-back rather than a guessed static PR number. The
+`t12-colima-lifecycle-completion-request/v1` path uses
+`--lifecycle-dry-run` to render one canonical Issue #25 completion comment and
+`--lifecycle-apply` to append that one comment with a stable marker and exact
+idempotent read-back. The completion comment is not a second runtime receipt
+and is not duplicated on the PR. Its input includes the original validated
+native runtime-receipt request. The lifecycle validator regenerates the safe
+canonical `runtime-receipt/v1` projection and exact rendered receipt rather
+than trusting caller-authored marker/body bytes, then retains only that safe
+projection and request digest. It binds the exact runtime-receipt URL,
+body/record digests and GitHub `created_at`, the same
+attempt/profile/instance/control-plane digest, PR head/tree/checks, destroy
+request/completion timestamps, and profile, runtime-data, and tracked-process
+absence read-backs. Validation requires runtime-receipt posting before destroy
+request, then destroy completion before every absence observation. Every
+timestamp is bounded to at most 300 seconds in the future, and each absence
+read-back must independently be at most 3600 seconds old when the actuator
+validates it. Raw provider state, paths, credentials, auth files, device codes,
+environment, JSONL, stderr, transcripts, and reasoning are rejected.
+
+T12 intentionally qualifies official stable Codex CLI `0.150.1` as one exact
+receipt-bound compatibility baseline. It does not describe that version as the
+current latest stable, generalize to every stable version, or permit a switch
+to `0.151.0` without an ownership and source-review replan. The bounded source-
+parity contribution is capability-aware routing for this one exact profile,
+bounded worker execution, a durable attempt/receipt trail, independent
+verification over worker self-claim, and privacy by reference. It does not
+complete K09, K10, K11, K12, or full runtime parity.

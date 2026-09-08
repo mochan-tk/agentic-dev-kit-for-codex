@@ -146,7 +146,8 @@ APPROVED_GIT_PACKAGE_VERSION = "1:2.43.0-1ubuntu7.3"
 APPROVED_GIT_VERSION_OUTPUT = "git version 2.43.0"
 APPROVED_GIT_BINARY_SHA256 = "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
 EXPECTED_REPOSITORY = "mochan-tk/agentic-dev-kit-for-codex"
-EXPECTED_T11_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
+EXPECTED_T11_ACCEPTED_PUBLIC_BRANCH = "codex/phase-2-minimal-execution-slice"
+EXPECTED_T12_PUBLIC_BRANCH = "codex/phase-2-live-codex-runtime"
 EXPECTED_STAGE_A1_GIT_FIXED_ENVIRONMENT = {
     "GIT_ATTR_NOSYSTEM": "1",
     "GIT_CONFIG_GLOBAL": "/dev/null",
@@ -194,7 +195,7 @@ EXPECTED_STAGE_A1_PRIVATE_UMASK_EXEC_SCRIPT = (
     "except (OSError,ValueError,TypeError,AttributeError): fail()\n"
 )
 EXPECTED_REPRESENTATIVE_GIT_CLONE_CONTRACT_SHA256 = (
-    "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7"
+    "af134538a459119e618854b6455199ac92ee0b7abd4546fabc1c7330d4eb51d8"
 )
 STAGE_A1_REASON_CODES = [
     "none", "not-run", "unsupported-platform", "apparmor-not-enforcing",
@@ -265,76 +266,213 @@ ZERO_SHA256 = "0" * 64
 
 
 def expected_runtime_frontier() -> Dict[str, Any]:
-    """Return the exact owner-approved T11 agreement-v2 status record."""
+    """Return the exact accepted-T11 / active-T12 runtime frontier."""
 
     return {
-        "agreement": {
-            "version": "t11-agreement-v2",
-            "task_issue": (
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
-            ),
-            "decision_url": (
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
-                "#issuecomment-5472720734"
-            ),
-            "decision_body_sha256": (
-                "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
-            ),
+        "tree_snapshot": {
+            "t11": "accepted",
+            "t12": "sole-active",
+            "live_evidence": "external-github-current-outcome-not-embedded-in-tree",
         },
-        "acceptance_mapping": {
-            "AC-01-through-AC-12": "applicable-offline-static-boundary",
-            "AC-13": "deferred-to-T12-by-approved-agreement-replan",
-            "AC-14": "unchanged",
-            "AC-15": "owner-merge-gate-offline-harness",
+        "t11_history": {
+            "agreement": {
+                "version": "t11-agreement-v2",
+                "task_issue": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                ),
+                "decision_url": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                    "#issuecomment-5472720734"
+                ),
+                "decision_body_sha256": (
+                    "f177b639139558c6a85d84d88c827e72c22e642ae0197c8a3fc8adf6dc6c0581"
+                ),
+            },
+            "acceptance_mapping": {
+                "AC-01-through-AC-12": "applicable-offline-static-boundary",
+                "AC-13": "deferred-to-T12-by-approved-agreement-replan",
+                "AC-14": "unchanged",
+                "AC-15": "owner-merge-gate-offline-harness",
+            },
+            "status": {
+                "task": "accepted",
+                "runtime_harness": "minimal-offline-implemented",
+                "live_codex_execution": "deferred-to-T12",
+                "sandbox_compatibility": "unresolved-non-success",
+                "runtime_receipt_apply": "deferred-to-T12",
+            },
+            "merge": {
+                "commit": "4a85a007ed62795b48bcbce04f6b7e5482e71e82",
+                "tree": "49afe003de2bbb04249d6f4c36ea6462c271c26f",
+                "receipt": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                    "#issuecomment-5473274452"
+                ),
+            },
+            "stage_a1": {
+                "classification": "bounded-non-success",
+                "qualified_boundary": "git-and-bubblewrap-prerequisites-only",
+                "aggregate_status": "UNCHECKABLE",
+                "direct_bwrap_smoke_status": "pass",
+                "device_auth_performed": False,
+                "logical_codex_exec_worker_process_invocation_count": 0,
+                "runtime_receipt_dry_run_count": 0,
+                "runtime_receipt_apply_count": 0,
+                "evidence_issue_url": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                    "#issuecomment-5470293000"
+                ),
+                "evidence_body_sha256": (
+                    "5911657f46e4a0f555ac642ed69f38dd31efe771ec5846d5a19d2a4f1a62dbce"
+                ),
+            },
+            "stage_a2": {
+                "classification": "bounded-non-success",
+                "aggregate_status": "UNCHECKABLE",
+                "provider_isolation_status": "pass",
+                "mount_boundary_status": "pass",
+                "process_cleanup_status": "pass",
+                "config_status": "pass",
+                "shell_environment_status": "fail",
+                "shell_environment_reason_code": "process-nonzero",
+                "codex_sandbox_network_status": "UNCHECKABLE",
+                "codex_sandbox_network_reason_code": "process-nonzero",
+                "auth_status": "unavailable",
+                "device_auth_performed": False,
+                "logical_codex_exec_worker_process_invocation_count": 0,
+                "runtime_receipt_dry_run_count": 0,
+                "runtime_receipt_apply_count": 0,
+                "evidence_issue_url": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+                    "#issuecomment-5472529555"
+                ),
+                "evidence_pull_request_url": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
+                    "#issuecomment-5472529704"
+                ),
+                "evidence_body_sha256": (
+                    "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
+                ),
+            },
+        },
+        "t12_activation": {
+            "task_issue": (
+                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
+            ),
+            "state": "active-in-this-tree",
+            "branch": EXPECTED_T12_PUBLIC_BRANCH,
+            "phase_origin": {
+                "commit": "36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2",
+                "tree": "1c1f46ad20dd289a713663c84eaf1dbb62840deb",
+            },
+            "task_base": {
+                "commit": "4a85a007ed62795b48bcbce04f6b7e5482e71e82",
+                "tree": "49afe003de2bbb04249d6f4c36ea6462c271c26f",
+            },
+            "owner_amendment": {
+                "url": (
+                    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
+                    "#issuecomment-5480062206"
+                ),
+                "body_sha256": (
+                    "b3f051da26ebba7e0d49b79917cffa81ec6e9c66d409029ffd0020d0211850ee"
+                ),
+            },
+            "worker_completion": {
+              "owner_decision_url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+              "owner_decision_body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1",
+              "historical_stage_a_allowance": "2-of-2-consumed-not-reset",
+              "new_stage_a_orchestration_max": 1,
+              "new_stage_b_vm_max": 1,
+              "new_logical_worker_process_max": 1,
+              "new_runtime_receipt_apply_max": 1,
+              "stage_b_gate": "new-stage-a-pass-cleanup-and-manual-owner-auth-and-confirmation",
+              "worker_boundary_artifact": "t12-worker-boundary/v1-required-before-runtime-receipt",
+              "worker_tmp": "same-private-root-source-bound-quiescent-linux-helper-only",
+              "evidence_scope": "bounded-pre-post-not-authenticated-authorship",
+              "current_outcome": "external-github-not-embedded"
+            },
+            "ownership": {
+                "transferred_path_count": 21,
+                "current_owned_path_count": 24,
+                "compatibility_amendment": {
+                    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698",
+                    "body_sha256": "ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b",
+                    "transferred_paths": [
+                        ".github/governance/codex-runtime-profile.v1.json",
+                        "docs/agreements/runtime/runtime-profile.v1.schema.json",
+                        "tests/runtime/fixtures/runtime-profile-valid.v1.json",
+                    ],
+                },
+                "path_transitions": [],
+                "expansion_requires_replan": True,
+            },
+            "runtime_evidence": {
+                "authority": "external-github-current-outcome-not-embedded-in-tree",
+                "stage_a": "required-before-stage-b",
+                "stage_b": "required-before-runtime-receipt",
+                "sandbox_compatibility": "must-be-qualified-not-embedded",
+                "runtime_receipt_apply": "exactly-once-required-not-embedded",
+                "lifecycle_completion": (
+                    "separate-append-only-comment-not-runtime-receipt"
+                ),
+            },
+            "compatibility_baseline": {
+                "client": "official-stable-codex-cli-0.150.1",
+                "scope": "one-exact-receipt-bound-profile-only",
+                "current_latest_stable_claimed": False,
+                "version_change": "ownership-and-source-review-replan-required",
+            },
+            "invocation_boundary": {
+                "claim": (
+                    "exactly-one-owner-triggered-logical-codex-exec-worker-"
+                    "process-invocation"
+                ),
+                "execution_result_logical_invocations": 1,
+                "backend_model_request_count_claimed": False,
+                "automatic_worker_retry": False,
+            },
+            "pull_request_binding": (
+                "dynamic-github-readback-required-no-static-pr-number"
+            ),
+            "receipt_chronology": [
+                "stage-b-live-worker",
+                "deterministic-verification",
+                "receipt-dry-run",
+                "exact-head-tree-check-readback",
+                "exactly-one-runtime-receipt-apply",
+                "canonical-receipt-readback",
+                "provider-and-runtime-destruction",
+                "profile-runtime-data-process-absence-readback",
+                "one-append-only-lifecycle-completion-evidence-comment",
+                "owner-merge-judgment",
+            ],
+            "source_parity": {
+                "repository": "mochan-tk/agentic-dev-kit-for-copilot",
+                "commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+                "tree": "88f96493ec167602750c8dfec044629bd494a586",
+                "contributes": [
+                    "capability-aware-routing-for-one-exact-profile",
+                    "bounded-worker-execution",
+                    "durable-attempt-and-receipt-trail",
+                    "independent-verification-over-worker-claim",
+                    "privacy-by-reference",
+                ],
+                "does_not_complete": [
+                    "K09", "K10", "K11", "K12", "full-runtime-parity",
+                ],
+            },
         },
         "status": {
             "runtime_harness": "minimal-offline-implemented",
-            "live_codex_execution": "deferred-to-T12",
-            "sandbox_compatibility": "unresolved-non-success",
-            "runtime_receipt_apply": "deferred-to-T12",
+            "live_codex_execution": (
+                "active-qualification-external-evidence-not-embedded"
+            ),
+            "sandbox_compatibility": "required-external-evidence-not-embedded",
+            "runtime_receipt_apply": "required-external-evidence-not-embedded",
             "phase_2": "incomplete",
             "repository": "incomplete",
             "release_blocked": True,
-        },
-        "deferred_task": {
-            "id": "T12",
-            "issue": (
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
-            ),
-            "state": "open-planning-only-inactive",
-            "blocked_by": [
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23",
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24",
-            ],
-        },
-        "stage_a2": {
-            "classification": "bounded-non-success",
-            "aggregate_status": "UNCHECKABLE",
-            "provider_isolation_status": "pass",
-            "mount_boundary_status": "pass",
-            "process_cleanup_status": "pass",
-            "config_status": "pass",
-            "shell_environment_status": "fail",
-            "shell_environment_reason_code": "process-nonzero",
-            "codex_sandbox_network_status": "UNCHECKABLE",
-            "codex_sandbox_network_reason_code": "process-nonzero",
-            "auth_status": "unavailable",
-            "device_auth_performed": False,
-            "model_invoked": False,
-            "real_codex_worker_success_count": 0,
-            "runtime_receipt_dry_run_count": 0,
-            "runtime_receipt_apply_count": 0,
-            "evidence_issue_url": (
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
-                "#issuecomment-5472529555"
-            ),
-            "evidence_pull_request_url": (
-                "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24"
-                "#issuecomment-5472529704"
-            ),
-            "evidence_body_sha256": (
-                "ba3f7d65be3a415e3fc36c1e6d20d16de4147cbd28912932b5cfeac759f972df"
-            ),
         },
         "canonical_release_boundary": {
             "scenario_count": 136,
@@ -402,6 +540,30 @@ def canonical_bytes(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode("utf-8")
 
 
+def expected_compatibility_contract() -> Dict[str, Any]:
+    """Reviewed source/policy facts, never observations of the executing client."""
+    return {
+        "schema": "t12-compatibility-contract/v1",
+        "codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
+        "network_source_sha256": "eb59313c7cfdb7d003df3c1e3d766ad66e414061ef5065d89546a74c1dd658ed",
+        "launcher_source_sha256": "bf1d23f8020d4e73f7a3e235165f0953154170256a92cf0c8254e5ab32578f91",
+        "sandbox_source_sha256": "3be631c566fbd4cbd08eea042cf425164d01002951b0dcad927c674beb571134",
+        "ubuntu_source_orig_sha256": "c6347eaced49ac0141996f46bba3b089e5e6ea4408bc1c43bab9f2d05dd094e1",
+        "ubuntu_source_debian_sha256": "d253eccba8f6a8d636dd3df241c2d4d722785341c665c7817040aafa7ed3495e",
+        "launcher_binary_sha256": APPROVED_BWRAP_BINARY_SHA256,
+        "launcher_help_sha256": "2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d",
+        "launcher_package": APPROVED_BWRAP_PACKAGE_VERSION,
+        "launcher_key": "PWD", "launcher_value": "exact-bound-cwd-in-memory",
+        "executed_image_required": True, "sandbox_policy": ":read-only-restricted-no-proxy",
+        "socket_create_denials": ["EPERM", "EACCES"],
+        "connect_denials": list(APPROVED_NETWORK_DENIAL_ERRNOS),
+        "observation_max_age_ms": 300000, "capture_max_ms": 15000,
+        "housekeeping": "quiescent-private-root-registry-empty-lock-only",
+        "housekeeping_max_entries": 2, "housekeeping_file_bytes": 0,
+        "worker_boundary": "same-private-tmp-observed-worker-linux-helper-quiescent-only",
+    }
+
+
 def expected_runtime_configuration_intent() -> Dict[str, Any]:
     """Return the checker-owned T11 intent anchor, independent of the adapter."""
     rules_digest = sha256(REVIEWED_RULES_BYTES)
@@ -419,12 +581,14 @@ def expected_runtime_configuration_intent() -> Dict[str, Any]:
             "rules_path_relative_to_codex_home": REVIEWED_RULES_RELATIVE_PATH,
             "rules_profile_sha256": rules_digest,
         },
+        "compatibility_contract": expected_compatibility_contract(),
     }
     return {
         "schema": "t11-runtime-configuration-intent/v1",
         "authority": "adapter-authored",
         "effective_configuration_proven": False,
         "configuration_sha256": sha256(canonical_bytes(static_configuration)),
+        "compatibility_contract_sha256": sha256(canonical_bytes(expected_compatibility_contract())),
         "rules_profile_sha256": rules_digest,
         "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
         "reviewed_codex_source_commit": OFFICIAL_CODEX_0150_SOURCE_COMMIT,
@@ -545,7 +709,16 @@ def expected_control_plane_schema() -> Dict[str, Any]:
     }
 
 
-def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
+def expected_git_clone_contract(
+    head: str,
+    tree: str,
+    public_branch: str = EXPECTED_T12_PUBLIC_BRANCH,
+) -> Dict[str, Any]:
+    if public_branch not in (
+        EXPECTED_T11_ACCEPTED_PUBLIC_BRANCH,
+        EXPECTED_T12_PUBLIC_BRANCH,
+    ):
+        raise ValueError("Git clone contract branch is not reviewed")
     repository_url = "https://github.com/{}.git".format(EXPECTED_REPOSITORY)
     target = "<private-vm-repository>"
     prefix = [
@@ -560,7 +733,7 @@ def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "schema": "t11-git-clone-contract/v1",
         "authority": "reviewed-static-contract",
         "repository_url": repository_url,
-        "branch": EXPECTED_T11_PUBLIC_BRANCH,
+        "branch": public_branch,
         "head": head,
         "tree": tree,
         "git_binary": "/usr/bin/git",
@@ -586,7 +759,7 @@ def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
         "argv_templates": [
             umask_wrapper + prefix + [
                 "clone", "--no-checkout", "--single-branch", "--branch",
-                EXPECTED_T11_PUBLIC_BRANCH, repository_url, target,
+                public_branch, repository_url, target,
             ],
             umask_wrapper + prefix + [
                 "-C", target, "checkout", "--detach", head,
@@ -610,8 +783,14 @@ def expected_git_clone_contract(head: str, tree: str) -> Dict[str, Any]:
     }
 
 
-def expected_git_clone_contract_sha256(head: str, tree: str) -> str:
-    return sha256(canonical_bytes(expected_git_clone_contract(head, tree)))
+def expected_git_clone_contract_sha256(
+    head: str,
+    tree: str,
+    public_branch: str = EXPECTED_T12_PUBLIC_BRANCH,
+) -> str:
+    return sha256(canonical_bytes(expected_git_clone_contract(
+        head, tree, public_branch,
+    )))
 
 
 def expected_git_bootstrap_evidence() -> Dict[str, Any]:
@@ -1082,7 +1261,7 @@ def expected_stage_a1_prerequisite_schema() -> Dict[str, Any]:
     }
 
 
-def expected_profile_evidence_schema() -> Dict[str, Any]:
+def _expected_profile_legacy_evidence_schema() -> Dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
@@ -1529,6 +1708,116 @@ def expected_profile_evidence_schema() -> Dict[str, Any]:
     }
 
 
+def expected_profile_evidence_schema() -> Dict[str, Any]:
+    """Independent closed transport schema; native arithmetic is also checked."""
+    def closed(properties):
+        return {"type": "object", "additionalProperties": False,
+                "required": list(properties), "properties": properties}
+    def nullable(value):
+        return {"anyOf": [{"type": "null"}, value]}
+    boolean = {"type": "boolean"}
+    digest = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    nonzero = {"type": "string", "pattern": "^(?!0{64}$)[0-9a-f]{64}$"}
+    number = {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+    binding = closed({"head": {"type": "string", "pattern": "^(?!0{40}$)[0-9a-f]{40}$"},
+        "tree": {"type": "string", "pattern": "^(?!0{40}$)[0-9a-f]{40}$"},
+        "provider_attempt_sha256": nonzero, "observation_id_sha256": nonzero})
+    source = {"const": sha256(canonical_bytes(expected_compatibility_contract()))}
+    legacy = _expected_profile_legacy_evidence_schema()
+    properties = legacy["properties"]
+    intent = properties["configuration_intent"]
+    intent["required"].append("compatibility_contract_sha256")
+    intent["properties"]["compatibility_contract_sha256"] = source
+    shell = closed({
+        "schema": {"const": "t11-shell-environment-evidence/v2"}, "authority": {"const": "adapter-authored"},
+        "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+        "reason_code": {"enum": list(SHELL_ENVIRONMENT_REASON_CODES)},
+        "environment_predicate": properties["shell_environment_behavior"], "source_contract_sha256": source,
+        "launcher": closed({"status": {"enum": ["pass", "not-run", "UNCHECKABLE"]},
+            "path_binding_stable": boolean, "binary_sha256": digest, "help_sha256": digest,
+            "help_required_flags": boolean, "actual_image_observed": boolean,
+            "image_samples": {"type": "integer", "minimum": 0, "maximum": 256},
+            "image_error_count": {"type": "integer", "minimum": 0, "maximum": 256}}),
+        "observation_binding": nullable(binding),
+        "window": nullable(closed({key: number for key in ("started_ms", "capture_started_ms", "capture_finished_ms", "classified_ms")})),
+        "pwd_present": nullable(boolean), "pwd_matches_exact_cwd": nullable(boolean),
+    })
+    shell["allOf"] = [{"if": {"properties": {"status": {"const": "pass"}}}, "then": {"properties": {
+        "observation_binding": binding, "pwd_present": boolean,
+        "environment_predicate": {"properties": {"status": {"const": "pass"}}},
+        "launcher": {"properties": {"status": {"const": "pass"}, "path_binding_stable": {"const": True},
+            "binary_sha256": {"const": APPROVED_BWRAP_BINARY_SHA256},
+            "help_sha256": {"const": expected_compatibility_contract()["launcher_help_sha256"]},
+            "help_required_flags": {"const": True}, "actual_image_observed": {"const": True},
+            "image_samples": {"minimum": 1}}}}}},
+        {"if": {"properties": {"status": {"const": "pass"}, "pwd_present": {"const": True}}},
+         "then": {"properties": {"pwd_matches_exact_cwd": {"const": True}}}}]
+    observation = closed({
+        "binding": binding,
+        **{key: boolean for key in ("control_connected", "control_accepted", "control_peer_matches", "control_closed")},
+        "parent_netns_sha256": digest, "sandbox_netns_sha256": digest,
+        "network_marker_status": {"enum": ["exact-1", "missing", "mismatch", "UNCHECKABLE"]},
+        "socket_create_status": {"enum": ["created", "denied", "UNCHECKABLE"]},
+        "socket_create_errno": {"enum": ["EPERM", "EACCES", "none", "unapproved"]},
+        "connect_status": {"enum": ["denied", "succeeded", "not-attempted", "UNCHECKABLE"]},
+        "connect_errno": {"enum": [*APPROVED_NETWORK_DENIAL_ERRNOS, "none", "unapproved"]},
+        "socket_close_status": {"enum": ["pass", "not-needed", "UNCHECKABLE"]},
+        "exit_code": nullable({"type": "integer", "minimum": 0, "maximum": 255}),
+        "signal": nullable({"type": "integer", "minimum": 0, "maximum": 64}),
+        **{key: boolean for key in ("timed_out", "stdout_overflow", "stderr_overflow", "reaped")},
+        "stderr_size": {"type": "integer", "minimum": 0, "maximum": 4097},
+        **{key: number for key in ("control_closed_ms", "probe_started_ms", "probe_finished_ms")},
+    })
+    context = closed({"expected_binding": binding, "control_binding": binding, "capture_binding": binding,
+        "observation_started_ms": number, "observation_finished_ms": number})
+    network = closed({"schema": {"const": "t11-network-sandbox-evidence/v2"},
+        "authority": {"const": "adapter-authored"}, "status": {"enum": ["pass", "fail", "not-run", "UNCHECKABLE"]},
+        "reason_code": {"enum": ["none", "not-run", "observation-uncheckable", "malformed-observation",
+            "binding-uncheckable", "attempt-binding-mismatch", "freshness-uncheckable", "stale-observation",
+            "control-unavailable", "process-not-reaped", "process-timeout", "output-overflow",
+            "process-nonzero-or-status-unavailable", "namespace-uncheckable", "netns-not-separated",
+            "network-marker-missing", "network-marker-mismatch", "network-marker-uncheckable",
+            "contradictory-operation-stages", "socket-creation-uncheckable", "socket-close-uncheckable",
+            "sandbox-connection-succeeded", "connect-denial-uncheckable"]},
+        "proof_path": {"enum": ["none", "socket-create-denial", "connect-denial"]},
+        "observation": nullable(observation), "context": nullable(context), "classified_at_ms": nullable(number)})
+    network["allOf"] = [{"if": {"properties": {"status": {"const": "pass"}}}, "then": {"properties": {
+        "reason_code": {"const": "none"}, "proof_path": {"enum": ["socket-create-denial", "connect-denial"]},
+        "observation": {**observation, "allOf": [{"properties": {
+            **{key: {"const": True} for key in ("control_connected", "control_accepted", "control_peer_matches", "control_closed", "reaped")},
+            "parent_netns_sha256": nonzero, "sandbox_netns_sha256": nonzero,
+            "network_marker_status": {"const": "exact-1"}, "exit_code": {"const": 0}, "signal": {"type": "null"},
+            "timed_out": {"const": False}, "stdout_overflow": {"const": False}, "stderr_overflow": {"const": False}, "stderr_size": {"const": 0}}}]},
+        "context": context, "classified_at_ms": number}}}]
+    transition = closed({"schema": {"const": "t12-sandbox-housekeeping-evidence/v1"},
+        "authority": {"const": "adapter-authored"}, "status": {"enum": ["pass", "UNCHECKABLE"]},
+        "reason_code": {"enum": ["none", "not-run", "observation-uncheckable", "quiescence-not-proven",
+            "expected-identity-drift", "unexpected-registry-removal", "protected-root-drift", "root-link-count-mismatch",
+            "unexplained-root-metadata-drift", "existing-lock-drift", "existing-registry-binding-drift"]},
+        "current_exact_predicate_equal": nullable(boolean),
+        "transition": {"enum": ["unclassified", "registry-created", "quiescent-preserved"]},
+        "unknown_entries_accepted": {"const": False}, "historical_a2_identified": {"const": False},
+        "cleanup_required": {"const": "existing-full-disposable-provider-destruction"}})
+    transition["allOf"] = [{"if": {"properties": {"transition": {"const": "registry-created"}}},
+        "then": {"properties": {"current_exact_predicate_equal": {"const": False}}}}]
+    housekeeping = closed({"schema": {"const": "t12-sandbox-housekeeping-observation/v1"},
+        "authority": {"const": "adapter-authored"}, "status": {"enum": ["pass", "not-run", "UNCHECKABLE"]},
+        "reason_code": transition["properties"]["reason_code"], "source_contract_sha256": source,
+        "transition": nullable(transition), "observation_binding": nullable(binding),
+        "window": nullable(closed({"started_ms": number, "finished_ms": number})),
+        "process_calls": closed({key: {"type": "integer", "minimum": 0, "maximum": 128}
+            for key in ("requested", "reaped", "unconfirmed")})})
+    housekeeping["allOf"] = [{"if": {"properties": {"status": {"const": "pass"}}}, "then": {"properties": {
+        "reason_code": {"const": "none"}, "transition": {**transition, "allOf": transition["allOf"] + [{"properties": {
+            "status": {"const": "pass"}, "reason_code": {"const": "none"}, "current_exact_predicate_equal": boolean,
+            "transition": {"enum": ["registry-created", "quiescent-preserved"]}}}]},
+        "observation_binding": binding, "window": {"type": "object"},
+        "process_calls": {"properties": {"requested": {"minimum": 1}, "unconfirmed": {"const": 0}}}}}}]
+    properties.update(shell_environment_behavior=shell, network_sandbox_behavior=network, sandbox_housekeeping=housekeeping)
+    legacy["required"].append("sandbox_housekeeping")
+    return legacy
+
+
 def expected_not_run_control_plane() -> Dict[str, Any]:
     return {
         "schema": "t11-colima-control-plane-evidence/v1",
@@ -1677,7 +1966,13 @@ def expected_not_run_containment_provider() -> Dict[str, Any]:
     }
 
 
-def validate_containment_provider(value: Any, profile_status: Any, label: str, errors: List[str]) -> None:
+def validate_containment_provider(
+    value: Any,
+    profile_status: Any,
+    label: str,
+    errors: List[str],
+    clone_public_branch: str = EXPECTED_T12_PUBLIC_BRANCH,
+) -> None:
     if not isinstance(value, dict) or set(value) != set(CONTAINMENT_PROVIDER_KEYS):
         errors.append(label + ": closed containment-provider evidence shape drifted")
         return
@@ -1776,6 +2071,7 @@ def validate_containment_provider(value: Any, profile_status: Any, label: str, e
         if value.get("repository_git_clone_contract_sha256") != (
             expected_git_clone_contract_sha256(
                 str(value.get("public_head")), str(value.get("public_tree")),
+                clone_public_branch,
             )
         ):
             errors.append(label + ": provider Git clone contract does not bind the exact head/tree")
@@ -2195,11 +2491,43 @@ def validate_network_sandbox_evidence(
     return value.get("status")
 
 
-def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[str]) -> None:
+def compatibility_shape_matches(value, schema, depth=0):
+    """Only the closed local compatibility-schema vocabulary, not a Draft validator."""
+    if depth > 24:
+        return False
+    if "anyOf" in schema and not any(compatibility_shape_matches(value, child, depth + 1) for child in schema["anyOf"]):
+        return False
+    if "allOf" in schema and not all(compatibility_shape_matches(value, child, depth + 1) for child in schema["allOf"]):
+        return False
+    if "if" in schema and compatibility_shape_matches(value, schema["if"], depth + 1):
+        if not compatibility_shape_matches(value, schema.get("then", {}), depth + 1): return False
+    if "const" in schema and (value != schema["const"] or type(value) is not type(schema["const"])): return False
+    if "enum" in schema and not any(value == item and type(value) is type(item) for item in schema["enum"]): return False
+    types = {"object": dict, "array": list, "string": str, "boolean": bool, "integer": int, "null": type(None)}
+    if "type" in schema and type(value) is not types[schema["type"]]: return False
+    if type(value) is int and not schema.get("minimum", value) <= value <= schema.get("maximum", value): return False
+    if isinstance(value, str):
+        if not schema.get("minLength", 0) <= len(value) <= schema.get("maxLength", len(value)): return False
+        if "pattern" in schema and re.search(schema["pattern"], value) is None: return False
+    if isinstance(value, dict):
+        properties = schema.get("properties", {})
+        if set(schema.get("required", ())) - set(value): return False
+        if schema.get("additionalProperties") is False and set(value) - set(properties): return False
+        if not all(compatibility_shape_matches(value[key], child, depth + 1) for key, child in properties.items() if key in value): return False
+    return True
+
+
+def validate_profile_evidence(
+    value: Any,
+    status: Any,
+    label: str,
+    errors: List[str],
+    clone_public_branch: str = EXPECTED_T12_PUBLIC_BRANCH,
+) -> None:
     if not isinstance(value, dict) or set(value) != {
         "configuration_intent", "diagnostic_health", "exact_worker_argv",
         "shell_environment_behavior", "network_sandbox_behavior",
-        "bubblewrap_prerequisite",
+        "bubblewrap_prerequisite", "sandbox_housekeeping",
         "containment_provider", "lane_statuses",
     }:
         errors.append(label + ": separated runtime evidence lanes drifted")
@@ -2258,13 +2586,22 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
     ):
         errors.append(label + ": exact worker argv evidence is invalid")
     shell = value.get("shell_environment_behavior")
-    shell_status = validate_shell_environment_evidence(shell, label, errors)
+    shapes = expected_profile_evidence_schema()["properties"]
+    for key in ("shell_environment_behavior", "network_sandbox_behavior", "sandbox_housekeeping"):
+        if not compatibility_shape_matches(value[key], shapes[key]):
+            errors.append(label + ": closed compatibility evidence shape drifted: " + key)
+    shell_status = shell.get("status") if isinstance(shell, dict) else None
+    if isinstance(shell, dict):
+        validate_shell_environment_evidence(shell.get("environment_predicate"), label, errors)
     network = value.get("network_sandbox_behavior")
-    network_status = validate_network_sandbox_evidence(network, label, errors)
+    network_status = network.get("status") if isinstance(network, dict) else None
     validate_stage_a1_prerequisite(
         value.get("bubblewrap_prerequisite"), status, label, errors
     )
-    validate_containment_provider(value.get("containment_provider"), status, label, errors)
+    validate_containment_provider(
+        value.get("containment_provider"), status, label, errors,
+        clone_public_branch,
+    )
     lanes = value.get("lane_statuses")
     if not isinstance(lanes, dict) or set(lanes) != set(LANE_STATUS_KEYS):
         errors.append(label + ": closed independent runtime lane status shape drifted")
@@ -2308,6 +2645,7 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
         or not isinstance(worker_argv, dict) or worker_argv.get("status") != "pass"
         or not isinstance(network, dict) or network.get("status") != "pass"
         or value.get("bubblewrap_prerequisite", {}).get("status") != "pass"
+        or value.get("sandbox_housekeeping", {}).get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
         or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
         or lanes.get("auth_status") != "signed-in-client"
@@ -2320,6 +2658,7 @@ def validate_profile_evidence(value: Any, status: Any, label: str, errors: List[
         or not isinstance(network, dict) or network.get("status") != "pass"
         or value.get("bubblewrap_prerequisite", {}).get("status") != "pass"
         or value.get("containment_provider", {}).get("status") != "pass"
+        or value.get("sandbox_housekeeping", {}).get("status") != "pass"
         or any(lanes.get(key) != "pass" for key in LANE_STATUS_KEYS[:-1])
         or lanes.get("auth_status") != "unavailable"
     ):
@@ -2755,7 +3094,7 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
     for key in (
         "exact_worker_argv", "shell_environment_behavior",
         "network_sandbox_behavior",
-        "bubblewrap_prerequisite", "containment_provider",
+        "bubblewrap_prerequisite", "containment_provider", "sandbox_housekeeping",
     ):
         if evidence_properties.get(key, {}).get("properties", {}).get("status") != {"const": "pass"}:
             errors.append(label + ": match does not require passing evidence lane " + key)
@@ -2833,6 +3172,38 @@ def validate_runtime_profile_schema(schema: Any, errors: List[str]) -> None:
             errors.append(label + ": probe-only-match fail-closed constraints drifted")
 
 
+def worker_boundary_schema():
+    """Independent closed success shape; adapter checks native arithmetic/bindings."""
+    def obj(fields):
+        return {"type": "object", "additionalProperties": False, "required": list(fields), "properties": fields}
+    digest = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    oid = {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+    return obj({
+        "schema": {"const": "t12-worker-boundary/v1"}, "authority": {"const": "adapter-authored"},
+        "status": {"const": "pass"}, "reason_code": {"const": "none"},
+        "agreement": {"const": {"url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+            "body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1"}},
+        "binding": obj({"attempt_id": {"type": "string", "pattern": "^ATTEMPT-[0-9a-f]{16}$"}, "head": oid, "tree": oid,
+            "provider_attempt_sha256": digest, "runtime_profile_sha256": digest, "envelope_sha256": digest}),
+        "window": obj({key: {"type": "integer", "minimum": 1} for key in ("started_ms", "finished_ms")}),
+        "process": {"const": {"logical_invocations": 1, "exit_code": 0, "signal": None, "timed_out": False,
+            "stdout_overflow": False, "stderr_overflow": False, "reaped": True}},
+        "launcher": obj({"role": {"const": "same-tmp-worker-linux-sandbox"}, "actual_image_observed": {"const": True},
+            "binding_stable": {"const": True}, "image_samples": {"type": "integer", "minimum": 1, "maximum": 4096},
+            "image_error_count": {"type": "integer", "minimum": 0, "maximum": 4096}, "budget_exhausted": {"const": False},
+            "binary_sha256": {"const": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8"},
+            "source_commit": {"const": "90854393966b21e9ebfd21b122334eb09a20c93d"}}),
+        "housekeeping": {**obj({"schema": {"const": "t12-sandbox-housekeeping-evidence/v1"}, "authority": {"const": "adapter-authored"},
+            "status": {"const": "pass"}, "reason_code": {"const": "none"}, "current_exact_predicate_equal": {"type": "boolean"},
+            "transition": {"enum": ["registry-created", "quiescent-preserved"]}, "unknown_entries_accepted": {"const": False},
+            "historical_a2_identified": {"const": False}, "cleanup_required": {"const": "existing-full-disposable-provider-destruction"}}),
+            "allOf": [{"if": {"properties": {"transition": {"const": "registry-created"}}, "required": ["transition"]},
+                "then": {"properties": {"current_exact_predicate_equal": {"const": False}}}}]},
+        "tmp_observations": obj({"before_sha256": digest, "after_sha256": digest, "before_status": {"const": "pass"}, "after_status": {"const": "pass"}}),
+        "execution_result_sha256": digest,
+    })
+
+
 def validate_runtime_receipt_schema(schema: Any, errors: List[str]) -> None:
     label = "docs/agreements/runtime/runtime-receipt.v1.schema.json"
     if not isinstance(schema, dict):
@@ -2846,9 +3217,12 @@ def validate_runtime_receipt_schema(schema: Any, errors: List[str]) -> None:
         "envelope": {"$ref": "task-execution-envelope.v1.schema.json"},
         "execution_result": {"$ref": "execution-result.v1.schema.json"},
         "verifier": {"$ref": "#/$defs/verifierArtifact"},
+        "worker_boundary": {"$ref": "#/$defs/workerBoundary"},
     }
     if artifacts.get("additionalProperties") is not False or artifacts.get("required") != list(expected) or artifacts.get("properties") != expected:
         errors.append(label + ": exact native runtime artifacts are not required")
+    if schema.get("$defs", {}).get("workerBoundary") != worker_boundary_schema():
+        errors.append(label + ": closed independently required worker boundary proof drifted")
     limitations = schema.get("properties", {}).get("limitations", {}).get("const", {})
     if limitations.get("artifact_provenance") != "unsigned-unverified":
         errors.append(label + ": unsigned artifact provenance limitation is missing")
@@ -2901,7 +3275,10 @@ def validate_execution_fixture(value: Any, envelope: Mapping[str, Any], profile:
         errors.append(label + ": result identity/status/authority drifted")
     worker = value["worker"]
     if worker != {"logical_invocations": 1, "exit_code": 0, "timed_out": False, "signal": None, "stdout_bytes": 467, "stderr_bytes": 0}:
-        errors.append(label + ": worker process evidence drifted")
+        errors.append(
+            label
+            + ": worker evidence must record exactly one logical invocation"
+        )
     expected_event_digest = sha256(b"".join(canonical_bytes(event) for event in events))
     if value["events"] != {"count": len(events), "terminal_count": 1, "terminal_state": "completed", "canonical_sha256": expected_event_digest}:
         errors.append(label + ": normalized event evidence drifted")
@@ -2933,16 +3310,22 @@ def validate_runtime_frontier(
     results: Any,
     errors: List[str],
 ) -> None:
-    """Bind the T11 offline acceptance boundary to canonical release state."""
+    """Bind accepted T11 and active T12 to canonical release state."""
 
     if not isinstance(ledger, dict):
         errors.append(LEDGER_CONTRACT_PATH + ": ledger must be an object")
         return
     frontier = ledger.get("runtime_frontier")
+    activation = frontier.get("t12_activation") if isinstance(frontier, dict) else None
+    completion = activation.get("worker_completion") if isinstance(activation, dict) else None
+    if not isinstance(completion, dict) or any(type(completion.get(key)) is not int for key in (
+        "new_stage_a_orchestration_max", "new_stage_b_vm_max", "new_logical_worker_process_max", "new_runtime_receipt_apply_max",
+    )):
+        errors.append(LEDGER_CONTRACT_PATH + ": finite worker-completion maxima must be exact integers")
     if frontier != expected_runtime_frontier():
         errors.append(
             LEDGER_CONTRACT_PATH
-            + ": runtime_frontier must match the exact T11 agreement-v2 deferral"
+            + ": runtime_frontier must match the exact T11/T12 activation frontier"
         )
 
     if not isinstance(coverage, dict):
@@ -3020,6 +3403,58 @@ def validate_runtime_frontier(
         )
 
 
+def validate_sandbox_launch_contract(adapter: Any, errors: List[str]) -> None:
+    """Offline behavioral checks, not evidence of actual CLI acceptance."""
+    label = ".github/scripts/codex-exec-adapter.py: sandbox launch contract"
+    try:
+        environment = {name: "reviewed" for name in adapter.SHELL_ENVIRONMENT_NAMES}
+        sandbox = adapter.sandbox_probe_argv(
+            Path("/reviewed/codex"), environment, ["/usr/bin/env", "-0"],
+            Path("/reviewed/root"),
+        )
+        doctor = adapter.runtime_configuration_argv(Path("/reviewed/codex"), environment)
+        if (
+            "--strict-config" in sandbox
+            or doctor.count("--strict-config") != 1
+            or sandbox[:sandbox.index("sandbox")] != [item for item in doctor if item != "--strict-config"]
+            or sandbox[sandbox.index("sandbox"):] != ["sandbox", "--permission-profile", ":read-only", "-C", "/reviewed/root", "--", "/usr/bin/env", "-0"]
+            or adapter.LAUNCH_DIAGNOSTIC_STDERR_LIMIT != 4096
+        ):
+            errors.append(label + " surface/override/limit drifted")
+        try:
+            adapter.validate_sandbox_probe_argv(sandbox[:1] + ["--strict-config"] + sandbox[1:])
+        except adapter.ContractError:
+            pass
+        else:
+            errors.append(label + " accepts unsupported strict flag")
+        source_rejection = b"Error: `--strict-config` is not supported for `codex sandbox`\n"
+        rejection = adapter.classify_sandbox_launch(adapter.ProcessResult(
+            1, None, False, False, False, b"", len(source_rejection), True, source_rejection,
+        ))
+        if rejection != {"status": "fail", "stage": "cli-dispatch", "reason_code": "unsupported-strict-config", "exit_code": 1, "signal": None}:
+            errors.append(label + " pinned-source rejection classification drifted")
+        unknown = adapter.classify_sandbox_launch(adapter.ProcessResult(
+            2, None, False, False, False, b"", 7, True, b"unknown",
+        ))
+        if unknown != {"status": "fail", "stage": "unclassified", "reason_code": "unrecognized-stderr", "exit_code": 2, "signal": None}:
+            errors.append(label + " unknown output was exposed or promoted")
+        wrapper = {
+            "schema": "t12-sandbox-launch-diagnostics/v1", "authority": "adapter-authored",
+            "runtime_profile": adapter._unavailable_runtime_profile("gpt-5.6-sol", "high", True),
+            "launch_diagnostics": {lane: adapter.launch_diagnostic_record() for lane in ("shell", "network")},
+        }
+        adapter.validate_launch_diagnostics_wrapper(wrapper)
+        wrapper["launch_diagnostics"]["shell"]["raw_stderr"] = "synthetic"
+        try:
+            adapter.validate_launch_diagnostics_wrapper(wrapper)
+        except adapter.ContractError:
+            pass
+        else:
+            errors.append(label + " diagnostic wrapper accepts raw fields")
+    except (AttributeError, KeyError, TypeError, ValueError, adapter.ContractError):
+        errors.append(label + " is invalid")
+
+
 def validate_repository(root: Path) -> List[str]:
     errors: List[str] = []
     for relative in SCHEMAS + JSON_FIXTURES + OTHER_FILES + (
@@ -3087,6 +3522,7 @@ def validate_repository(root: Path) -> List[str]:
                 fixture_profile.get("status") if isinstance(fixture_profile, dict) else None,
                 "tests/runtime/fixtures/runtime-profile-valid.v1.json",
                 errors,
+                EXPECTED_T11_ACCEPTED_PUBLIC_BRANCH,
             )
             validate_profile_lane_bindings(
                 fixture_profile,
@@ -3163,8 +3599,10 @@ def validate_repository(root: Path) -> List[str]:
             representative_tree = "b" * 40
             if (
                 getattr(adapter, "REPOSITORY", None) != EXPECTED_REPOSITORY
-                or getattr(adapter, "T11_PUBLIC_BRANCH", None)
-                != EXPECTED_T11_PUBLIC_BRANCH
+                or getattr(adapter, "T11_ACCEPTED_PUBLIC_BRANCH", None)
+                != EXPECTED_T11_ACCEPTED_PUBLIC_BRANCH
+                or getattr(adapter, "T12_PUBLIC_BRANCH", None)
+                != EXPECTED_T12_PUBLIC_BRANCH
                 or adapter.stage_a1_git_clone_contract(
                     representative_head, representative_tree,
                 ) != expected_git_clone_contract(
@@ -3178,6 +3616,17 @@ def validate_repository(root: Path) -> List[str]:
                 or expected_git_clone_contract_sha256(
                     representative_head, representative_tree,
                 ) != EXPECTED_REPRESENTATIVE_GIT_CLONE_CONTRACT_SHA256
+                or adapter.stage_a1_git_clone_contract_sha256(
+                    representative_head, representative_tree,
+                    adapter.T11_ACCEPTED_PUBLIC_BRANCH,
+                ) != expected_git_clone_contract_sha256(
+                    representative_head, representative_tree,
+                    EXPECTED_T11_ACCEPTED_PUBLIC_BRANCH,
+                )
+                or expected_git_clone_contract_sha256(
+                    representative_head, representative_tree,
+                    EXPECTED_T11_ACCEPTED_PUBLIC_BRANCH,
+                ) != "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7"
             ):
                 errors.append(
                     ".github/scripts/codex-exec-adapter.py: reviewed Git clone contract drifted"
@@ -3263,9 +3712,10 @@ def validate_repository(root: Path) -> List[str]:
                 adapter.validate_envelope(receipt_envelope)
                 adapter.validate_verifier_record(receipt_verifier, receipt_envelope["attempt_id"])
                 adapter.validate_execution_result(receipt_result, receipt_envelope, receipt_profile, receipt_verifier)
+                adapter.validate_worker_boundary(artifacts["worker_boundary"], receipt_envelope, receipt_profile, receipt_result)
             live_argv = adapter.build_live_argv(Path("/reviewed/codex"), Path("/private-target"), root, envelope)
             joined = "\n".join(live_argv)
-            for marker in (envelope["attempt_id"], "Issue #23"):
+            for marker in (envelope["attempt_id"], "Issue #25"):
                 if marker in joined:
                     errors.append(".github/scripts/codex-exec-adapter.py: dynamic Task data appears in live argv")
             for argument in live_argv:
@@ -3279,6 +3729,9 @@ def validate_repository(root: Path) -> List[str]:
                         + argument
                     )
             adapter.validate_runtime_argv_policy(live_argv, require_memory_overrides=True)
+            if live_argv.count("--strict-config") != 1:
+                errors.append(".github/scripts/codex-exec-adapter.py: live worker strict configuration drifted")
+            validate_sandbox_launch_contract(adapter, errors)
             for override_key, override_value in sorted(EXPECTED_RUNTIME_OVERRIDES.items()):
                 rendered = "{}={}".format(override_key, adapter.toml_literal(override_value))
                 if rendered not in live_argv:
@@ -3364,9 +3817,13 @@ def validate_repository(root: Path) -> List[str]:
         if required not in adapter_text:
             errors.append(".github/scripts/codex-exec-adapter.py: missing deterministic boundary " + required)
     for required in (
-        "--dry-run", "--apply", "--lifecycle-dry-run", "--lifecycle-apply",
-        "t11-colima-lifecycle-receipt-request/v1", "verify_linked_runtime_receipt",
-        "PULL_REQUEST = 24", "--body-file", "read-back differs",
+        "--dry-run", "--apply", "--dry-run-proof-sha256",
+        "--lifecycle-dry-run", "--lifecycle-apply",
+        "t12-colima-lifecycle-completion-request/v1", "verify_linked_runtime_receipt",
+        "validate_pull_request_binding", "PROBE_PULL_REQUEST = 24",
+        "isCrossRepository", "headRepository", "headRefName",
+        "codex/phase-2-live-codex-runtime",
+        "--body-file", "read-back differs",
         "run_bounded_process", "receipt_marker", "lifecycle_marker",
         "native runtime artifact", "artifact_bundle_sha256", "existing_comments",
         "uncertain", "--paginate", "duplicate object key", "non-finite",
@@ -3375,6 +3832,10 @@ def validate_repository(root: Path) -> List[str]:
     ):
         if required not in receipt_text:
             errors.append(".github/scripts/post-runtime-receipt.py: missing receipt boundary " + required)
+    if re.search(r"(?m)^PULL_REQUEST\s*=", receipt_text) is not None:
+        errors.append(
+            ".github/scripts/post-runtime-receipt.py: live receipt must not pin a static PR number"
+        )
     for forbidden in ("issue edit", "comment --edit", "comment --delete"):
         if forbidden in receipt_text:
             errors.append(".github/scripts/post-runtime-receipt.py: append-only actuator contains forbidden operation " + forbidden)

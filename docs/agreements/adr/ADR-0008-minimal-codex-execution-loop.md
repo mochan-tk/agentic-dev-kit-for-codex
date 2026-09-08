@@ -1,13 +1,14 @@
 # ADR-0008: Minimal Codex execution loop
 
-- Status: T11 agreement v2 accepted for deterministic offline-harness
-  implementation; live compatibility and receipt application deferred to T12
+- Status: T11 deterministic offline harness accepted; T12 live-runtime
+  qualification is the sole active frontier in this tree
 - Decision date: 2026-08-28
 - Bounded amendment date: 2026-08-30
 - Agreement-v2 date: 2026-08-31
 - Task: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23>
-- Deferred Task: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25>
+- Active Task: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25>
 - Agreement-v2 decision: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23#issuecomment-5472720734>
+- T12 activation amendment: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5480062206>
 - Parent Epic: <https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22>
 
 ## Context
@@ -42,7 +43,7 @@ change is a failure. The adapter's deterministic offline mode starts exactly
 one fake logical worker and a fresh Python verifier process. T11 does not claim
 real-Codex-worker success from that fixture.
 
-The approved agreement-v2 status is exact:
+The accepted T11 agreement-v2 historical status is exact:
 
 ```text
 runtime_harness = minimal-offline-implemented
@@ -53,6 +54,13 @@ Phase 2 = incomplete
 repository = incomplete
 release_blocked = true
 ```
+
+This tree activates T12 while preserving the Phase 2 phase origin at commit
+`36c7eabecf7a56eb2a1c2c8f2c4d8fcb371c31c2` and tree
+`1c1f46ad20dd289a713663c84eaf1dbb62840deb`. T12 alone is based on accepted
+T11 merge `4a85a007ed62795b48bcbce04f6b7e5482e71e82` and tree
+`49afe003de2bbb04249d6f4c36ea6462c271c26f`. Current live evidence is external
+GitHub state and is not embedded as mutable truth in this tree.
 
 AC-01 through AC-12 remain applicable only inside their offline/static
 boundary. AC-13 is superseded for T11 and deferred to T12; it is neither passed
@@ -221,6 +229,160 @@ sandbox/network, shell environment, configuration, or authentication status.
 
 ## Security and privacy consequences
 
+### T12 finite worker completion amendment (2026-09-08)
+
+The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437)
+with canonical body SHA-256
+`764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1`
+adopts the companion agreement's finite same-private-TMP worker transition.
+It supersedes the prior blanket worker/receipt latch below, not any failed
+historical observation, protected representative/Git boundary or native HOME,
+credential/rules, binary, mount, provider or cleanup requirement.
+
+Collect actual before/after finite observations directly around the one worker,
+its original confirmed process reap and a separate source-qualified same-TMP
+worker Linux-helper image witness. Shell/help/inert evidence cannot substitute.
+Missing or unexamined backend proof remains non-success; the model/tool/prompt
+is not forced to create a passing witness. Bind the closed supplemental
+`t12-worker-boundary/v1` artifact to exact attempt/head/tree, unchanged native
+profile/envelope and final result. Persist provisional safe worker evidence
+before later parsing/verification, retain unknown as unknown and require the
+proof independently in native receipt validation. A readiness-helper bypass
+cannot manufacture that proof. No unowned event/result schema changes.
+
+This is bounded pre/post and existential helper evidence, not authenticated
+authorship or an all-backend/intermediate-write trace. The same finite table
+and no-follow predicates apply; arbitrary TMP output is still rejected.
+The separate new allocation permits one Stage A orchestration and conditional
+one fresh Stage B VM/one logical worker/one logical receipt apply. The original
+2/2 ledger stays consumed. Bind exact reviewed sources and inputs after CI;
+pre-VM failure consumes the new orchestration once it starts. Manual owner
+authentication and explicit worker confirmation remain mandatory, as do the
+capacity/account-setting gates and existing bounded pause/B1/B2 cleanup.
+Keep the exact accepted receipt-before-destruction chronology below. No test
+or static authority record claims live success, T12 completion or merge readiness.
+
+### T12 combined compatibility production integration (2026-09-08)
+
+The [owner decision](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5581660698),
+canonical body SHA-256
+`ddd0aba3bc655d31442aac42a49afdf0e8e8b4e2ea62e20f8dc5589b2bc6374b`,
+authorizes a supplementary ownership-only transfer of the declared runtime
+profile, its closed schema and its existing fixture from accepted T11 to T12.
+Current ownership is T12 24 paths / T11 18 paths; the original 21-path activation,
+all previous commits and Phase/Task bases remain unchanged.
+
+Adopt `t11-shell-environment-evidence/v2`, `t11-network-sandbox-evidence/v2` and
+`t12-sandbox-housekeeping-observation/v1` inside the existing closed
+`runtime-profile/v1`. Independently collected current head/tree, provider
+attempt, fixed configuration/source/binary/help bindings, process outcomes and
+observation windows accompany the pure classifiers. New records do not migrate
+historical observations or the declared non-success profile into measurements.
+The agreement companion defines the precise finite predicates and stable/fresh
+comparison; no unpinned JSON Schema validator dependency is introduced.
+
+Socket creation denied with observed EPERM/EACCES is distinct from an observed
+connect denial. Both require all outer isolation/control/freshness/reap facts;
+resource failures and missing errno never pass. Launcher-qualified PWD requires
+actual pinned bwrap image observation in the witnessed owned sandbox-launcher
+role, plus exact private cwd equality in memory. Package/PATH/help or source
+prediction alone cannot set the actual-image predicate. Kernel `/proc/PID/exe`
+is followed only after anchoring that owned process and checking its birth
+identity; this deliberate kernel-magic-link observation does not relax any
+resource-file or directory no-follow policy. A missed image remains uncheckable.
+
+The finite TMP allowance is only a quiescent probe transition: exact root and
+ownership, an optional complete UID registry plus empty immutable single-link
+lock, no unknown entry, and confirmed reap of every observed profile process.
+Actual runner results are aggregated within one observation, with exceptions,
+missing results and non-reap non-success. Provider/image/mount/inventory and
+B1/B2 cleanup policies are unchanged.
+
+Worker disposition: pinned source permits a conditional sandbox-launcher route
+whose cleaned marker lifecycle changes registry-directory timestamps. The
+offline real-filesystem regression demonstrates a possible conflict with the
+unchanged whole-worker TMP equality, not a measured worker failure. This probe
+amendment does not silently permit worker TMP changes. Keep that equality and
+the mandatory `known-worker-tmp-unresolved` gate before fresh live observation,
+claim or worker, and before runtime/lifecycle receipt application. Current CLI
+dry-run is also blocked; pure fixture validation/rendering is not readiness.
+`live_run_allowed` is only a necessary authenticated profile-compatibility gate.
+
+No new runtime allowance is granted. Stage A remains 2/2 consumed; old A1/A2
+non-success, missing errno, original profiles and digests remain historical.
+Future worker execution needs one source-grounded equivalent housekeeping
+agreement and finite authority naming the integrated execution set. The offline
+tests and new external guest/export glue are not T12 acceptance, runtime-profile
+match, live E2E, runtime receipt, repository completion or release evidence.
+
+### T12 native-state and profile-comparison amendment (2026-09-08)
+
+The [owner amendment](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5577690456)
+supersedes only whole-private-HOME equality and whole-profile equality except
+for time. It does not supersede representative repository equality, credential
+lifecycle, protected configuration/rules, or any failed historical observation.
+The implementation uses the finite state/comparison tables in the companion
+runtime agreement. Those tables precede implementation and bind official
+Codex 0.150.1 source commit `90854393966b21e9ebfd21b122334eb09a20c93d`.
+Native state is private, potentially sensitive runtime data, not proof of
+Codex authorship or permission to export it. It is destroyed with the same
+approved disposable VM; no additional retention boundary is introduced.
+
+Both complete sanitized runtime observations are independently validated and
+retained with their original canonical digests. Stable security bindings and
+same-attempt VM/root/ownership bindings remain exact. A newly executed sensor
+must independently establish every required lane; namespace identifiers may
+coincide with or differ from the earlier sensor, but freshness and successful
+isolation cannot be inferred from identifier novelty. No protected native
+schema is changed by this comparison contract.
+
+### T12 bounded sandbox-launch remediation (2026-09-05)
+
+The [bounded owner plan](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5550009263)
+authorizes offline investigation and safety-preserving remediation only. Both
+T12 Stage A attempts remain non-success; the retry allowance is exhausted.
+No third attempt, renamed diagnostic VM, authentication, model, live worker,
+receipt application, Stage B, or merge is authorized by this correction.
+
+Static review of official Codex 0.150.1 source commit
+`90854393966b21e9ebfd21b122334eb09a20c93d`, `codex-rs/cli/src/main.rs`
+blob `455682e14248c73e76adc72cce97b6c1bff46402`, established a sufficient
+shared launch incompatibility: the CLI rejects `--strict-config` for `sandbox`
+before dispatch. Its `debug_sandbox` loader intentionally uses
+`strict_config=false`. Only the sandbox configuration argv omits that flag;
+doctor and the live worker retain strict configuration. All reviewed `-c`
+overrides, environment values, Option B, configuration-intent digest, image
+binding, provider isolation, network policy, pinned client, and qualified
+AppArmor/bubblewrap prerequisites are unchanged.
+
+This source-proven defect does not recover the prior discarded stderr or
+prove it was the sole failure. Self-validation, synthetic processes, and green
+offline CI do not prove real CLI acceptance or resolved sandbox compatibility.
+
+Optional `profile --probe-only --launch-diagnostics` emits a separate
+adapter-authored `t12-sandbox-launch-diagnostics/v1` transport wrapper around
+the unchanged, closed `runtime-profile/v1`. It requires the approved provider
+and an exact unavailable-auth classification before diagnostic capture. The
+existing auth observation is reused, and each shell/network lane still
+launches at most its one existing process. Only these unauthenticated,
+no-model probes may transiently capture at most 4096 stderr bytes in memory.
+The adapter immediately classifies/discards them before the existing lane
+classifiers; raw stderr, exception text, argv, private paths, and environment
+values never enter either record. Diagnostic status, fixed stage/reason,
+numeric exit code, and numeric signal are supplemental facts, not a new
+runtime gate or authenticated attestation. Unknown stderr stays unclassified
+non-success. Timeout, overflow, signal, spawn failure, and incomplete reap
+remain distinct; only a failure at the actual process-spawn boundary is
+called a spawn failure. Existing profile statuses and lane semantics remain
+unchanged, and no launch classification promotes a profile or lane.
+
+Any future minimal measurement needs a separate owner replan against the
+exhausted attempt allowance. The proposed measurement is the existing exact
+unauthenticated profile command plus `--launch-diagnostics`, preserving all
+provider/prerequisite gates and one process per shell/network lane. It would
+distinguish pre-dispatch rejection from unclassified process failure using
+only the safe wrapper. No such command is executed by this remediation.
+
 - The worker has `workspace-write`, approval `never`, network disabled, no
   additional writable roots, ephemeral history, hooks/apps/agents/web search/
   feedback/memory disabled, strict config, and ignored user config. Its argv
@@ -256,7 +418,10 @@ sandbox/network, shell environment, configuration, or authentication status.
   byte-identical namespace replacement, unreachable objects, split/shared
   indexes, config/hooks, and other Git-internal changes even if a caller forges
   its pre-state.
-- A single private execution root encloses the target, HOME, and TMPDIR. Its
+- The offline private execution root encloses the target, HOME, and TMPDIR. The
+  live path keeps persistent HOME/TMPDIR separately inside the private VM.
+  The 2026-09-08 finite native-state amendment supersedes whole-HOME equality,
+  but leaves target-root and TMPDIR checks exact. The target inventory's
   bounded no-follow before/after inventory includes persistent membership,
   bytes, bindings, modes, timestamps, xattr names/value digests, and `st_flags`
   where exposed, allowing only the exact owned-leaf transition. It does not
@@ -275,21 +440,40 @@ sandbox/network, shell environment, configuration, or authentication status.
   tokens bind observed descendant signals across reparenting/setsid and reject
   PID reuse. This process-table tracking is best-effort cleanup evidence, not
   kernel-enforced containment. T11 does not claim full escaped-descendant
-  process-lifetime containment; that stronger control is deferred to T12. The
+  process-lifetime containment; that stronger control is deferred to T13. The
   approved disposable-VM outer boundary remains mandatory for live `match`.
 - Any T12 runtime receipt application occurs before provider destruction. The receipt
   records the pre-live destruction obligation without claiming completion;
   destroy request/completion and profile-absence read-back are later,
   append-only owner/adapter evidence.
-- The current T11 lifecycle actuator is fixture-tested against Issue #23 and
-  PR #24 and is not applied. T12 must bind its own exact Task and PR targets
-  before any live actuation. The tested actuator posts stable idempotent copies,
-  regenerates the canonical receipt projection/comment from the original
-  validated native request, cross-binds the linked receipt's GitHub creation
-  time, and requires the sequence receipt -> destroy request -> destroy
-  completion -> profile and runtime-data absence read-backs. All lifecycle
-  timestamps have a 300-second maximum future skew, and the latest absence
-  observation must be no more than 3600 seconds old at validation.
+- The T11 lifecycle actuator was fixture-tested against Issue #23 and PR #24
+  and was not applied. T12 dynamically binds its exact same-repository PR,
+  non-fork head branch, head, tree, and checks through GitHub read-back before
+  live actuation. Runtime `--apply` requires the exact deterministic digest
+  emitted by the preceding `--dry-run`; this binds the two operations but is
+  not an authenticated attestation that a human ran either command. After the
+  single runtime receipt is canonically read back, the T12 lifecycle actuator
+  accepts a separate completion record and appends one Issue #25 comment, not
+  a second runtime receipt or a PR copy. It requires receipt -> destroy request
+  -> destroy completion -> profile, runtime-data, and tracked-process absence
+  read-backs. All lifecycle timestamps have a 300-second maximum future skew,
+  and every absence observation must independently be no more than 3600
+  seconds old at validation.
+
+T12 preserves this exact chronology: Stage B live worker; deterministic
+verification; receipt dry-run; exact head/tree/check read-back; exactly one
+runtime-receipt apply; canonical receipt read-back; provider/runtime
+destruction; profile/runtime-data/process absence read-back; one append-only
+lifecycle-completion evidence comment; owner merge judgment. The lifecycle
+comment is not a second runtime receipt. Changing this order requires a
+separate agreement change.
+
+This slice advances only a bounded source-parity contribution from
+`mochan-tk/agentic-dev-kit-for-copilot` commit
+`fd265ddef150fab86cd54d0e383c2c25fe297ffb`: capability-aware routing for one
+exact profile, bounded worker execution, a durable attempt/receipt trail,
+independent verification rather than worker self-claim, and privacy by
+reference. It does not complete K09, K10, K11, K12, or full runtime parity.
 
 The single Stage A.2 attempt completed fail-closed. Its aggregate runtime
 profile was `UNCHECKABLE`: provider isolation, mount boundary, process cleanup,
@@ -301,11 +485,11 @@ and tracked processes were destroyed with absence read-back. This remains
 bounded non-success evidence and is not rewritten as pass. T11 performs no
 Stage A.3.
 
-The agreement-v2 decision moves live compatibility and receipt proof to the
-planning-only T12. Stage B requires later review and a separate fresh VM; only
+The agreement-v2 decision moved live compatibility and receipt proof to T12,
+which is active in this tree. Stage B requires a separate fresh VM; only
 then may device-code authentication be enabled temporarily. A Stage B worker remains
 blocked unless exact auth classification and the complete runtime profile are
-`match`. The Stage A.2 non-success record is qualification evidence, not
+`match`. The Stage A.2 non-success record is immutable historical qualification evidence, not
 live-execution or runtime-receipt evidence, and cannot consume or impersonate
 the one later T12 receipt.
 
@@ -317,7 +501,11 @@ full K09/K10/K11/K12 parity, hooks, a generalized Task ritual, installation,
 upgrade, feedback transport, full escaped-descendant process-lifetime
 containment, or release readiness. Offline fixtures and Stage A.1/A.2
 probe-only evidence do not
-constitute a live Codex run. Only a later exact-head supported-profile T12
-Stage B run and read-back receipt can supply live evidence. T11 owner merge
+constitute a live Codex run. Only an exact-head supported-profile T12 Stage B
+run and read-back receipt can supply live evidence. T12 intentionally
+qualifies official stable Codex CLI `0.150.1` as one bounded compatibility
+baseline, not as the current latest stable and not as proof for every stable
+version. It proves exactly one owner-triggered logical `codex exec` worker-
+process invocation and does not claim a count of backend model requests. T11 owner merge
 remains only the acceptance gate for the deterministic offline harness; it
 does not complete Phase 2, the repository, or a release.

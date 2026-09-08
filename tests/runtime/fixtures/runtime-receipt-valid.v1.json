@@ -2,12 +2,12 @@
   "schema": "runtime-receipt-request/v1",
   "repository": "mochan-tk/agentic-dev-kit-for-codex",
   "task": {
-    "issue": 23,
-    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+    "issue": 25,
+    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
   },
   "pull_request": {
-    "number": 24,
-    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/24",
+    "number": 73,
+    "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/pull/73",
     "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
@@ -51,21 +51,47 @@
           "schema": "t11-runtime-configuration-intent/v1",
           "authority": "adapter-authored",
           "effective_configuration_proven": false,
-          "configuration_sha256": "17be962b3def2ca516a67792e3a1916732afef1dfdb1c627ecae7ae798ddc584",
+          "configuration_sha256": "57544f913162c855183d171f4217d9c1ad4f1a9a6d63f4539245ca8a73e16889",
           "rules_profile_sha256": "5b35a6d5cb6bb79458229743019b9fce9cce3478de0c3692388482f15aefe9c2",
-          "dynamic_environment_values_excluded": ["CODEX_HOME", "HOME", "PATH", "TMPDIR"],
+          "dynamic_environment_values_excluded": [
+            "CODEX_HOME",
+            "HOME",
+            "PATH",
+            "TMPDIR"
+          ],
           "reviewed_codex_source_commit": "90854393966b21e9ebfd21b122334eb09a20c93d",
-          "reviewed_codex_source_blobs": {"debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79", "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e", "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c"},
+          "reviewed_codex_source_blobs": {
+            "debug_sandbox": "06c133394b408d4700a82bd88ddd6b8cf01ffd79",
+            "spawn": "bbae9308d7e8483476887cb1a1e82555001be06c",
+            "shell_environment": "e8bdaa40ca63c29ee23111252a04165e0f1f528e"
+          },
+          "compatibility_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
           "reviewed_codex_injected_keys_sha256": "8ef011e3681e8a597c368d97b2dcc36e9a4c75ec9260d11a2fd5c05f26129ea6"
         },
         "diagnostic_health": {
           "classification": "diagnostic-only",
           "status": "pass",
           "checks": [
-            {"id": "auth.credentials", "category": "auth", "status": "ok"},
-            {"id": "config.load", "category": "config", "status": "ok"},
-            {"id": "runtime.provenance", "category": "runtime", "status": "ok"},
-            {"id": "sandbox.helpers", "category": "sandbox", "status": "ok"}
+            {
+              "id": "auth.credentials",
+              "category": "auth",
+              "status": "ok"
+            },
+            {
+              "id": "config.load",
+              "category": "config",
+              "status": "ok"
+            },
+            {
+              "id": "runtime.provenance",
+              "category": "runtime",
+              "status": "ok"
+            },
+            {
+              "id": "sandbox.helpers",
+              "category": "sandbox",
+              "status": "ok"
+            }
           ],
           "codex_issued_effective_configuration_proof": false
         },
@@ -76,19 +102,160 @@
           "rules_bypass_absent": true,
           "dynamic_task_data_stdin_only": true
         },
-        "shell_environment_behavior": {"schema": "t11-shell-environment-evidence/v1", "authority": "adapter-authored", "status": "pass", "reason_code": "none", "unexpected_key_count": 0, "unexpected_key_names_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570", "secret_shaped_key_count": 0},
-        "network_sandbox_behavior": {"schema": "t11-network-sandbox-evidence/v1", "authority": "adapter-authored", "status": "pass", "reason_code": "none", "unsandboxed_control_accepted": true, "unsandboxed_control_closed": true, "parent_netns_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "sandbox_netns_sha256": "2222222222222222222222222222222222222222222222222222222222222222", "netns_different": true, "network_marker_status": "exact-1", "sandbox_connect_status": "denied", "sandbox_connect_errno": "EPERM", "process_cleanup_status": "pass", "process_reaped": true, "raw_stdout_recorded": false, "raw_stderr_recorded": false},
+        "shell_environment_behavior": {
+          "schema": "t11-shell-environment-evidence/v2",
+          "authority": "adapter-authored",
+          "status": "pass",
+          "reason_code": "none",
+          "environment_predicate": {
+            "schema": "t11-shell-environment-evidence/v1",
+            "authority": "adapter-authored",
+            "status": "pass",
+            "reason_code": "none",
+            "unexpected_key_count": 0,
+            "unexpected_key_names_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "secret_shaped_key_count": 0
+          },
+          "source_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
+          "launcher": {
+            "status": "pass",
+            "path_binding_stable": true,
+            "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8",
+            "help_sha256": "2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d",
+            "help_required_flags": true,
+            "actual_image_observed": true,
+            "image_samples": 2,
+            "image_error_count": 0
+          },
+          "observation_binding": {
+            "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+            "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+          },
+          "window": {
+            "started_ms": 1787875199000,
+            "capture_started_ms": 1787875199100,
+            "capture_finished_ms": 1787875199200,
+            "classified_ms": 1787875199200
+          },
+          "pwd_present": true,
+          "pwd_matches_exact_cwd": true
+        },
+        "network_sandbox_behavior": {
+          "schema": "t11-network-sandbox-evidence/v2",
+          "authority": "adapter-authored",
+          "status": "pass",
+          "reason_code": "none",
+          "proof_path": "connect-denial",
+          "observation": {
+            "binding": {
+              "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+              "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+            },
+            "control_connected": true,
+            "control_accepted": true,
+            "control_peer_matches": true,
+            "control_closed": true,
+            "parent_netns_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "sandbox_netns_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+            "network_marker_status": "exact-1",
+            "socket_create_status": "created",
+            "socket_create_errno": "none",
+            "connect_status": "denied",
+            "connect_errno": "EPERM",
+            "socket_close_status": "pass",
+            "exit_code": 0,
+            "signal": null,
+            "timed_out": false,
+            "stdout_overflow": false,
+            "stderr_overflow": false,
+            "stderr_size": 0,
+            "reaped": true,
+            "control_closed_ms": 1787875199300,
+            "probe_started_ms": 1787875199400,
+            "probe_finished_ms": 1787875199500
+          },
+          "context": {
+            "expected_binding": {
+              "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+              "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+            },
+            "control_binding": {
+              "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+              "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+            },
+            "capture_binding": {
+              "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+              "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+            },
+            "observation_started_ms": 1787875199000,
+            "observation_finished_ms": 1787875199500
+          },
+          "classified_at_ms": 1787875199500
+        },
         "bubblewrap_prerequisite": {
           "schema": "t11-bubblewrap-prerequisite-evidence/v1",
           "authority": "adapter/owner-authored",
           "status": "pass",
           "reason_code": "none",
-          "guest": {"distribution_id": "ubuntu", "distribution_version": "24.04", "distribution_codename": "noble", "kernel": "6.8.0-fixture", "architecture": "aarch64"},
-          "apparmor": {"enabled": true, "unprivileged_userns_restriction": "active", "profile_required": true, "profile_source": "ubuntu-noble-apparmor-profiles", "source_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9", "installed_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9", "load_status": "enforce"},
-          "bubblewrap": {"package_name": "bubblewrap", "package_version": "0.9.0-1ubuntu0.1", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8", "version_output": "bubblewrap 0.9.0", "help_sha256": "8888888888888888888888888888888888888888888888888888888888888888"},
-          "git": {"package_name": "git", "package_version": "1:2.43.0-1ubuntu7.3", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942", "version_output": "git version 2.43.0"},
-          "controller": {"argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "shell": false, "model_invoked": false, "device_auth_performed": false, "legacy_landlock_enabled": false, "global_apparmor_userns_disabled": false},
-          "smoke": {"argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08", "status": "pass", "reason_code": "none", "exit_code": 0, "raw_stdout_recorded": false, "raw_stderr_recorded": false}
+          "guest": {
+            "distribution_id": "ubuntu",
+            "distribution_version": "24.04",
+            "distribution_codename": "noble",
+            "kernel": "6.8.0-fixture",
+            "architecture": "aarch64"
+          },
+          "apparmor": {
+            "enabled": true,
+            "unprivileged_userns_restriction": "active",
+            "profile_required": true,
+            "profile_source": "ubuntu-noble-apparmor-profiles",
+            "source_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9",
+            "installed_sha256": "11d39094f044f0cda0febb3ad517b830301da6b2ce929664af09ee9e4dd264f9",
+            "load_status": "enforce"
+          },
+          "bubblewrap": {
+            "package_name": "bubblewrap",
+            "package_version": "0.9.0-1ubuntu0.1",
+            "package_architecture": "arm64",
+            "install_status": "installed",
+            "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8",
+            "version_output": "bubblewrap 0.9.0",
+            "help_sha256": "2e2d9c7637f0e032a23cb86705bf9a82946451916e8583aa50ccc8e943c4b15d"
+          },
+          "git": {
+            "package_name": "git",
+            "package_version": "1:2.43.0-1ubuntu7.3",
+            "package_architecture": "arm64",
+            "install_status": "installed",
+            "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942",
+            "version_output": "git version 2.43.0"
+          },
+          "controller": {
+            "argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff",
+            "shell": false,
+            "model_invoked": false,
+            "device_auth_performed": false,
+            "legacy_landlock_enabled": false,
+            "global_apparmor_userns_disabled": false
+          },
+          "smoke": {
+            "argv_sha256": "8e8d9907189e3b2dbcf3170d20d3dad2cfe6269da5148946ae79c4aa06843f08",
+            "status": "pass",
+            "reason_code": "none",
+            "exit_code": 0,
+            "raw_stdout_recorded": false,
+            "raw_stderr_recorded": false
+          }
         },
         "containment_provider": {
           "schema": "t11-containment-provider-evidence/v1",
@@ -108,7 +275,9 @@
           "provider_cache_mount_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
           "provider_cache_guest_mountpoint_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
           "host_mount_count": 1,
-          "host_mount_classifications": ["provider-internal-cache"],
+          "host_mount_classifications": [
+            "provider-internal-cache"
+          ],
           "all_host_mounts_read_only": true,
           "provider_cache_only": true,
           "host_sensitive_mounts_absent": true,
@@ -120,9 +289,22 @@
           "public_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "public_tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           "repository_clean": true,
-          "repository_git_bootstrap": {"schema": "t11-git-bootstrap-evidence/v1", "authority": "owner/controller-authored", "package_name": "git", "package_version": "1:2.43.0-1ubuntu7.3", "package_architecture": "arm64", "install_status": "installed", "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942", "version_output": "git version 2.43.0", "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff", "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc", "raw_stdout_recorded": false, "raw_stderr_recorded": false},
+          "repository_git_bootstrap": {
+            "schema": "t11-git-bootstrap-evidence/v1",
+            "authority": "owner/controller-authored",
+            "package_name": "git",
+            "package_version": "1:2.43.0-1ubuntu7.3",
+            "package_architecture": "arm64",
+            "install_status": "installed",
+            "binary_sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942",
+            "version_output": "git version 2.43.0",
+            "controller_argv_sha256": "3d61c7c2a924a30853381dbebd912e33d474ec0dd226598b540ecc1e0f1f44ff",
+            "preclone_qualification_argv_sha256": "a5ea1c6699df4dcde3d7c7572b80fb866a242e016bb9d30399f9d01d3b3650dc",
+            "raw_stdout_recorded": false,
+            "raw_stderr_recorded": false
+          },
           "repository_git_bootstrap_runtime_match": true,
-          "repository_git_clone_contract_sha256": "80175bb5a8b09587866e54b425361eaa796213e770e40b3b866d389796da12b7",
+          "repository_git_clone_contract_sha256": "af134538a459119e618854b6455199ac92ee0b7abd4546fabc1c7330d4eb51d8",
           "codex_version_output": "codex-cli 0.150.1",
           "approved_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
           "observed_archive_sha256": "5bb1f75e1a1588845b4a31f2c98fb2b394be5c2a8d90a24a8ab0ebbae1169264",
@@ -172,6 +354,39 @@
           "shell_environment_status": "pass",
           "config_status": "pass",
           "auth_status": "signed-in-client"
+        },
+        "sandbox_housekeeping": {
+          "schema": "t12-sandbox-housekeeping-observation/v1",
+          "authority": "adapter-authored",
+          "status": "pass",
+          "reason_code": "none",
+          "source_contract_sha256": "a28fedd4f0ecbc21d9c6f8947ba11c4464686c5946bfd6f4be8909f91846eef4",
+          "transition": {
+            "schema": "t12-sandbox-housekeeping-evidence/v1",
+            "authority": "adapter-authored",
+            "status": "pass",
+            "reason_code": "none",
+            "current_exact_predicate_equal": false,
+            "transition": "registry-created",
+            "unknown_entries_accepted": false,
+            "historical_a2_identified": false,
+            "cleanup_required": "existing-full-disposable-provider-destruction"
+          },
+          "observation_binding": {
+            "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+            "observation_id_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+          },
+          "window": {
+            "started_ms": 1787875199000,
+            "finished_ms": 1787875200000
+          },
+          "process_calls": {
+            "requested": 12,
+            "reaped": 12,
+            "unconfirmed": 0
+          }
         }
       },
       "auth": {
@@ -221,8 +436,8 @@
       "schema": "task-execution-envelope/v1",
       "task": {
         "repository": "mochan-tk/agentic-dev-kit-for-codex",
-        "issue": 23,
-        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/23"
+        "issue": 25,
+        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25"
       },
       "attempt_id": "ATTEMPT-0123456789abcdef",
       "harness": {
@@ -917,8 +1132,8 @@
         "record_sha256": "eadf6a4de1854f600255940213aebc966ecfe5185d48a9f34c83db3e2ce0af12"
       },
       "digests": {
-        "envelope_sha256": "bbb6b4bf3ff6bab953ecb3efcd8528f4dd118bd3918f558ce3e22903ee1ac847",
-        "runtime_profile_sha256": "a95f54f5b75890d9e72c4cfa7edebd76c0d580f7f1777a06b85e897f12142dea"
+        "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637",
+        "runtime_profile_sha256": "324ae540e30467fb5a741ec5c7e06adccc32477375bedd04428ce2fac871df39"
       },
       "privacy": {
         "raw_jsonl_retained": false,
@@ -951,6 +1166,65 @@
         "index",
         "unreachable-objects"
       ]
+    },
+    "worker_boundary": {
+      "schema": "t12-worker-boundary/v1",
+      "authority": "adapter-authored",
+      "status": "pass",
+      "reason_code": "none",
+      "agreement": {
+        "url": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/25#issuecomment-5583709437",
+        "body_sha256": "764f0a2d0acc07d80fc88c3f3710ce5224ca3da5ef8d4bdbcbb13562a4eed3d1"
+      },
+      "binding": {
+        "attempt_id": "ATTEMPT-0123456789abcdef",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "provider_attempt_sha256": "20e9cf28dd4a272b7d6135e13df4ad5c0981d506c1e67da2618ab8994ada215e",
+        "runtime_profile_sha256": "324ae540e30467fb5a741ec5c7e06adccc32477375bedd04428ce2fac871df39",
+        "envelope_sha256": "f10ef82387814c645fa97fc9fdb40968aad1f020d21b2f6029932b08ea55b637"
+      },
+      "window": {
+        "started_ms": 1787875201000,
+        "finished_ms": 1787875202000
+      },
+      "process": {
+        "logical_invocations": 1,
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "stdout_overflow": false,
+        "stderr_overflow": false,
+        "reaped": true
+      },
+      "launcher": {
+        "role": "same-tmp-worker-linux-sandbox",
+        "actual_image_observed": true,
+        "binding_stable": true,
+        "image_samples": 1,
+        "image_error_count": 0,
+        "budget_exhausted": false,
+        "binary_sha256": "ae27935781511400c65ebcc0b4669775d602f46251b8707c947a1ac1b160c1c8",
+        "source_commit": "90854393966b21e9ebfd21b122334eb09a20c93d"
+      },
+      "housekeeping": {
+        "schema": "t12-sandbox-housekeeping-evidence/v1",
+        "authority": "adapter-authored",
+        "status": "pass",
+        "reason_code": "none",
+        "current_exact_predicate_equal": false,
+        "transition": "registry-created",
+        "unknown_entries_accepted": false,
+        "historical_a2_identified": false,
+        "cleanup_required": "existing-full-disposable-provider-destruction"
+      },
+      "tmp_observations": {
+        "before_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "after_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "before_status": "pass",
+        "after_status": "pass"
+      },
+      "execution_result_sha256": "b295179de7b036e8dff92ddce23bae00a1cca8822ab576d6c8589fc06bd6612a"
     }
   },
   "checks": [
