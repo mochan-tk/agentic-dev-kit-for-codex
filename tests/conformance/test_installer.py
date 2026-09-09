@@ -49,13 +49,17 @@ class InstallerTests(unittest.TestCase):
                  "commit", "-qm", message)
         return self.git("rev-parse", "HEAD")
 
-    def adoption_fixture(self, *, initial=False, preserved=False, tune=True, application=False):
+    def adoption_fixture(self, *, initial=False, preserved=False, tune=True, application=False,
+                         anchor=None, head_anchor=None):
         (self.target / "existing.txt").write_text("existing adopter file\n")
         if preserved:
             for name in ("AGENTS.md", "README.md", "SCAFFOLD-CHANGELOG.md"):
                 (self.target / name).write_text("adopter-owned " + name + "\n")
         before_install = self.commit_adopter("before adoption")
         self.assertEqual(0, self.run_install("--apply").returncode)
+        anchor_path = self.target / ".agents/skills/plan-management/scripts/frontier.sh"
+        if anchor is not None:
+            anchor_path.write_bytes(anchor)
         adopted = self.commit_adopter("adopt reviewed local payload")
         if initial:
             return before_install, adopted
@@ -64,6 +68,8 @@ class InstallerTests(unittest.TestCase):
             path.write_text(path.read_text().replace("CUSTOMIZE", "CONFIGURED"))
         if application:
             (self.target / "application.py").write_text("print('application change')\n")
+        if head_anchor is not None:
+            anchor_path.write_bytes(head_anchor)
         if not tune and not application:
             (self.target / "existing.txt").write_text("ordinary work\n")
         return adopted, self.commit_adopter("onboarding candidate")
@@ -251,6 +257,129 @@ print(value[1]); sys.exit(value[0])
         result = self.ritual(base, head, defect="read-error", ordinary=True)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn('ritual in order', result.stdout)
+
+    def packaged_json(self, helper, records, *args):
+        # Execute the helper's actual --jq expression against raw GitHub JSON.
+        # No preprojected IDs/markers can hide a broken query in these fixtures.
+        self.assertIsNotNone(shutil.which("jq"), "real jq is required for helper regressions")
+        fake = self.base / "json-bin"
+        fake.mkdir(exist_ok=True)
+        fixture = self.base / "raw-github.json"
+        fixture.write_text(json.dumps(records))
+        gh = fake / "gh"
+        gh.write_text("""#!/usr/bin/env python3
+import json, os, subprocess, sys
+args=sys.argv[1:]
+records=json.load(open(os.environ['RAW_GITHUB_FIXTURE']))
+if args[:2] == ['issue','list']:
+    value=records['list']
+    if value is None: sys.exit(90)
+    print(value, end=''); sys.exit(0)
+if args[0] == 'api':
+    key=args[1]
+elif args[:2] == ['issue','view']:
+    repo=args[args.index('--repo')+1] if '--repo' in args else 'fixture/adopter'
+    key=repo+'#'+args[2]+':'+args[args.index('--json')+1]
+else: sys.exit(91)
+if key not in records or records[key] is None: sys.exit(92)
+if '--jq' not in args: sys.exit(93)
+sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
+    input=json.dumps(records[key]),text=True).returncode)
+""")
+        gh.chmod(0o755)
+        return subprocess.run(["bash", str(ROOT / PAYLOAD / helper), *args], cwd=self.target,
+            env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"],
+                     RAW_GITHUB_FIXTURE=str(fixture), RITUAL_API_RETRY_DELAY="0"),
+            capture_output=True, text=True, timeout=15)
+
+    def ordinary_ritual(self, identifier="6af9582d-42d1-425d-82c8-f9ec651225a8", *, defect=None):
+        prefix = 'repos/{owner}/{repo}'
+        def comment(body, minute):
+            stamp = f'2026-01-01T00:{minute:02}:00Z'
+            return {'body': body, 'created_at': stamp, 'updated_at': stamp}
+        dispatch = f'Dispatching worker: Task #2 worker (session {identifier}), branch codex/task-2-fix'
+        comments = [comment('Starting in session fixture-supervisor', 0),
+                    comment('## Plan\nImplement the bounded Task.', 1), comment(dispatch, 2)]
+        body = 'Refs #2\nPlan: https://github.com/fixture/adopter/issues/2#issuecomment-3'
+        if defect == 'wrong-branch': comments[2]['body'] = dispatch.replace('task-2-fix', 'task-4-fix')
+        if defect == 'edited': comments[2]['updated_at'] = '2026-01-01T00:03:00Z'
+        if defect == 'early': comments[2] = comment(dispatch, 0)
+        if defect == 'late': comments[2] = comment(dispatch, 6)
+        if defect == 'claim-after-plan': comments[0] = comment(comments[0]['body'], 2)
+        if defect in ('replacement', 'missing-release', 'edited-release'):
+            if defect != 'missing-release': comments.append(comment('Releasing worker: prior attempt', 3))
+            if defect == 'edited-release': comments[-1]['updated_at'] = '2026-01-01T00:04:00Z'
+            comments.append(comment(dispatch, 4))
+        if defect == 'missing-session': comments[2]['body'] = dispatch.replace(f' (session {identifier})', '')
+        if defect == 'duplicate-session': comments[2]['body'] = dispatch + ' (session deadbeef)'
+        if defect == 'wrong-plan-repo': body = body.replace('fixture/adopter/issues', 'other/repo/issues')
+        if defect == 'wrong-plan-issue': body = body.replace('/issues/2#', '/issues/4#')
+        if defect == 'missing-plan-link': body = 'Refs #2'
+        records = {
+            prefix + '/pulls/1': {'user': {'login': 'owner', 'type': 'User'}, 'body': body,
+                                 'head': {'ref': 'codex/task-2-fix'}},
+            prefix + '/issues/2/comments': comments,
+            prefix + '/pulls/1/commits': [{'commit': {'committer': {'date': '2026-01-01T00:05:00Z'}}}],
+            prefix + '/issues/2': {'labels': [{'name': 'type:task'}]},
+            prefix: {'full_name': 'fixture/adopter'},
+            prefix + '/issues/comments/3': {'issue_url': 'https://api.github.com/repos/fixture/adopter/issues/2',
+                                          'body': '## Plan\nImplement the bounded Task.'},
+        }
+        if defect == 'wrong-plan-resolution': records[prefix + '/issues/comments/3']['issue_url'] = 'issues/4'
+        if defect == 'non-plan-comment': records[prefix + '/issues/comments/3']['body'] = 'Starting in session fixture'
+        if defect == 'missing-task-label': records[prefix + '/issues/2']['labels'] = []
+        return self.packaged_json('.github/scripts/check-task-ritual.sh', records, '1')
+
+    def test_f2_whole_legacy_and_tool_scoped_identifiers(self):
+        for identifier in ('deadbeef', '6af9582d-42d1-425d-82c8-f9ec651225a8',
+                           'a' * 128, '/root/worker', '/root/example_supervisor/example_worker',
+                           '/root/' + 'a' * 63, '/root/' + '/'.join(['worker'] * 16)):
+            with self.subTest(identifier=identifier):
+                result = self.ordinary_ritual(identifier)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn('two-tier', result.stdout)
+
+    def test_f2_missing_malformed_or_unbounded_identifiers_refuse(self):
+        for identifier in ('', '<id>', 'UNKNOWN', 'TBD', '--------', 'a' * 129,
+                           'deadbeef-tail', 'deadbeef/garbage', 'xdeadbeef', 'deadbeef extra',
+                           'deadbeef,garbage', 'deadbeef)garbage', 'deadbeef\tgarbage',
+                           'deadbeef\r', 'deadbeef\x1b', '/root', '/root/', '/root//worker',
+                           '/root/../worker', '/root/./worker', '/root/worker/', '/root/Worker',
+                           '/root/<worker>', '/root/unknown', '/root/tbd', '/root/' + 'a' * 64,
+                           '/root/' + '/'.join(['a'] * 17), '/root/' + '/'.join(['a' * 63] * 4)):
+            with self.subTest(identifier=identifier):
+                result = self.ordinary_ritual(identifier)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+
+    def test_f2_ordinary_provenance_chronology_branch_and_replacement(self):
+        result = self.ordinary_ritual(defect='replacement')
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        for defect in ('wrong-branch', 'edited', 'early', 'late', 'claim-after-plan',
+                       'missing-release', 'edited-release', 'missing-session', 'duplicate-session',
+                       'wrong-plan-repo', 'wrong-plan-issue', 'missing-plan-link',
+                       'wrong-plan-resolution', 'non-plan-comment', 'missing-task-label'):
+            with self.subTest(defect=defect):
+                result = self.ordinary_ritual(defect=defect)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+
+    def test_f2_bootstrap_retains_exact_historical_anchor(self):
+        old = subprocess.check_output(['git', '-C', str(ROOT), 'cat-file', 'blob',
+                                       'f66d3aa5e73abf24052c70f557cd6df9177ca012'])
+        base, head = self.adoption_fixture(anchor=old)
+        result = self.ritual(base, head)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_f2_bootstrap_rejects_unknown_and_mixed_anchors(self):
+        old = subprocess.check_output(['git', '-C', str(ROOT), 'cat-file', 'blob',
+                                       'f66d3aa5e73abf24052c70f557cd6df9177ca012'])
+        new = (ROOT / PAYLOAD / '.agents/skills/plan-management/scripts/frontier.sh').read_bytes()
+        self.assertNotEqual(old, new, 'the compatibility correction must have a new reviewed anchor')
+        base, head = self.adoption_fixture(anchor=old, head_anchor=new)
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+        path = self.target / '.agents/skills/plan-management/scripts/frontier.sh'
+        path.write_bytes(b'unknown anchor\n')
+        head = self.commit_adopter('unreviewed anchor')
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
 
     def clone_source(self):
         source = self.base / "local source"
@@ -489,31 +618,19 @@ esac
         self.assertTrue(checker.validate(source))
 
     def test_frontier_keeps_ready_and_blocked_distinct_and_refuses_later_error(self):
-        fake = self.base / "bin"
-        fake.mkdir()
-        gh = fake / "gh"
-        gh.write_text("""#!/bin/sh
-case "$2" in
-  list) printf '1\tReady Task\n2\tDependent Task\n' ;;
-  view)
-    case "$3" in
-      1) exit 0 ;;
-      2) if [ "$FIXTURE_FAILURE" = yes ]; then exit 1; fi; printf '3\n' ;;
-      3) printf '%s\n' "$FIXTURE_STATE" ;;
-      *) exit 1 ;;
-    esac ;;
-  *) exit 1 ;;
-esac
-""")
-        gh.chmod(0o755)
-        command = ["bash", str(ROOT / PAYLOAD / ".agents/skills/plan-management/scripts/frontier.sh"), "--all"]
-        for state, failure, succeeds in (("OPEN", "no", True), ("CLOSED", "no", True),
-                                         ("UNKNOWN", "no", False), ("OPEN", "yes", False)):
-            with self.subTest(state=state, failure=failure):
-                result = subprocess.run(command, env=dict(os.environ,
-                    PATH=str(fake) + os.pathsep + os.environ["PATH"],
-                    FIXTURE_STATE=state, FIXTURE_FAILURE=failure),
-                    capture_output=True, text=True, timeout=5)
+        for shape in ('connection', 'legacy-array'):
+          for state, failure, succeeds in (("OPEN", False, True), ("CLOSED", False, True),
+                                           ("UNKNOWN", False, False), ("OPEN", True, False)):
+            with self.subTest(shape=shape, state=state, failure=failure):
+                empty = {'nodes': [], 'totalCount': 0} if shape == 'connection' else []
+                nodes = [{'number': 3}]
+                blockers = {'nodes': nodes, 'totalCount': 1} if shape == 'connection' else nodes
+                records = {'list': '1\tReady Task\n2\tDependent Task\n',
+                    'fixture/adopter#1:blockedBy': {'blockedBy': empty},
+                    'fixture/adopter#2:blockedBy': None if failure else {'blockedBy': blockers},
+                    'fixture/adopter#3:state': {'state': state}}
+                result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh',
+                                            records, '--all')
                 if succeeds:
                     self.assertEqual(0, result.returncode, result.stderr)
                     self.assertIn("#1\tReady Task", result.stdout)
@@ -522,6 +639,54 @@ esac
                 else:
                     self.assertNotEqual(0, result.returncode)
                     self.assertEqual("", result.stdout, "never publish a partial actionable frontier")
+
+    def test_frontier_typed_complete_dependencies_and_repository_identity(self):
+        nodes = [{'number': 3, 'repository': {'nameWithOwner': 'other/dependency'}}]
+        records = {'list': '1\tReady Task\n2\tDependent Task\n',
+            'fixture/adopter#1:blockedBy': {'blockedBy': {'nodes': [], 'totalCount': 0}},
+            'fixture/adopter#2:blockedBy': {'blockedBy': {'nodes': nodes, 'totalCount': 1}},
+            'fixture/adopter#3:state': {'state': 'CLOSED'},
+            'other/dependency#3:state': {'state': 'OPEN'}}
+        for identity in ({'nameWithOwner': 'other/dependency'},
+                         {'name': 'dependency', 'owner': {'login': 'other'}}):
+            with self.subTest(identity=identity):
+                nodes[0]['repository'] = identity
+                result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh',
+                                            records, '--all', '-R', 'fixture/adopter')
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertIn('== Blocked ==\n#2', result.stdout)
+        records['other/dependency#3:state'] = None
+        result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh', records)
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual('', result.stdout)
+
+    def test_frontier_missing_malformed_and_incomplete_dependencies_never_publish(self):
+        invalid = [None, {}, {'blockedBy': None}, {'blockedBy': {}},
+            {'blockedBy': {'nodes': [], 'totalCount': 1}},
+            {'blockedBy': {'nodes': [], 'totalCount': '0'}},
+            {'blockedBy': {'nodes': [], 'totalCount': False}},
+            {'blockedBy': {'nodes': [], 'totalCount': -1}},
+            {'blockedBy': {'nodes': [], 'totalCount': 0.5}},
+            {'blockedBy': {'nodes': None, 'totalCount': 0}},
+            {'blockedBy': {'nodes': [{'number': 3}], 'totalCount': 0}},
+            {'blockedBy': {'nodes': [{'number': n} for n in range(1, 51)], 'totalCount': 51}}]
+        for node in (None, {}, {'number': 0}, {'number': -1}, {'number': 2.5},
+                     {'number': True}, {'number': '3'},
+                     {'number': 3, 'repository': None}, {'number': 3, 'repository': {}},
+                     {'number': 3, 'repository': {'nameWithOwner': 'other/repo\tbad'}},
+                     {'number': 3, 'repository': {'nameWithOwner': '../repo'}},
+                     {'number': 3, 'repository': {'nameWithOwner': 'other/repo',
+                                                'name': 'different', 'owner': {'login': 'other'}}}):
+            invalid.extend([{'blockedBy': [node]}, {'blockedBy': {'nodes': [node], 'totalCount': 1}}])
+        for value in invalid:
+            with self.subTest(value=value):
+                records = {'list': '1\tReady Task\n2\tDependent Task\n',
+                    'fixture/adopter#1:blockedBy': {'blockedBy': []},
+                    'fixture/adopter#2:blockedBy': value,
+                    'fixture/adopter#3:state': {'state': 'CLOSED'}}
+                result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh', records)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertEqual('', result.stdout, 'late invalid data must not publish earlier ready Tasks')
 
     def test_checker_rejects_wrong_preservation_class_and_malformed_parity_row(self):
         spec = importlib.util.spec_from_file_location("installer_checker", ROOT / ".github/scripts/check-installer.py")

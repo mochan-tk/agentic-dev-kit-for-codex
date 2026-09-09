@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T14"
-CURRENT_TASK_BRANCH = "codex/source-first-installer"
+CURRENT_TASK_ID = "T18"
+CURRENT_TASK_BRANCH = "codex/helper-compatibility"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,12 +521,21 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T14"], [task["id"] for task in active])
+        self.assertEqual(["T18"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T14_PATHS,
+            self.checker.EXPECTED_T18_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(61, len(active[0]["owned_paths"]))
+        self.assertEqual(9, len(active[0]["owned_paths"]))
+        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/29', active[0]['record'])
+        self.assertEqual('d36fad317947364a602ee5cdbe54903e68478b44', active[0]['base_commit'])
+        self.assertEqual('87d2e889b88ff3a37e5809741ac3e7fa81a5e94a', active[0]['base_tree'])
+        t14 = next(task for task in payload['tasks'] if task['id'] == 'T14')
+        self.assertEqual('accepted', t14['state'])
+        self.assertEqual(52, len(t14['owned_paths']))
+        self.assertEqual(tuple(path for path in self.checker.EXPECTED_T14_PATHS
+                               if path not in self.checker.EXPECTED_T18_PATHS),
+                         tuple(entry['path'] for entry in t14['owned_paths']))
         self.assertEqual("accepted", next(task for task in payload["tasks"] if task["id"] == "T11")["state"])
         t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
         self.assertEqual("accepted", t10["state"])
@@ -732,10 +741,30 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T14", self.active_task(payload)["id"])
+        self.assertEqual("T18", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
+
+    def test_t18_transition_rejects_binding_scope_and_t14_acceptance_drift(self):
+        for task_id, field, value in (
+            ('T18', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27'),
+            ('T18', 'branch', 'codex/unreviewed'), ('T18', 'base_commit', '0' * 40),
+            ('T18', 'base_tree', '0' * 40), ('T18', 'state', 'accepted'),
+            ('T18', 'path_transitions', [{'operation': 'delete'}]),
+            ('T18', 'owned_paths', []), ('T14', 'state', 'active'),
+            ('T14', 'owned_paths', [])):
+            with self.subTest(task_id=task_id, field=field):
+                payload = copy.deepcopy(self.ownership_payload())
+                next(task for task in payload['tasks'] if task['id'] == task_id)[field] = value
+                errors = []
+                self.checker.validate_phase2_frontier(payload, errors)
+                self.assert_rejected(errors, task_id)
+        payload = copy.deepcopy(self.ownership_payload())
+        self.active_task(payload)['owned_paths'][0]['mode'] = '100755'
+        errors = []
+        self.checker.validate_phase2_frontier(payload, errors)
+        self.assert_rejected(errors, 'T18 paths must all use mode 100644')
 
     def test_unreviewed_t11_declared_expansion_is_rejected(self):
         temporary, fixture = self.copy_fixture()
