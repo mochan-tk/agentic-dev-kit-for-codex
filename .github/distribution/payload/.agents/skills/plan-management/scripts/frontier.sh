@@ -94,7 +94,7 @@ while IFS= read -r line; do
             else error("inconsistent blocker identity") end
           end
         else [$node.number, ($repo // "-")] end
-      ) | if (unique | length) == length then .[] | @tsv
+      ) | if (unique_by([.[0], (.[1] | ascii_downcase)]) | length) == length then .[] | @tsv
           else error("duplicate blocker identity") end')" \
     || fail 'dependency retrieval failed or unsupported; inspect the Issue graph manually'
   blocked=false

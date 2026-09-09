@@ -137,7 +137,7 @@ reviewed_adoption_anchor() {
   case "$1" in
     # Accepted source-first payload and the bounded T18 compatibility payload.
     $'100644\tblob\tf66d3aa5e73abf24052c70f557cd6df9177ca012'|\
-    $'100644\tblob\t9b09186a457d4e78c7c0ca8f427f0dede9eafa51') return 0 ;;
+    $'100644\tblob\tcc888c829bc5957871376004cb59a93b4980b50f') return 0 ;;
     *) return 1 ;;
   esac
 }

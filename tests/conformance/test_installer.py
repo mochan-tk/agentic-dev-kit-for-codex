@@ -695,6 +695,12 @@ esac
             {'blockedBy': {'nodes': None, 'totalCount': 0}},
             {'blockedBy': {'nodes': [{'number': 3}], 'totalCount': 0}},
             {'blockedBy': {'nodes': [{'number': 3}, {'number': 3}], 'totalCount': 2}},
+            {'blockedBy': {'nodes': [
+                {'number': 3, 'repository': {'nameWithOwner': 'other/dependency'}},
+                {'number': 3, 'repository': {'nameWithOwner': 'Other/Dependency'}}], 'totalCount': 2}},
+            {'blockedBy': {'nodes': [
+                {'number': 3, 'url': 'https://github.example/other/dependency/issues/3'},
+                {'number': 3, 'url': 'https://GitHub.Example/Other/Dependency/issues/3'}], 'totalCount': 2}},
             {'blockedBy': {'nodes': [{'number': n} for n in range(1, 51)], 'totalCount': 51}}]
         for node in (None, {}, {'number': 0}, {'number': -1}, {'number': 2.5},
                      {'number': True}, {'number': '3'},
@@ -709,7 +715,11 @@ esac
                 records = {'list': '1\tReady Task\n2\tDependent Task\n',
                     'fixture/adopter#1:blockedBy': {'blockedBy': []},
                     'fixture/adopter#2:blockedBy': value,
-                    'fixture/adopter#3:state': {'state': 'CLOSED'}}
+                    'fixture/adopter#3:state': {'state': 'CLOSED'},
+                    'other/dependency#3:state': {'state': 'CLOSED'},
+                    'Other/Dependency#3:state': {'state': 'CLOSED'},
+                    'github.example/other/dependency#3:state': {'state': 'CLOSED'},
+                    'GitHub.Example/Other/Dependency#3:state': {'state': 'CLOSED'}}
                 result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh', records)
                 self.assertNotEqual(0, result.returncode, result.stdout)
                 self.assertEqual('', result.stdout, 'late invalid data must not publish earlier ready Tasks')
