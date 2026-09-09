@@ -61,8 +61,8 @@ against the current PR; no workflow or ruleset is automatically installed.
 the Task issue belong to the **supervisor**; the PR is opened and iterated
 by the **worker**. Before a worker starts, the supervisor **creates the
 worker session, confirms it exists, and only then** posts a worker-dispatch
-comment naming it — session name, session ID, and branch, plus the target PR
-and scope. No verified worker, no implementation: a dispatch comment for a
+comment naming it — session name, actual tool reference, and branch, plus the
+Task scope and target PR when one exists. No verified worker, no implementation: a dispatch comment for a
 session that was never created records a split that did not happen, which is
 the one thing this trail exists to show (ADR-0003). A supervisor that cannot
 raise a worker either declares the small-task exemption in its plan comment
@@ -75,17 +75,27 @@ match the regex `^Dispatching worker`, and the release comment's *first
 line* must match `^Releasing worker` — no leading blank line, greeting, or
 Markdown heading before either — as checked when explicitly invoked by
 `.github/scripts/check-task-ritual.sh`. That first line also carries the
-worker's identity, in this shape:
+worker's reference, in this shape (synthetic example):
 
 ```
-Dispatching worker: PR #12 worker (session 6af9582d-42d1-425d-82c8-f9ec651225a8), branch task/12-fix-esp32
+Dispatching worker: Task #12 worker (session /root/example_supervisor/example_worker), branch codex/task-12-fix
 ```
 
 The branch is compared against the PR's head ref, so a dispatch written for
-one task cannot satisfy another's trail. The session ID is the evidence that
-a session was really raised; the sensor cannot authenticate it, because session trees are
-app-local, so it is recorded for humans and later audits rather than
-machine-verified. The same sensor expects every task to
+one task cannot satisfy another's trail. Copy the actual identifier returned
+by the available tool; do not invent a UUID or hash alias. Keep the display
+name and optional navigation link separate from this reference. No future PR
+number is required. The first line ends after the branch; scope and links go
+on following lines.
+
+The sensor accepts whole legacy hex/hyphen IDs of 8–128 characters (starting
+and ending in hex, without repeated hyphens), or canonical `/root/` references
+with 1–16 slash-separated segments of 1–63 lowercase letters, digits or
+underscores, and at most 256 characters overall. Empty segments, placeholders
+(`unknown`, `none`, `null`, `tbd`, `todo`, `placeholder`), controls and ambiguous
+delimiters fail. These are tool-scoped identifiers, not filesystem paths or
+authenticated identities. The sensor validates the recorded syntax and branch;
+the supervisor verifies the actual worker before recording it. The same sensor expects every task to
 declare its execution mode (ADR-0003): either a dispatch trail (earliest
 dispatch after the earliest plan and before the PR's first commit, a release
 between successive dispatches, dispatch and release comments unedited) or a

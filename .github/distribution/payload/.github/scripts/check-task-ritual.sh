@@ -133,7 +133,14 @@ body=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.body // ""')
 # is a reviewed payload anchor; this is structural evidence, not attestation
 # that a particular installer or runtime was executed.
 ADOPTION_ANCHOR='.agents/skills/plan-management/scripts/frontier.sh'
-ADOPTION_ANCHOR_BLOB='f66d3aa5e73abf24052c70f557cd6df9177ca012'
+reviewed_adoption_anchor() {
+  case "$1" in
+    # Accepted source-first payload and the bounded T18 compatibility payload.
+    $'100644\tblob\tf66d3aa5e73abf24052c70f557cd6df9177ca012'|\
+    $'100644\tblob\t9b09186a457d4e78c7c0ca8f427f0dede9eafa51') return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 proof_fail() { echo "FAIL: bootstrap proof is unreadable or invalid ($1)." >&2; exit 1; }
 read_tree() {
@@ -175,7 +182,7 @@ read_blob() {
 }
 bootstrap_exception() {
   local base head base_tree head_tree base_agents head_agents base_instructions head_instructions
-  local expected_anchor base_anchor head_anchor title base_text head_text changed allowed path rebound output
+  local base_anchor head_anchor title base_text head_text changed allowed path rebound output
   command -v git >/dev/null 2>&1 || proof_fail git-unavailable
   base=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.base.sha') || proof_fail base-commit
   head=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.head.sha') || proof_fail head-commit
@@ -187,8 +194,7 @@ bootstrap_exception() {
   head_instructions=$(entry "$head_tree" .github/codex-instructions.md) || proof_fail head-instructions-lookup
   base_anchor=$(entry "$base_tree" "$ADOPTION_ANCHOR") || proof_fail base-anchor-lookup
   head_anchor=$(entry "$head_tree" "$ADOPTION_ANCHOR") || proof_fail head-anchor-lookup
-  expected_anchor=$'100644\tblob\t'"$ADOPTION_ANCHOR_BLOB"
-  [[ "$head_anchor" == "$expected_anchor" ]] || return 1
+  reviewed_adoption_anchor "$head_anchor" || return 1
   regular_blob "$head_agents" && regular_blob "$head_instructions" || return 1
   head_text=$(read_blob "${head_instructions##*$'\t'}") || proof_fail head-instructions
 
@@ -203,7 +209,7 @@ bootstrap_exception() {
 
   title=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.title // ""') || proof_fail title
   [[ "$title" == 'scaffold: onboard '* ]] || return 1
-  [[ "$base_anchor" == "$expected_anchor" ]] || return 1
+  [[ "$base_anchor" == "$head_anchor" ]] || return 1
   regular_blob "$base_agents" && regular_blob "$base_instructions" || return 1
   [[ "$base_instructions" != "$head_instructions" ]] || return 1
   base_text=$(read_blob "${base_instructions##*$'\t'}") || proof_fail base-instructions
@@ -337,6 +343,27 @@ fi
 # actually happened. The exemption marker is the exact phrase quoted in
 # AGENTS.md §4, matched case-sensitively inside a plan comment.
 mode_desc=""
+valid_session_reference() {
+  local value="$1" segment count=0 rest
+  local LC_ALL=C
+  # Legacy IDs remain opaque. Require whole bounded tokens, not a hex prefix.
+  if [[ "$value" =~ ^[0-9a-fA-F][0-9a-fA-F-]{7,127}$ && "$value" != *--* && "$value" != *- ]]; then
+    return 0
+  fi
+  # Canonical collaboration references are tool identifiers, never paths or
+  # authenticated identities. Limit the full token and each of 1-16 segments.
+  [[ ${#value} -le 256 && "$value" == /root/* ]] || return 1
+  rest="${value#/root/}"
+  while :; do
+    segment="${rest%%/*}"
+    [[ "$segment" =~ ^[a-z0-9_]{1,63}$ ]] || return 1
+    case "$segment" in unknown|none|null|tbd|todo|placeholder) return 1 ;; esac
+    count=$((count + 1))
+    [[ $count -le 16 ]] || return 1
+    [[ "$rest" == */* ]] || break
+    rest="${rest#*/}"
+  done
+}
 if [[ "$markers" == *DISPATCH* ]]; then
   earliest_dispatch=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH" { print $2 }' | sort | head -n1)
   mode_desc="two-tier (dispatch ${earliest_dispatch})"
@@ -351,14 +378,24 @@ if [[ "$markers" == *DISPATCH* ]]; then
   head_ref=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.head.ref')
   while IFS=$'\t' read -r _kind _created _updated first_line; do
     [[ -n "$first_line" ]] || continue
-    if ! printf '%s\n' "$first_line" | grep -qE 'session[[:space:]]+[0-9a-fA-F-]{8,}'; then
-      echo "FAIL: issue #${issue} has a worker-dispatch comment that names no session:"
+    # Match one complete field and branch, rejecting delimiters, escaped TSV
+    # controls and prefix/tail contamination. Extra scope belongs on later lines.
+    dispatch_pattern='^Dispatching worker:[^()]+ \(session ([^()]*)\), branch ([^ ,()]+)$'
+    if [[ "$first_line" == *\\* ]] || printf '%s' "$first_line" | LC_ALL=C grep -q '[[:cntrl:]]' ||
+       [[ ! "$first_line" =~ $dispatch_pattern ]]; then
+      echo "FAIL: issue #${issue} has a malformed worker-dispatch first line:"
       echo "        ${first_line}"
-      echo "      Create the worker session first, then record it — 'Dispatching worker: PR #<n> worker (session <id>), branch <branch>' (session-orchestration skill)."
+      echo "      Use 'Dispatching worker: Task worker (session <actual-reference>), branch <branch>'."
       ok=false
       continue
     fi
-    dispatch_branch=$(printf '%s\n' "$first_line" | sed -n 's/.*branch[[:space:]]\{1,\}\([^ ,)]\{1,\}\).*/\1/p')
+    session_reference="${BASH_REMATCH[1]}"
+    dispatch_branch="${BASH_REMATCH[2]}"
+    if ! valid_session_reference "$session_reference"; then
+      echo "FAIL: issue #${issue} has a missing, invalid or unbounded worker session reference."
+      ok=false
+      continue
+    fi
     if [[ -z "$dispatch_branch" ]]; then
       echo "FAIL: issue #${issue} has a worker-dispatch comment that names no branch:"
       echo "        ${first_line}"

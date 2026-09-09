@@ -618,9 +618,11 @@ esac
         self.assertTrue(checker.validate(source))
 
     def test_frontier_keeps_ready_and_blocked_distinct_and_refuses_later_error(self):
-        for shape in ('connection', 'legacy-array'):
-          for state, failure, succeeds in (("OPEN", False, True), ("CLOSED", False, True),
-                                           ("UNKNOWN", False, False), ("OPEN", True, False)):
+        for shape, state, failure, succeeds in (
+                (shape, state, failure, succeeds)
+                for shape in ('connection', 'legacy-array')
+                for state, failure, succeeds in (("OPEN", False, True), ("CLOSED", False, True),
+                                                 ("UNKNOWN", False, False), ("OPEN", True, False))):
             with self.subTest(shape=shape, state=state, failure=failure):
                 empty = {'nodes': [], 'totalCount': 0} if shape == 'connection' else []
                 nodes = [{'number': 3}]
@@ -660,6 +662,29 @@ esac
         self.assertNotEqual(0, result.returncode)
         self.assertEqual('', result.stdout)
 
+    def test_frontier_documented_node_url_preserves_host_and_repository(self):
+        # CLI 2.96.0 LinkedIssue includes both URL and repository.nameWithOwner.
+        node = {'id': 'fixture-id', 'title': 'Dependency', 'number': 3, 'state': 'CLOSED',
+                'url': 'https://github.example/other/dependency/issues/3',
+                'repository': {'nameWithOwner': 'other/dependency'}}
+        records = {'list': '2\tDependent Task\n',
+            'fixture/adopter#2:blockedBy': {'blockedBy': {'nodes': [node], 'totalCount': 1}},
+            'fixture/adopter#3:state': {'state': 'CLOSED'},
+            'other/dependency#3:state': {'state': 'CLOSED'},
+            'github.example/other/dependency#3:state': {'state': 'OPEN'}}
+        result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh', records, '--all')
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('== Blocked ==\n#2', result.stdout)
+        for url in (None, 'https://github.example/other/dependency/issues/4',
+                    'https://github.example/wrong/repo/issues/3',
+                    'https://github.example/other/dependency/issues/3?extra',
+                    'https://github.example/other/dependency/issues/3\n'):
+            with self.subTest(url=url):
+                node['url'] = url
+                result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh', records)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual('', result.stdout)
+
     def test_frontier_missing_malformed_and_incomplete_dependencies_never_publish(self):
         invalid = [None, {}, {'blockedBy': None}, {'blockedBy': {}},
             {'blockedBy': {'nodes': [], 'totalCount': 1}},
@@ -669,6 +694,7 @@ esac
             {'blockedBy': {'nodes': [], 'totalCount': 0.5}},
             {'blockedBy': {'nodes': None, 'totalCount': 0}},
             {'blockedBy': {'nodes': [{'number': 3}], 'totalCount': 0}},
+            {'blockedBy': {'nodes': [{'number': 3}, {'number': 3}], 'totalCount': 2}},
             {'blockedBy': {'nodes': [{'number': n} for n in range(1, 51)], 'totalCount': 51}}]
         for node in (None, {}, {'number': 0}, {'number': -1}, {'number': 2.5},
                      {'number': True}, {'number': '3'},

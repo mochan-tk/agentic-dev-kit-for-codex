@@ -780,7 +780,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 61 paths"
+            self.errors_for(fixture), "exactly the reviewed nine paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -2117,7 +2117,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 61 paths"
+            self.errors_for(fixture), "exactly the reviewed nine paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2426,7 +2426,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the reviewed 61 paths"
+                    self.errors_for(fixture), "exactly the reviewed nine paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2438,7 +2438,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 61 paths"
+            self.errors_for(fixture), "exactly the reviewed nine paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
@@ -3056,6 +3056,16 @@ jobs:
                     operation, destination=destination
                 )
                 if destination is not None:
+                    # This synthetic transition owns its workflow edit explicitly;
+                    # the real T18 manifest must continue rejecting this expansion.
+                    owner = next(task for task in payload['tasks'] if any(
+                        entry['path'] == '.github/workflows/ci.yml' for entry in task['owned_paths']))
+                    entry = next(entry for entry in owner['owned_paths']
+                                 if entry['path'] == '.github/workflows/ci.yml')
+                    owner['owned_paths'].remove(entry)
+                    self.active_task(payload)['owned_paths'].append(entry)
+                    self.active_task(payload)['owned_paths'].sort(key=lambda item: item['path'])
+                    self.write_ownership(fixture, payload)
                     commands = payload["policy"]["required_quality_commands"]
                     commands.append(f"bash {destination}")
                     self.set_quality_registry(fixture, commands)
@@ -3067,7 +3077,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T14",
+                    "ownership T18",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):
@@ -3382,7 +3392,13 @@ jobs:
 
     def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
         fixture = self.local_branch_fixture()
-        relative = "docs/distribution/source-first-installer.md"
+        # A maintenance Task need not add production paths. Build the additive
+        # history in the disposable fixture to test composition independently.
+        relative = ".github/scripts/composition-fixture.py"
+        self.add_declared_file(fixture, relative)
+        subprocess.run(['git', 'add', relative, OWNERSHIP], cwd=fixture, check=True)
+        subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'fixture-only declared addition'], cwd=fixture, check=True)
         self.assertEqual(
             "A",
             subprocess.check_output(
