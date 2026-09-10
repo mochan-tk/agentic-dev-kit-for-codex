@@ -610,16 +610,12 @@
     {
       "id": "T14",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-installer",
       "base_commit": "4a85a007ed62795b48bcbce04f6b7e5482e71e82",
       "base_tree": "49afe003de2bbb04249d6f4c36ea6462c271c26f",
       "path_transitions": [],
       "owned_paths": [
-        {
-          "path": ".github/distribution/payload.v1.tsv",
-          "mode": "100644"
-        },
         {
           "path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
           "mode": "100644"
@@ -630,10 +626,6 @@
         },
         {
           "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
           "mode": "100644"
         },
         {
@@ -654,10 +646,6 @@
         },
         {
           "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
           "mode": "100644"
         },
         {
@@ -757,10 +745,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
           "mode": "100644"
         },
@@ -809,19 +793,7 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/source-parity.v1.json",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/governance/phase-task-ownership.v1.json",
-          "mode": "100644"
-        },
-        {
           "path": ".github/scripts/check-installer.py",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/scripts/check-repository-policy.py",
           "mode": "100644"
         },
         {
@@ -850,6 +822,45 @@
         },
         {
           "path": "docs/known-limitations.md",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T18",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/29",
+      "state": "active",
+      "branch": "codex/helper-compatibility",
+      "base_commit": "d36fad317947364a602ee5cdbe54903e68478b44",
+      "base_tree": "87d2e889b88ff3a37e5809741ac3e7fa81a5e94a",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/distribution/payload.v1.tsv",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/source-parity.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/governance/phase-task-ownership.v1.json",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/check-repository-policy.py",
           "mode": "100644"
         },
         {

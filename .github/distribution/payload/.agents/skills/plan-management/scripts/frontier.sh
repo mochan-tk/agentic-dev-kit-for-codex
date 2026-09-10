@@ -51,16 +51,59 @@ while IFS= read -r line; do
   [[ "$num" =~ ^[1-9][0-9]*$ ]] && [ "$title" != "$line" ] || fail 'malformed Task list'
   COUNT=$((COUNT + 1))
   [ "$COUNT" -lt 200 ] || fail 'Task list may be truncated; inspect the frontier manually'
-  # gh parses JSON; valid empty array is distinct from missing or failed data.
+  # gh 2.96.0 returns a connection capped at 50 nodes. Prove completeness
+  # before publishing anything. Retain tested flat-array compatibility only;
+  # it is not a claim about every gh version. Missing data is never empty.
   # shellcheck disable=SC2016
   refs="$(gh issue view "$num" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --json blockedBy \
-    --jq 'if (.blockedBy | type) == "array" then .blockedBy[] | if (.number | type) == "number" then .number else error("invalid blocker") end else error("missing blockers") end')" \
+    --jq '
+      def integer: type == "number" and . >= 0 and . == floor;
+      def repo_name: type == "string" and length <= 140 and
+        test("^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}\\z");
+      def repository:
+        if has("repository") then .repository |
+          if type != "object" then error("invalid repository")
+          else
+            (if has("name") or has("owner") then
+              if (.name | type) != "string" or (.owner.login | type) != "string"
+              then error("invalid repository fields") else .owner.login + "/" + .name end
+             else null end) as $parts |
+            (if has("nameWithOwner") then .nameWithOwner else $parts end) as $name |
+            if ($name | repo_name) and ($parts == null or
+                ($parts | ascii_downcase) == ($name | ascii_downcase))
+            then $name else error("invalid or inconsistent repository") end
+          end
+        else null end;
+      .blockedBy |
+      (if type == "array" then .
+       elif type == "object" and (.nodes | type) == "array" and
+         (.totalCount | integer) and .totalCount == (.nodes | length) and .totalCount <= 50
+       then .nodes else error("missing, malformed or incomplete blockers") end) |
+      map(
+        if type != "object" or ((.number | integer) | not) or .number < 1
+        then error("invalid blocker") else . end |
+        . as $node | repository as $repo |
+        if has("url") then
+          if (.url | type) != "string" or
+            ((.url | test("^https://[A-Za-z0-9][A-Za-z0-9.-]{0,252}/[^/]+/[^/]+/issues/[1-9][0-9]*\\z")) | not)
+          then error("invalid blocker URL") else
+            (.url | capture("^https://(?<host>[^/]+)/(?<repo>[^/]+/[^/]+)/issues/(?<number>[0-9]+)\\z")) as $url |
+            if ($url.repo | repo_name) and ($url.number | tonumber) == $node.number and
+              ($repo == null or ($repo | ascii_downcase) == ($url.repo | ascii_downcase))
+            then [$node.number, ($url.host + "/" + $url.repo)]
+            else error("inconsistent blocker identity") end
+          end
+        else [$node.number, ($repo // "-")] end
+      ) | if (unique_by([.[0], (.[1] | ascii_downcase)]) | length) == length then .[] | @tsv
+          else error("duplicate blocker identity") end')" \
     || fail 'dependency retrieval failed or unsupported; inspect the Issue graph manually'
   blocked=false
   if [ -n "$refs" ]; then
-    while IFS= read -r ref; do
+    while IFS=$'\t' read -r ref blocker_repo; do
       [[ "$ref" =~ ^[1-9][0-9]*$ ]] || fail 'malformed blocker reference'
-      state="$(gh issue view "$ref" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --json state --jq .state)" \
+      BLOCKER_REPO_ARGS=("${REPO_ARGS[@]+"${REPO_ARGS[@]}"}")
+      if [ "$blocker_repo" != '-' ]; then BLOCKER_REPO_ARGS=(--repo "$blocker_repo"); fi
+      state="$(gh issue view "$ref" ${BLOCKER_REPO_ARGS[@]+"${BLOCKER_REPO_ARGS[@]}"} --json state --jq .state)" \
         || fail 'blocker state retrieval failed'
       case "$state" in CLOSED) ;; OPEN) blocked=true ;; *) fail 'unknown blocker state' ;; esac
     done <<< "$refs"

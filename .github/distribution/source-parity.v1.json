@@ -35,9 +35,10 @@
       "destination": ".agents/skills/plan-management/scripts/frontier.sh",
       "source_path": ".github/skills/plan-management/scripts/frontier.sh",
       "source_blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
-      "target_sha256": "a6d451092bd963f988e311876f8c2062a978e29b1b9d9a5fe2b1ab02a30f32b6",
+      "target_sha256": "bf94a75bea1318049c4b142ff7efcf927ddb374c314cd7531c163344cbbe6745",
       "adaptations": [
         "Retain Task/frontier computation; fail closed on list/dependency/state errors and truncation; no unchecked text fallback; embed original MIT notice.",
+        "Accept typed complete gh 2.96.0 blockedBy connections and tested legacy arrays; preserve supplied repository/URL identity, reject inconsistent, duplicate (including case aliases) or incomplete data, and retain manual graph fallback without partial output.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
     },
@@ -92,9 +93,10 @@
       "destination": ".agents/skills/session-orchestration/SKILL.md",
       "source_path": ".github/skills/session-orchestration/SKILL.md",
       "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
-      "target_sha256": "0df552288dbeff1b2ee355486c4d050ebe1d727082fbdca80a25f1fad68c2305",
+      "target_sha256": "271204335f00e2c1cc09c051786ca034f27136eab90463db72702ef6044334dd",
       "adaptations": [
-        "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI."
+        "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI.",
+        "Explain bounded whole legacy/tool-scoped identifiers, separate actual reference from navigation/display names, and avoid a future PR-number requirement or identity/authentication claims."
       ]
     },
     {
@@ -318,10 +320,11 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "07ace9e8432d5fd01faa85e0c0f221b8c4f13a4f0142fbf9c042534dc61673bb",
+      "target_sha256": "ab0b2b48fdf048952dcd6f6503fb2831706c80729aa7c3150c95727e08e73412",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
-        "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records."
+        "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
+        "Validate one bounded whole dispatch reference and preserve ordinary branch, plan, chronology and release gates; retain exact old/new frontier anchors with equal onboarding base/head anchors."
       ]
     },
     {

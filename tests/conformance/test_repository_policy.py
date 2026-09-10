@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T14"
-CURRENT_TASK_BRANCH = "codex/source-first-installer"
+CURRENT_TASK_ID = "T18"
+CURRENT_TASK_BRANCH = "codex/helper-compatibility"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,12 +521,21 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T14"], [task["id"] for task in active])
+        self.assertEqual(["T18"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T14_PATHS,
+            self.checker.EXPECTED_T18_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(61, len(active[0]["owned_paths"]))
+        self.assertEqual(9, len(active[0]["owned_paths"]))
+        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/29', active[0]['record'])
+        self.assertEqual('d36fad317947364a602ee5cdbe54903e68478b44', active[0]['base_commit'])
+        self.assertEqual('87d2e889b88ff3a37e5809741ac3e7fa81a5e94a', active[0]['base_tree'])
+        t14 = next(task for task in payload['tasks'] if task['id'] == 'T14')
+        self.assertEqual('accepted', t14['state'])
+        self.assertEqual(52, len(t14['owned_paths']))
+        self.assertEqual(tuple(path for path in self.checker.EXPECTED_T14_PATHS
+                               if path not in self.checker.EXPECTED_T18_PATHS),
+                         tuple(entry['path'] for entry in t14['owned_paths']))
         self.assertEqual("accepted", next(task for task in payload["tasks"] if task["id"] == "T11")["state"])
         t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
         self.assertEqual("accepted", t10["state"])
@@ -732,10 +741,30 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T14", self.active_task(payload)["id"])
+        self.assertEqual("T18", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
+
+    def test_t18_transition_rejects_binding_scope_and_t14_acceptance_drift(self):
+        for task_id, field, value in (
+            ('T18', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27'),
+            ('T18', 'branch', 'codex/unreviewed'), ('T18', 'base_commit', '0' * 40),
+            ('T18', 'base_tree', '0' * 40), ('T18', 'state', 'accepted'),
+            ('T18', 'path_transitions', [{'operation': 'delete'}]),
+            ('T18', 'owned_paths', []), ('T14', 'state', 'active'),
+            ('T14', 'owned_paths', [])):
+            with self.subTest(task_id=task_id, field=field):
+                payload = copy.deepcopy(self.ownership_payload())
+                next(task for task in payload['tasks'] if task['id'] == task_id)[field] = value
+                errors = []
+                self.checker.validate_phase2_frontier(payload, errors)
+                self.assert_rejected(errors, task_id)
+        payload = copy.deepcopy(self.ownership_payload())
+        self.active_task(payload)['owned_paths'][0]['mode'] = '100755'
+        errors = []
+        self.checker.validate_phase2_frontier(payload, errors)
+        self.assert_rejected(errors, 'T18 paths must all use mode 100644')
 
     def test_unreviewed_t11_declared_expansion_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -751,7 +780,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 61 paths"
+            self.errors_for(fixture), "exactly the reviewed nine paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -2088,7 +2117,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 61 paths"
+            self.errors_for(fixture), "exactly the reviewed nine paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2397,7 +2426,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the reviewed 61 paths"
+                    self.errors_for(fixture), "exactly the reviewed nine paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2409,7 +2438,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed 61 paths"
+            self.errors_for(fixture), "exactly the reviewed nine paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
@@ -3027,6 +3056,16 @@ jobs:
                     operation, destination=destination
                 )
                 if destination is not None:
+                    # This synthetic transition owns its workflow edit explicitly;
+                    # the real T18 manifest must continue rejecting this expansion.
+                    owner = next(task for task in payload['tasks'] if any(
+                        entry['path'] == '.github/workflows/ci.yml' for entry in task['owned_paths']))
+                    entry = next(entry for entry in owner['owned_paths']
+                                 if entry['path'] == '.github/workflows/ci.yml')
+                    owner['owned_paths'].remove(entry)
+                    self.active_task(payload)['owned_paths'].append(entry)
+                    self.active_task(payload)['owned_paths'].sort(key=lambda item: item['path'])
+                    self.write_ownership(fixture, payload)
                     commands = payload["policy"]["required_quality_commands"]
                     commands.append(f"bash {destination}")
                     self.set_quality_registry(fixture, commands)
@@ -3038,7 +3077,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T14",
+                    "ownership T18",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):
@@ -3353,7 +3392,13 @@ jobs:
 
     def test_local_diff_composes_committed_addition_plus_dirty_modification(self):
         fixture = self.local_branch_fixture()
-        relative = "docs/distribution/source-first-installer.md"
+        # A maintenance Task need not add production paths. Build the additive
+        # history in the disposable fixture to test composition independently.
+        relative = ".github/scripts/composition-fixture.py"
+        self.add_declared_file(fixture, relative)
+        subprocess.run(['git', 'add', relative, OWNERSHIP], cwd=fixture, check=True)
+        subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'fixture-only declared addition'], cwd=fixture, check=True)
         self.assertEqual(
             "A",
             subprocess.check_output(
