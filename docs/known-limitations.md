@@ -33,6 +33,22 @@ rollback. This is not automatic migration, power-loss atomicity, malicious
 same-user race protection, a global transaction service, native Windows proof,
 or permission to migrate existing adopters. No force or repository reset exists.
 
+T20 adds an optional standalone local-installer failure reporter next to the
+installer, outside the unchanged 47-file payload. Draft needs no gh/account;
+send needs both TTYs outside CI, a complete public preview and literal y/Y
+consent using an existing account. Eight closed fields exclude private data;
+caller line/exit metadata is user-reported and Scaffold version stays unknown.
+No automatic ERR/EXIT integration, adopter marker inspection, auth, labels or
+retry exists. Failed/lost/invalid create responses remain
+`submission-unconfirmed`, not proof that no Issue exists. Confirmation is a
+validated create URL, not an independent read-back. Local trusted tools are
+not process-isolated or subject to a general execution-time guarantee.
+Evidence is actual Bash with fake GitHub and bounded PTY fixtures, not a live
+public report, measured Windows behavior, receiving workflow, full K16,
+retrospective promotion, runtime parity or repository/release completion.
+The detailed [report contract](distribution/source-first-installer.md#optional-local-installer-failure-report)
+records the source adaptations and result semantics.
+
 The three native role definitions are configuration/instruction layers, not
 authenticated roles. Skills use documented available tooling or explicit
 manual fallback; installation tests do not prove runtime orchestration or

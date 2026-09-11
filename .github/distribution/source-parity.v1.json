@@ -442,6 +442,47 @@
       ]
     }
   ],
+  "feedback_companion": {
+    "schema": "installer-feedback-companion/v1",
+    "source_files": {
+      ".github/scripts/feedback-lib.sh": "b09747ae0bc8ffa2183fec48b578b97cdb45c67b",
+      ".github/scripts/tests/test-feedback-lib.sh": "fce1632234b8e9f64ab374130cb39c667eafb7b5",
+      ".github/scripts/scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+      "docs/agreements/adr/ADR-0002-consent-gated-adopter-feedback.md": "65c4c20ee9fd2c91d0738a38fa8558be8761dc42",
+      "docs/context/feedback-loop/privacy-posture.md": "d417b2c7114913aaea80b03014f3c5f7e5458fe8"
+    },
+    "target_files": [
+      {
+        "path": ".github/scripts/feedback-lib.sh",
+        "mode": "100644",
+        "sha256": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20"
+      },
+      {
+        "path": ".github/scripts/report-installer-failure.sh",
+        "mode": "100644",
+        "sha256": "9880d074c768c694816181af1f94e0288afa9a7cc15dc22537d701fcc9bd5e07"
+      },
+      {
+        "path": "tests/conformance/test_installer_feedback.py",
+        "mode": "100644",
+        "sha256": "09f6b8a633a33c6089ffa5bdf8c30efbfc5ed23bee06b62fbe6302bf40d5a27d"
+      }
+    ],
+    "fields": [
+      "Script", "Failing line", "Exit code", "OS / arch", "bash version",
+      "gh version", "jq version", "Scaffold version"
+    ],
+    "recipient": "https://github.com/mochan-tk/agentic-dev-kit-for-codex",
+    "integration": "standalone-opt-in-outside-payload",
+    "adaptations": [
+      "Reuse source bounded fields, TTY/CI gates, preview-before-consent and one create attempt; standalone opt-in replaces automatic ERR/EXIT integration.",
+      "Fixed public github.com recipient replaces adopter changelog routing; Scaffold version is unknown and caller failure metadata is user-reported, not historical proof.",
+      "Draft requires no gh/account; no auth, labels, retry or receiving workflow. Failed/lost/invalid create response is submission-unconfirmed, never confirmed absence.",
+      "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam.",
+      "Literal terminal consent and tool-output limits preserve byte distinctions before Bash string normalization."
+    ],
+    "evidence": "offline-real-bash-fake-gh-pty-only"
+  },
   "installer_source": {
     "scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
     "scaffold-init.ps1": "6baa8ca94535d25c3b3b1cc1e4ac4ba95542321f",

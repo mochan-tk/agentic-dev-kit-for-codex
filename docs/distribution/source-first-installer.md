@@ -196,6 +196,96 @@ during rollback remain partial/non-success. There is no automatic crash recovery
 whole-project reset, power-loss atomicity, concurrent-writer guarantee or
 malicious same-user race resistance. Keep exclusive ownership for the operation.
 
+## Optional local installer failure report
+
+T20 adds a standalone, explicitly invoked companion **outside the 47-file
+installed payload**. Use the reviewed kit checkout's mode-0644 Bash entrypoint:
+
+```sh
+bash .github/scripts/report-installer-failure.sh --draft --line 42 --exit-code 1
+bash .github/scripts/report-installer-failure.sh --send --line 42 --exit-code 1
+```
+
+The default is `--draft`. The only metadata options are `--line` (canonical
+decimal 1..999999) and `--exit-code` (1..255); omitted values are `unknown`.
+Invalid/duplicate arguments reject, including arbitrary script, title, body,
+recipient, free text and `--yes`. A caller-supplied line/exit code is a user
+report, **not measured proof of any earlier installer execution**. The helper
+neither reads nor modifies adopter files, Git state, operation records or
+backups, and cannot repair or change the earlier installer's exit/result.
+
+The exact eight fields are Script (`scaffold-init`), Failing line, Exit code,
+OS / arch, bash version, gh version, jq version, and Scaffold version
+(`unknown`). Fixed field grammars reject oversized or unexpected observations
+to `unknown`; OS/architecture use closed known values, tool versions use
+numeric/version-specific forms. The canonical gh version line may include its
+official public release-URL second line; unrelated extra content is rejected.
+Terminal tool-output newlines are normalized only after checking the byte
+bound, and NUL bytes become rejected controls rather than disappearing.
+An unfamiliar platform/version
+format is unknown, not a compatibility claim. Tool observation/creation stdout
+is captured to a 256-byte bound, with overflow as non-success and stderr
+discarded. There is no raw-log, command, path, environment dump, credential,
+private repository identity, branch, transcript or free-form payload input.
+The companion uses normally installed trusted shell/version/gh tools; it is
+not a sandbox or general process-lifetime supervisor.
+
+Draft prints the exact destination, title and body, never prompts or performs
+an Issue operation, and requires neither `gh`, `jq` nor an account. Optional
+version observations do not authenticate. Send additionally requires an
+explicit `--send`, available `gh`, stdin **and** stderr TTYs, and empty `CI`
+and `GITHUB_ACTIONS`; even `CI=false` blocks. The full **public** destination,
+existing-account disclosure and exact in-memory title/body are shown before
+`Send this public report? [y/N]`. Only the entire literal answer `y` or `Y`
+allows one Issue-create attempt. Terminal consent bytes are checked before
+Bash string normalization, so NUL-containing answers cannot become `y`.
+Empty, EOF, other answers and piped consent
+do not send; environment variables, changelog markers and config do not arm
+consent or select the recipient.
+
+The only destination is
+`https://github.com/mochan-tk/agentic-dev-kit-for-codex`. The call uses this full
+`--repo` and fixed `GH_HOST`/`GH_REPO` hints, neutralizing caller host/repository
+overrides. It uses the user's already configured GitHub account; it does not
+log in, create labels, use another repository or retry. Preview and request
+share the same in-memory strings. No file is used as a draft carrier.
+
+| Result | Exit | Meaning |
+|---|---|---|
+| `drafted` | 0 | Safe draft printed; no Issue operation. |
+| argument rejection | 2 | Usage rejected; no Issue operation. |
+| `declined` | 3 | No literal y/Y consent; no Issue operation. |
+| `send-unavailable` | 4 | TTY/CI/tool gate closed; no Issue operation. |
+| `confirmed` | 0 | Create returned a validated fixed-recipient Issue URL, printed on stdout. |
+| `submission-unconfirmed` | 5 | Nonzero, oversized, missing or invalid create response; no raw response projected. |
+
+A network/API failure can occur after server creation. Unconfirmed is **not**
+proof that nothing was filed. Cancellation during creation is also uncertain;
+inspect the public repository manually before considering another explicit
+invocation. There is no automatic retry, deduplication, rollback, URL read-back
+or receiving-triage service. Confirmation means a validated create response,
+not a separate read-back or authenticated report provenance.
+
+### Frozen reuse and bounded adaptations
+
+`feedback-lib.sh` reuses the frozen Copilot `_fb_field` single-line bounds,
+`_fb_isatty`, fixed-field rendering, preview/consent order and one-create flow.
+The source's automatic `feedback_arm` ERR/EXIT wiring is intentionally not
+ported: `scaffold-init.sh`, `operation_finish`, exit codes and backups remain
+unchanged. Marker-derived recipient/version becomes the fixed public target
+and unknown Scaffold version. Numeric version forms are narrower, draft is
+available offline, and uncertain submission replaces the source's unsupported
+“nothing was filed” failure statement. Source fake-GitHub tests are adapted to
+actual bounded PTY fixtures, not a production TTY-bypass flag.
+
+The existing parity JSON retains all 47 payload rows unchanged and adds a
+separate `feedback_companion` record. It binds the source library/test/ADR/
+privacy blobs at `fd265ddef150fab86cd54d0e383c2c25fe297ffb`, exact companion
+file hashes/modes, closed fields, recipient and limitations. It does not turn
+the source's ADR into target permission or copy development truth to adopters.
+No automatic instrumentation, live-send proof, Windows execution, receiving
+workflow, retrospective promotion or full K16 completion is claimed.
+
 ## Evidence boundary
 
 Disposable local adopter tests cover real copy/dry-run/preservation, rejection,

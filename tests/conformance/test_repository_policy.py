@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T19"
-CURRENT_TASK_BRANCH = "codex/source-first-upgrade-rollback"
+CURRENT_TASK_ID = "T20"
+CURRENT_TASK_BRANCH = "codex/source-first-installer-feedback"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,15 +521,21 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T19"], [task["id"] for task in active])
+        self.assertEqual(["T20"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T19_PATHS,
+            self.checker.EXPECTED_T20_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
         self.assertEqual(11, len(active[0]["owned_paths"]))
-        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/31', active[0]['record'])
-        self.assertEqual('c999ec67eafb2c548a9151b54df4276c6d7833bb', active[0]['base_commit'])
-        self.assertEqual('1ebf78554a0afbf09e9f812f331eea2d1706dd2e', active[0]['base_tree'])
+        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33', active[0]['record'])
+        self.assertEqual('ba6a4aa9993861660d192e4371ddb36775545eb6', active[0]['base_commit'])
+        self.assertEqual('e5a8cafb29e34e78ee446e6d1f5f42c2bfdfb48d', active[0]['base_tree'])
+        t19 = next(task for task in payload['tasks'] if task['id'] == 'T19')
+        self.assertEqual('accepted', t19['state'])
+        self.assertEqual(3, len(t19['owned_paths']))
+        self.assertEqual(tuple(path for path in self.checker.EXPECTED_T19_PATHS
+                               if path not in self.checker.EXPECTED_T20_PATHS),
+                         tuple(entry['path'] for entry in t19['owned_paths']))
         t14 = next(task for task in payload['tasks'] if task['id'] == 'T14')
         self.assertEqual('accepted', t14['state'])
         self.assertEqual(46, len(t14['owned_paths']))
@@ -748,18 +754,20 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T19", self.active_task(payload)["id"])
+        self.assertEqual("T20", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
 
-    def test_t19_transition_rejects_binding_scope_and_t14_acceptance_drift(self):
+    def test_t20_transition_rejects_binding_scope_and_accepted_owner_drift(self):
         for task_id, field, value in (
-            ('T19', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27'),
-            ('T19', 'branch', 'codex/unreviewed'), ('T19', 'base_commit', '0' * 40),
-            ('T19', 'base_tree', '0' * 40), ('T19', 'state', 'accepted'),
-            ('T19', 'path_transitions', [{'operation': 'delete'}]),
-            ('T19', 'owned_paths', []), ('T14', 'state', 'active'),
+            ('T20', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27'),
+            ('T20', 'branch', 'codex/unreviewed'), ('T20', 'base_commit', '0' * 40),
+            ('T20', 'base_tree', '0' * 40), ('T20', 'state', 'accepted'),
+            ('T20', 'path_transitions', [{'operation': 'delete'}]),
+            ('T20', 'owned_paths', []), ('T14', 'state', 'active'),
+            ('T19', 'state', 'active'), ('T19', 'owned_paths', []),
+            ('T19', 'base_commit', '0' * 40), ('T19', 'base_tree', '0' * 40),
             ('T18', 'state', 'active'), ('T18', 'owned_paths', []),
             ('T14', 'owned_paths', [])):
             with self.subTest(task_id=task_id, field=field):
@@ -772,7 +780,18 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.active_task(payload)['owned_paths'][0]['mode'] = '100755'
         errors = []
         self.checker.validate_phase2_frontier(payload, errors)
-        self.assert_rejected(errors, 'T19 paths must all use mode 100644')
+        self.assert_rejected(errors, 'T20 paths must all use mode 100644')
+
+    def test_feedback_execution_allowance_is_exactly_the_two_companion_paths(self):
+        errors = []
+        self.checker.validate_execution_root_surfaces({
+            '.github/scripts/feedback-lib.sh', '.github/scripts/report-installer-failure.sh'}, errors)
+        self.assertEqual([], errors)
+        for path in ('.github/scripts/feedback-extra.sh', '.github/scripts/report-anything.sh',
+                     '.github/scripts/feedback-lib.py', '.github/scripts/feedback/nested.sh'):
+            errors = []
+            self.checker.validate_execution_root_surfaces({path}, errors)
+            self.assertTrue(errors, path)
 
     def test_unreviewed_t11_declared_expansion_is_rejected(self):
         temporary, fixture = self.copy_fixture()
@@ -3065,7 +3084,7 @@ jobs:
                 )
                 if destination is not None:
                     # This synthetic transition owns its workflow edit explicitly;
-                    # the real T19 manifest must continue rejecting this expansion.
+                    # the real T20 manifest must continue rejecting this expansion.
                     owner = next(task for task in payload['tasks'] if any(
                         entry['path'] == '.github/workflows/ci.yml' for entry in task['owned_paths']))
                     entry = next(entry for entry in owner['owned_paths']
@@ -3085,7 +3104,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T19",
+                    "ownership T20",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):
