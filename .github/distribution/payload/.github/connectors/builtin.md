@@ -25,9 +25,13 @@ present and what the Contract still lacks.
 
 ## retrieve
 
-Run the draft-first elicitation (invoked as the `/kickoff-context`
-Skill, `.agents/skills/context-collection/SKILL.md`; the mechanics are
-normative here):
+Explicitly request builtin kickoff through the installed
+[context-collection Skill](../../.agents/skills/context-collection/SKILL.md).
+For example, in Codex CLI or IDE: `$context-collection Start builtin kickoff
+for <topic>; I have no existing requirements source.` On another surface,
+explicitly ask to use that installed Skill file for builtin kickoff. The
+mechanics below are normative for `builtin.retrieve`; ordinary collection and
+existing-source connectors do not require this interview.
 
 1. **Intake.** Accept whatever the humans have — file paths, pasted
    text, URLs. Land it under `.github/docs/context/<topic>/` per the
@@ -48,10 +52,16 @@ normative here):
    recommended option, one at a time; skip anything the material already
    answers. Record answers in a dated Q&A file under the same topic
    directory — the interview log is itself collected material.
-4. **Promote sparingly.** Only material that clears the distillation
-   promotion bar becomes `.github/docs/agreements/` content: `REQ-###`
-   requirements with stable IDs, ADRs for constraining choices
-   (context-distillation skill). Everything else stays context.
+4. **Iterate or stop.** Repeat the draft and question rounds until no
+   `[NEEDS CLARIFICATION]` markers remain or the human says stop. Keep the
+   draft and Assumptions current under the topic directory; preserve unresolved
+   markers and open questions when stopping early.
+5. **Stop at the promotion bar.** Do not write to `.github/docs/agreements/`
+   during kickoff. Finish by listing promotion-worthy candidates and why.
+   Later promotion uses the existing
+   [context-distillation Skill](../../.agents/skills/context-distillation/SKILL.md)
+   and a human-reviewed distillation PR: only warranted, reviewed material
+   becomes `REQ-###` requirements or ADRs. Everything else stays context.
 
 ## pin
 

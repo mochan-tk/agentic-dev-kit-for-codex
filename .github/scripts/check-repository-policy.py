@@ -51,6 +51,23 @@ T21_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/35"
 T21_BRANCH = "codex/source-first-connector-validation"
 T21_BASE_COMMIT = "583005816444007a754fa641d6b49c4631f997c8"
 T21_BASE_TREE = "7687ac84d1dcb880b479a6e36c44d8fc640a9549"
+T22_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/37"
+T22_BRANCH = "codex/source-first-context-kickoff"
+T22_BASE_COMMIT = "219202b28c980e417283d761dbd8515c8b38e69f"
+T22_BASE_TREE = "bce884e33cd4932c0a999070e57e84e9293ab032"
+EXPECTED_T22_PATHS = (
+    ".github/distribution/payload.v1.tsv",
+    ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+    ".github/distribution/payload/.github/connectors/builtin.md",
+    ".github/distribution/payload/README.md",
+    ".github/distribution/source-parity.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-installer.py",
+    ".github/scripts/check-repository-policy.py",
+    "docs/distribution/source-first-installer.md",
+    "tests/conformance/test_installer.py",
+    "tests/conformance/test_repository_policy.py",
+)
 EXPECTED_T21_PATHS = (
     ".github/distribution/source-parity.v1.json",
     ".github/governance/phase-task-ownership.v1.json",
@@ -1118,8 +1135,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T14 " + key + " drifted")
     entries = t14.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS):
-        errors.append("accepted ownership T14 must retain its reviewed 46 non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS):
+        errors.append("accepted ownership T14 must retain its reviewed 43 non-transferred paths")
     if t14.get("path_transitions") != []:
         errors.append("ownership T14 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1135,8 +1152,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T18 " + key + " drifted")
     entries = t18.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T18_PATHS if path not in EXPECTED_T19_PATHS):
-        errors.append("accepted ownership T18 must retain its reviewed four non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T18_PATHS if path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS):
+        errors.append("accepted ownership T18 must retain its reviewed three non-transferred paths")
     if t18.get("path_transitions") != []:
         errors.append("ownership T18 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1152,8 +1169,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T19 " + key + " drifted")
     entries = t19.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T19_PATHS if path not in EXPECTED_T20_PATHS):
-        errors.append("accepted ownership T19 must retain its reviewed three non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T19_PATHS if path not in EXPECTED_T20_PATHS and path not in EXPECTED_T22_PATHS):
+        errors.append("accepted ownership T19 must retain its reviewed two non-transferred paths")
     if t19.get("path_transitions") != []:
         errors.append("ownership T19 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1179,19 +1196,36 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t21, dict):
         errors.append("ownership manifest is missing T21")
         return
-    for key, expected in (("state", "active"), ("record", T21_RECORD),
+    for key, expected in (("state", "accepted"), ("record", T21_RECORD),
                           ("branch", T21_BRANCH), ("base_commit", T21_BASE_COMMIT),
                           ("base_tree", T21_BASE_TREE)):
         if t21.get(key) != expected:
             errors.append("ownership T21 " + key + " drifted")
     entries = t21.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != EXPECTED_T21_PATHS:
-        errors.append("ownership T21 must declare exactly the reviewed ten paths")
+    if actual != tuple(path for path in EXPECTED_T21_PATHS if path not in EXPECTED_T22_PATHS):
+        errors.append("accepted ownership T21 must retain its reviewed four non-transferred paths")
     if t21.get("path_transitions") != []:
         errors.append("ownership T21 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
         errors.append("ownership T21 paths must all use mode 100644")
+    t22 = task_by_id.get("T22")
+    if not isinstance(t22, dict):
+        errors.append("ownership manifest is missing T22")
+        return
+    for key, expected in (("state", "active"), ("record", T22_RECORD),
+                          ("branch", T22_BRANCH), ("base_commit", T22_BASE_COMMIT),
+                          ("base_tree", T22_BASE_TREE)):
+        if t22.get(key) != expected:
+            errors.append("ownership T22 " + key + " drifted")
+    entries = t22.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T22_PATHS:
+        errors.append("ownership T22 must declare exactly the reviewed eleven paths")
+    if t22.get("path_transitions") != []:
+        errors.append("ownership T22 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T22 paths must all use mode 100644")
     if "T12" in task_by_id:
         errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 

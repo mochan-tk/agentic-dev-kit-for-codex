@@ -13,6 +13,29 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+KICKOFF_PATHS = (
+    ".agents/skills/context-collection/SKILL.md",
+    ".github/connectors/builtin.md",
+    "README.md",
+)
+KICKOFF_CONTRACT = {
+    "schema": "builtin-context-kickoff/v1",
+    "source_files": {
+        ".github/prompts/kickoff-context.prompt.md": "9b565657def003a3c04cfd9ec6e67578ff7d2906",
+        ".github/skills/context-collection/SKILL.md": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+        ".github/connectors/builtin.md": "3bf19026be22f7d167f9c26d82410c4b9b9ca022",
+        "README.md": "76480f3ae0458926d854e62f51d10958ff229bd3",
+    },
+    "prompt_sha256": "f11922e1f96ccf5f9e827a77db1f06455f05991d63c20b0ef95fc2ce8b46228c",
+    "integration": "explicit-route-in-existing-context-collection-skill",
+    "adaptations": [
+        "Reuse frozen kickoff routing into builtin.retrieve and collection; retain the existing normative builtin procedure and ordinary collection path.",
+        "Replace Copilot prompt aliases and topic interpolation with explicit installed Skill/resource guidance and a chosen topic; no ninth Skill or implicit preload.",
+        "Preserve iterative candidate drafts, bounded questions, human stop, provenance, redaction and the human-reviewed distillation promotion gate.",
+        "Document optional registry preparation separately from reviewed activation and sufficiency; preserve existing adopter README and tuned files.",
+    ],
+    "evidence": "offline-installed-instructions-and-disposable-bash-fixtures-only",
+}
 FEEDBACK_PATHS = (
     ".github/scripts/feedback-lib.sh",
     ".github/scripts/report-installer-failure.sh",
@@ -282,6 +305,74 @@ def regular_bytes(root, name):
         raise ValueError("input too large")
     return data
 
+def validate_context_kickoff(payload_data, parity):
+    """Guard reviewed instruction boundaries, not model adherence or sufficiency."""
+    errors = []
+    record = parity.get("context_kickoff")
+    if not isinstance(record, dict) or set(record) != set(KICKOFF_CONTRACT) | {"target_files"}:
+        errors.append("kickoff provenance fields are missing or unreviewed")
+    elif any(record.get(key) != value for key, value in KICKOFF_CONTRACT.items()):
+        errors.append("kickoff source/routing/evidence contract drifted")
+    targets = record.get("target_files") if isinstance(record, dict) else None
+    if (not isinstance(targets, list) or any(not isinstance(item, dict) for item in targets)
+            or [item.get("path") for item in targets] != list(KICKOFF_PATHS)):
+        errors.append("kickoff target inventory drifted")
+    else:
+        for item in targets:
+            if (set(item) != {"path", "mode", "sha256"} or item.get("mode") != "100644"
+                    or item.get("sha256") != hashlib.sha256(payload_data[item["path"]]).hexdigest()):
+                errors.append("kickoff target digest/mode/fields drifted")
+
+    # These selected source-derived phrases are reviewed static guard anchors.
+    # They reject accidental routing/promotion regressions even after rehashing;
+    # they are not a general natural-language safety or Markdown validator.
+    required = {
+        KICKOFF_PATHS[0]: ("routing", (
+            "For ordinary collection or an existing source", "Only for explicit builtin kickoff",
+            "`builtin.retrieve`", "builtin.md#retrieve)",
+            "read the builtin procedure only when this route is selected",
+            "never present a generated candidate as a source fact",
+            "Do not write to `.github/docs/agreements/` during kickoff",
+            "human-reviewed PR gate",
+        )),
+        KICKOFF_PATHS[1]: ("boundary", (
+            "provenance headers", "sensitivity marking", "redaction first",
+            "EARS form", "`REQ-C##`", "[NEEDS CLARIFICATION]", "**Assumptions**",
+            "3–5 questions per round", "one at a time", "dated Q&A file",
+            "Repeat the draft and question rounds", "human says stop",
+            "Do not write to `.github/docs/agreements/`", "promotion-worthy candidates and why",
+            "human-reviewed distillation PR",
+        )),
+        KICKOFF_PATHS[2]: ("boundary", (
+            "Registry preparation is not activation or context sufficiency",
+            "Activation requires the agreements PR and human review",
+            "Do not write to `.github/docs/agreements/` during kickoff",
+            "human-reviewed distillation PR",
+        )),
+    }
+    for name, (reason, fragments) in required.items():
+        text = payload_data[name].decode("utf-8")
+        normalized = " ".join(text.split())
+        if any(fragment not in normalized for fragment in fragments) or "/kickoff-context" in text:
+            errors.append("kickoff " + reason + " instructions drifted: " + name)
+        for reference in re.findall(r"\[[^\]]+\]\(([^)]+)\)", text):
+            target, _, anchor = reference.partition("#")
+            parts = list(PurePosixPath(name).parent.parts)
+            safe = bool(target) and not target.startswith("/") and ":" not in target
+            for part in target.split("/"):
+                if part == "..":
+                    if parts:
+                        parts.pop()
+                    else:
+                        safe = False
+                elif part not in {"", "."}:
+                    parts.append(part)
+            destination = "/".join(parts)
+            if (not safe or destination not in payload_data
+                    or (anchor and "## " + anchor not in payload_data[destination].decode().splitlines())):
+                errors.append("kickoff dangling installed resource: " + name)
+    return errors
+
 def validate(root):
     errors = []
     root = Path(root)
@@ -304,11 +395,12 @@ def validate(root):
             payload_data[name] = data
             if hashlib.sha256(data).hexdigest() != digest:
                 errors.append("installer payload digest drift: " + name)
-            if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) & 0o111:
+            if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) != 0o644:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff"}:
             errors.append("installer provenance fields drifted")
+        errors.extend(validate_context_kickoff(payload_data, parity))
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
         if parity.get("limits") != INSTALLER_LIMITS:
@@ -429,7 +521,7 @@ def main():
         print("ERROR: " + error)
     if errors:
         return 1
-    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; standalone feedback and connector-validation companions; offline structural evidence only.")
+    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; builtin kickoff instructions; standalone feedback and connector-validation companions; offline structural evidence only.")
     return 0
 
 if __name__ == "__main__":
