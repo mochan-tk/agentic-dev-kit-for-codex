@@ -23,7 +23,8 @@ _fb_isatty() { [ -t 0 ] && [ -t 2 ]; }
 _fb_capture() {
   local captured
   # Sentinel retains terminal newlines until after the byte bound is checked.
-  captured="$(set -o pipefail; "$@" </dev/null 2>/dev/null | head -c 257; status=$?; printf .; exit "$status")" || return 1
+  # Map NUL to a rejected one-byte control character before Bash can discard it.
+  captured="$(set -o pipefail; { "$@" </dev/null | head -c 257 | tr '\000' '\001'; } 2>/dev/null; status=$?; printf .; exit "$status")" || return 1
   captured="${captured%.}"
   [ "${#captured}" -le 256 ] || return 1
   printf '%s' "$captured"
@@ -116,11 +117,13 @@ feedback_report() {
   fi
   _fb_preview >&2
   printf 'Send this public report? [y/N] ' >&2
-  # Keep the source's whole-line consent and normal terminal EOF semantics.
-  # The answer is never part of the report or a persisted record.
-  IFS= read -r answer || answer=
+  # Bash read/variables discard NUL. Encode the bounded first line before
+  # touching a shell variable: accept only literal y/Y followed by newline.
+  # Normal terminal EOF declines; unknown bytes/errors cannot become consent.
+  answer="$(set -o pipefail; { head -n 1 | head -c 3 | od -An -tx1; } 2>/dev/null)" || answer=''
   printf '\n' >&2
-  case "$answer" in y|Y) ;; *) printf 'result=declined\n' >&2; return 3 ;; esac
+  expression='^[[:space:]]*(79|59)[[:space:]]+0a[[:space:]]*$'
+  [[ "$answer" =~ $expression ]] || { printf 'result=declined\n' >&2; return 3; }
   # Full github.com destination plus fixed gh hints; no labels, auth or retry.
   # Never project raw response/stderr: even a failure may have created an Issue.
   response="$(GH_HOST=github.com GH_REPO=mochan-tk/agentic-dev-kit-for-codex GH_DEBUG='' GH_PROMPT_DISABLED=1 \

@@ -32,6 +32,7 @@ FEEDBACK_ADAPTATIONS = [
     "Fixed public github.com recipient replaces adopter changelog routing; Scaffold version is unknown and caller failure metadata is user-reported, not historical proof.",
     "Draft requires no gh/account; no auth, labels, retry or receiving workflow. Failed/lost/invalid create response is submission-unconfirmed, never confirmed absence.",
     "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam.",
+    "Literal terminal consent and tool-output limits preserve byte distinctions before Bash string normalization.",
 ]
 INSTALLER_LIMITS = [
     "Local-source explicit install/known-old upgrade and operation-scoped rollback; no auto download/init/stage/commit/force.",
@@ -322,7 +323,7 @@ def validate(root):
                     if item.get("sha256") != hashlib.sha256(data).hexdigest():
                         errors.append("feedback companion target digest drifted: " + name)
         files = parity.get("files", [])
-        if not isinstance(files, list) or [row.get("destination") for row in files] != sorted(EXPECTED):
+        if not isinstance(files, list) or any(not isinstance(row, dict) for row in files) or [row.get("destination") for row in files] != sorted(EXPECTED):
             errors.append("installer source parity omits, reorders or adds files")
         else:
             for row in files:

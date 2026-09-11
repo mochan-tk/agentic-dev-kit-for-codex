@@ -455,7 +455,7 @@
       {
         "path": ".github/scripts/feedback-lib.sh",
         "mode": "100644",
-        "sha256": "c5fa5015ae32d91aaa2b0c55021904281b46100779038acccab9987860e9a56d"
+        "sha256": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20"
       },
       {
         "path": ".github/scripts/report-installer-failure.sh",
@@ -465,7 +465,7 @@
       {
         "path": "tests/conformance/test_installer_feedback.py",
         "mode": "100644",
-        "sha256": "a74c790693a3127f1b79f4b5fd7598aa2cdddea6889391a2bfacdb393c500230"
+        "sha256": "09f6b8a633a33c6089ffa5bdf8c30efbfc5ed23bee06b62fbe6302bf40d5a27d"
       }
     ],
     "fields": [
@@ -478,7 +478,8 @@
       "Reuse source bounded fields, TTY/CI gates, preview-before-consent and one create attempt; standalone opt-in replaces automatic ERR/EXIT integration.",
       "Fixed public github.com recipient replaces adopter changelog routing; Scaffold version is unknown and caller failure metadata is user-reported, not historical proof.",
       "Draft requires no gh/account; no auth, labels, retry or receiving workflow. Failed/lost/invalid create response is submission-unconfirmed, never confirmed absence.",
-      "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam."
+      "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam.",
+      "Literal terminal consent and tool-output limits preserve byte distinctions before Bash string normalization."
     ],
     "evidence": "offline-real-bash-fake-gh-pty-only"
   },

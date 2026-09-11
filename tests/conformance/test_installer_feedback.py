@@ -38,10 +38,14 @@ with open(os.environ['FIXTURE_CALLS'], 'a') as output:
     output.write(json.dumps({'argv':sys.argv[1:], 'host':os.environ.get('GH_HOST'),
                             'repo':os.environ.get('GH_REPO')})+'\\n')
 if sys.argv[1:] == ['--version']:
-    print(os.environ.get('FIXTURE_GH_VERSION', 'gh version 2.96.0 (2026-09-01)'))
+    value = os.environ.get('FIXTURE_GH_VERSION', 'gh version 2.96.0 (2026-09-01)')
+    if os.environ.get('FIXTURE_VERSION_NUL'): value = value.replace('2.96', '2.'+chr(0)+'96')
+    print(value)
     sys.exit(int(os.environ.get('FIXTURE_VERSION_RC', '0')))
 if sys.argv[1:3] != ['issue','create']: sys.exit(92)
-print(os.environ.get('FIXTURE_CREATE_OUTPUT', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/42'))
+value = os.environ.get('FIXTURE_CREATE_OUTPUT', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/42')
+if os.environ.get('FIXTURE_CREATE_NUL'): value += chr(0) * int(os.environ['FIXTURE_CREATE_NUL'])
+print(value)
 print(os.environ.get('FIXTURE_CREATE_ERROR', ''), file=sys.stderr)
 sys.exit(int(os.environ.get('FIXTURE_CREATE_RC', '0')))
 """)
@@ -50,7 +54,7 @@ sys.exit(int(os.environ.get('FIXTURE_CREATE_RC', '0')))
                            ("jq", '#!/bin/sh\nprintf "%s\\n" "${FIXTURE_JQ_VERSION:-jq-1.7.1}"\n')):
             path = self.bin / name
             path.write_text(text); path.chmod(0o755)
-        for name in ('dirname', 'head'):
+        for name in ('dirname', 'head', 'od', 'tr'):
             (self.bin / name).symlink_to(shutil.which(name, path='/usr/bin:/bin'))
         # Never fall through to a runner's real gh/jq, including absence tests.
         self.env = dict(os.environ, PATH=str(self.bin), LC_ALL="C",
@@ -202,6 +206,31 @@ sys.exit(int(os.environ.get('FIXTURE_CREATE_RC', '0')))
         rc, output, _ = self.terminal('Y')
         self.assertEqual((0, URL + '\n'), (rc, output))
         self.assertEqual(1, len(self.creates()))
+
+    def test_nul_consent_bytes_never_normalize_into_literal_y(self):
+        for answer in ('y\x00', 'Y\x00', '\x00y', 'y\x00x', 'y\x01'):
+            with self.subTest(answer=repr(answer)):
+                before = len(self.creates())
+                rc, output, preview = self.terminal(answer)
+                self.assertEqual(3, rc, preview)
+                self.assertEqual('', output)
+                self.assertEqual(before, len(self.creates()))
+
+    def test_nul_create_response_and_raw_byte_overflow_remain_unconfirmed(self):
+        for count in ('1', '300'):
+            with self.subTest(nul_count=count):
+                before = len(self.creates())
+                rc, output, preview = self.terminal(env={'FIXTURE_CREATE_NUL':count})
+                self.assertEqual(5, rc, preview)
+                self.assertEqual('', output)
+                self.assertIn('result=submission-unconfirmed', preview)
+                self.assertEqual(before + 1, len(self.creates()))
+
+    def test_nul_version_output_is_unknown_not_a_normalized_version(self):
+        result = self.run_report(env={'FIXTURE_VERSION_NUL':'1'})
+        self.assertEqual(0, result.returncode)
+        self.assertIn('| gh version | unknown |', result.stdout)
+        self.assertNotIn('\x00', result.stdout + result.stderr)
 
     def test_unknown_malformed_lost_and_overflow_responses_are_unconfirmed(self):
         for value in ('', 'https://github.com/elsewhere/repository/issues/42',
@@ -377,3 +406,27 @@ class FeedbackCompanionProvenanceTests(unittest.TestCase):
                 self.mutate(lambda data: data.update({field:value}))
                 self.assertTrue(self.checker.validate(self.root))
                 self.parity.write_bytes(original)
+
+    def test_complete_fixture_retains_frozen_source_rejection(self):
+        self.assertEqual([], self.checker.validate(self.root))
+        data = json.loads(self.parity.read_bytes())
+        data['source_commit'] = '0' * 40
+        self.parity.write_text(json.dumps(data))
+        self.assertIn('installer frozen source provenance drifted', self.checker.validate(self.root))
+
+    def test_complete_fixture_retains_payload_preservation_class_rejection(self):
+        self.assertEqual([], self.checker.validate(self.root))
+        inventory = self.root / '.github/distribution/payload.v1.tsv'
+        inventory.write_text(inventory.read_text().replace('\tengine\t', '\ttuned\t', 1))
+        errors = self.checker.validate(self.root)
+        self.assertTrue(any(error.startswith('installer inventory class/digest is invalid:') for error in errors), errors)
+        self.assertFalse(any('feedback companion' in error for error in errors), errors)
+
+    def test_complete_fixture_retains_malformed_payload_parity_rejection(self):
+        self.assertEqual([], self.checker.validate(self.root))
+        data = json.loads(self.parity.read_bytes())
+        data['files'][0] = 'not-a-record'
+        self.parity.write_text(json.dumps(data))
+        errors = self.checker.validate(self.root)
+        self.assertIn('installer source parity omits, reorders or adds files', errors)
+        self.assertFalse(any('feedback companion' in error for error in errors), errors)

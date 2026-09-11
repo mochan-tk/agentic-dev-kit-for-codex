@@ -216,9 +216,13 @@ backups, and cannot repair or change the earlier installer's exit/result.
 
 The exact eight fields are Script (`scaffold-init`), Failing line, Exit code,
 OS / arch, bash version, gh version, jq version, and Scaffold version
-(`unknown`). Fixed field grammars reject multiline, oversized or unexpected
-observations to `unknown`; OS/architecture use closed known values, tool
-versions use numeric/version-specific forms. An unfamiliar platform/version
+(`unknown`). Fixed field grammars reject oversized or unexpected observations
+to `unknown`; OS/architecture use closed known values, tool versions use
+numeric/version-specific forms. The canonical gh version line may include its
+official public release-URL second line; unrelated extra content is rejected.
+Terminal tool-output newlines are normalized only after checking the byte
+bound, and NUL bytes become rejected controls rather than disappearing.
+An unfamiliar platform/version
 format is unknown, not a compatibility claim. Tool observation/creation stdout
 is captured to a 256-byte bound, with overflow as non-success and stderr
 discarded. There is no raw-log, command, path, environment dump, credential,
@@ -233,7 +237,9 @@ explicit `--send`, available `gh`, stdin **and** stderr TTYs, and empty `CI`
 and `GITHUB_ACTIONS`; even `CI=false` blocks. The full **public** destination,
 existing-account disclosure and exact in-memory title/body are shown before
 `Send this public report? [y/N]`. Only the entire literal answer `y` or `Y`
-allows one Issue-create attempt. Empty, EOF, other answers and piped consent
+allows one Issue-create attempt. Terminal consent bytes are checked before
+Bash string normalization, so NUL-containing answers cannot become `y`.
+Empty, EOF, other answers and piped consent
 do not send; environment variables, changelog markers and config do not arm
 consent or select the recipient.
 
