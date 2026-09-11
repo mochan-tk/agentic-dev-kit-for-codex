@@ -448,7 +448,9 @@
     "test-scaffold-init.sh": "e060e59ef1fc4c8dabdae2de091ed8eabafba8a9"
   },
   "limits": [
-    "Local-source explicit apply only; no auto download/init/stage/commit/force/upgrade.",
+    "Local-source explicit install/known-old upgrade and operation-scoped rollback; no auto download/init/stage/commit/force.",
+    "Source class dispatch and two-version preservation tests are reused; old-byte/mode checks, prewrite backups and explicit rollback are Codex-target safety adaptations, not source-provided transactions.",
+    "Rollback preserves unrelated edits and refuses changed affected files; exclusive-writer local fixtures do not prove power-loss atomicity or malicious same-user race resistance.",
     "No live Codex, Windows or GitHub-helper execution proof; no VM prerequisite.",
     "Development-only AGENTS/PIN/Task IDs/governance/results are excluded."
   ]

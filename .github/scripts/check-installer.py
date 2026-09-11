@@ -13,6 +13,13 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+INSTALLER_LIMITS = [
+    "Local-source explicit install/known-old upgrade and operation-scoped rollback; no auto download/init/stage/commit/force.",
+    "Source class dispatch and two-version preservation tests are reused; old-byte/mode checks, prewrite backups and explicit rollback are Codex-target safety adaptations, not source-provided transactions.",
+    "Rollback preserves unrelated edits and refuses changed affected files; exclusive-writer local fixtures do not prove power-loss atomicity or malicious same-user race resistance.",
+    "No live Codex, Windows or GitHub-helper execution proof; no VM prerequisite.",
+    "Development-only AGENTS/PIN/Task IDs/governance/results are excluded.",
+]
 EXPECTED = {
     ".agents/skills/context-collection/SKILL.md": [
         ".github/skills/context-collection/SKILL.md",
@@ -260,6 +267,8 @@ def validate(root):
             errors.append("installer provenance fields drifted")
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
+        if parity.get("limits") != INSTALLER_LIMITS:
+            errors.append("installer known-old/operation-scoped preservation boundary drifted")
         if parity.get("installer_source") != {
             "scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
             "scaffold-init.ps1": "6baa8ca94535d25c3b3b1cc1e4ac4ba95542321f",

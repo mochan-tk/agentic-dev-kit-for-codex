@@ -63,7 +63,7 @@ selected. Source/target/ancestor/leaf symlinks, broken links, path escapes,
 unlisted payload files, missing inputs, modified inventory layouts, and file/
 directory collisions fail closed. A failing inventory enumeration is not an
 empty or successful inventory. Existing Git metadata and index are untouched.
-No force, upgrade, overwrite, automatic init, stage, or commit is supported.
+Plain installation supports no overwrite, force, automatic init, stage or commit.
 After preflight, a copy error can leave a reported partial install; review it
 before re-running. This is not atomic rollback or an adversarial concurrent
 filesystem mutation guarantee.
@@ -101,9 +101,100 @@ not installed. Adopter CI/setup commands must be observed and run locally.
 
 Intentional convenience differences are local-source only, dry-run by default,
 explicit apply, existing Git root, no network bootstrap, no automatic staging,
-and no force/upgrade. PowerShell calls adjacent reviewed Bash rather than
-downloading a moving main script. These limits avoid exporting kit development
-governance as adopter truth while leaving upgrade design for its own Task.
+and no force. PowerShell calls adjacent reviewed Bash rather than downloading a
+moving main script. These limits avoid exporting kit development governance as
+adopter truth.
+
+## Preservation-safe local upgrade and operation-scoped rollback
+
+T19 reuses the frozen source's engine/tuned/instance class dispatch and
+two-version preservation tests. It does **not** reuse blind engine overwrite,
+automatic staging, changelog replacement or broad path discovery. Known-old
+checks, prewrite backups and explicit operation rollback are target additions.
+The 47 shipped payload paths/classes/bytes/modes and source blob IDs are unchanged.
+
+Select inspected local old/new roots containing `.github/distribution/`, an
+exclusively owned adopter Git root, and a new private transaction directory whose
+parent already exists. Sources and transaction must not overlap the adopter;
+the transaction must not overlap either source. The new root is selected with
+`SCAFFOLD_SOURCE_DIR`; `--old-source` is mandatory for upgrade. Old and new may
+be the same inspected source (a no-op if everything is present). Both inventories
+must contain exactly the reviewed 47 ordered paths/classes, with single-link
+regular mode-0644 payload files and valid SHA-256 digests. A self-consistent
+manifest is integrity relative to the chosen input, **not source authenticity**.
+
+```sh
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --upgrade --old-source /path/to/old-kit --transaction /path/to/private/update-1 --dry-run /path/to/adopter
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --upgrade --old-source /path/to/old-kit --transaction /path/to/private/update-1 --apply /path/to/adopter
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --rollback --transaction /path/to/private/update-1 --dry-run /path/to/adopter
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --rollback --transaction /path/to/private/update-1 --apply /path/to/adopter
+```
+
+The reviewed script being executed must support these options; do not execute an
+unreviewed script from a source merely because its inventory validates. The
+unchanged PowerShell entrypoint forwards the same arguments to Bash. Standard
+BSD/GNU `stat`, `cp`, `sort`, `wc`, `rmdir`, and `sync` supplement the installation
+prerequisites; no new Python, jq, service, or package installation is required.
+
+Upgrade preflights the **whole** fixed inventory before mutation. Existing
+engine files must equal the old bytes/mode (replace), or the new bytes/mode
+(no-op); all other engine states refuse. Existing tuned, instance and seed files
+are preserved, including their custom modes. Missing files of any class may be
+installed, recording original absence. Unrelated files are never selected.
+Dry-run creates neither target nor transaction; an already-new apply creates no
+transaction. A supplied pre-existing transaction is always refused by upgrade.
+
+### Private recovery record
+
+Before target writes, apply exclusively creates the mode-0700 transaction root,
+then prepares and checks **all** necessary numbered byte backups and the complete
+data-only `local-upgrade/v1` record, flushing it with `sync`. Records/backups stay
+local; do not upload them as evidence. Fixed files are:
+
+- `meta.tsv`: schema, digest of target canonical path/device/inode, digest of
+  transaction canonical path/device/inode, old/new inventory digests, and
+  old/new canonical source path/device/inode digests;
+- `files.tsv`: strictly increasing fixed-inventory index, relative path, old
+  SHA-256 or `-` for confirmed absence, and expected new SHA-256 (mode 0644);
+- `directories.tsv`: sorted relative directories absent before this operation;
+- `before-N`: exact original engine bytes for the Nth affected entry, when any;
+- `record.sha256`: digest of metadata/files/directories; a self-consistency seal,
+  not a signature or proof against a malicious record author;
+- `status`: prepared/applied/partial/rolled-back plus completed-file progress.
+
+Input/backup payload files are limited to 1 MiB each, record inputs to 16 KiB,
+47 affected files and 128 directories. Links, special files, malformed/extra
+records, escapes, wrong target/source binding and tampered backups refuse. Data
+is parsed, never sourced/evaluated. Completion is reported only after affected
+states are verified and the final operation status is written/flushed. No Git
+HEAD/index operation, automatic staging, GitHub operation or credential access
+is part of installation, upgrade or rollback.
+
+### Recovery and refusal
+
+Rollback requires the same new inventory, target root and transaction root. It
+preflights the complete record, all backups and all affected target states
+before writes. Only recorded pre/post bytes with exact 0644 mode (or recorded
+absence) are recognized. A later affected-file edit, mode change, missing backup,
+unknown partial bytes, symlink or identity drift stops without forcing a restore.
+Unrelated later application/document edits remain unchanged.
+
+Restore only overwritten engine bytes/modes; remove only files created by this
+operation that still match its post-state. Remove only recorded operation-created
+directories after checking they contain no unrelated entries, using `rmdir` when
+empty. A later unrelated child in one of those directories refuses the whole
+preflight and is preserved. Pre-existing directories are never removed. A
+validated repeated rollback of an already restored operation is a zero-write
+no-op; it does not reinterpret later changes as rollback targets.
+
+The supported interrupted-apply test fails the second engine copy after the
+first completed. The prewritten record/backups and partial progress remain;
+explicit rollback restores recognized pre/post states. Errors before complete
+record preparation leave the target unchanged and may require manual review of
+the retained incomplete transaction. Unknown partial writes refuse, and errors
+during rollback remain partial/non-success. There is no automatic crash recovery,
+whole-project reset, power-loss atomicity, concurrent-writer guarantee or
+malicious same-user race resistance. Keep exclusive ownership for the operation.
 
 ## Evidence boundary
 

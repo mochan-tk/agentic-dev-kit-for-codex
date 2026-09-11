@@ -22,6 +22,17 @@ rollback engine; an interrupted apply may leave a reported partial install.
 No files are automatically staged or committed. Windows Git Bash entrypoint
 behavior has static/offline coverage only, not a measured Windows run.
 
+T19 adds explicit local known-old upgrade and operation-scoped rollback, tested
+only with disposable synthetic adopters. It preserves the same 47 payload files.
+Exact old engine bytes/mode are required; existing tuned/instance/seed files
+stay unchanged. A private complete record/backups precede target mutation.
+Rollback restores/removes only recorded affected files and empty operation-created
+directories; later affected-file edits or unknown states refuse. Unrelated edits
+remain. One bounded interrupted-copy case is recoverable through explicit
+rollback. This is not automatic migration, power-loss atomicity, malicious
+same-user race protection, a global transaction service, native Windows proof,
+or permission to migrate existing adopters. No force or repository reset exists.
+
 The three native role definitions are configuration/instruction layers, not
 authenticated roles. Skills use documented available tooling or explicit
 manual fallback; installation tests do not prove runtime orchestration or

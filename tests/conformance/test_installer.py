@@ -386,6 +386,312 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         shutil.copytree(ROOT / ".github/distribution", source / ".github/distribution")
         return source
 
+    def upgrade_fixture(self):
+        old = self.clone_source()
+        new = self.base / "new local source"
+        shutil.copytree(old, new)
+        rows = [line.split("\t") for line in (new / INVENTORY).read_text().splitlines()
+                if line and not line.startswith("#")]
+        changed = [row[0] for row in rows if row[1] == "engine"][:2]
+        for name in changed:
+            path = new / PAYLOAD / name
+            path.write_bytes(path.read_bytes() + b"\nSynthetic newer fixture.\n")
+        (new / INVENTORY).write_text("".join("\t".join((name, kind,
+            hashlib.sha256((new / PAYLOAD / name).read_bytes()).hexdigest())) + "\n"
+            for name, kind, _ in rows))
+        self.assertEqual(0, self.run_install("--apply", source=old).returncode)
+        self.old_source, self.new_source, self.changed = old, new, changed
+        self.transaction = self.base / "operation record"
+        return changed
+
+    def upgrade(self, *args, **kwargs):
+        return self.run_install("--upgrade", "--old-source", str(self.old_source),
+            "--transaction", str(self.transaction), *args, source=self.new_source, **kwargs)
+
+    def rollback(self, *args, **kwargs):
+        return self.run_install("--rollback", "--transaction", str(self.transaction),
+            *args, source=self.new_source, **kwargs)
+
+    def test_upgrade_roundtrip_preserves_customization_modes_and_git(self):
+        self.upgrade_fixture()
+        for name in ("AGENTS.md", "README.md", "SCAFFOLD-CHANGELOG.md",
+                     ".github/codex-instructions.md", ".github/docs/agreements/requirements.md"):
+            (self.target / name).write_text("adopter-owned\n")
+            (self.target / name).chmod(0o600)
+        self.commit_adopter("synthetic adopted baseline")
+        (self.target / "staged.txt").write_text("unrelated staged change\n")
+        self.git("add", "staged.txt")
+        before = self.snapshot(self.target)
+        modes = {p.relative_to(self.target): p.stat().st_mode for p in self.target.rglob("*")}
+        result = self.upgrade("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        for name in self.changed:
+            self.assertEqual((self.new_source / PAYLOAD / name).read_bytes(), (self.target / name).read_bytes())
+        result = self.rollback("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.target))
+        self.assertEqual(modes, {p.relative_to(self.target): p.stat().st_mode for p in self.target.rglob("*")})
+
+    def test_upgrade_dry_run_and_already_new_create_no_record(self):
+        self.upgrade_fixture()
+        before = self.snapshot(self.base)
+        result = self.upgrade()
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.base))
+        for name in self.changed:
+            (self.target / name).write_bytes((self.new_source / PAYLOAD / name).read_bytes())
+        before = self.snapshot(self.base)
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_upgrade_absent_dry_run_target_stays_absent(self):
+        self.upgrade_fixture()
+        result = self.upgrade(target=self.base / "absent")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertFalse((self.base / "absent").exists())
+        self.assertFalse(self.transaction.exists())
+
+    def test_upgrade_unknown_engine_refuses_whole_plan(self):
+        self.upgrade_fixture()
+        (self.target / self.changed[-1]).write_text("unknown edit\n")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.upgrade("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_upgrade_unknown_engine_mode_refuses(self):
+        self.upgrade_fixture()
+        (self.target / self.changed[-1]).chmod(0o755)
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.upgrade("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+        self.assertEqual(0o755, (self.target / self.changed[-1]).stat().st_mode & 0o777)
+
+    def test_rollback_original_absence_and_only_created_directories(self):
+        self.upgrade_fixture()
+        shutil.rmtree(self.target / ".codex")
+        (self.target / "AGENTS.md").unlink()
+        before = self.snapshot(self.target)
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        self.assertTrue((self.target / ".codex/agents/planner.toml").is_file())
+        self.assertEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def test_rollback_preserves_unrelated_later_edits(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        (self.target / "app.py").write_text("later application edit\n")
+        (self.target / "README.md").write_text("later notes\n")
+        self.assertEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual("later application edit\n", (self.target / "app.py").read_text())
+        self.assertEqual("later notes\n", (self.target / "README.md").read_text())
+
+    def test_rollback_post_upgrade_edit_refuses_all_writes(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        (self.target / self.changed[-1]).write_text("later affected edit\n")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_rollback_dry_run_and_repeat_are_zero_write(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        before = self.snapshot(self.base)
+        self.assertEqual(0, self.rollback().returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+        self.assertEqual(0, self.rollback("--apply").returncode)
+        before = self.snapshot(self.base)
+        self.assertEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_upgrade_transaction_overlap_or_existing_record_refuses(self):
+        self.upgrade_fixture()
+        for transaction in (self.target / "record", self.new_source / "record", self.old_source / "record", self.base):
+            with self.subTest(transaction=transaction.name):
+                self.transaction = transaction
+                before = self.snapshot(self.base)
+                self.assertNotEqual(0, self.upgrade("--apply").returncode)
+                self.assertEqual(before, self.snapshot(self.base))
+
+    def test_upgrade_backup_and_record_tampering_refuse(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        backup = self.transaction / "before-0"
+        original = backup.read_bytes()
+        backup.write_bytes(b"tampered\n")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+        backup.write_bytes(original)
+        record = self.transaction / "files.tsv"
+        record.write_text(record.read_text().replace(self.changed[0], "../escape"))
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_upgrade_interrupted_apply_is_explicitly_recoverable(self):
+        self.upgrade_fixture()
+        before = self.snapshot(self.target)
+        fake = self.base / "copy-failure-bin"
+        fake.mkdir()
+        # Real Bash engine and real copy; fail only the second target replacement.
+        cp = fake / "cp"
+        cp.write_text('#!/bin/sh\ncase "$*" in *"' + self.changed[-1] + '") exit 77 ;; esac\nexec /bin/cp "$@"\n')
+        cp.chmod(0o755)
+        result = subprocess.run(["bash", str(INSTALLER), "--upgrade", "--apply", "--old-source",
+            str(self.old_source), "--transaction", str(self.transaction), str(self.target)],
+            env=dict(os.environ, SCAFFOLD_SOURCE_DIR=str(self.new_source), PATH=str(fake) + os.pathsep + os.environ['PATH']),
+            capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual((self.new_source / PAYLOAD / self.changed[0]).read_bytes(), (self.target / self.changed[0]).read_bytes())
+        self.assertIn("partial", (self.transaction / "status").read_text())
+        result = self.rollback("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def run_upgrade_with_copy_probe(self, code):
+        fake = self.base / "instrumented-copy-bin"
+        fake.mkdir()
+        cp = fake / "cp"
+        cp.write_text('#!/usr/bin/env python3\nimport os,pathlib,subprocess,sys\n'
+                      'src,dst=sys.argv[-2:]\nroot=pathlib.Path(os.environ["FIXTURE_TRANSACTION"])\n'
+                      + code + '\nsys.exit(subprocess.run(["/bin/cp",*sys.argv[1:]]).returncode)\n')
+        cp.chmod(0o755)
+        return subprocess.run(["bash", str(INSTALLER), "--upgrade", "--apply", "--old-source",
+            str(self.old_source), "--transaction", str(self.transaction), str(self.target)],
+            env=dict(os.environ, SCAFFOLD_SOURCE_DIR=str(self.new_source),
+                     FIXTURE_TRANSACTION=str(self.transaction), FIXTURE_TARGET=str(self.target),
+                     PATH=str(fake) + os.pathsep + os.environ['PATH']),
+            capture_output=True, text=True, timeout=30)
+
+    def test_upgrade_complete_recovery_data_precedes_first_target_write(self):
+        self.upgrade_fixture()
+        result = self.run_upgrade_with_copy_probe(
+            'if dst.startswith(os.environ["FIXTURE_TARGET"]+"/"):\n'
+            '    assert (root/"before-0").is_file() and (root/"before-1").is_file()\n'
+            '    assert len((root/"files.tsv").read_text().splitlines())==2\n'
+            '    assert (root/"meta.tsv").is_file() and (root/"directories.tsv").is_file()\n'
+            '    assert (root/"record.sha256").is_file() and (root/"status").is_file()\n')
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_upgrade_prewrite_backup_failure_leaves_target_unchanged(self):
+        self.upgrade_fixture()
+        before = self.snapshot(self.target)
+        result = self.run_upgrade_with_copy_probe('if dst==str(root/"before-1"): sys.exit(77)\n')
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+        self.assertIn("partial", (self.transaction / "status").read_text())
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def test_rollback_missing_or_unsafe_backup_and_record_refuse(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        for name in ("before-0", "files.tsv"):
+            path = self.transaction / name
+            data, mode = path.read_bytes(), path.stat().st_mode & 0o777
+            for kind in ("missing", "symlink", "hardlink", "fifo", "oversized"):
+                with self.subTest(name=name, kind=kind):
+                    path.unlink()
+                    outside = self.base / "outside-data"
+                    outside.write_bytes(data)
+                    if kind == "symlink": path.symlink_to(outside)
+                    elif kind == "hardlink": os.link(outside, path)
+                    elif kind == "fifo": os.mkfifo(path)
+                    elif kind == "oversized": path.write_bytes(b"x" * (1024 * 1024 + 1))
+                    # Snapshot only targets: generic snapshot's FIFO classification
+                    # does not open the FIFO, and the actual engine must not either.
+                    before = self.snapshot(self.target)
+                    result = self.rollback("--apply")
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertEqual(before, self.snapshot(self.target))
+                    if path.exists() or path.is_symlink(): path.unlink()
+                    path.write_bytes(data); path.chmod(mode); outside.unlink()
+
+    def test_rollback_affected_mode_change_refuses_before_any_write(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        path = self.target / self.changed[-1]
+        path.chmod(0o600)
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+        self.assertEqual(0o600, path.stat().st_mode & 0o777)
+
+    def test_rollback_wrong_target_and_moved_transaction_refuse(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        other = self.base / "other adopter"
+        shutil.copytree(self.target, other)
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply", target=other).returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+        renamed = self.base / "moved transaction"
+        self.transaction.rename(renamed); self.transaction = renamed
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_rollback_created_directory_with_later_unrelated_child_refuses(self):
+        self.upgrade_fixture()
+        shutil.rmtree(self.target / ".codex")
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        unrelated = self.target / ".codex/notes.md"
+        unrelated.write_text("keep later unrelated notes\n")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_upgrade_old_source_drift_and_transaction_symlink_refuse(self):
+        self.upgrade_fixture()
+        path = self.old_source / PAYLOAD / self.changed[-1]
+        data = path.read_bytes()
+        path.write_text("old source drift\n")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.upgrade("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+        path.write_bytes(data)
+        self.transaction.symlink_to(self.base / "missing")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.upgrade("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_rollback_resealed_unsafe_path_is_not_executed(self):
+        self.upgrade_fixture()
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        path = self.transaction / "files.tsv"
+        path.write_text(path.read_text().replace(self.changed[0], "../escape"))
+        data = b"".join((self.transaction / name).read_bytes()
+                        for name in ("meta.tsv", "files.tsv", "directories.tsv"))
+        (self.transaction / "record.sha256").write_text(hashlib.sha256(data).hexdigest() + "\n")
+        before = self.snapshot(self.base)
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(before, self.snapshot(self.base))
+
+    def test_rollback_noncanonical_records_refuse(self):
+        self.upgrade_fixture()
+        shutil.rmtree(self.target / ".codex")
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        records = {name: (self.transaction / name).read_bytes()
+                   for name in ("meta.tsv", "files.tsv", "directories.tsv", "status")}
+        cases = [
+            ("files.tsv", records["files.tsv"].replace(b".agents/", b".ag\x00ents/", 1)),
+            ("files.tsv", records["files.tsv"].rstrip(b"\n")),
+            ("meta.tsv", records["meta.tsv"].replace(b"schema", b"sch\x00ema", 1)),
+            ("status", records["status"].replace(b"applied", b"app\x00lied", 1)),
+            ("directories.tsv", b"\n".join(reversed(records["directories.tsv"].splitlines())) + b"\n"),
+        ]
+        for name, data in cases:
+            with self.subTest(name=name, digest=hashlib.sha256(data).hexdigest()):
+                for key, value in records.items(): (self.transaction / key).write_bytes(value)
+                (self.transaction / name).write_bytes(data)
+                sealed = b"".join((self.transaction / key).read_bytes()
+                                   for key in ("meta.tsv", "files.tsv", "directories.tsv"))
+                (self.transaction / "record.sha256").write_text(hashlib.sha256(sealed).hexdigest() + "\n")
+                before = self.snapshot(self.base)
+                self.assertNotEqual(0, self.rollback("--apply").returncode)
+                self.assertEqual(before, self.snapshot(self.base))
+
     def assert_refused_unchanged(self, *args, source=ROOT, target=None):
         target = target or self.target
         before = self.snapshot(target)
