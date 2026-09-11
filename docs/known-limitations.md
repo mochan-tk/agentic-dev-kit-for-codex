@@ -49,6 +49,19 @@ retrospective promotion, runtime parity or repository/release completion.
 The detailed [report contract](distribution/source-first-installer.md#optional-local-installer-failure-report)
 records the source adaptations and result semantics.
 
+T21 adds a source-only `check-connectors.sh --target EXISTING_DIRECTORY`
+companion, outside the unchanged payload. It validates the frozen source's
+five-field/four-heading textual structure and corrects empty-name acceptance.
+Explicit target, bounded reads/diagnostics and unsafe-file/read/enumeration
+refusal are tested with actual Bash and disposable fixtures. It does not
+activate connectors, install a validation gate, prove operation bodies,
+duplicate-heading semantics, context sufficiency, pin authenticity, service
+reachability or runtime behavior. Ordinary trusted tools and no concurrent
+target writer are required; it is not hostile filesystem-race containment.
+Full K06/K16, parity and release completion are not claimed. Existing payload,
+installer/upgrade/rollback/feedback and N1 remain unchanged. See the
+[connector validation contract](distribution/source-first-installer.md#optional-offline-connector-definition-validation).
+
 The three native role definitions are configuration/instruction layers, not
 authenticated roles. Skills use documented available tooling or explicit
 manual fallback; installation tests do not prove runtime orchestration or

@@ -92,6 +92,23 @@ labels or retry occurs. A failed or invalid response is
 See the [report contract and exit codes](docs/distribution/source-first-installer.md#optional-local-installer-failure-report).
 Tests use fake GitHub, not a live public submission or full feedback-loop proof.
 
+### Validate local connector definitions before review
+
+Run the standalone read-only companion from an inspected kit checkout against
+an explicit adopter directory:
+
+```sh
+bash /path/to/reviewed-kit/.github/scripts/check-connectors.sh --target /path/to/adopter
+```
+
+It checks the source-derived five Metadata fields, name/filename agreement,
+status and four operation headings. Missing/unsafe/unreadable inputs fail;
+nothing is installed, repaired, activated or sent to a service. This companion
+is outside the unchanged 47-file payload and adds no automatic adopter CI.
+Passing is structural evidence, not source reachability, context sufficiency,
+pin authenticity or runtime proof. See the
+[connector validation contract](docs/distribution/source-first-installer.md#optional-offline-connector-definition-validation).
+
 ## Durable operating model
 
 ```text

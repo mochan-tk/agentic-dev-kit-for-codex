@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T20"
-CURRENT_TASK_BRANCH = "codex/source-first-installer-feedback"
+CURRENT_TASK_ID = "T21"
+CURRENT_TASK_BRANCH = "codex/source-first-connector-validation"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,15 +521,21 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T20"], [task["id"] for task in active])
+        self.assertEqual(["T21"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T20_PATHS,
+            self.checker.EXPECTED_T21_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(11, len(active[0]["owned_paths"]))
-        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33', active[0]['record'])
-        self.assertEqual('ba6a4aa9993861660d192e4371ddb36775545eb6', active[0]['base_commit'])
-        self.assertEqual('e5a8cafb29e34e78ee446e6d1f5f42c2bfdfb48d', active[0]['base_tree'])
+        self.assertEqual(10, len(active[0]["owned_paths"]))
+        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/35', active[0]['record'])
+        self.assertEqual('583005816444007a754fa641d6b49c4631f997c8', active[0]['base_commit'])
+        self.assertEqual('7687ac84d1dcb880b479a6e36c44d8fc640a9549', active[0]['base_tree'])
+        t20 = next(task for task in payload['tasks'] if task['id'] == 'T20')
+        self.assertEqual('accepted', t20['state'])
+        self.assertEqual(3, len(t20['owned_paths']))
+        self.assertEqual(tuple(path for path in self.checker.EXPECTED_T20_PATHS
+                               if path not in self.checker.EXPECTED_T21_PATHS),
+                         tuple(entry['path'] for entry in t20['owned_paths']))
         t19 = next(task for task in payload['tasks'] if task['id'] == 'T19')
         self.assertEqual('accepted', t19['state'])
         self.assertEqual(3, len(t19['owned_paths']))
@@ -754,16 +760,20 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T20", self.active_task(payload)["id"])
+        self.assertEqual("T21", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
 
-    def test_t20_transition_rejects_binding_scope_and_accepted_owner_drift(self):
+    def test_t21_transition_rejects_binding_scope_and_accepted_owner_drift(self):
         for task_id, field, value in (
+            ('T21', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33'),
+            ('T21', 'branch', 'codex/unreviewed'), ('T21', 'base_commit', '0' * 40),
+            ('T21', 'base_tree', '0' * 40), ('T21', 'state', 'accepted'),
+            ('T21', 'path_transitions', [{'operation': 'delete'}]), ('T21', 'owned_paths', []),
             ('T20', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/27'),
             ('T20', 'branch', 'codex/unreviewed'), ('T20', 'base_commit', '0' * 40),
-            ('T20', 'base_tree', '0' * 40), ('T20', 'state', 'accepted'),
+            ('T20', 'base_tree', '0' * 40), ('T20', 'state', 'active'),
             ('T20', 'path_transitions', [{'operation': 'delete'}]),
             ('T20', 'owned_paths', []), ('T14', 'state', 'active'),
             ('T19', 'state', 'active'), ('T19', 'owned_paths', []),
@@ -780,7 +790,39 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.active_task(payload)['owned_paths'][0]['mode'] = '100755'
         errors = []
         self.checker.validate_phase2_frontier(payload, errors)
-        self.assert_rejected(errors, 'T20 paths must all use mode 100644')
+        self.assert_rejected(errors, 'T21 paths must all use mode 100644')
+
+    def test_connector_execution_authorization_is_one_exact_companion(self):
+        errors = []
+        self.checker.validate_execution_root_surfaces({'.github/scripts/check-connectors.sh'}, errors)
+        self.assertEqual([], errors)
+        for path in ('.github/scripts/check-connector.sh', '.github/scripts/connectors/check.sh',
+                     '.github/scripts/check-connectors.py', '.github/scripts/check-connectors.ps1'):
+            errors = []
+            self.checker.validate_execution_root_surfaces({path}, errors)
+            # Generic check-* syntax is not execution authority: an unreviewed
+            # spelling has neither this exact reachability edge nor ownership.
+            self.checker.validate_registry_reachability({path}, self.ownership_payload()['policy'], errors)
+            self.assertTrue(errors, path)
+
+    def test_connector_reachability_requires_exact_suite_discovery_and_provenance(self):
+        paths = {'.github/scripts/check-connectors.sh', 'tests/conformance/test_connector_validation.py'}
+        policy = self.ownership_payload()['policy']
+        errors = []
+        self.checker.validate_registry_reachability(paths, policy, errors)
+        self.assertEqual([], errors)
+        for missing in ('suite', 'discovery', 'provenance'):
+            with self.subTest(missing=missing):
+                changed_paths = set(paths); changed_policy = copy.deepcopy(policy)
+                if missing == 'suite': changed_paths.remove('tests/conformance/test_connector_validation.py')
+                elif missing == 'discovery': changed_policy['required_conformance_commands'] = []
+                else: changed_policy['required_quality_commands'].remove(self.checker.INSTALLER_COMMAND)
+                errors = []
+                self.checker.validate_registry_reachability(changed_paths, changed_policy, errors)
+                self.assert_rejected(errors, 'connector companion is not reachable')
+        errors = []
+        self.checker.validate_registry_reachability({'.github/scripts/check-connectors-extra.sh'}, policy, errors)
+        self.assert_rejected(errors, 'governed checker or test is not reachable')
 
     def test_feedback_execution_allowance_is_exactly_the_two_companion_paths(self):
         errors = []
@@ -3084,7 +3126,7 @@ jobs:
                 )
                 if destination is not None:
                     # This synthetic transition owns its workflow edit explicitly;
-                    # the real T20 manifest must continue rejecting this expansion.
+                    # the real T21 manifest must continue rejecting this expansion.
                     owner = next(task for task in payload['tasks'] if any(
                         entry['path'] == '.github/workflows/ci.yml' for entry in task['owned_paths']))
                     entry = next(entry for entry in owner['owned_paths']
@@ -3104,7 +3146,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T20",
+                    "ownership T21",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):

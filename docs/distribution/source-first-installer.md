@@ -286,6 +286,66 @@ the source's ADR into target permission or copy development truth to adopters.
 No automatic instrumentation, live-send proof, Windows execution, receiving
 workflow, retrospective promotion or full K16 completion is claimed.
 
+## Optional offline connector-definition validation
+
+Use the source-derived standalone companion from a reviewed local kit checkout:
+
+```sh
+bash /path/to/reviewed-kit/.github/scripts/check-connectors.sh --target /path/to/adopter
+```
+
+An explicit existing target is mandatory; there is no current-directory or
+kit-root fallback. This Bash 3.2+ command uses standard find/head/tr/grep/sed/awk
+only. It never calls Git, GitHub, authentication, a model or a network service,
+changes files, applies fixes, writes an activation registry or modifies CI.
+No existing adopter is updated. The 47 installed payload files remain unchanged;
+their README truthfully says this validator is not installed automatically.
+The separate source-only companion provides the optional explicit invocation.
+
+The frozen Copilot checker at `fd265ddef150fab86cd54d0e383c2c25fe297ffb`
+supplies `err()`, `check_connector()`, framework checks, Metadata extraction,
+definition enumeration and the twelve structural fixture cases. The target
+requires readable regular `README.md` and `CONNECTOR-TEMPLATE.md` and at least
+one other `.md` definition in `.github/connectors/`. Each definition needs
+exactly one bullet per `name`, `access`, `reach`, `trust-default`, `status`
+inside `## Metadata`, no undeclared Metadata bullet, a nonempty name equal to
+its filename stem, `core|community|experimental` status, and headings
+`## discover`, `## retrieve`, `## pin`, `## verify`.
+
+The inherited textual grammar allows heading trailing whitespace and indented
+continuations. It is not a full Markdown parser: operation bodies, other field
+values, duplicate headings, service availability, requirement sufficiency and
+pin authenticity are not proven. The source's empty-name bypass is corrected.
+Hidden `.md` entries are included rather than silently skipped. Framework files
+are checked for bounded readability, not parsed as definitions.
+
+Target/ancestor/directory/leaf symlinks, non-regular inputs, unavailable reads
+or enumeration fail closed. Inputs are limited to 1 MiB each and 128 definitions;
+NUL cannot disappear during Bash capture. At most 32 itemized errors plus a
+fixed truncation marker are printed. Diagnostic labels use `definition-N` and
+fixed fields/reasons, never raw names, values or full private paths. Ordinary
+trusted local tools and an unchanged target during the read are prerequisites;
+these checks are not an atomic snapshot or hostile same-user race isolation.
+
+| Exit | Meaning |
+|---|---|
+| 0 | Structural checks passed (or `--help` displayed); no activation proof. |
+| 1 | Confirmed missing framework/definition or invalid structure. |
+| 2 | Invalid or incomplete explicit command arguments. |
+| 3 | Filesystem, read, tool or bounded-input state is uncheckable/unsafe. |
+
+`connector_companion` in the existing parity JSON binds the exact frozen
+checker/test blobs and the target checker/test bytes and mode 0644. Required
+quality composes connector validation with the existing payload/feedback
+components; calling only the legacy `validate()` component does not validate
+this companion. Required conformance discovers `test_connector_validation.py`,
+which executes the actual checker against disposable fixtures and shipped
+builtin/speckit definitions. Live policy binds this exact execution edge; an
+absent suite, missing discovery or absent quality provenance gate fails.
+No workflow, registry, installed payload, existing feedback behavior or N1
+limitation changes. These tests are not canonical scenario passes or full K06,
+runtime, K16, Phase 2 or release completion evidence.
+
 ## Evidence boundary
 
 Disposable local adopter tests cover real copy/dry-run/preservation, rejection,
