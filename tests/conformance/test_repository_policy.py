@@ -849,7 +849,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed eleven paths"
+            self.errors_for(fixture), "exactly the reviewed ten paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -2186,7 +2186,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed eleven paths"
+            self.errors_for(fixture), "exactly the reviewed ten paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2495,7 +2495,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the reviewed eleven paths"
+                    self.errors_for(fixture), "exactly the reviewed ten paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2507,7 +2507,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed eleven paths"
+            self.errors_for(fixture), "exactly the reviewed ten paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):
