@@ -793,35 +793,11 @@
           "mode": "100644"
         },
         {
-          "path": ".github/scripts/check-installer.py",
-          "mode": "100644"
-        },
-        {
           "path": ".github/scripts/scaffold-init.ps1",
           "mode": "100644"
         },
         {
-          "path": ".github/scripts/scaffold-init.sh",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/scripts/tests/test-scaffold-init.sh",
-          "mode": "100644"
-        },
-        {
           "path": ".github/workflows/ci.yml",
-          "mode": "100644"
-        },
-        {
-          "path": "README.md",
-          "mode": "100644"
-        },
-        {
-          "path": "docs/distribution/source-first-installer.md",
-          "mode": "100644"
-        },
-        {
-          "path": "docs/known-limitations.md",
           "mode": "100644"
         }
       ]
@@ -829,7 +805,7 @@
     {
       "id": "T18",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/29",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/helper-compatibility",
       "base_commit": "d36fad317947364a602ee5cdbe54903e68478b44",
       "base_tree": "87d2e889b88ff3a37e5809741ac3e7fa81a5e94a",
@@ -850,7 +826,18 @@
         {
           "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
           "mode": "100644"
-        },
+        }
+      ]
+    },
+    {
+      "id": "T19",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/31",
+      "state": "active",
+      "branch": "codex/source-first-upgrade-rollback",
+      "base_commit": "c999ec67eafb2c548a9151b54df4276c6d7833bb",
+      "base_tree": "1ebf78554a0afbf09e9f812f331eea2d1706dd2e",
+      "path_transitions": [],
+      "owned_paths": [
         {
           "path": ".github/distribution/source-parity.v1.json",
           "mode": "100644"
@@ -860,7 +847,31 @@
           "mode": "100644"
         },
         {
+          "path": ".github/scripts/check-installer.py",
+          "mode": "100644"
+        },
+        {
           "path": ".github/scripts/check-repository-policy.py",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/scaffold-init.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/tests/test-scaffold-init.sh",
+          "mode": "100644"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/distribution/source-first-installer.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/known-limitations.md",
           "mode": "100644"
         },
         {
