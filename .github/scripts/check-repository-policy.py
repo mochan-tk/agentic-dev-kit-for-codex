@@ -47,6 +47,22 @@ T20_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33"
 T20_BRANCH = "codex/source-first-installer-feedback"
 T20_BASE_COMMIT = "ba6a4aa9993861660d192e4371ddb36775545eb6"
 T20_BASE_TREE = "e5a8cafb29e34e78ee446e6d1f5f42c2bfdfb48d"
+T21_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/35"
+T21_BRANCH = "codex/source-first-connector-validation"
+T21_BASE_COMMIT = "583005816444007a754fa641d6b49c4631f997c8"
+T21_BASE_TREE = "7687ac84d1dcb880b479a6e36c44d8fc640a9549"
+EXPECTED_T21_PATHS = (
+    ".github/distribution/source-parity.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-connectors.sh",
+    ".github/scripts/check-installer.py",
+    ".github/scripts/check-repository-policy.py",
+    "README.md",
+    "docs/distribution/source-first-installer.md",
+    "docs/known-limitations.md",
+    "tests/conformance/test_connector_validation.py",
+    "tests/conformance/test_repository_policy.py",
+)
 EXPECTED_T20_PATHS = (
     ".github/distribution/source-parity.v1.json",
     ".github/governance/phase-task-ownership.v1.json",
@@ -584,6 +600,16 @@ def validate_registry_reachability(
     canonical_discovery = CANONICAL_CONFORMANCE_DISCOVERY in commands
     for relative in sorted(paths):
         name = PurePosixPath(relative).name
+        if relative == ".github/scripts/check-connectors.sh":
+            # Explicit-target companion must run against disposable adopter
+            # fixtures, not the kit-development connector contract. This one
+            # exact execution edge is required; both endpoints are digest-bound
+            # by the always-composed installer companion validation in quality.
+            if (canonical_discovery and INSTALLER_COMMAND in commands
+                    and "tests/conformance/test_connector_validation.py" in paths):
+                continue
+            errors.append("connector companion is not reachable through its exact conformance suite and quality provenance gate")
+            continue
         if relative in EXPECTED_DISTRIBUTION_PATHS:
             # Exact installed data, not a development checker against this repo.
             # The closed inventory is validated below and its checker is required.
@@ -683,6 +709,7 @@ def validate_execution_root_surfaces(paths: set[str], errors: list[str]) -> None
         ".github/scripts/scaffold-init.ps1",
         ".github/scripts/feedback-lib.sh",
         ".github/scripts/report-installer-failure.sh",
+        ".github/scripts/check-connectors.sh",
         ".github/scripts/codex-exec-adapter.py",
         ".github/scripts/post-runtime-receipt.py",
         ".github/scripts/tests/lib.sh",
@@ -1135,19 +1162,36 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t20, dict):
         errors.append("ownership manifest is missing T20")
         return
-    for key, expected in (("state", "active"), ("record", T20_RECORD),
+    for key, expected in (("state", "accepted"), ("record", T20_RECORD),
                           ("branch", T20_BRANCH), ("base_commit", T20_BASE_COMMIT),
                           ("base_tree", T20_BASE_TREE)):
         if t20.get(key) != expected:
             errors.append("ownership T20 " + key + " drifted")
     entries = t20.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != EXPECTED_T20_PATHS:
-        errors.append("ownership T20 must declare exactly the reviewed eleven paths")
+    if actual != tuple(path for path in EXPECTED_T20_PATHS if path not in EXPECTED_T21_PATHS):
+        errors.append("accepted ownership T20 must retain its reviewed three non-transferred paths")
     if t20.get("path_transitions") != []:
         errors.append("ownership T20 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
         errors.append("ownership T20 paths must all use mode 100644")
+    t21 = task_by_id.get("T21")
+    if not isinstance(t21, dict):
+        errors.append("ownership manifest is missing T21")
+        return
+    for key, expected in (("state", "active"), ("record", T21_RECORD),
+                          ("branch", T21_BRANCH), ("base_commit", T21_BASE_COMMIT),
+                          ("base_tree", T21_BASE_TREE)):
+        if t21.get(key) != expected:
+            errors.append("ownership T21 " + key + " drifted")
+    entries = t21.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T21_PATHS:
+        errors.append("ownership T21 must declare exactly the reviewed ten paths")
+    if t21.get("path_transitions") != []:
+        errors.append("ownership T21 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T21 paths must all use mode 100644")
     if "T12" in task_by_id:
         errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 

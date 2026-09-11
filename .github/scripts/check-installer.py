@@ -34,6 +34,29 @@ FEEDBACK_ADAPTATIONS = [
     "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam.",
     "Literal terminal consent and tool-output limits preserve byte distinctions before Bash string normalization.",
 ]
+CONNECTOR_PATHS = (
+    ".github/scripts/check-connectors.sh",
+    "tests/conformance/test_connector_validation.py",
+)
+CONNECTOR_CONTRACT = {
+    "schema": "connector-validation-companion/v1",
+    "source_files": {
+        ".github/scripts/check-connectors.sh": "8a598ab8fd5b54f0fe48b5daf3dc91abc86cadf9",
+        ".github/scripts/tests/test-connectors.sh": "ee17fa9a52d9e0b5cef3428360f0407a8cda59a1",
+    },
+    "integration": "explicit-target-read-only-outside-payload",
+    "fields": ["name", "access", "reach", "trust-default", "status"],
+    "operations": ["discover", "retrieve", "pin", "verify"],
+    "statuses": ["core", "community", "experimental"],
+    "adaptations": [
+        "Reuse source err/check_connector, framework checks, Metadata extraction, field/heading grammar and twelve fixture cases; payload builtin/speckit supplies separate smoke evidence.",
+        "Require an explicit existing target; reject empty names, symlink/non-regular inputs, failed enumeration/reads and NUL before Bash normalization; include hidden Markdown definitions.",
+        "Limit each input to 1 MiB, definitions to 128 and itemized diagnostics to 32; publish fixed field/role labels instead of filenames or raw values.",
+        "Standalone Bash companion is not installed or automatically wired into adopter CI; no Git, network, auth, model, activation, auto-fix or writes.",
+        "Trusted local tools and no concurrent writer; no hostile namespace-race guarantee, full Markdown parser, content sufficiency, pin authenticity, reachability or runtime proof.",
+    ],
+    "evidence": "offline-real-bash-disposable-fixtures-only",
+}
 INSTALLER_LIMITS = [
     "Local-source explicit install/known-old upgrade and operation-scoped rollback; no auto download/init/stage/commit/force.",
     "Source class dispatch and two-version preservation tests are reused; old-byte/mode checks, prewrite backups and explicit rollback are Codex-target safety adaptations, not source-provided transactions.",
@@ -284,7 +307,7 @@ def validate(root):
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) & 0o111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion"}:
             errors.append("installer provenance fields drifted")
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
@@ -364,16 +387,49 @@ def validate(root):
         errors.append("installer payload/provenance is missing, malformed or uncheckable")
     return errors
 
+
+def validate_connector_companion(root):
+    """Strict companion component, always composed by the production CLI.
+
+    Keep validate()'s payload/feedback component API for existing callers;
+    partial fixtures are not evidence that this production component passed.
+    """
+    errors = []
+    root = Path(root)
+    try:
+        if root.is_symlink():
+            raise ValueError("root symlink")
+        parity = json.loads(regular_bytes(root, PARITY))
+        companion = parity.get("connector_companion")
+        if not isinstance(companion, dict) or set(companion) != set(CONNECTOR_CONTRACT) | {"target_files"}:
+            return ["connector companion fields are missing or unreviewed"]
+        if any(companion.get(key) != value for key, value in CONNECTOR_CONTRACT.items()):
+            errors.append("connector companion source/structure/safety/evidence contract drifted")
+        targets = companion.get("target_files")
+        if not isinstance(targets, list) or any(not isinstance(item, dict) for item in targets) or [item.get("path") for item in targets] != list(CONNECTOR_PATHS):
+            return errors + ["connector companion target inventory drifted"]
+        for item in targets:
+            name = item["path"]
+            data = regular_bytes(root, name)
+            if set(item) != {"path", "mode", "sha256"} or item.get("mode") != "100644" or stat.S_IMODE((root / name).stat().st_mode) != 0o644:
+                errors.append("connector companion mode/fields drifted: " + name)
+            if item.get("sha256") != hashlib.sha256(data).hexdigest():
+                errors.append("connector companion target digest drifted: " + name)
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError, RecursionError):
+        errors.append("connector companion is missing, malformed or uncheckable")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
-    errors = validate(args.root)
+    errors = validate(args.root) + validate_connector_companion(args.root)
     for error in errors:
         print("ERROR: " + error)
     if errors:
         return 1
-    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; standalone feedback companion; offline structural evidence only.")
+    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; standalone feedback and connector-validation companions; offline structural evidence only.")
     return 0
 
 if __name__ == "__main__":

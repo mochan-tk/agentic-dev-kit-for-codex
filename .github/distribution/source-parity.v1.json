@@ -483,6 +483,52 @@
     ],
     "evidence": "offline-real-bash-fake-gh-pty-only"
   },
+  "connector_companion": {
+    "schema": "connector-validation-companion/v1",
+    "source_files": {
+      ".github/scripts/check-connectors.sh": "8a598ab8fd5b54f0fe48b5daf3dc91abc86cadf9",
+      ".github/scripts/tests/test-connectors.sh": "ee17fa9a52d9e0b5cef3428360f0407a8cda59a1"
+    },
+    "integration": "explicit-target-read-only-outside-payload",
+    "fields": [
+      "name",
+      "access",
+      "reach",
+      "trust-default",
+      "status"
+    ],
+    "operations": [
+      "discover",
+      "retrieve",
+      "pin",
+      "verify"
+    ],
+    "statuses": [
+      "core",
+      "community",
+      "experimental"
+    ],
+    "adaptations": [
+      "Reuse source err/check_connector, framework checks, Metadata extraction, field/heading grammar and twelve fixture cases; payload builtin/speckit supplies separate smoke evidence.",
+      "Require an explicit existing target; reject empty names, symlink/non-regular inputs, failed enumeration/reads and NUL before Bash normalization; include hidden Markdown definitions.",
+      "Limit each input to 1 MiB, definitions to 128 and itemized diagnostics to 32; publish fixed field/role labels instead of filenames or raw values.",
+      "Standalone Bash companion is not installed or automatically wired into adopter CI; no Git, network, auth, model, activation, auto-fix or writes.",
+      "Trusted local tools and no concurrent writer; no hostile namespace-race guarantee, full Markdown parser, content sufficiency, pin authenticity, reachability or runtime proof."
+    ],
+    "evidence": "offline-real-bash-disposable-fixtures-only",
+    "target_files": [
+      {
+        "path": ".github/scripts/check-connectors.sh",
+        "mode": "100644",
+        "sha256": "a9c4941b5802f5607d9dc0d37f87b7658a3b798c85c511ae3042ef27f10f413d"
+      },
+      {
+        "path": "tests/conformance/test_connector_validation.py",
+        "mode": "100644",
+        "sha256": "c6b4049460b226dcf00d523a735993f20d65ed74b3ba9ca7ff9e86ac86cebbbc"
+      }
+    ]
+  },
   "installer_source": {
     "scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
     "scaffold-init.ps1": "6baa8ca94535d25c3b3b1cc1e4ac4ba95542321f",
