@@ -855,10 +855,33 @@
     {
       "id": "T20",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-installer-feedback",
       "base_commit": "ba6a4aa9993861660d192e4371ddb36775545eb6",
       "base_tree": "e5a8cafb29e34e78ee446e6d1f5f42c2bfdfb48d",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/scripts/feedback-lib.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/report-installer-failure.sh",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_installer_feedback.py",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T21",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/35",
+      "state": "active",
+      "branch": "codex/source-first-connector-validation",
+      "base_commit": "583005816444007a754fa641d6b49c4631f997c8",
+      "base_tree": "7687ac84d1dcb880b479a6e36c44d8fc640a9549",
       "path_transitions": [],
       "owned_paths": [
         {
@@ -870,19 +893,15 @@
           "mode": "100644"
         },
         {
+          "path": ".github/scripts/check-connectors.sh",
+          "mode": "100644"
+        },
+        {
           "path": ".github/scripts/check-installer.py",
           "mode": "100644"
         },
         {
           "path": ".github/scripts/check-repository-policy.py",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/scripts/feedback-lib.sh",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/scripts/report-installer-failure.sh",
           "mode": "100644"
         },
         {
@@ -898,7 +917,7 @@
           "mode": "100644"
         },
         {
-          "path": "tests/conformance/test_installer_feedback.py",
+          "path": "tests/conformance/test_connector_validation.py",
           "mode": "100644"
         },
         {
