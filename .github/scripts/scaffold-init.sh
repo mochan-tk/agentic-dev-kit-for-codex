@@ -291,6 +291,9 @@ if [ "$OP" = rollback ]; then
     IFS=$'\t' read -r key old_root; [ "$key" = old-root ] || fail 'invalid old root binding'
   } < "$TX/meta.tsv"
   for value in "$TARGET_BINDING" "$TX_BINDING" "$new_digest" "$old_digest" "$new_root" "$old_root"; do [[ "$value" =~ ^[0-9a-f]{64}$ ]] || fail 'invalid binding digest'; done
+  canonical_meta="$(printf 'schema\tlocal-upgrade/v1\ntarget\t%s\ntransaction\t%s\nnew-inventory\t%s\nold-inventory\t%s\nnew-root\t%s\nold-root\t%s\n' \
+    "$TARGET_BINDING" "$TX_BINDING" "$new_digest" "$old_digest" "$new_root" "$old_root")"
+  [ "$(printf '%s\n' "$canonical_meta" | hash_text)" = "$(digest "$TX/meta.tsv")" ] || fail 'noncanonical operation metadata'
   check_bindings
   [ "$new_digest" = "$(digest "$MANIFEST")" ] || fail 'rollback source inventory mismatch'
   [ "$new_root" = "$(root_binding "$SRC")" ] || fail 'rollback source root mismatch'
@@ -301,8 +304,10 @@ if [ "$OP" = rollback ]; then
   [ "$(wc -l < "$TX/status" | tr -d ' ')" = 1 ] || fail 'malformed operation status'
   case "$status" in prepared|applied|partial|rolled-back) ;; *) fail 'unknown operation status' ;; esac
   [[ "$progress" =~ ^[0-9]+$ ]] && [ "$progress" -le 47 ] && [ -z "$extra" ] || fail 'invalid operation progress'
+  [ "$(printf '%s\t%s\n' "$status" "$progress" | hash_text)" = "$(digest "$TX/status")" ] || fail 'noncanonical operation status'
   R_NAMES=(); R_BEFORE=(); R_AFTER=(); R_STATE=(); R_DIRS=()
   previous=-1
+  canonical_files=""
   expected_entries=$'\nmeta.tsv\nfiles.tsv\ndirectories.tsv\nrecord.sha256\nstatus\n'
   while IFS=$'\t' read -r index name before after extra || [ -n "${index:-}" ]; do
     [[ "$index" =~ ^(0|[1-9][0-9]?)$ ]] && [ "$index" -lt 47 ] && [ "$index" -gt "$previous" ] || fail 'invalid operation index/order'
@@ -318,12 +323,16 @@ if [ "$OP" = rollback ]; then
     [ "$STATE" = "$before" ] || [ "$STATE" = "$after" ] || fail 'affected file is neither recorded pre-state nor post-state'
     [ "$status" != rolled-back ] || [ "$STATE" = "$before" ] || fail 'rolled-back target changed'
     R_NAMES+=("$name"); R_BEFORE+=("$before"); R_AFTER+=("$after"); R_STATE+=("$STATE")
+    canonical_files+="$index"$'\t'"$name"$'\t'"$before"$'\t'"$after"$'\n'
     previous="$index"
   done < "$TX/files.tsv"
   [ "${#R_NAMES[@]}" -gt 0 ] && [ "$progress" -le "${#R_NAMES[@]}" ] || fail 'empty or inconsistent operation'
+  [ "$(printf '%s' "$canonical_files" | hash_text)" = "$(digest "$TX/files.tsv")" ] || fail 'noncanonical operation files'
   dir_seen=$'\n'
+  canonical_dirs=""; previous_dir=""
   while IFS= read -r name || [ -n "${name:-}" ]; do
     safe_relative "$name" || fail 'unsafe operation directory'
+    [[ "$name" > "$previous_dir" ]] || fail 'noncanonical operation directory order'
     case "$dir_seen" in *$'\n'"$name"$'\n'*) fail 'duplicate operation directory' ;; esac
     related=0
     for f in "${R_NAMES[@]}"; do case "$f" in "$name/"*) related=1 ;; esac; done
@@ -331,8 +340,10 @@ if [ "$OP" = rollback ]; then
     no_links "$DEST/$name" || fail 'operation directory is a symlink'
     [ ! -e "$DEST/$name" ] || [ -d "$DEST/$name" ] || fail 'operation directory collision'
     R_DIRS+=("$name"); dir_seen+="$name"$'\n'
+    canonical_dirs+="$name"$'\n'; previous_dir="$name"
     [ "${#R_DIRS[@]}" -le 128 ] || fail 'too many operation directories'
   done < "$TX/directories.tsv"
+  [ "$(printf '%s' "$canonical_dirs" | hash_text)" = "$(digest "$TX/directories.tsv")" ] || fail 'noncanonical operation directories'
   # Every extant entry under an operation-created directory must itself be
   # recorded. Unrelated additions stop rollback BEFORE any target write.
   for name in ${R_DIRS[@]+"${R_DIRS[@]}"}; do

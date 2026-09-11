@@ -668,6 +668,30 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         self.assertNotEqual(0, self.rollback("--apply").returncode)
         self.assertEqual(before, self.snapshot(self.base))
 
+    def test_rollback_noncanonical_records_refuse(self):
+        self.upgrade_fixture()
+        shutil.rmtree(self.target / ".codex")
+        self.assertEqual(0, self.upgrade("--apply").returncode)
+        records = {name: (self.transaction / name).read_bytes()
+                   for name in ("meta.tsv", "files.tsv", "directories.tsv", "status")}
+        cases = [
+            ("files.tsv", records["files.tsv"].replace(b".agents/", b".ag\x00ents/", 1)),
+            ("files.tsv", records["files.tsv"].rstrip(b"\n")),
+            ("meta.tsv", records["meta.tsv"].replace(b"schema", b"sch\x00ema", 1)),
+            ("status", records["status"].replace(b"applied", b"app\x00lied", 1)),
+            ("directories.tsv", b"\n".join(reversed(records["directories.tsv"].splitlines())) + b"\n"),
+        ]
+        for name, data in cases:
+            with self.subTest(name=name, digest=hashlib.sha256(data).hexdigest()):
+                for key, value in records.items(): (self.transaction / key).write_bytes(value)
+                (self.transaction / name).write_bytes(data)
+                sealed = b"".join((self.transaction / key).read_bytes()
+                                   for key in ("meta.tsv", "files.tsv", "directories.tsv"))
+                (self.transaction / "record.sha256").write_text(hashlib.sha256(sealed).hexdigest() + "\n")
+                before = self.snapshot(self.base)
+                self.assertNotEqual(0, self.rollback("--apply").returncode)
+                self.assertEqual(before, self.snapshot(self.base))
+
     def assert_refused_unchanged(self, *args, source=ROOT, target=None):
         target = target or self.target
         before = self.snapshot(target)
