@@ -70,6 +70,28 @@ preflight. No force or automatic rollback is available. Supported interrupted
 apply recovery is tested in disposable local fixtures, not a power-loss or
 concurrent-writer guarantee. See the guide for exact refusal and recovery rules.
 
+### Optionally report a local installer failure
+
+Run the standalone companion from the reviewed kit checkout, not the adopter.
+It does not modify the installer, its traps, or the 47 installed files:
+
+```sh
+bash .github/scripts/report-installer-failure.sh --draft --line 42 --exit-code 1
+# Optional: inspect the full public report, then answer y/Y in a real terminal.
+bash .github/scripts/report-installer-failure.sh --send --line 42 --exit-code 1
+```
+
+Draft is the default and needs no GitHub account or `gh`. The eight bounded
+fields exclude logs, private paths and adopter identity; supplied failure
+metadata is a user report, not historical proof, and Scaffold version stays
+`unknown`. Explicit send needs an existing `gh` login and both stdin/stderr
+TTYs outside CI. It previews the exact public
+`mochan-tk/agentic-dev-kit-for-codex` Issue before default-No consent. No login,
+labels or retry occurs. A failed or invalid response is
+`submission-unconfirmed`: it may already have created an Issue.
+See the [report contract and exit codes](docs/distribution/source-first-installer.md#optional-local-installer-failure-report).
+Tests use fake GitHub, not a live public submission or full feedback-loop proof.
+
 ## Durable operating model
 
 ```text
@@ -157,8 +179,8 @@ and read-back behavior.
 - hooks, recovery orchestration, or a general runtime control plane;
 - a production-complete execution envelope, loop-event protocol, or `codex
   exec` adapter beyond the bounded T11 slice;
-- the live Task ritual, consent feedback transport, and general adopter
-  governance activation;
+- a generalized live Task ritual, receiving triage and feedback beyond the
+  bounded standalone reporter, and general adopter governance activation;
 - local/worktree/cloud parity claims;
 - clean-adopter live runtime E2E, upgrade, and rollback evidence;
 - authenticated runtime roles, universal heartbeat/budget/control, or

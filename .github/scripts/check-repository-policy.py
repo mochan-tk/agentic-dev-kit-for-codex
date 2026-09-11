@@ -43,6 +43,23 @@ T19_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/31"
 T19_BRANCH = "codex/source-first-upgrade-rollback"
 T19_BASE_COMMIT = "c999ec67eafb2c548a9151b54df4276c6d7833bb"
 T19_BASE_TREE = "1ebf78554a0afbf09e9f812f331eea2d1706dd2e"
+T20_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33"
+T20_BRANCH = "codex/source-first-installer-feedback"
+T20_BASE_COMMIT = "ba6a4aa9993861660d192e4371ddb36775545eb6"
+T20_BASE_TREE = "e5a8cafb29e34e78ee446e6d1f5f42c2bfdfb48d"
+EXPECTED_T20_PATHS = (
+    ".github/distribution/source-parity.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-installer.py",
+    ".github/scripts/check-repository-policy.py",
+    ".github/scripts/feedback-lib.sh",
+    ".github/scripts/report-installer-failure.sh",
+    "README.md",
+    "docs/distribution/source-first-installer.md",
+    "docs/known-limitations.md",
+    "tests/conformance/test_installer_feedback.py",
+    "tests/conformance/test_repository_policy.py",
+)
 EXPECTED_T19_PATHS = (
     ".github/distribution/source-parity.v1.json",
     ".github/governance/phase-task-ownership.v1.json",
@@ -664,6 +681,8 @@ def validate_execution_root_surfaces(paths: set[str], errors: list[str]) -> None
         ".github/scripts/install-ci-tools.py",
         ".github/scripts/scaffold-init.sh",
         ".github/scripts/scaffold-init.ps1",
+        ".github/scripts/feedback-lib.sh",
+        ".github/scripts/report-installer-failure.sh",
         ".github/scripts/codex-exec-adapter.py",
         ".github/scripts/post-runtime-receipt.py",
         ".github/scripts/tests/lib.sh",
@@ -1099,19 +1118,36 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t19, dict):
         errors.append("ownership manifest is missing T19")
         return
-    for key, expected in (("state", "active"), ("record", T19_RECORD),
+    for key, expected in (("state", "accepted"), ("record", T19_RECORD),
                           ("branch", T19_BRANCH), ("base_commit", T19_BASE_COMMIT),
                           ("base_tree", T19_BASE_TREE)):
         if t19.get(key) != expected:
             errors.append("ownership T19 " + key + " drifted")
     entries = t19.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != EXPECTED_T19_PATHS:
-        errors.append("ownership T19 must declare exactly the reviewed eleven paths")
+    if actual != tuple(path for path in EXPECTED_T19_PATHS if path not in EXPECTED_T20_PATHS):
+        errors.append("accepted ownership T19 must retain its reviewed three non-transferred paths")
     if t19.get("path_transitions") != []:
         errors.append("ownership T19 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
         errors.append("ownership T19 paths must all use mode 100644")
+    t20 = task_by_id.get("T20")
+    if not isinstance(t20, dict):
+        errors.append("ownership manifest is missing T20")
+        return
+    for key, expected in (("state", "active"), ("record", T20_RECORD),
+                          ("branch", T20_BRANCH), ("base_commit", T20_BASE_COMMIT),
+                          ("base_tree", T20_BASE_TREE)):
+        if t20.get(key) != expected:
+            errors.append("ownership T20 " + key + " drifted")
+    entries = t20.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T20_PATHS:
+        errors.append("ownership T20 must declare exactly the reviewed eleven paths")
+    if t20.get("path_transitions") != []:
+        errors.append("ownership T20 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T20 paths must all use mode 100644")
     if "T12" in task_by_id:
         errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 

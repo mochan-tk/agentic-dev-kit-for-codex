@@ -13,6 +13,26 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+FEEDBACK_PATHS = (
+    ".github/scripts/feedback-lib.sh",
+    ".github/scripts/report-installer-failure.sh",
+    "tests/conformance/test_installer_feedback.py",
+)
+FEEDBACK_SOURCES = {
+    ".github/scripts/feedback-lib.sh": "b09747ae0bc8ffa2183fec48b578b97cdb45c67b",
+    ".github/scripts/tests/test-feedback-lib.sh": "fce1632234b8e9f64ab374130cb39c667eafb7b5",
+    ".github/scripts/scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+    "docs/agreements/adr/ADR-0002-consent-gated-adopter-feedback.md": "65c4c20ee9fd2c91d0738a38fa8558be8761dc42",
+    "docs/context/feedback-loop/privacy-posture.md": "d417b2c7114913aaea80b03014f3c5f7e5458fe8",
+}
+FEEDBACK_FIELDS = ["Script", "Failing line", "Exit code", "OS / arch", "bash version",
+                   "gh version", "jq version", "Scaffold version"]
+FEEDBACK_ADAPTATIONS = [
+    "Reuse source bounded fields, TTY/CI gates, preview-before-consent and one create attempt; standalone opt-in replaces automatic ERR/EXIT integration.",
+    "Fixed public github.com recipient replaces adopter changelog routing; Scaffold version is unknown and caller failure metadata is user-reported, not historical proof.",
+    "Draft requires no gh/account; no auth, labels, retry or receiving workflow. Failed/lost/invalid create response is submission-unconfirmed, never confirmed absence.",
+    "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam.",
+]
 INSTALLER_LIMITS = [
     "Local-source explicit install/known-old upgrade and operation-scoped rollback; no auto download/init/stage/commit/force.",
     "Source class dispatch and two-version preservation tests are reused; old-byte/mode checks, prewrite backups and explicit rollback are Codex-target safety adaptations, not source-provided transactions.",
@@ -263,7 +283,7 @@ def validate(root):
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) & 0o111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion"}:
             errors.append("installer provenance fields drifted")
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
@@ -275,6 +295,32 @@ def validate(root):
             "test-scaffold-init.sh": "e060e59ef1fc4c8dabdae2de091ed8eabafba8a9",
         }:
             errors.append("installer source script/test provenance drifted")
+        companion = parity.get("feedback_companion")
+        expected = {
+            "schema": "installer-feedback-companion/v1",
+            "source_files": FEEDBACK_SOURCES,
+            "fields": FEEDBACK_FIELDS,
+            "recipient": "https://github.com/mochan-tk/agentic-dev-kit-for-codex",
+            "integration": "standalone-opt-in-outside-payload",
+            "adaptations": FEEDBACK_ADAPTATIONS,
+            "evidence": "offline-real-bash-fake-gh-pty-only",
+        }
+        if not isinstance(companion, dict) or set(companion) != set(expected) | {"target_files"}:
+            errors.append("feedback companion fields are missing or unreviewed")
+        elif any(companion.get(key) != value for key, value in expected.items()):
+            errors.append("feedback companion source/consent/privacy/evidence contract drifted")
+        if isinstance(companion, dict):
+            targets = companion.get("target_files")
+            if not isinstance(targets, list) or [item.get("path") for item in targets] != list(FEEDBACK_PATHS):
+                errors.append("feedback companion target inventory drifted")
+            else:
+                for item in targets:
+                    name = item["path"]
+                    data = regular_bytes(root, name)
+                    if set(item) != {"path", "mode", "sha256"} or item.get("mode") != "100644" or stat.S_IMODE((root / name).stat().st_mode) != 0o644:
+                        errors.append("feedback companion mode/fields drifted: " + name)
+                    if item.get("sha256") != hashlib.sha256(data).hexdigest():
+                        errors.append("feedback companion target digest drifted: " + name)
         files = parity.get("files", [])
         if not isinstance(files, list) or [row.get("destination") for row in files] != sorted(EXPECTED):
             errors.append("installer source parity omits, reorders or adds files")
@@ -326,7 +372,7 @@ def main():
         print("ERROR: " + error)
     if errors:
         return 1
-    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; offline structural evidence only.")
+    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; standalone feedback companion; offline structural evidence only.")
     return 0
 
 if __name__ == "__main__":
