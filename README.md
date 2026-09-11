@@ -50,6 +50,26 @@ Inspect the changes, commit/push them yourself, and invoke
 The kit-development `AGENTS.md`, Task IDs, context pins, sole-active ownership
 policy, and Colima qualification infrastructure are never exported.
 
+### Preserve configuration while updating, or undo just one update
+
+Use reviewed local old/new distribution roots with the same fixed 47-file
+inventory. Only exact known-old engine bytes/modes are replaced; existing
+tuned/instance/seed files remain yours. Select a new private operation directory
+outside both sources and the adopter (its parent must already exist):
+
+```sh
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --upgrade --old-source /path/to/old-kit --transaction /path/to/private/update-1 --dry-run /path/to/adopter
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --upgrade --old-source /path/to/old-kit --transaction /path/to/private/update-1 --apply /path/to/adopter
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --rollback --transaction /path/to/private/update-1 --dry-run /path/to/adopter
+SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --rollback --transaction /path/to/private/update-1 --apply /path/to/adopter
+```
+
+Keep the private operation record/backups. Rollback is not a repository reset:
+unrelated later edits stay, while edits to affected files refuse the entire
+preflight. No force or automatic rollback is available. Supported interrupted
+apply recovery is tested in disposable local fixtures, not a power-loss or
+concurrent-writer guarantee. See the guide for exact refusal and recovery rules.
+
 ## Durable operating model
 
 ```text
