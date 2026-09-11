@@ -832,10 +832,33 @@
     {
       "id": "T19",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/31",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-upgrade-rollback",
       "base_commit": "c999ec67eafb2c548a9151b54df4276c6d7833bb",
       "base_tree": "1ebf78554a0afbf09e9f812f331eea2d1706dd2e",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/scripts/scaffold-init.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/scripts/tests/test-scaffold-init.sh",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_installer.py",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T20",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33",
+      "state": "active",
+      "branch": "codex/source-first-installer-feedback",
+      "base_commit": "ba6a4aa9993861660d192e4371ddb36775545eb6",
+      "base_tree": "e5a8cafb29e34e78ee446e6d1f5f42c2bfdfb48d",
       "path_transitions": [],
       "owned_paths": [
         {
@@ -855,11 +878,11 @@
           "mode": "100644"
         },
         {
-          "path": ".github/scripts/scaffold-init.sh",
+          "path": ".github/scripts/feedback-lib.sh",
           "mode": "100644"
         },
         {
-          "path": ".github/scripts/tests/test-scaffold-init.sh",
+          "path": ".github/scripts/report-installer-failure.sh",
           "mode": "100644"
         },
         {
@@ -875,7 +898,7 @@
           "mode": "100644"
         },
         {
-          "path": "tests/conformance/test_installer.py",
+          "path": "tests/conformance/test_installer_feedback.py",
           "mode": "100644"
         },
         {
