@@ -821,10 +821,6 @@
           "mode": "100644"
         },
         {
-          "path": "docs/known-limitations.md",
-          "mode": "100644"
-        },
-        {
           "path": "tests/conformance/test_connector_validation.py",
           "mode": "100644"
         }
@@ -894,7 +890,7 @@
     {
       "id": "T25",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-ritual-verification",
       "base_commit": "d396865c0f5e23fa01bb790242835dda482d679d",
       "base_tree": "17cf82b1cc305b3263e8a84e18beecdea91c32e5",
@@ -941,11 +937,30 @@
           "mode": "100644"
         },
         {
+          "path": ".github/scripts/check-installer.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_installer.py",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T26",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/45",
+      "state": "active",
+      "branch": "codex/source-first-completion-contract",
+      "base_commit": "4f34ffff13e82ca06b397fec4dae34483c9d9711",
+      "base_tree": "00a8a6eaa4fcc4ad1970f136ccd811a3b86e6fe6",
+      "path_transitions": [],
+      "owned_paths": [
+        {
           "path": ".github/governance/phase-task-ownership.v1.json",
           "mode": "100644"
         },
         {
-          "path": ".github/scripts/check-installer.py",
+          "path": ".github/governance/source-first-completion.v1.json",
           "mode": "100644"
         },
         {
@@ -957,15 +972,23 @@
           "mode": "100644"
         },
         {
+          "path": "docs/agreements/source-first-completion.md",
+          "mode": "100644"
+        },
+        {
           "path": "docs/distribution/source-first-installer.md",
           "mode": "100644"
         },
         {
-          "path": "tests/conformance/test_installer.py",
+          "path": "docs/known-limitations.md",
           "mode": "100644"
         },
         {
           "path": "tests/conformance/test_repository_policy.py",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_source_first_completion.py",
           "mode": "100644"
         }
       ]

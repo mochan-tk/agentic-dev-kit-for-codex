@@ -11,6 +11,18 @@ local-source installation, not a parity release. `release_blocked` remains `true
 
 ## Source-first installer boundary (2026-09-09)
 
+### Source-first product completion
+
+The [additive product contract](agreements/source-first-completion.md) is a
+creation-time snapshot, not the current GitHub acceptance outcome. Product
+completion is incomplete in this tree; Issue #45 / Epic #22 retain current
+owner authority. Structural validation is not acceptance evidence, and the
+original repository release gate is unchanged. Ten product criteria and the
+complete K01-K20 / 136-scenario applicability projection do not record new
+scenario passes, waive missing clauses or establish runtime compatibility.
+Existing private-use aggregates require private underlying-record review and
+currentness/equivalence checks; cooperative replacement is not crash recovery.
+
 The local-source installer provides explicit dry-run/apply, 47 reviewed
 generic payload files, source-derived workflows, and adopter preservation.
 It does not export this development repository's AGENTS, Task IDs, pins,

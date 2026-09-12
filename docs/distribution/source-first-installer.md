@@ -665,6 +665,17 @@ from its own exit code and from a production-helper verdict.
 
 ## Evidence boundary
 
+### Source-first product completion
+
+The [product contract](../agreements/source-first-completion.md) separates
+adopter-facing criteria from the original repository release gate. Its
+creation-time snapshot is incomplete; current owner acceptance is external
+Issue #45 / Epic #22 state. A validated applicability map is not acceptance
+evidence. This agreement ships no additional file, changes no installer
+operation, and does not promote synthetic fixtures or private aggregates to
+current runtime proof. Review actual selected-client use and historical
+equivalence separately; T12 and full parity remain unaccepted.
+
 Disposable local adopter tests cover real copy/dry-run/preservation, rejection,
 Git-state invariance, source/inventory drift, and fail-closed frontier behavior.
 The shell suite checks entrypoint arguments and syntax; required CI also runs
