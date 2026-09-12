@@ -641,10 +641,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.codex/agents/orchestrator.toml",
           "mode": "100644"
         },
@@ -903,16 +899,12 @@
     {
       "id": "T24",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/41",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-task-selection",
       "base_commit": "4e62351d3c053e6c72cc1d295df5567245340014",
       "base_tree": "eab568e5eee0bc09889f67764655d07ab0d31142",
       "path_transitions": [],
       "owned_paths": [
-        {
-          "path": ".github/distribution/payload.v1.tsv",
-          "mode": "100644"
-        },
         {
           "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
           "mode": "100644"
@@ -922,11 +914,30 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+          "path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T25",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43",
+      "state": "active",
+      "branch": "codex/source-first-ritual-verification",
+      "base_commit": "d396865c0f5e23fa01bb790242835dda482d679d",
+      "base_tree": "17cf82b1cc305b3263e8a84e18beecdea91c32e5",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/distribution/payload.v1.tsv",
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+          "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
           "mode": "100644"
         },
         {
