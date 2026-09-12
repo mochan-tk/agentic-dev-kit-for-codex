@@ -1,6 +1,6 @@
 ---
 name: context-collection
-description: Land raw project information — meeting notes, existing specs, domain research, external tool exports, interview answers — into .github/docs/context/ with provenance, so later phases and stateless agents can use it. Use this at project kickoff, whenever new source material appears (a document, a decision made in chat, findings from web/MCP research), and before any distillation work that lacks raw inputs.
+description: Collect project material into .github/docs/context/ with provenance, or start the builtin draft-first requirements kickoff when humans choose it without an existing requirements source. Use for new notes, specs, research, exports, interview answers, and before distillation that lacks raw inputs.
 ---
 
 # Context Collection
@@ -11,6 +11,25 @@ here — the distillation phase (see `context-distillation`) will filter. What
 collection must never do is silently interpret: a paraphrase that changes
 meaning is worse than a messy verbatim note, because downstream agents will
 trust it.
+
+## Entry routing
+
+For ordinary collection or an existing source, use the collection rules below
+and the selected connector. Do not start a builtin interview unless the humans
+choose that route.
+
+Only for explicit builtin kickoff, choose or confirm a topic and run
+`builtin.retrieve` using [builtin retrieve](../../../.github/connectors/builtin.md#retrieve)
+and the collection rules below. The linked procedure is normative for this
+mode; read the builtin procedure only when this route is selected. It supplies
+the candidate drafts, bounded question rounds and human-stop boundary.
+Label kickoff drafts and assumptions as proposals, separate from faithfully
+collected source material; never present a generated candidate as a source fact.
+
+Keep kickoff drafts under `.github/docs/context/<topic>/`. Do not write to
+`.github/docs/agreements/` during kickoff. Finish with promotion-worthy candidates
+and reasons; use [context-distillation](../context-distillation/SKILL.md) and its
+human-reviewed PR gate for any later agreement proposal.
 
 ## Landing zone
 

@@ -617,10 +617,6 @@
       "path_transitions": [],
       "owned_paths": [
         {
-          "path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.agents/skills/context-distillation/SKILL.md",
           "mode": "100644"
         },
@@ -701,10 +697,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/connectors/builtin.md",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.github/connectors/speckit.md",
           "mode": "100644"
         },
@@ -781,10 +773,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/README.md",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/SCAFFOLD-CHANGELOG.md",
           "mode": "100644"
         },
@@ -811,10 +799,6 @@
       "base_tree": "87d2e889b88ff3a37e5809741ac3e7fa81a5e94a",
       "path_transitions": [],
       "owned_paths": [
-        {
-          "path": ".github/distribution/payload.v1.tsv",
-          "mode": "100644"
-        },
         {
           "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
           "mode": "100644"
@@ -845,10 +829,6 @@
         {
           "path": ".github/scripts/tests/test-scaffold-init.sh",
           "mode": "100644"
-        },
-        {
-          "path": "tests/conformance/test_installer.py",
-          "mode": "100644"
         }
       ]
     },
@@ -878,22 +858,61 @@
     {
       "id": "T21",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/35",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-connector-validation",
       "base_commit": "583005816444007a754fa641d6b49c4631f997c8",
       "base_tree": "7687ac84d1dcb880b479a6e36c44d8fc640a9549",
       "path_transitions": [],
       "owned_paths": [
         {
+          "path": ".github/scripts/check-connectors.sh",
+          "mode": "100644"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644"
+        },
+        {
+          "path": "docs/known-limitations.md",
+          "mode": "100644"
+        },
+        {
+          "path": "tests/conformance/test_connector_validation.py",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T22",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/37",
+      "state": "active",
+      "branch": "codex/source-first-context-kickoff",
+      "base_commit": "219202b28c980e417283d761dbd8515c8b38e69f",
+      "base_tree": "bce884e33cd4932c0a999070e57e84e9293ab032",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/distribution/payload.v1.tsv",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/connectors/builtin.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/README.md",
+          "mode": "100644"
+        },
+        {
           "path": ".github/distribution/source-parity.v1.json",
           "mode": "100644"
         },
         {
           "path": ".github/governance/phase-task-ownership.v1.json",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/scripts/check-connectors.sh",
           "mode": "100644"
         },
         {
@@ -905,19 +924,11 @@
           "mode": "100644"
         },
         {
-          "path": "README.md",
-          "mode": "100644"
-        },
-        {
           "path": "docs/distribution/source-first-installer.md",
           "mode": "100644"
         },
         {
-          "path": "docs/known-limitations.md",
-          "mode": "100644"
-        },
-        {
-          "path": "tests/conformance/test_connector_validation.py",
+          "path": "tests/conformance/test_installer.py",
           "mode": "100644"
         },
         {

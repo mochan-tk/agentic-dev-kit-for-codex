@@ -105,6 +105,63 @@ and no force. PowerShell calls adjacent reviewed Bash rather than downloading a
 moving main script. These limits avoid exporting kit development governance as
 adopter truth.
 
+## Builtin context kickoff entry
+
+T22 restores the frozen source's `.github/prompts/kickoff-context.prompt.md`
+entry through the existing installed context-collection Skill. The source
+prompt blob is `9b565657def003a3c04cfd9ec6e67578ff7d2906` at the frozen source
+commit above. The builtin draft-first procedure, source-selection helper and
+context-distillation Skill already ship; this change repairs their navigation.
+It adds no Skill, algorithm, helper, service or execution surface.
+
+In Codex CLI or IDE, explicitly request
+`$context-collection Start builtin kickoff for <topic>; I have no existing requirements source.`
+On another client, explicitly ask to use the installed
+`.agents/skills/context-collection/SKILL.md` for builtin kickoff. This is
+instruction guidance, not evidence that invocation works on every client.
+The Skill links to installed `.github/connectors/builtin.md#retrieve` and reads
+that procedure only when builtin kickoff is selected. Ordinary collection and
+existing-source connectors keep their original route.
+
+The sequence is collect/draft, optionally prepare the source registry with
+the existing `bash .github/scripts/setup-sources.sh`, then use reviewed
+activation/distillation when appropriate. The optional helper has GitHub
+preflights and writes a proposed registry; it does not activate the source,
+prove context sufficiency or run automatically. It and context-distillation
+remain byte-identical. No real helper or service is exercised for T22.
+
+Candidate `REQ-C##` drafts remain under `.github/docs/context/<topic>/`, separate
+from faithful source material and accepted `REQ-###` agreements. Preserve
+provenance, redaction, unknown markers, assumptions and dated Q&A. Repeat bounded
+draft/question rounds until resolved or the human stops, retaining unanswered
+questions. Finish with promotion-worthy candidates and reasons. Kickoff does
+not write agreements; the existing human-reviewed distillation PR is the
+promotion gate, and activation/sufficiency retain their existing review gates.
+
+Only the collection Skill, builtin definition and installed README bytes change.
+All 47 paths, preservation classes and modes remain; the other 44 payload files
+are byte-identical to accepted T21. The README is a seed: existing adopter README
+files stay intact, so the engine Skill and builtin links work independently of
+the README. A known-old upgrade updates only the two changed engine files and
+preserves existing seed/tuned/instance content; operation rollback restores the
+old engines without changing unrelated files or Git state.
+
+The existing parity record's `context_kickoff` section binds the additional
+prompt blob/SHA-256, original collection/builtin/README source blobs and exact
+three target digests/modes. The payload component `validate()` checks the
+selected routing/review anchors and relative installed links; its public API
+and the CLI composition with the existing companions remain compatible.
+Self-consistent rehashed negative fixtures still fail for missing/misrouted
+entry, missing human-stop/privacy/question/candidate boundaries, unsafe
+promotion and dangling resources. This is a narrow instruction guard, not a
+general natural-language or Markdown validator.
+
+Disposable synthetic adopters run actual Bash install, known-old upgrade and
+operation rollback against the accepted old/current bytes. These observations
+verify distributed instructions, file preservation and guard behavior. They
+do not establish model adherence, useful requirements, successful elicitation,
+activation, human approval, sufficiency, authenticated roles or runtime parity.
+
 ## Preservation-safe local upgrade and operation-scoped rollback
 
 T19 reuses the frozen source's engine/tuned/instance class dispatch and

@@ -10,6 +10,7 @@ import shutil
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -17,6 +18,9 @@ ROOT = Path(__file__).resolve().parents[2]
 INSTALLER = ROOT / ".github/scripts/scaffold-init.sh"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
+KICKOFF_BASE = "219202b28c980e417283d761dbd8515c8b38e69f"
+KICKOFF_PATHS = (".agents/skills/context-collection/SKILL.md",
+                 ".github/connectors/builtin.md", "README.md")
 
 
 class InstallerTests(unittest.TestCase):
@@ -386,6 +390,175 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         shutil.copytree(ROOT / ".github/distribution", source / ".github/distribution")
         return source
 
+    def kickoff_checker(self):
+        spec = importlib.util.spec_from_file_location("kickoff_checker", ROOT / ".github/scripts/check-installer.py")
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        return checker
+
+    def complete_checker_source(self):
+        source = self.clone_source()
+        checker = self.kickoff_checker()
+        for name in (*checker.FEEDBACK_PATHS, *checker.CONNECTOR_PATHS):
+            destination = source / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / name, destination)
+        self.assertEqual([], checker.validate(source))
+        self.assertEqual([], checker.validate_connector_companion(source))
+        return source, checker
+
+    def reseal_payload(self, source):
+        # Self-consistent digests alone must not bypass the routing/review guard.
+        manifest = source / INVENTORY
+        rows = [line.split("\t") for line in manifest.read_text().splitlines()
+                if line and not line.startswith("#")]
+        digests = {name: hashlib.sha256((source / PAYLOAD / name).read_bytes()).hexdigest()
+                   for name, _kind, _digest in rows}
+        manifest.write_text("".join("\t".join((name, kind, digests[name])) + "\n"
+                                    for name, kind, _digest in rows))
+        parity = source / ".github/distribution/source-parity.v1.json"
+        value = json.loads(parity.read_text())
+        for row in value["files"]:
+            row["target_sha256"] = digests[row["destination"]]
+        for row in value.get("context_kickoff", {}).get("target_files", []):
+            row["sha256"] = digests[row["path"]]
+        parity.write_text(json.dumps(value))
+
+    def test_kickoff_installed_entry_and_links_without_adopter_readme(self):
+        (self.target / "README.md").write_text("Existing adopter README\n")
+        (self.target / "README.md").chmod(0o600)
+        (self.target / "AGENTS.md").write_text("Existing tuned instructions\n")
+        before_git = self.snapshot(self.target / ".git")
+        result = self.run_install("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("Existing adopter README\n", (self.target / "README.md").read_text())
+        self.assertEqual(0o600, (self.target / "README.md").stat().st_mode & 0o777)
+        self.assertEqual("Existing tuned instructions\n", (self.target / "AGENTS.md").read_text())
+        self.assertEqual(before_git, self.snapshot(self.target / ".git"))
+        for name in KICKOFF_PATHS[:2]:
+            self.assertEqual((ROOT / PAYLOAD / name).read_bytes(), (self.target / name).read_bytes())
+            self.assertEqual(0o644, (self.target / name).stat().st_mode & 0o777)
+        skill = (self.target / KICKOFF_PATHS[0]).read_text()
+        builtin = (self.target / KICKOFF_PATHS[1]).read_text()
+        self.assertIn("`builtin.retrieve`", skill)
+        self.assertNotIn("/kickoff-context", builtin)
+        self.assertIn("human says stop", builtin)
+        self.assertIn("Do not write to `.github/docs/agreements/`", builtin)
+        for name in KICKOFF_PATHS[:2]:
+            for link in re.findall(r"\[[^\]]+\]\(([^)]+)\)", (self.target / name).read_text()):
+                target, _, anchor = link.partition("#")
+                path = (self.target / name).parent / target
+                self.assertTrue(path.is_file(), link)
+                if anchor:
+                    self.assertIn("## " + anchor, path.read_text(), link)
+
+    def test_kickoff_checker_rejects_resealed_routing_and_boundary_mutations(self):
+        source, checker = self.complete_checker_source()
+        cases = (
+            (KICKOFF_PATHS[0], "`builtin.retrieve`", "`speckit.retrieve`", "routing"),
+            (KICKOFF_PATHS[0], "Only for explicit builtin kickoff", "For every collection pass", "routing"),
+            (KICKOFF_PATHS[0], "read the builtin procedure only when this route is selected",
+             "always preload the builtin procedure", "routing"),
+            (KICKOFF_PATHS[0], "never present a generated candidate as a source fact",
+             "treat generated candidates as source facts", "routing"),
+            (KICKOFF_PATHS[1], "human says stop", "all questions are exhausted", "boundary"),
+            (KICKOFF_PATHS[1], "Do not write to `.github/docs/agreements/`",
+             "Write directly to `.github/docs/agreements/`", "boundary"),
+            (KICKOFF_PATHS[1], "human-reviewed distillation PR", "automatic promotion", "boundary"),
+            (KICKOFF_PATHS[1], "3–5 questions per round", "unlimited questions", "boundary"),
+            (KICKOFF_PATHS[1], "`REQ-C##`", "temporary IDs", "boundary"),
+            (KICKOFF_PATHS[1], "**Assumptions**", "**Facts**", "boundary"),
+            (KICKOFF_PATHS[1], "redaction first", "unredacted capture", "boundary"),
+            (KICKOFF_PATHS[2], "Registry preparation is not activation or context sufficiency",
+             "Registry preparation proves activation and context sufficiency", "boundary"),
+            (KICKOFF_PATHS[0], "builtin.md#retrieve", "builtin.md#pin", "routing"),
+            (KICKOFF_PATHS[1], "context-collection/SKILL.md", "missing/SKILL.md", "resource"),
+            (KICKOFF_PATHS[2], "setup-sources.sh)", "missing-setup.sh)", "resource"),
+        )
+        originals = {name: (source / PAYLOAD / name).read_bytes() for name in KICKOFF_PATHS}
+        for name, old, new, reason in cases:
+            with self.subTest(name=name, mutation=new):
+                path = source / PAYLOAD / name
+                text = originals[name].decode()
+                self.assertIn(old, text)
+                path.write_text(text.replace(old, new))
+                self.reseal_payload(source)
+                errors = checker.validate(source)
+                self.assertTrue(any("kickoff" in item and reason in item for item in errors), errors)
+                if new == "`speckit.retrieve`":
+                    result = subprocess.run([sys.executable, "-I", str(ROOT / ".github/scripts/check-installer.py"),
+                                             "--root", str(source)], capture_output=True, text=True, timeout=10)
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertIn("kickoff routing", result.stdout)
+                path.write_bytes(originals[name])
+                self.reseal_payload(source)
+        self.assertEqual([], checker.validate(source))
+
+    def test_kickoff_prompt_provenance_and_closed_target_bindings(self):
+        source, checker = self.complete_checker_source()
+        parity = source / ".github/distribution/source-parity.v1.json"
+        original = parity.read_bytes()
+        value = json.loads(original)
+        self.assertIn("context_kickoff", value)
+        self.assertEqual(list(KICKOFF_PATHS), [row["path"] for row in value["context_kickoff"]["target_files"]])
+        for mutation in ("missing", "prompt", "target", "extra", "mode"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original)
+                record = value["context_kickoff"]
+                if mutation == "missing": del value["context_kickoff"]
+                elif mutation == "prompt": record["source_files"][".github/prompts/kickoff-context.prompt.md"] = "0" * 40
+                elif mutation == "target": record["target_files"][0]["sha256"] = "0" * 64
+                elif mutation == "extra": record["automatic_activation"] = True
+                else: record["target_files"][0]["mode"] = "100755"
+                parity.write_text(json.dumps(value))
+                self.assertTrue(any("kickoff" in item for item in checker.validate(source)))
+        parity.write_bytes(original)
+
+    def test_kickoff_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        # Actual accepted old bytes and actual current new bytes, real Bash only.
+        old = self.clone_source()
+        for name in KICKOFF_PATHS:
+            data = subprocess.check_output(["git", "-C", str(ROOT), "show", KICKOFF_BASE + ":" + PAYLOAD + "/" + name])
+            (old / PAYLOAD / name).write_bytes(data)
+        self.reseal_payload(old)
+        self.assertEqual(0, self.run_install("--apply", source=old).returncode)
+        for name in ("README.md", "AGENTS.md", ".github/codex-instructions.md",
+                     ".github/docs/agreements/requirements.md"):
+            (self.target / name).write_text("Synthetic adopter-owned content\n")
+            (self.target / name).chmod(0o600)
+        self.commit_adopter("synthetic old installation")
+        (self.target / "later.txt").write_text("Unrelated staged content\n")
+        self.git("add", "later.txt")
+        before = self.snapshot(self.target)
+        modes = {str(path.relative_to(self.target)): path.stat().st_mode for path in self.target.rglob("*")}
+        self.old_source, self.new_source = old, ROOT
+        self.transaction = self.base / "kickoff operation"
+        result = self.upgrade("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        for name in KICKOFF_PATHS[:2]:
+            self.assertNotEqual((old / PAYLOAD / name).read_bytes(), (ROOT / PAYLOAD / name).read_bytes())
+            self.assertEqual((ROOT / PAYLOAD / name).read_bytes(), (self.target / name).read_bytes())
+        for name in ("README.md", "AGENTS.md", ".github/codex-instructions.md",
+                     ".github/docs/agreements/requirements.md"):
+            self.assertEqual("Synthetic adopter-owned content\n", (self.target / name).read_text())
+            self.assertEqual(0o600, (self.target / name).stat().st_mode & 0o777)
+        result = self.rollback("--apply")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.target))
+        self.assertEqual(modes, {str(path.relative_to(self.target)): path.stat().st_mode for path in self.target.rglob("*")})
+
+    def test_kickoff_changes_only_three_payload_bytes_and_no_layout_or_modes(self):
+        old = subprocess.check_output(["git", "-C", str(ROOT), "show", KICKOFF_BASE + ":" + INVENTORY], text=True)
+        old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
+        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        self.assertEqual(47, len(new_rows))
+        self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
+        self.assertEqual(set(KICKOFF_PATHS), {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
+        for name, _kind, digest in new_rows:
+            path = ROOT / PAYLOAD / name
+            self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest())
+            self.assertEqual(0o644, path.stat().st_mode & 0o777)
+
     def upgrade_fixture(self):
         old = self.clone_source()
         new = self.base / "new local source"
@@ -728,7 +901,17 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         files = [p for p in payload.rglob("*") if p.is_file()]
         self.assertEqual(47, len(files))
         for source in files:
-            self.assertEqual(source.read_bytes(), (self.target / source.relative_to(payload)).read_bytes())
+            installed = self.target / source.relative_to(payload)
+            self.assertEqual(source.read_bytes(), installed.read_bytes())
+            self.assertEqual(0o644, installed.stat().st_mode & 0o777)
+        for name in KICKOFF_PATHS:
+            installed = self.target / name
+            for link in re.findall(r"\[[^\]]+\]\(([^)]+)\)", installed.read_text()):
+                target, _, anchor = link.partition("#")
+                linked = installed.parent / target
+                self.assertTrue(linked.is_file(), link)
+                if anchor:
+                    self.assertIn("## " + anchor, linked.read_text().splitlines(), link)
         self.assertEqual(git_before, self.snapshot(self.target / ".git"))
         self.assertFalse((self.target / ".github/governance").exists())
         self.assertFalse((self.target / "tests/conformance/results.json").exists())

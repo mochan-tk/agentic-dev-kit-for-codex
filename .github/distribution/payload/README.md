@@ -18,6 +18,38 @@ of complete autonomous execution or full runtime parity.
    when material and an approved goal are ready. Use `$task-routing`,
    `$session-orchestration`, `$verification` and `$retro` for bounded work.
 
+## Collect context and prepare requirements
+
+1. Collect existing material with the
+   [context-collection Skill](.agents/skills/context-collection/SKILL.md) and the
+   appropriate source connector. If you have no requirements source, explicitly
+   choose builtin kickoff. In Codex CLI or IDE, for example:
+   `$context-collection Start builtin kickoff for <topic>; I have no existing requirements source.`
+   On another surface, explicitly request that installed Skill file and the
+   builtin route. It reads [builtin retrieve](.github/connectors/builtin.md#retrieve)
+   for draft-first candidates and bounded questions, retaining drafts,
+   provenance, assumptions and unanswered questions under `.github/docs/context/`.
+   Stop the interview at any time; ordinary collection does not start it.
+2. Optionally prepare a source registry with the reviewed
+   [setup-sources helper](.github/scripts/setup-sources.sh):
+   `bash .github/scripts/setup-sources.sh` from the adopter root. Inspect its
+   diff and the [connector contract](.github/connectors/README.md) before use.
+   Registry preparation is not activation or context sufficiency. Activation
+   requires the agreements PR and human review; a generated placeholder proves
+   neither. No helper runs during collection or installation automatically.
+3. When candidates warrant agreements, use the
+   [context-distillation Skill](.agents/skills/context-distillation/SKILL.md) to
+   prepare the source-linked proposal for human review. Do not write to
+   `.github/docs/agreements/` during kickoff; promotion uses a human-reviewed
+   distillation PR. Apply the connector's verification and sufficiency test
+   before decomposition.
+
+Existing adopter README files are preserved by install and upgrade. The
+installed context-collection Skill links directly to builtin retrieve, so
+explicit kickoff remains available through that Skill even with your own README.
+These are installed instructions; client invocation and successful elicitation
+need evidence from the actual Codex surface. No implicit preload is assumed.
+
 ## Scope and prerequisites
 
 Local files require Git, Bash and a SHA-256 utility. The GitHub helpers

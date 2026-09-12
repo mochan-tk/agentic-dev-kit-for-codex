@@ -7,7 +7,7 @@
       "destination": ".agents/skills/context-collection/SKILL.md",
       "source_path": ".github/skills/context-collection/SKILL.md",
       "source_blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
-      "target_sha256": "90edc067f5dde208f93def58d63b162aaa76d8a393cdae08ede3f44886c472cb",
+      "target_sha256": "b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
       ]
@@ -221,7 +221,7 @@
       "destination": ".github/connectors/builtin.md",
       "source_path": ".github/connectors/builtin.md",
       "source_blob": "3bf19026be22f7d167f9c26d82410c4b9b9ca022",
-      "target_sha256": "14b2c8997a203de2d394f0a66cddbca1161f3139185fff4c751c9383977f5b31",
+      "target_sha256": "a0efecd6fecbb206fa83dc2d62c5ff0cac4177cb14cc0adb3ff1e4c0111ceaff",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
       ]
@@ -418,7 +418,7 @@
       "destination": "README.md",
       "source_path": "README.md",
       "source_blob": "76480f3ae0458926d854e62f51d10958ff229bd3",
-      "target_sha256": "be3f6a0ecf930765bdb8bd286fb913c6e76856b2552ac337777779192d8a33b3",
+      "target_sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b",
       "adaptations": [
         "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
       ]
@@ -442,6 +442,41 @@
       ]
     }
   ],
+  "context_kickoff": {
+    "schema": "builtin-context-kickoff/v1",
+    "source_files": {
+      ".github/prompts/kickoff-context.prompt.md": "9b565657def003a3c04cfd9ec6e67578ff7d2906",
+      ".github/skills/context-collection/SKILL.md": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+      ".github/connectors/builtin.md": "3bf19026be22f7d167f9c26d82410c4b9b9ca022",
+      "README.md": "76480f3ae0458926d854e62f51d10958ff229bd3"
+    },
+    "prompt_sha256": "f11922e1f96ccf5f9e827a77db1f06455f05991d63c20b0ef95fc2ce8b46228c",
+    "integration": "explicit-route-in-existing-context-collection-skill",
+    "adaptations": [
+      "Reuse frozen kickoff routing into builtin.retrieve and collection; retain the existing normative builtin procedure and ordinary collection path.",
+      "Replace Copilot prompt aliases and topic interpolation with explicit installed Skill/resource guidance and a chosen topic; no ninth Skill or implicit preload.",
+      "Preserve iterative candidate drafts, bounded questions, human stop, provenance, redaction and the human-reviewed distillation promotion gate.",
+      "Document optional registry preparation separately from reviewed activation and sufficiency; preserve existing adopter README and tuned files."
+    ],
+    "evidence": "offline-installed-instructions-and-disposable-bash-fixtures-only",
+    "target_files": [
+      {
+        "path": ".agents/skills/context-collection/SKILL.md",
+        "mode": "100644",
+        "sha256": "b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97"
+      },
+      {
+        "path": ".github/connectors/builtin.md",
+        "mode": "100644",
+        "sha256": "a0efecd6fecbb206fa83dc2d62c5ff0cac4177cb14cc0adb3ff1e4c0111ceaff"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b"
+      }
+    ]
+  },
   "feedback_companion": {
     "schema": "installer-feedback-companion/v1",
     "source_files": {
