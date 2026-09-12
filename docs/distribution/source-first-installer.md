@@ -138,9 +138,9 @@ questions. Finish with promotion-worthy candidates and reasons. Kickoff does
 not write agreements; the existing human-reviewed distillation PR is the
 promotion gate, and activation/sufficiency retain their existing review gates.
 
-Only the collection Skill, builtin definition and installed README bytes change.
-All 47 paths, preservation classes and modes remain; the other 44 payload files
-are byte-identical to accepted T21. The README is a seed: existing adopter README
+T22 changed only the collection Skill, builtin definition and installed README.
+All 47 paths, preservation classes and modes remained; the other 44 payload files
+were byte-identical to accepted T21 at T22 acceptance. The README is a seed: existing adopter README
 files stay intact, so the engine Skill and builtin links work independently of
 the README. A known-old upgrade updates only the two changed engine files and
 preserves existing seed/tuned/instance content; operation rollback restores the
@@ -161,6 +161,63 @@ operation rollback against the accepted old/current bytes. These observations
 verify distributed instructions, file preservation and guard behavior. They
 do not establish model adherence, useful requirements, successful elicitation,
 activation, human approval, sufficiency, authenticated roles or runtime parity.
+
+## Task creation and verified readiness
+
+T23 corrects the frozen source's Task creation atomicity assumption through the
+existing installed planning Skill and mode-0644 helper:
+
+```sh
+bash .agents/skills/plan-management/scripts/new-task.sh -t "Task title" -b task-body.md -p 12 -e cli -d 14,15 --ready
+```
+
+The original `gh issue create --parent [--blocked-by]` flow remains one create
+attempt. It sends `type:task` and the selected `exec:*` label without initial
+`ai:ready`. A successful-looking create URL alone is insufficient. The helper
+resolves the repository first, then reads back the exact issue URL/number/ID,
+title and body, requested parent, complete unique blockers and required labels.
+Only explicit `--ready` adds readiness after that verification, followed by a
+second full read-back with the same issue and relationship IDs. No-ready verifies
+without adding readiness. OPEN blockers are allowed: `ai:ready` describes the
+brief, while the unchanged frontier determines whether execution may begin.
+
+In [gh 2.96.0 create.go](https://github.com/cli/cli/blob/b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0/pkg/cmd/issue/create/create.go#L410),
+IssueCreate precedes DeferredUpdateIssue and URL printing. One CLI call is not
+an atomic GitHub transaction. Create/link failures can leave an issue without
+a returned URL; failed readiness edits can already have applied the label.
+Every ambiguous write or failed read remains unconfirmed/non-success. The
+helper prints a safely resolved known Task URL when available, then stops.
+There is no automatic retry, deletion, repair, rollback or guess that zero
+changes occurred. Inspect current state before another explicit invocation.
+
+The helper uses gh's actual exported JSON: parent is an issue object, blockers
+have nodes/totalCount (first 50), and labels are a flat array (first 100), as
+shown in the [query builder](https://github.com/cli/cli/blob/b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0/api/query_builder.go#L401)
+and [export implementation](https://github.com/cli/cli/blob/b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0/api/export_pr.go#L18).
+No exported repository node is invented; canonical URLs bind the selected host
+and repository. Require integral complete blocker counts of at most 50 and
+fewer than 100 unique labels; 100 cannot prove completeness. Missing, malformed,
+duplicate, mismatched or unsupported responses refuse success.
+
+Inputs are bounded to a 256-byte non-control title, a regular non-symlink body
+of 1..65536 bytes without NUL, and 50 unique positive same-repository dependency
+numbers. Snapshot the body in private temporary storage before ownership
+validation and creation. The existing ownership-body grammar still gates
+`--ready`; an unfinished no-ready brief need not pass that readiness grammar.
+Standard base64/head/cmp tools supplement Bash and gh; external jq or Python
+is not required by this helper. Query projection output is capped at 128 KiB;
+repository/create/edit output at 4 KiB. Raw body/tool output is not printed.
+Scratch data is removed on ordinary exit; no general crash/process supervisor
+or hostile same-user race guarantee is claimed.
+
+Only the two planning engine files change; the other 45 payload byte sequences
+and all 47 paths/classes/modes remain unchanged from accepted T22. Existing
+parity records bind original frozen helper/Skill blobs, the reviewed gh source
+revision and new target digests. Actual Bash fake-gh fixtures test sequencing,
+failure boundaries and real jq evaluation of the same query against raw CLI
+shapes. Disposable install/known-old upgrade/operation rollback preserves
+adopter README, tuned/instance/application content and Git state. No modified
+helper is run against a live service, and no runtime or completion claim follows.
 
 ## Preservation-safe local upgrade and operation-scoped rollback
 

@@ -21,6 +21,9 @@ INVENTORY = ".github/distribution/payload.v1.tsv"
 KICKOFF_BASE = "219202b28c980e417283d761dbd8515c8b38e69f"
 KICKOFF_PATHS = (".agents/skills/context-collection/SKILL.md",
                  ".github/connectors/builtin.md", "README.md")
+TASK_CREATION_BASE = "7565593f470fa6515a138c730f2545595cbd888f"
+TASK_CREATION_PATHS = (".agents/skills/plan-management/SKILL.md",
+                       ".agents/skills/plan-management/scripts/new-task.sh")
 
 
 class InstallerTests(unittest.TestCase):
@@ -396,6 +399,197 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         spec.loader.exec_module(checker)
         return checker
 
+    def task_creation_fixture(self, defect=None, *, ready=True, dependencies="14,15", repo="fixture/adopter", body=None):
+        # Raw gh 2.96.0 exports, not a made-up repository node or labels connection.
+        self.assertIsNotNone(shutil.which("jq"), "real jq is needed by the fake-gh query evaluator")
+        helper = ROOT / PAYLOAD / TASK_CREATION_PATHS[1]
+        body_path = self.base / "task body.md"
+        body_text = body if body is not None else "## Objective\n\nBuild a bounded fixture.\n\n## File ownership\n\n- app/**\n"
+        body_path.write_text(body_text)
+        def related(number, state="OPEN"):
+            return {"id": "I_fixture_" + str(number), "number": number, "title": "Related issue",
+                    "url": "https://github.com/fixture/adopter/issues/" + str(number), "state": state}
+        value = {**related(40), "title": "Fixture Task", "body": body_text,
+                 "parent": related(12), "blockedBy": {"nodes": [related(14), related(15, "CLOSED")], "totalCount": 2},
+                 "labels": [{"id": "L_task", "name": "type:task"}, {"id": "L_exec", "name": "exec:cli"}]}
+        if not dependencies:
+            value["blockedBy"] = {"nodes": [], "totalCount": 0}
+        elif all(part.isdigit() for part in dependencies.split(",")):
+            numbers = [int(part) for part in dependencies.split(",")]
+            value["blockedBy"] = {"nodes": [related(n) for n in numbers], "totalCount": len(numbers)}
+        mutations = {
+            "wrong-body": lambda v: v.update(body=v["body"] + "changed"),
+            "wrong-title": lambda v: v.update(title="Other Task"),
+            "wrong-url": lambda v: v.update(url="https://github.com/other/adopter/issues/40"),
+            "wrong-number": lambda v: v.update(number=41),
+            "bad-id": lambda v: v.update(id=None),
+            "closed-task": lambda v: v.update(state="CLOSED"),
+            "wrong-parent": lambda v: v.update(parent=related(13)),
+            "absent-parent": lambda v: v.update(parent=None),
+            "cross-repo-parent": lambda v: v["parent"].update(url="https://github.com/other/adopter/issues/12"),
+            "wrong-dependency": lambda v: v["blockedBy"]["nodes"].__setitem__(0, related(16)),
+            "duplicate-dependency": lambda v: v["blockedBy"]["nodes"].__setitem__(1, related(14)),
+            "duplicate-id": lambda v: v["blockedBy"]["nodes"][1].update(id=v["blockedBy"]["nodes"][0]["id"]),
+            "truncated-dependencies": lambda v: v["blockedBy"].update(totalCount=3),
+            "malformed-dependencies": lambda v: v.update(blockedBy=[]),
+            "string-count": lambda v: v["blockedBy"].update(totalCount="2"),
+            "cross-repo-dependency": lambda v: v["blockedBy"]["nodes"][0].update(url="https://github.com/other/adopter/issues/14"),
+            "unknown-dependency-state": lambda v: v["blockedBy"]["nodes"][0].update(state="UNKNOWN"),
+            "missing-label": lambda v: v.update(labels=v["labels"][:1]),
+            "wrong-exec": lambda v: v["labels"][1].update(name="exec:ide"),
+            "duplicate-label": lambda v: v["labels"].append(v["labels"][0]),
+            "labels-connection": lambda v: v.update(labels={"nodes": v["labels"], "totalCount": 2}),
+            "labels-cap": lambda v: v["labels"].extend({"name": "label" + str(n)} for n in range(98)),
+            "premature-ready": lambda v: v["labels"].append({"name": "ai:ready"}),
+        }
+        if defect in mutations:
+            mutations[defect](value)
+        directory = self.base / "task-bin"
+        directory.mkdir(exist_ok=True)
+        state = self.base / "task-fixture.json"
+        events = self.base / "task-events.jsonl"
+        events.write_text("")
+        state.write_text(json.dumps({"issue": value, "defect": defect, "views": 0, "edited": False}))
+        fake = directory / "gh"
+        fake.write_text("""#!/usr/bin/env python3
+import json, os, subprocess, sys
+from pathlib import Path
+args=sys.argv[1:]; path=Path(os.environ['TASK_FIXTURE']); s=json.loads(path.read_text())
+with open(os.environ['TASK_EVENTS'],'a') as f: f.write(json.dumps(args)+'\\n')
+defect=s['defect']
+if args[:2]==['repo','view']:
+    if defect=='repo-read-error': sys.exit(1)
+    value={'url':'https://github.com/fixture/adopter','nameWithOwner':'fixture/adopter'}
+elif args[:2]==['issue','create']:
+    if defect=='create-link-failure': sys.exit(1)
+    if defect=='create-failed-known': print('https://github.com/fixture/adopter/issues/40'); sys.exit(1)
+    if defect=='create-malformed': print('not an issue URL'); sys.exit(0)
+    if defect=='create-wrong-repo': print('https://github.com/other/adopter/issues/40'); sys.exit(0)
+    if defect=='create-oversized': print('x'*200000); sys.exit(0)
+    if defect=='create-nul': sys.stdout.buffer.write(b'https://github.com/fixture/adopter/issues/40\\0\\n'); sys.exit(0)
+    print('https://github.com/fixture/adopter/issues/40'); sys.exit(0)
+elif args[:2]==['issue','edit']:
+    s['edited']=True; path.write_text(json.dumps(s))
+    if defect=='ready-write-error': sys.exit(1)
+    print('https://github.com/fixture/adopter/issues/40'); sys.exit(0)
+elif args[:2]==['issue','view']:
+    s['views']+=1; path.write_text(json.dumps(s))
+    if defect=='read-error' or (s['edited'] and defect=='final-read-error'): sys.exit(1)
+    value=s['issue']
+    if s['edited'] and defect!='ready-not-applied': value['labels'].append({'name':'ai:ready'})
+    if s['edited'] and defect=='final-body-drift': value['body']+='drift'
+    if s['edited'] and defect=='final-id-drift': value['id']='I_other'
+    if s['edited'] and defect=='final-parent-id-drift': value['parent']['id']='I_other_parent'
+    if s['edited'] and defect=='final-blocker-id-drift': value['blockedBy']['nodes'][0]['id']='I_other_blocker'
+    if defect=='view-oversized': print('x'*200000); sys.exit(0)
+else: sys.exit(91)
+if '--json' not in args or '--jq' not in args: sys.exit(92)
+fields=args[args.index('--json')+1].split(',')
+if any(name not in value for name in fields): sys.exit(93)
+result=subprocess.run(['jq','-r',args[args.index('--jq')+1]],input=json.dumps(value),text=True)
+sys.exit(result.returncode)
+""")
+        fake.chmod(0o755)
+        fake_head = directory / "head"
+        if defect == "body-read-error":
+            fake_head.write_text('#!/usr/bin/env bash\nprintf "cannot read %s\\n" "$3" >&2\nexit 1\n')
+            fake_head.chmod(0o755)
+        elif fake_head.exists():
+            fake_head.unlink()
+        args = ["bash", str(helper), "-t", "Fixture Task", "-b", str(body_path), "-p", "12", "-e", "cli"]
+        if dependencies: args.extend(["-d", dependencies])
+        if repo is not None: args.extend(["-R", repo])
+        if ready: args.append("--ready")
+        result = subprocess.run(args, cwd=self.target, env=dict(os.environ,
+            PATH=str(directory) + os.pathsep + os.environ["PATH"], TASK_FIXTURE=str(state), TASK_EVENTS=str(events)),
+            capture_output=True, text=True, timeout=15)
+        return result, [json.loads(line) for line in events.read_text().splitlines()]
+
+    def test_task_creation_deferred_link_failure_never_initially_ready(self):
+        result, events = self.task_creation_fixture("create-link-failure")
+        self.assertNotEqual(0, result.returncode)
+        creates = [event for event in events if event[:2] == ["issue", "create"]]
+        self.assertEqual(1, len(creates))
+        self.assertNotIn("ai:ready", creates[0][creates[0].index("--label") + 1])
+        self.assertEqual("12", creates[0][creates[0].index("--parent") + 1])
+        self.assertEqual("14,15", creates[0][creates[0].index("--blocked-by") + 1])
+        self.assertFalse(any(event[:2] == ["issue", "edit"] for event in events))
+        self.assertIn("unconfirmed", result.stderr)
+
+    def test_task_creation_ready_requires_two_verified_reads_and_open_blockers_are_allowed(self):
+        result, events = self.task_creation_fixture()
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual([["repo", "view"], ["issue", "create"], ["issue", "view"],
+                          ["issue", "edit"], ["issue", "view"]], [event[:2] for event in events])
+        self.assertNotIn("ai:ready", events[1][events[1].index("--label") + 1])
+        self.assertIn("--add-label", events[3])
+        self.assertIn("ai:ready", events[3])
+
+    def test_task_creation_without_ready_has_one_read_and_no_edit(self):
+        result, events = self.task_creation_fixture(ready=False, dependencies="", repo=None)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual([["repo", "view"], ["issue", "create"], ["issue", "view"]], [event[:2] for event in events])
+        self.assertNotIn("--blocked-by", events[1])
+
+    def test_task_creation_preserves_body_bytes_and_accepts_bounded_complete_inputs(self):
+        prefix = "## File ownership\n\n- app/**\n\n## Notes\n\n"
+        for body, ready, dependencies in (
+            (prefix + "\n日本語 'quotes' $() and trailing lines\n\n", True, "14,15"),
+            (prefix + "x" * (65536 - len(prefix)), False, ""),
+            ("An unfinished brief without an ownership section.\n", False, ""),
+            (prefix, True, ",".join(str(n) for n in range(100, 150))),
+        ):
+            with self.subTest(body_bytes=len(body.encode()), ready=ready, dependencies=len(dependencies.split(","))):
+                result, events = self.task_creation_fixture(body=body, ready=ready, dependencies=dependencies)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(1, sum(event[:2] == ["issue", "create"] for event in events))
+
+    def test_task_creation_rejects_bad_graph_body_identity_and_labels_before_ready(self):
+        for defect in ("wrong-body", "wrong-title", "wrong-url", "wrong-number", "bad-id", "closed-task",
+                       "wrong-parent", "absent-parent", "cross-repo-parent", "wrong-dependency", "duplicate-dependency",
+                       "duplicate-id", "truncated-dependencies", "malformed-dependencies", "string-count",
+                       "cross-repo-dependency", "unknown-dependency-state", "missing-label", "wrong-exec",
+                       "duplicate-label", "labels-connection", "labels-cap", "premature-ready", "read-error", "view-oversized"):
+            with self.subTest(defect=defect):
+                result, events = self.task_creation_fixture(defect)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual(1, sum(event[:2] == ["issue", "create"] for event in events))
+                self.assertFalse(any(event[:2] == ["issue", "edit"] for event in events))
+                self.assertNotIn("Created and verified", result.stdout)
+
+    def test_task_creation_ambiguous_create_and_readiness_never_retry_or_claim_success(self):
+        for defect in ("create-failed-known", "create-malformed", "create-wrong-repo", "create-oversized", "create-nul",
+                       "ready-write-error", "ready-not-applied", "final-read-error", "final-body-drift", "final-id-drift",
+                       "final-parent-id-drift", "final-blocker-id-drift"):
+            with self.subTest(defect=defect):
+                result, events = self.task_creation_fixture(defect)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual(1, sum(event[:2] == ["issue", "create"] for event in events))
+                self.assertLessEqual(sum(event[:2] == ["issue", "edit"] for event in events), 1)
+                self.assertFalse(any(event[:2] == ["issue", "delete"] for event in events))
+                self.assertNotIn("Created and verified", result.stdout)
+                self.assertIn("unconfirmed", result.stderr)
+                if defect in ("create-failed-known", "ready-write-error", "final-read-error"):
+                    self.assertIn("https://github.com/fixture/adopter/issues/40", result.stderr)
+
+    def test_task_creation_invalid_inputs_and_ownership_do_not_create(self):
+        for kwargs in ({"dependencies": "14,14"}, {"dependencies": "0"}, {"dependencies": "01"},
+                       {"dependencies": "14,"}, {"dependencies": ",14"}, {"dependencies": "14,x"},
+                       {"dependencies": ",".join(str(n) for n in range(1, 52))},
+                       {"repo": "-evil"}, {"repo": "other/adopter"}, {"defect": "repo-read-error"},
+                       {"body": "## File ownership\n\n- ../escape\n"}, {"body": "x" * 65537}, {"body": "NUL\0input"}):
+            with self.subTest(kwargs={key: str(value)[:40] for key, value in kwargs.items()}):
+                result, events = self.task_creation_fixture(**kwargs)
+                self.assertNotEqual(0, result.returncode)
+                self.assertFalse(any(event[:2] == ["issue", "create"] for event in events))
+
+    def test_task_creation_local_body_read_error_has_safe_diagnostic_and_no_write(self):
+        result, events = self.task_creation_fixture("body-read-error")
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual([], events)
+        self.assertIn("invalid or incomplete Task inputs", result.stderr)
+        self.assertNotIn(str(self.base), result.stderr + result.stdout)
+
     def complete_checker_source(self):
         source = self.clone_source()
         checker = self.kickoff_checker()
@@ -420,8 +614,9 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         value = json.loads(parity.read_text())
         for row in value["files"]:
             row["target_sha256"] = digests[row["destination"]]
-        for row in value.get("context_kickoff", {}).get("target_files", []):
-            row["sha256"] = digests[row["path"]]
+        for component in ("context_kickoff", "task_creation"):
+            for row in value.get(component, {}).get("target_files", []):
+                row["sha256"] = digests[row["path"]]
         parity.write_text(json.dumps(value))
 
     def test_kickoff_installed_entry_and_links_without_adopter_readme(self):
@@ -514,11 +709,11 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
                 self.assertTrue(any("kickoff" in item for item in checker.validate(source)))
         parity.write_bytes(original)
 
-    def test_kickoff_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+    def assert_payload_upgrade_preserves_adopter_state(self, paths, base):
         # Actual accepted old bytes and actual current new bytes, real Bash only.
         old = self.clone_source()
-        for name in KICKOFF_PATHS:
-            data = subprocess.check_output(["git", "-C", str(ROOT), "show", KICKOFF_BASE + ":" + PAYLOAD + "/" + name])
+        for name in paths:
+            data = subprocess.check_output(["git", "-C", str(ROOT), "show", base + ":" + PAYLOAD + "/" + name])
             (old / PAYLOAD / name).write_bytes(data)
         self.reseal_payload(old)
         self.assertEqual(0, self.run_install("--apply", source=old).returncode)
@@ -535,7 +730,9 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         self.transaction = self.base / "kickoff operation"
         result = self.upgrade("--apply")
         self.assertEqual(0, result.returncode, result.stderr)
-        for name in KICKOFF_PATHS[:2]:
+        after = self.snapshot(self.target)
+        self.assertEqual(set(paths[:2]), {name for name in before.keys() | after.keys() if before.get(name) != after.get(name)})
+        for name in paths[:2]:
             self.assertNotEqual((old / PAYLOAD / name).read_bytes(), (ROOT / PAYLOAD / name).read_bytes())
             self.assertEqual((ROOT / PAYLOAD / name).read_bytes(), (self.target / name).read_bytes())
         for name in ("README.md", "AGENTS.md", ".github/codex-instructions.md",
@@ -547,17 +744,69 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         self.assertEqual(before, self.snapshot(self.target))
         self.assertEqual(modes, {str(path.relative_to(self.target)): path.stat().st_mode for path in self.target.rglob("*")})
 
+    def test_kickoff_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(KICKOFF_PATHS, KICKOFF_BASE)
+
+    def test_task_creation_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(TASK_CREATION_PATHS, TASK_CREATION_BASE)
+
     def test_kickoff_changes_only_three_payload_bytes_and_no_layout_or_modes(self):
         old = subprocess.check_output(["git", "-C", str(ROOT), "show", KICKOFF_BASE + ":" + INVENTORY], text=True)
         old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
-        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        accepted = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_CREATION_BASE + ":" + INVENTORY], text=True)
+        new_rows = [line.split("\t") for line in accepted.splitlines() if line and not line.startswith("#")]
         self.assertEqual(47, len(new_rows))
         self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
         self.assertEqual(set(KICKOFF_PATHS), {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
         for name, _kind, digest in new_rows:
+            if name not in KICKOFF_PATHS:
+                continue
             path = ROOT / PAYLOAD / name
             self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest())
             self.assertEqual(0o644, path.stat().st_mode & 0o777)
+
+    def test_task_creation_changes_only_two_payload_bytes_and_no_layout_or_modes(self):
+        old = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_CREATION_BASE + ":" + INVENTORY], text=True)
+        old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
+        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        self.assertEqual(47, len(new_rows))
+        self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
+        self.assertEqual(set(TASK_CREATION_PATHS), {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
+        for name, _kind, digest in new_rows:
+            self.assertEqual(digest, hashlib.sha256((ROOT / PAYLOAD / name).read_bytes()).hexdigest())
+            self.assertEqual(0o644, (ROOT / PAYLOAD / name).stat().st_mode & 0o777)
+
+    def test_task_creation_checker_rejects_resealed_unsafe_readiness_and_source_drift(self):
+        source, checker = self.complete_checker_source()
+        path = source / PAYLOAD / TASK_CREATION_PATHS[1]
+        original = path.read_text()
+        for old, replacement in (
+            ('--label "type:task,exec:$EXEC"', '--label "type:task,exec:$EXEC,ai:ready"'),
+            ('read_back false || unconfirmed "Task read-back"', ': # omitted read-back'),
+            ('read_back true || unconfirmed "Task readiness read-back"', ': # omitted final verification'),
+        ):
+            with self.subTest(replacement=replacement):
+                self.assertIn(old, original)
+                path.write_text(original.replace(old, replacement))
+                self.reseal_payload(source)
+                self.assertTrue(any("task creation" in error for error in checker.validate(source)))
+                path.write_text(original)
+                self.reseal_payload(source)
+        parity = source / ".github/distribution/source-parity.v1.json"
+        original_parity = parity.read_text()
+        for mutation in ("missing", "source", "extra", "digest", "mode"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original_parity)
+                record = value["task_creation"]
+                if mutation == "missing": del value["task_creation"]
+                elif mutation == "source": record["cli_source"] = "cli/cli@" + "0" * 40
+                elif mutation == "extra": record["retry"] = True
+                elif mutation == "digest": record["target_files"][0]["sha256"] = "0" * 64
+                else: record["target_files"][0]["mode"] = "100755"
+                parity.write_text(json.dumps(value))
+                self.assertTrue(any("task creation" in error for error in checker.validate(source)))
+        parity.write_text(original_parity)
+        self.assertEqual([], checker.validate(source))
 
     def upgrade_fixture(self):
         old = self.clone_source()
