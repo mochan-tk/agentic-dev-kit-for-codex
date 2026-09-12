@@ -21,6 +21,11 @@ INVENTORY = ".github/distribution/payload.v1.tsv"
 KICKOFF_BASE = "219202b28c980e417283d761dbd8515c8b38e69f"
 KICKOFF_PATHS = (".agents/skills/context-collection/SKILL.md",
                  ".github/connectors/builtin.md", "README.md")
+TASK_CREATION_BASE = "7565593f470fa6515a138c730f2545595cbd888f"
+TASK_CREATION_PATHS = (".agents/skills/plan-management/SKILL.md",
+                       ".agents/skills/plan-management/scripts/new-task.sh")
+SOURCE_REGISTRY_PATH = ".github/scripts/setup-sources.sh"
+REGISTRY_REL = ".github/docs/context/SOURCES.md"
 
 
 class InstallerTests(unittest.TestCase):
@@ -396,6 +401,477 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         spec.loader.exec_module(checker)
         return checker
 
+    def task_creation_inputs(self, defect=None, *, ready=True, dependencies="14,15", repo="fixture/adopter", body=None, installed=False):
+        # Raw gh 2.96.0 exports, not a made-up repository node or labels connection.
+        self.assertIsNotNone(shutil.which("jq"), "real jq is needed by the fake-gh query evaluator")
+        helper = (self.target if installed else ROOT / PAYLOAD) / TASK_CREATION_PATHS[1]
+        body_path = self.base / "task body.md"
+        body_text = body if body is not None else "## Objective\n\nBuild a bounded fixture.\n\n## File ownership\n\n- app/**\n"
+        body_path.write_text(body_text)
+        def related(number, state="OPEN"):
+            return {"id": "I_fixture_" + str(number), "number": number, "title": "Related issue",
+                    "url": "https://github.com/fixture/adopter/issues/" + str(number), "state": state}
+        value = {**related(40), "title": "Fixture Task", "body": body_text,
+                 "parent": related(12), "blockedBy": {"nodes": [related(14), related(15, "CLOSED")], "totalCount": 2},
+                 "labels": [{"id": "L_task", "name": "type:task"}, {"id": "L_exec", "name": "exec:cli"}]}
+        if not dependencies:
+            value["blockedBy"] = {"nodes": [], "totalCount": 0}
+        elif all(part.isdigit() for part in dependencies.split(",")):
+            numbers = [int(part) for part in dependencies.split(",")]
+            value["blockedBy"] = {"nodes": [related(n) for n in numbers], "totalCount": len(numbers)}
+        mutations = {
+            "wrong-body": lambda v: v.update(body=v["body"] + "changed"),
+            "wrong-title": lambda v: v.update(title="Other Task"),
+            "wrong-url": lambda v: v.update(url="https://github.com/other/adopter/issues/40"),
+            "wrong-number": lambda v: v.update(number=41),
+            "bad-id": lambda v: v.update(id=None),
+            "closed-task": lambda v: v.update(state="CLOSED"),
+            "wrong-parent": lambda v: v.update(parent=related(13)),
+            "absent-parent": lambda v: v.update(parent=None),
+            "cross-repo-parent": lambda v: v["parent"].update(url="https://github.com/other/adopter/issues/12"),
+            "wrong-dependency": lambda v: v["blockedBy"]["nodes"].__setitem__(0, related(16)),
+            "duplicate-dependency": lambda v: v["blockedBy"]["nodes"].__setitem__(1, related(14)),
+            "duplicate-id": lambda v: v["blockedBy"]["nodes"][1].update(id=v["blockedBy"]["nodes"][0]["id"]),
+            "truncated-dependencies": lambda v: v["blockedBy"].update(totalCount=3),
+            "malformed-dependencies": lambda v: v.update(blockedBy=[]),
+            "string-count": lambda v: v["blockedBy"].update(totalCount="2"),
+            "cross-repo-dependency": lambda v: v["blockedBy"]["nodes"][0].update(url="https://github.com/other/adopter/issues/14"),
+            "unknown-dependency-state": lambda v: v["blockedBy"]["nodes"][0].update(state="UNKNOWN"),
+            "missing-label": lambda v: v.update(labels=v["labels"][:1]),
+            "wrong-exec": lambda v: v["labels"][1].update(name="exec:ide"),
+            "duplicate-label": lambda v: v["labels"].append(v["labels"][0]),
+            "labels-connection": lambda v: v.update(labels={"nodes": v["labels"], "totalCount": 2}),
+            "labels-cap": lambda v: v["labels"].extend({"name": "label" + str(n)} for n in range(98)),
+            "premature-ready": lambda v: v["labels"].append({"name": "ai:ready"}),
+        }
+        if defect in mutations:
+            mutations[defect](value)
+        directory = self.base / "task-bin"
+        directory.mkdir(exist_ok=True)
+        state = self.base / "task-fixture.json"
+        events = self.base / "task-events.jsonl"
+        events.write_text("")
+        state.write_text(json.dumps({"issue": value, "defect": defect, "views": 0, "edited": False, "created": False}))
+        fake = directory / "gh"
+        fake.write_text("""#!/usr/bin/env python3
+import json, os, subprocess, sys
+from pathlib import Path
+args=sys.argv[1:]; path=Path(os.environ['TASK_FIXTURE']); s=json.loads(path.read_text())
+with open(os.environ['TASK_EVENTS'],'a') as f: f.write(json.dumps(args)+'\\n')
+defect=s['defect']
+if args[:2]==['api','user']:
+    if defect=='setup-auth-error': sys.exit(1)
+    value={'login':'fixture','plan':{'name':'free' if defect=='setup-private-free' else None if defect=='setup-private-unknown' else 'pro'}}
+elif args[:2]==['api','repos/fixture/adopter']:
+    value={'private':defect in ('setup-private-free','setup-private-unknown'),'owner':{'type':'User'}}
+elif args[:2]==['repo','view']:
+    if defect=='repo-read-error': sys.exit(1)
+    value={'url':'https://github.com/fixture/adopter','nameWithOwner':'fixture/adopter'}
+elif args[:2]==['issue','create']:
+    s['created']=True; path.write_text(json.dumps(s))
+    if defect=='create-link-failure': sys.exit(1)
+    if defect=='create-failed-known': print('https://github.com/fixture/adopter/issues/40'); sys.exit(1)
+    if defect=='create-malformed': print('not an issue URL'); sys.exit(0)
+    if defect=='create-wrong-repo': print('https://github.com/other/adopter/issues/40'); sys.exit(0)
+    if defect=='create-oversized': print('x'*200000); sys.exit(0)
+    if defect=='create-nul': sys.stdout.buffer.write(b'https://github.com/fixture/adopter/issues/40\\0\\n'); sys.exit(0)
+    print('https://github.com/fixture/adopter/issues/40'); sys.exit(0)
+elif args[:2]==['issue','edit']:
+    s['edited']=True
+    if defect!='ready-not-applied': s['issue']['labels'].append({'name':'ai:ready'})
+    path.write_text(json.dumps(s))
+    if defect=='ready-write-error': sys.exit(1)
+    print('https://github.com/fixture/adopter/issues/40'); sys.exit(0)
+elif args[:2]==['issue','list']:
+    names={label['name'] for label in s['issue']['labels']}
+    if s['created'] and s['issue']['state']=='OPEN' and {'type:task','ai:ready'} <= names:
+        print(str(s['issue']['number'])+'\\t'+s['issue']['title'])
+    sys.exit(0)
+elif args[:2]==['issue','view'] and args[2]!='40':
+    matches=[node for node in s['issue']['blockedBy']['nodes'] if str(node['number'])==args[2]]
+    if len(matches)!=1 or args[args.index('--repo')+1]!='github.com/fixture/adopter': sys.exit(94)
+    value={'state':matches[0]['state']}
+elif args[:2]==['issue','view']:
+    s['views']+=1; path.write_text(json.dumps(s))
+    if defect=='read-error' or (s['edited'] and defect=='final-read-error'): sys.exit(1)
+    value=s['issue']
+    if defect=='frontier-read-error': sys.exit(1)
+    if defect=='frontier-incomplete': value['blockedBy']['totalCount']+=1
+    if s['edited'] and defect=='final-body-drift': value['body']+='drift'
+    if s['edited'] and defect=='final-id-drift': value['id']='I_other'
+    if s['edited'] and defect=='final-parent-id-drift': value['parent']['id']='I_other_parent'
+    if s['edited'] and defect=='final-blocker-id-drift': value['blockedBy']['nodes'][0]['id']='I_other_blocker'
+    if defect=='view-oversized': print('x'*200000); sys.exit(0)
+else: sys.exit(91)
+if '--jq' not in args: sys.exit(92)
+if args[0]!='api':
+    if '--json' not in args: sys.exit(92)
+    fields=args[args.index('--json')+1].split(',')
+    if any(name not in value for name in fields): sys.exit(93)
+result=subprocess.run(['jq','-r',args[args.index('--jq')+1]],input=json.dumps(value),text=True)
+sys.exit(result.returncode)
+""")
+        fake.chmod(0o755)
+        fake_head = directory / "head"
+        if defect == "body-read-error":
+            fake_head.write_text('#!/usr/bin/env bash\nprintf "cannot read %s\\n" "$3" >&2\nexit 1\n')
+            fake_head.chmod(0o755)
+        elif fake_head.exists():
+            fake_head.unlink()
+        args = ["bash", str(helper), "-t", "Fixture Task", "-b", str(body_path), "-p", "12", "-e", "cli"]
+        if dependencies: args.extend(["-d", dependencies])
+        if repo is not None: args.extend(["-R", repo])
+        if ready: args.append("--ready")
+        env = dict(os.environ, PATH=str(directory) + os.pathsep + os.environ["PATH"],
+                   TASK_FIXTURE=str(state), TASK_EVENTS=str(events))
+        return args, env, state, events
+
+    def task_creation_fixture(self, *args, **kwargs):
+        command, env, _state, events = self.task_creation_inputs(*args, **kwargs)
+        result = subprocess.run(command, cwd=self.target, env=env,
+            capture_output=True, text=True, timeout=15)
+        return result, [json.loads(line) for line in events.read_text().splitlines()]
+
+    def source_preparation_inputs(self, *, installed=False):
+        _args, env, state, events = self.task_creation_inputs(installed=installed)
+        self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+        helper = (self.target if installed else ROOT / PAYLOAD) / SOURCE_REGISTRY_PATH
+        return ["bash", str(helper)], env, state, events
+
+    def test_source_preparation_refuses_registry_symlink_without_changing_referent(self):
+        command, env, _state, _events = self.source_preparation_inputs()
+        registry = self.target / REGISTRY_REL
+        registry.parent.mkdir(parents=True)
+        outside = self.base / "external registry.md"
+        outside.write_text("External sentinel\n")
+        registry.symlink_to(outside)
+        result = subprocess.run(command + ["--source", "builtin", "--yes"], cwd=self.target,
+                                env=env, capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual("External sentinel\n", outside.read_text())
+        self.assertTrue(registry.is_symlink())
+
+    def test_source_preparation_refuses_unsafe_destinations_and_parents(self):
+        cases = ["dangling-registry", "directory-registry", "fifo-registry", "dangling-parent"]
+        cases += [kind + ":" + path for kind in ("link", "file")
+                  for path in (".github", ".github/docs", ".github/docs/context")]
+        for index, case in enumerate(cases):
+            with self.subTest(case=case):
+                self.target = self.base / ("unsafe-adopter-" + str(index))
+                self.target.mkdir()
+                self.git("init", "-q")
+                command, env, _state, events = self.source_preparation_inputs()
+                registry = self.target / REGISTRY_REL
+                outside = self.base / ("outside-" + str(index))
+                outside.mkdir()
+                (outside / "sentinel").write_text("Unrelated bytes\n")
+                if case in ("dangling-registry", "directory-registry", "fifo-registry"):
+                    registry.parent.mkdir(parents=True)
+                    if case == "dangling-registry": registry.symlink_to(outside / "absent")
+                    elif case == "directory-registry": registry.mkdir()
+                    else: os.mkfifo(registry)
+                else:
+                    kind, name = ("link", ".github/docs") if case == "dangling-parent" else case.split(":")
+                    path = self.target / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    if kind == "file": path.write_text("Parent obstruction\n")
+                    else: path.symlink_to(outside / "absent" if case == "dangling-parent" else outside)
+                before, external = self.snapshot(self.target), self.snapshot(outside)
+                for option in ("--yes", "--dry-run"):
+                    result = subprocess.run(command + ["--source", "builtin", option], cwd=self.target,
+                                            env=env, capture_output=True, text=True, timeout=5)
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertNotIn(str(self.base), result.stderr + result.stdout)
+                    self.assertEqual(before, self.snapshot(self.target))
+                    self.assertEqual(external, self.snapshot(outside))
+                self.assertEqual("", events.read_text())
+
+    def test_source_preparation_checks_logical_in_repository_invocation_ancestry(self):
+        command, env, _state, _events = self.source_preparation_inputs()
+        nested = self.target / "ordinary" / "nested"
+        nested.mkdir(parents=True)
+        alias = self.target / "alias"
+        alias.symlink_to(self.target / "ordinary")
+        short = self.target / "short"
+        short.symlink_to(nested)
+        root_alias = self.base / "root-alias"
+        root_alias.symlink_to(self.target)
+        before = self.snapshot(self.target)
+        for cwd in (alias / "nested", short, root_alias):
+            with self.subTest(kind=cwd.name):
+                result = subprocess.run(command + ["--source", "builtin", "--yes"], cwd=cwd,
+                                        env=dict(env, PWD=str(cwd)), capture_output=True, text=True, timeout=5)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual(before, self.snapshot(self.target))
+                self.assertNotIn(str(self.base), result.stderr + result.stdout)
+        # An OS/path alias above the repository is outside this bounded check.
+        outer_alias = self.base / "outer-alias"
+        outer_alias.symlink_to(self.base)
+        cwd = outer_alias / self.target.name / "ordinary" / "nested"
+        result = subprocess.run(command + ["--source", "builtin", "--dry-run"], cwd=cwd,
+                                env=dict(env, PWD=str(cwd)), capture_output=True, text=True, timeout=5)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.target))
+
+    def test_source_preparation_preserves_normal_create_append_duplicate_dry_run_and_pins(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        command, env, _state, events = self.source_preparation_inputs(installed=True)
+        nested = self.target / "ordinary" / "nested"
+        nested.mkdir(parents=True)
+        def run(*options):
+            return subprocess.run(command + ["--source", *options], cwd=nested,
+                                  env=dict(env, PWD=str(nested)), capture_output=True, text=True, timeout=5)
+        before = self.snapshot(self.target)
+        preview = run("builtin", "--dry-run")
+        self.assertEqual(0, preview.returncode, preview.stderr)
+        self.assertIn("status: pending-activation", preview.stdout)
+        self.assertEqual(before, self.snapshot(self.target))
+        refused = run("builtin")
+        self.assertNotEqual(0, refused.returncode)
+        self.assertEqual(before, self.snapshot(self.target))
+        created = subprocess.run(["bash", "-c", 'umask 027; exec "$@"', "fixture", *command,
+                                  "--source", "builtin", "--yes"], cwd=nested, env=dict(env, PWD=str(nested)),
+                                 capture_output=True, text=True, timeout=5)
+        self.assertEqual(0, created.returncode, created.stderr)
+        registry = self.target / REGISTRY_REL
+        initial = registry.read_bytes()
+        self.assertTrue(initial.startswith(b"# Context sources registry\n"))
+        self.assertIn(b"activation PR #<fill in from inside the activation PR>", initial)
+        self.assertEqual(0o640, registry.stat().st_mode & 0o777)
+        registry.chmod(0o600)
+        for options in (("builtin", "--yes"), ("builtin", "--dry-run")):
+            self.assertEqual(0, run(*options).returncode)
+            self.assertEqual(initial, registry.read_bytes())
+            self.assertEqual(0o600, registry.stat().st_mode & 0o777)
+        (self.target / "specs").mkdir()
+        (self.target / "specs/example.md").write_text("Synthetic spec\n")
+        spec_sha = self.commit_adopter("synthetic specs pin")
+        self.assertEqual(0, run("speckit", "--yes").returncode)
+        appended = registry.read_bytes()
+        self.assertTrue(appended.startswith(initial + b"\n## speckit\n"))
+        self.assertIn(("specs/** adoption SHA " + spec_sha).encode(), appended)
+        self.assertEqual(2, appended.count(b"status: pending-activation"))
+        self.assertEqual(0o600, registry.stat().st_mode & 0o777)
+        self.assertTrue(all(json.loads(line)[0] == "api" for line in events.read_text().splitlines()))
+
+    def test_source_preparation_chains_installed_pending_registry_task_and_frontier(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        task, env, state, events = self.task_creation_inputs(installed=True)
+        self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+        setup = ["bash", str(self.target / SOURCE_REGISTRY_PATH), "--source", "builtin", "--yes"]
+        frontier = ["bash", str(self.target / ".agents/skills/plan-management/scripts/frontier.sh"), "-R", "fixture/adopter", "--all"]
+        def run(command):
+            return subprocess.run(command, cwd=self.target, env=env, capture_output=True, text=True, timeout=10)
+        prepared = run(setup)
+        self.assertEqual(0, prepared.returncode, prepared.stderr)
+        registry = (self.target / REGISTRY_REL).read_bytes()
+        self.assertIn(b"status: pending-activation", registry)
+        created = run(task)
+        self.assertEqual(0, created.returncode, created.stderr)
+        blocked = run(frontier)
+        self.assertEqual(0, blocked.returncode, blocked.stderr)
+        self.assertNotIn("#40", blocked.stdout.split("== Blocked ==")[0])
+        self.assertIn("== Blocked ==\n#40\tFixture Task", blocked.stdout)
+        value = json.loads(state.read_text())
+        for node in value["issue"]["blockedBy"]["nodes"]: node["state"] = "CLOSED"
+        state.write_text(json.dumps(value))
+        actionable = run(frontier)
+        self.assertEqual(0, actionable.returncode, actionable.stderr)
+        self.assertIn("== Actionable frontier (all dependency observations succeeded) ==\n#40\tFixture Task", actionable.stdout)
+        self.assertNotIn("== Blocked ==", actionable.stdout)
+        self.assertEqual(registry, (self.target / REGISTRY_REL).read_bytes())
+        calls = [json.loads(line) for line in events.read_text().splitlines()]
+        self.assertEqual(["api", "api", "repo", "issue", "issue", "issue", "issue"], [call[0] for call in calls[:7]])
+        self.assertEqual(1, sum(call[:2] == ["issue", "create"] for call in calls))
+
+    def test_source_preparation_preserves_preflight_selection_and_uncommitted_spec_pin(self):
+        command, env, state, events = self.source_preparation_inputs()
+        before = self.snapshot(self.target)
+        for defect in ("setup-auth-error", "setup-private-free", "setup-private-unknown"):
+            with self.subTest(defect=defect):
+                value = json.loads(state.read_text())
+                value["defect"] = defect
+                state.write_text(json.dumps(value))
+                result = subprocess.run(command + ["--source", "builtin", "--yes"], cwd=self.target,
+                                        env=env, capture_output=True, text=True, timeout=5)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual(before, self.snapshot(self.target))
+        value["defect"] = None
+        state.write_text(json.dumps(value))
+        (self.target / "specs").mkdir()
+        before = self.snapshot(self.target)
+        result = subprocess.run(command + ["--yes"], cwd=self.target, env=env,
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(2, result.returncode)
+        self.assertIn("consider --source speckit", result.stderr)
+        preview = subprocess.run(command + ["--source", "speckit", "--dry-run"], cwd=self.target,
+                                 env=env, capture_output=True, text=True, timeout=5)
+        self.assertEqual(0, preview.returncode, preview.stderr)
+        self.assertIn("specs/** adoption SHA <record the current specs/** commit SHA>", preview.stdout)
+        self.assertEqual(before, self.snapshot(self.target))
+        self.assertTrue(all(json.loads(line)[0] == "api" for line in events.read_text().splitlines()))
+
+    def test_source_preparation_chain_refuses_unsafe_and_nonactionable_observations(self):
+        for case in ("no-ready", "frontier-read-error", "frontier-incomplete", "unsafe-registry"):
+            with self.subTest(case=case):
+                self.target = self.base / case
+                self.target.mkdir()
+                self.git("init", "-q")
+                self.assertEqual(0, self.run_install("--apply").returncode)
+                task, env, state, events = self.task_creation_inputs(installed=True, ready=case != "no-ready")
+                self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+                registry = self.target / REGISTRY_REL
+                outside = self.base / (case + "-sentinel")
+                if case == "unsafe-registry":
+                    outside.write_text("External sentinel\n")
+                    registry.symlink_to(outside)
+                setup = ["bash", str(self.target / SOURCE_REGISTRY_PATH), "--source", "builtin", "--yes"]
+                prepared = subprocess.run(setup, cwd=self.target, env=env, capture_output=True, text=True, timeout=10)
+                # This conditional is a disposable test driver, not shipped orchestration.
+                if prepared.returncode != 0:
+                    self.assertEqual("unsafe-registry", case)
+                    self.assertEqual("External sentinel\n", outside.read_text())
+                    self.assertEqual("", events.read_text())
+                    continue
+                self.assertNotEqual("unsafe-registry", case)
+                result = subprocess.run(task, cwd=self.target, env=env, capture_output=True, text=True, timeout=10)
+                self.assertEqual(0, result.returncode, result.stderr)
+                value = json.loads(state.read_text())
+                if case != "no-ready": value["defect"] = case
+                state.write_text(json.dumps(value))
+                frontier = subprocess.run(["bash", str(self.target / ".agents/skills/plan-management/scripts/frontier.sh"), "-R", "fixture/adopter"],
+                                          cwd=self.target, env=env, capture_output=True, text=True, timeout=10)
+                self.assertNotIn("#40", frontier.stdout)
+                if case == "no-ready":
+                    self.assertEqual(0, frontier.returncode)
+                    self.assertIn("No open Task issues labeled ai:ready", frontier.stdout)
+                else:
+                    self.assertNotEqual(0, frontier.returncode)
+                    self.assertNotIn("Actionable frontier", frontier.stdout)
+
+    def test_source_preparation_checker_rejects_resealed_path_guard_and_provenance_drift(self):
+        source, checker = self.complete_checker_source()
+        script = source / PAYLOAD / SOURCE_REGISTRY_PATH
+        original = script.read_text()
+        for old, replacement in (("\ncheck_registry_path\n", "\n:\n"),
+                                 ('[ -L "$REGISTRY" ]', 'false'),
+                                 ('[ ! -L "$INVOCATION" ]', 'true'),
+                                 ('status: pending-activation', 'status: active')):
+            with self.subTest(guard=old):
+                self.assertIn(old, original)
+                script.write_text(original.replace(old, replacement))
+                self.reseal_payload(source)
+                self.assertTrue(any("source preparation" in item for item in checker.validate(source)))
+                script.write_text(original)
+                self.reseal_payload(source)
+        path = source / ".github/distribution/source-parity.v1.json"
+        original_parity = path.read_bytes()
+        for mutation in ("missing", "source", "extra", "digest", "mode"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original_parity)
+                record = value["source_preparation"]
+                if mutation == "missing": del value["source_preparation"]
+                elif mutation == "source": record["source_files"][SOURCE_REGISTRY_PATH] = "0" * 40
+                elif mutation == "extra": record["automatic_activation"] = True
+                elif mutation == "digest": record["target_files"][0]["sha256"] = "0" * 64
+                else: record["target_files"][0]["mode"] = "100755"
+                path.write_text(json.dumps(value))
+                self.assertTrue(any("source preparation" in item for item in checker.validate(source)))
+        path.write_bytes(original_parity)
+        self.assertEqual([], checker.validate(source))
+
+    def test_task_creation_deferred_link_failure_never_initially_ready(self):
+        result, events = self.task_creation_fixture("create-link-failure")
+        self.assertNotEqual(0, result.returncode)
+        creates = [event for event in events if event[:2] == ["issue", "create"]]
+        self.assertEqual(1, len(creates))
+        self.assertNotIn("ai:ready", creates[0][creates[0].index("--label") + 1])
+        self.assertEqual("12", creates[0][creates[0].index("--parent") + 1])
+        self.assertEqual("14,15", creates[0][creates[0].index("--blocked-by") + 1])
+        self.assertFalse(any(event[:2] == ["issue", "edit"] for event in events))
+        self.assertIn("unconfirmed", result.stderr)
+
+    def test_task_creation_ready_requires_two_verified_reads_and_open_blockers_are_allowed(self):
+        result, events = self.task_creation_fixture()
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual([["repo", "view"], ["issue", "create"], ["issue", "view"],
+                          ["issue", "edit"], ["issue", "view"]], [event[:2] for event in events])
+        self.assertNotIn("ai:ready", events[1][events[1].index("--label") + 1])
+        self.assertIn("--add-label", events[3])
+        self.assertIn("ai:ready", events[3])
+
+    def test_task_creation_without_ready_has_one_read_and_no_edit(self):
+        result, events = self.task_creation_fixture(ready=False, dependencies="", repo=None)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual([["repo", "view"], ["issue", "create"], ["issue", "view"]], [event[:2] for event in events])
+        self.assertNotIn("--blocked-by", events[1])
+
+    def test_task_creation_preserves_body_bytes_and_accepts_bounded_complete_inputs(self):
+        prefix = "## File ownership\n\n- app/**\n\n## Notes\n\n"
+        for body, ready, dependencies in (
+            (prefix + "\n日本語 'quotes' $() and trailing lines\n\n", True, "14,15"),
+            (prefix + "x" * (65536 - len(prefix)), False, ""),
+            ("An unfinished brief without an ownership section.\n", False, ""),
+            (prefix, True, ",".join(str(n) for n in range(100, 150))),
+        ):
+            with self.subTest(body_bytes=len(body.encode()), ready=ready, dependencies=len(dependencies.split(","))):
+                result, events = self.task_creation_fixture(body=body, ready=ready, dependencies=dependencies)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(1, sum(event[:2] == ["issue", "create"] for event in events))
+
+    def test_task_creation_rejects_bad_graph_body_identity_and_labels_before_ready(self):
+        for defect in ("wrong-body", "wrong-title", "wrong-url", "wrong-number", "bad-id", "closed-task",
+                       "wrong-parent", "absent-parent", "cross-repo-parent", "wrong-dependency", "duplicate-dependency",
+                       "duplicate-id", "truncated-dependencies", "malformed-dependencies", "string-count",
+                       "cross-repo-dependency", "unknown-dependency-state", "missing-label", "wrong-exec",
+                       "duplicate-label", "labels-connection", "labels-cap", "premature-ready", "read-error", "view-oversized"):
+            with self.subTest(defect=defect):
+                result, events = self.task_creation_fixture(defect)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual(1, sum(event[:2] == ["issue", "create"] for event in events))
+                self.assertFalse(any(event[:2] == ["issue", "edit"] for event in events))
+                self.assertNotIn("Created and verified", result.stdout)
+
+    def test_task_creation_ambiguous_create_and_readiness_never_retry_or_claim_success(self):
+        for defect in ("create-failed-known", "create-malformed", "create-wrong-repo", "create-oversized", "create-nul",
+                       "ready-write-error", "ready-not-applied", "final-read-error", "final-body-drift", "final-id-drift",
+                       "final-parent-id-drift", "final-blocker-id-drift"):
+            with self.subTest(defect=defect):
+                result, events = self.task_creation_fixture(defect)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual(1, sum(event[:2] == ["issue", "create"] for event in events))
+                self.assertLessEqual(sum(event[:2] == ["issue", "edit"] for event in events), 1)
+                self.assertFalse(any(event[:2] == ["issue", "delete"] for event in events))
+                self.assertNotIn("Created and verified", result.stdout)
+                self.assertIn("unconfirmed", result.stderr)
+                if defect in ("create-failed-known", "ready-write-error", "final-read-error"):
+                    self.assertIn("https://github.com/fixture/adopter/issues/40", result.stderr)
+
+    def test_task_creation_invalid_inputs_and_ownership_do_not_create(self):
+        for kwargs in ({"dependencies": "14,14"}, {"dependencies": "0"}, {"dependencies": "01"},
+                       {"dependencies": "14,"}, {"dependencies": ",14"}, {"dependencies": "14,x"},
+                       {"dependencies": ",".join(str(n) for n in range(1, 52))},
+                       {"repo": "-evil"}, {"repo": "other/adopter"}, {"defect": "repo-read-error"},
+                       {"body": "## File ownership\n\n- ../escape\n"}, {"body": "x" * 65537}, {"body": "NUL\0input"}):
+            with self.subTest(kwargs={key: str(value)[:40] for key, value in kwargs.items()}):
+                result, events = self.task_creation_fixture(**kwargs)
+                self.assertNotEqual(0, result.returncode)
+                self.assertFalse(any(event[:2] == ["issue", "create"] for event in events))
+
+    def test_task_creation_local_body_read_error_has_safe_diagnostic_and_no_write(self):
+        result, events = self.task_creation_fixture("body-read-error")
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual([], events)
+        self.assertIn("invalid or incomplete Task inputs", result.stderr)
+        self.assertNotIn(str(self.base), result.stderr + result.stdout)
+
+    def test_task_creation_rejects_entire_dependency_value_before_any_gh_call(self):
+        for dependencies in ("14,15\n", "14,15\r", "14,15\n,16", "14,15\n]", "14,15\t", "14,15\x01"):
+            with self.subTest(dependencies=repr(dependencies)):
+                result, events = self.task_creation_fixture(dependencies=dependencies)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual([], events)
+
     def complete_checker_source(self):
         source = self.clone_source()
         checker = self.kickoff_checker()
@@ -420,8 +896,9 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         value = json.loads(parity.read_text())
         for row in value["files"]:
             row["target_sha256"] = digests[row["destination"]]
-        for row in value.get("context_kickoff", {}).get("target_files", []):
-            row["sha256"] = digests[row["path"]]
+        for component in ("context_kickoff", "task_creation", "source_preparation"):
+            for row in value.get(component, {}).get("target_files", []):
+                row["sha256"] = digests[row["path"]]
         parity.write_text(json.dumps(value))
 
     def test_kickoff_installed_entry_and_links_without_adopter_readme(self):
@@ -514,16 +991,17 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
                 self.assertTrue(any("kickoff" in item for item in checker.validate(source)))
         parity.write_bytes(original)
 
-    def test_kickoff_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+    def assert_payload_upgrade_preserves_adopter_state(self, paths, base, *, changed=None):
         # Actual accepted old bytes and actual current new bytes, real Bash only.
         old = self.clone_source()
-        for name in KICKOFF_PATHS:
-            data = subprocess.check_output(["git", "-C", str(ROOT), "show", KICKOFF_BASE + ":" + PAYLOAD + "/" + name])
+        for name in paths:
+            data = subprocess.check_output(["git", "-C", str(ROOT), "show", base + ":" + PAYLOAD + "/" + name])
             (old / PAYLOAD / name).write_bytes(data)
         self.reseal_payload(old)
         self.assertEqual(0, self.run_install("--apply", source=old).returncode)
-        for name in ("README.md", "AGENTS.md", ".github/codex-instructions.md",
-                     ".github/docs/agreements/requirements.md"):
+        preserved = ("README.md", "AGENTS.md", ".github/codex-instructions.md",
+                     ".github/docs/agreements/requirements.md", REGISTRY_REL)
+        for name in preserved:
             (self.target / name).write_text("Synthetic adopter-owned content\n")
             (self.target / name).chmod(0o600)
         self.commit_adopter("synthetic old installation")
@@ -535,11 +1013,13 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         self.transaction = self.base / "kickoff operation"
         result = self.upgrade("--apply")
         self.assertEqual(0, result.returncode, result.stderr)
-        for name in KICKOFF_PATHS[:2]:
+        after = self.snapshot(self.target)
+        changed = paths[:2] if changed is None else changed
+        self.assertEqual(set(changed), {name for name in before.keys() | after.keys() if before.get(name) != after.get(name)})
+        for name in changed:
             self.assertNotEqual((old / PAYLOAD / name).read_bytes(), (ROOT / PAYLOAD / name).read_bytes())
             self.assertEqual((ROOT / PAYLOAD / name).read_bytes(), (self.target / name).read_bytes())
-        for name in ("README.md", "AGENTS.md", ".github/codex-instructions.md",
-                     ".github/docs/agreements/requirements.md"):
+        for name in preserved:
             self.assertEqual("Synthetic adopter-owned content\n", (self.target / name).read_text())
             self.assertEqual(0o600, (self.target / name).stat().st_mode & 0o777)
         result = self.rollback("--apply")
@@ -547,17 +1027,75 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         self.assertEqual(before, self.snapshot(self.target))
         self.assertEqual(modes, {str(path.relative_to(self.target)): path.stat().st_mode for path in self.target.rglob("*")})
 
+    def test_kickoff_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(KICKOFF_PATHS, KICKOFF_BASE)
+
+    def test_task_creation_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(TASK_CREATION_PATHS, TASK_CREATION_BASE)
+
+    def test_source_preparation_combined_three_engine_upgrade_and_rollback_preserve_registry(self):
+        paths = TASK_CREATION_PATHS + (SOURCE_REGISTRY_PATH,)
+        self.assert_payload_upgrade_preserves_adopter_state(paths, TASK_CREATION_BASE, changed=paths)
+
     def test_kickoff_changes_only_three_payload_bytes_and_no_layout_or_modes(self):
         old = subprocess.check_output(["git", "-C", str(ROOT), "show", KICKOFF_BASE + ":" + INVENTORY], text=True)
         old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
-        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        accepted = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_CREATION_BASE + ":" + INVENTORY], text=True)
+        new_rows = [line.split("\t") for line in accepted.splitlines() if line and not line.startswith("#")]
         self.assertEqual(47, len(new_rows))
         self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
         self.assertEqual(set(KICKOFF_PATHS), {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
         for name, _kind, digest in new_rows:
+            if name not in KICKOFF_PATHS:
+                continue
             path = ROOT / PAYLOAD / name
             self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest())
             self.assertEqual(0o644, path.stat().st_mode & 0o777)
+
+    def test_task_creation_changes_only_three_payload_bytes_and_no_layout_or_modes(self):
+        old = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_CREATION_BASE + ":" + INVENTORY], text=True)
+        old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
+        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        self.assertEqual(47, len(new_rows))
+        self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
+        self.assertEqual(set(TASK_CREATION_PATHS + (SOURCE_REGISTRY_PATH,)),
+                         {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
+        for name, _kind, digest in new_rows:
+            self.assertEqual(digest, hashlib.sha256((ROOT / PAYLOAD / name).read_bytes()).hexdigest())
+            self.assertEqual(0o644, (ROOT / PAYLOAD / name).stat().st_mode & 0o777)
+
+    def test_task_creation_checker_rejects_resealed_unsafe_readiness_and_source_drift(self):
+        source, checker = self.complete_checker_source()
+        path = source / PAYLOAD / TASK_CREATION_PATHS[1]
+        original = path.read_text()
+        for old, replacement in (
+            ('--label "type:task,exec:$EXEC"', '--label "type:task,exec:$EXEC,ai:ready"'),
+            ('read_back false || unconfirmed "Task read-back"', ': # omitted read-back'),
+            ('read_back true || unconfirmed "Task readiness read-back"', ': # omitted final verification'),
+            ('"$DEPS" =~ ^[1-9][0-9]*(,[1-9][0-9]*)*$', 'true'),
+        ):
+            with self.subTest(replacement=replacement):
+                self.assertIn(old, original)
+                path.write_text(original.replace(old, replacement))
+                self.reseal_payload(source)
+                self.assertTrue(any("task creation" in error for error in checker.validate(source)))
+                path.write_text(original)
+                self.reseal_payload(source)
+        parity = source / ".github/distribution/source-parity.v1.json"
+        original_parity = parity.read_text()
+        for mutation in ("missing", "source", "extra", "digest", "mode"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original_parity)
+                record = value["task_creation"]
+                if mutation == "missing": del value["task_creation"]
+                elif mutation == "source": record["cli_source"] = "cli/cli@" + "0" * 40
+                elif mutation == "extra": record["retry"] = True
+                elif mutation == "digest": record["target_files"][0]["sha256"] = "0" * 64
+                else: record["target_files"][0]["mode"] = "100755"
+                parity.write_text(json.dumps(value))
+                self.assertTrue(any("task creation" in error for error in checker.validate(source)))
+        parity.write_text(original_parity)
+        self.assertEqual([], checker.validate(source))
 
     def upgrade_fixture(self):
         old = self.clone_source()

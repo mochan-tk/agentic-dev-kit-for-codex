@@ -22,8 +22,8 @@ REPOSITORY_COMPLETION = "docs/agreements/repository-completion.md"
 HIERARCHY_ISSUE = (
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/7"
 )
-CURRENT_TASK_ID = "T22"
-CURRENT_TASK_BRANCH = "codex/source-first-context-kickoff"
+CURRENT_TASK_ID = "T23"
+CURRENT_TASK_BRANCH = "codex/source-first-task-creation"
 EXPECTED_I02 = (
     "The Issue graph (repository initiative / Epic set -> Epic issue -> Task issue "
     "-> PR -> commits, checks, and evidence) is canonical; a GitHub Projects board "
@@ -521,15 +521,21 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.ACCEPTED_PHASE1_TREE, payload["phase"]["base_tree"]
         )
         active = [task for task in payload["tasks"] if task["state"] == "active"]
-        self.assertEqual(["T22"], [task["id"] for task in active])
+        self.assertEqual(["T23"], [task["id"] for task in active])
         self.assertEqual(
-            self.checker.EXPECTED_T22_PATHS,
+            self.checker.EXPECTED_T23_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
         self.assertEqual(11, len(active[0]["owned_paths"]))
-        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/37', active[0]['record'])
-        self.assertEqual('219202b28c980e417283d761dbd8515c8b38e69f', active[0]['base_commit'])
-        self.assertEqual('bce884e33cd4932c0a999070e57e84e9293ab032', active[0]['base_tree'])
+        self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/39', active[0]['record'])
+        self.assertEqual('7565593f470fa6515a138c730f2545595cbd888f', active[0]['base_commit'])
+        self.assertEqual('1fb6d53a58568a6a62ae9dfe5b2a6759d2f60273', active[0]['base_tree'])
+        t22 = next(task for task in payload['tasks'] if task['id'] == 'T22')
+        self.assertEqual('accepted', t22['state'])
+        self.assertEqual(3, len(t22['owned_paths']))
+        self.assertEqual(tuple(path for path in self.checker.EXPECTED_T22_PATHS
+                               if path not in self.checker.EXPECTED_T23_PATHS),
+                         tuple(entry['path'] for entry in t22['owned_paths']))
         t21 = next(task for task in payload['tasks'] if task['id'] == 'T21')
         self.assertEqual('accepted', t21['state'])
         self.assertEqual(4, len(t21['owned_paths']))
@@ -551,7 +557,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                          tuple(entry['path'] for entry in t19['owned_paths']))
         t14 = next(task for task in payload['tasks'] if task['id'] == 'T14')
         self.assertEqual('accepted', t14['state'])
-        self.assertEqual(43, len(t14['owned_paths']))
+        self.assertEqual(40, len(t14['owned_paths']))
         t18 = next(task for task in payload['tasks'] if task['id'] == 'T18')
         self.assertEqual('accepted', t18['state'])
         self.assertEqual(3, len(t18['owned_paths']))
@@ -562,7 +568,8 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.assertEqual(tuple(path for path in self.checker.EXPECTED_T14_PATHS
                                if path not in self.checker.EXPECTED_T18_PATHS
                                and path not in self.checker.EXPECTED_T19_PATHS
-                               and path not in self.checker.EXPECTED_T22_PATHS),
+                               and path not in self.checker.EXPECTED_T22_PATHS
+                               and path not in self.checker.EXPECTED_T23_PATHS),
                          tuple(entry['path'] for entry in t14['owned_paths']))
         self.assertEqual("accepted", next(task for task in payload["tasks"] if task["id"] == "T11")["state"])
         t10 = next(task for task in payload["tasks"] if task["id"] == "T10")
@@ -769,16 +776,20 @@ class RepositoryPolicyTest(unittest.TestCase):
         payload = copy.deepcopy(self.ownership_payload())
         phase0 = next(task for task in payload["tasks"] if task["id"] == "P00")
         phase0["state"] = "active"
-        self.assertEqual("T22", self.active_task(payload)["id"])
+        self.assertEqual("T23", self.active_task(payload)["id"])
         errors = []
         self.checker.validate_manifest(payload, errors)
         self.assert_rejected(errors, "exactly one active Task")
 
-    def test_t22_transition_rejects_binding_scope_and_accepted_owner_drift(self):
+    def test_t23_transition_rejects_binding_scope_and_accepted_owner_drift(self):
         for task_id, field, value in (
+            ('T23', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/37'),
+            ('T23', 'branch', 'codex/unreviewed'), ('T23', 'base_commit', '0' * 40),
+            ('T23', 'base_tree', '0' * 40), ('T23', 'state', 'accepted'),
+            ('T23', 'path_transitions', [{'operation': 'delete'}]), ('T23', 'owned_paths', []),
             ('T22', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/35'),
             ('T22', 'branch', 'codex/unreviewed'), ('T22', 'base_commit', '0' * 40),
-            ('T22', 'base_tree', '0' * 40), ('T22', 'state', 'accepted'),
+            ('T22', 'base_tree', '0' * 40), ('T22', 'state', 'active'),
             ('T22', 'path_transitions', [{'operation': 'delete'}]), ('T22', 'owned_paths', []),
             ('T21', 'record', 'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/33'),
             ('T21', 'branch', 'codex/unreviewed'), ('T21', 'base_commit', '0' * 40),
@@ -803,7 +814,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         self.active_task(payload)['owned_paths'][0]['mode'] = '100755'
         errors = []
         self.checker.validate_phase2_frontier(payload, errors)
-        self.assert_rejected(errors, 'T22 paths must all use mode 100644')
+        self.assert_rejected(errors, 'T23 paths must all use mode 100644')
 
     def test_connector_execution_authorization_is_one_exact_companion(self):
         errors = []
@@ -3139,7 +3150,7 @@ jobs:
                 )
                 if destination is not None:
                     # This synthetic transition owns its workflow edit explicitly;
-                    # the real T22 manifest must continue rejecting this expansion.
+                    # the real T23 manifest must continue rejecting this expansion.
                     owner = next(task for task in payload['tasks'] if any(
                         entry['path'] == '.github/workflows/ci.yml' for entry in task['owned_paths']))
                     entry = next(entry for entry in owner['owned_paths']
@@ -3159,7 +3170,7 @@ jobs:
                 self.assertEqual([], errors)
                 self.assert_rejected(
                     self.checker.validate_repository(fixture, environment={}),
-                    "ownership T22",
+                    "ownership T23",
                 )
 
     def test_execution_authorization_actually_wires_transition_validator(self):

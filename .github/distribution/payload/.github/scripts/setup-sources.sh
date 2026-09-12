@@ -88,6 +88,40 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || fail "not inside a git repository" \
           "run this from your project checkout (git init / git clone first)"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
+REGISTRY="$REPO_ROOT/$REGISTRY_REL"
+
+# Git resolves symlinked working directories. Check the logical invocation
+# inside this repository too, without policing OS ancestors above its root.
+PREFIX="$(git rev-parse --show-prefix)"
+LOGICAL_ROOT="$PWD"
+while [ -n "$PREFIX" ]; do
+  LOGICAL_ROOT="${LOGICAL_ROOT%/*}"
+  PREFIX="${PREFIX#*/}"
+done
+[ -n "$LOGICAL_ROOT" ] || LOGICAL_ROOT=/
+[ ! -L "$LOGICAL_ROOT" ] && [ "$(cd "$LOGICAL_ROOT" 2>/dev/null && pwd -P)" = "$REPO_ROOT" ] \
+  || fail "unsafe repository-relative invocation path"
+INVOCATION="$PWD"
+while [ "$INVOCATION" != "$LOGICAL_ROOT" ]; do
+  [ ! -L "$INVOCATION" ] && [ -d "$INVOCATION" ] \
+    || fail "unsafe repository-relative invocation path"
+  INVOCATION="${INVOCATION%/*}"
+done
+
+check_registry_path() {
+  local path="$REPO_ROOT" component
+  for component in .github docs context; do
+    path="$path/$component"
+    if [ -L "$path" ] || { [ -e "$path" ] && [ ! -d "$path" ]; }; then
+      fail "unsafe registry parent; no registry write attempted"
+    fi
+  done
+  if [ -L "$REGISTRY" ] || { [ -e "$REGISTRY" ] && [ ! -f "$REGISTRY" ]; }; then
+    fail "unsafe registry destination; no registry write attempted"
+  fi
+}
+check_registry_path
 
 REMOTE_URL="$(git config --get remote.origin.url 2>/dev/null || true)"
 [ -n "$REMOTE_URL" ] \
@@ -187,7 +221,7 @@ case "$SOURCE" in
     PIN="activation PR #<fill in from inside the activation PR>"
     ;;
   speckit)
-    SPEC_SHA="$(git log -1 --format=%H -- specs/ 2>/dev/null || true)"
+    SPEC_SHA="$(git -C "$REPO_ROOT" log -1 --format=%H -- specs/ 2>/dev/null || true)"
     if [ -n "$SPEC_SHA" ]; then
       PIN="specs/** adoption SHA $SPEC_SHA"
     else
@@ -204,8 +238,6 @@ ENTRY="## $SOURCE
 
 # --- Dry run / confirm / write -------------------------------------------
 
-REGISTRY="$REPO_ROOT/$REGISTRY_REL"
-
 if [ "$DRY_RUN" = "true" ]; then
   echo "dry-run: would write to $REGISTRY_REL:"
   echo
@@ -214,9 +246,14 @@ if [ "$DRY_RUN" = "true" ]; then
   exit 0
 fi
 
-if [ -f "$REGISTRY" ] && grep -q "^## $SOURCE\$" "$REGISTRY"; then
-  echo "'$SOURCE' is already registered in $REGISTRY_REL — nothing to do."
-  exit 0
+if [ -f "$REGISTRY" ]; then
+  found=0
+  grep -q "^## $SOURCE\$" "$REGISTRY" 2>/dev/null || found=$?
+  case "$found" in
+    0) echo "'$SOURCE' is already registered in $REGISTRY_REL — nothing to do."; exit 0 ;;
+    1) : ;;
+    *) fail "registry could not be read; no registry write attempted" ;;
+  esac
 fi
 
 if [ "$ASSUME_YES" != "true" ]; then
@@ -229,12 +266,16 @@ if [ "$ASSUME_YES" != "true" ]; then
   esac
 fi
 
-mkdir -p "$(dirname "$REGISTRY")"
-if [ -f "$REGISTRY" ]; then
-  printf '\n%s\n' "$ENTRY" >> "$REGISTRY"
-else
-  printf '%s\n\n%s\n' "$HEADER" "$ENTRY" > "$REGISTRY"
-fi
+check_registry_path
+mkdir -p "$(dirname "$REGISTRY")" 2>/dev/null || fail "registry parent creation failed"
+check_registry_path
+if ! {
+  if [ -f "$REGISTRY" ]; then
+    printf '\n%s\n' "$ENTRY" >> "$REGISTRY"
+  else
+    printf '%s\n\n%s\n' "$HEADER" "$ENTRY" > "$REGISTRY"
+  fi
+} 2>/dev/null; then fail "registry write failed; inspect before another explicit invocation"; fi
 
 echo "wrote $REGISTRY_REL ($SOURCE)."
 echo

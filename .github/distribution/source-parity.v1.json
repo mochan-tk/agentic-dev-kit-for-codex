@@ -25,7 +25,7 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "c88b2fe20240fa31aa34628e3937e972278c8a59c88a99b1a57e8ade42a5a7e2",
+      "target_sha256": "38924886ddb7b92226da776aad241b1b66be6598fd9380de4a85186368b1b095",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -46,7 +46,7 @@
       "destination": ".agents/skills/plan-management/scripts/new-task.sh",
       "source_path": ".github/skills/plan-management/scripts/new-task.sh",
       "source_blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
-      "target_sha256": "f96952a901917918f1cec29485a7bd12dc078d30a90c691b6dd943e8c43c486d",
+      "target_sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -380,7 +380,7 @@
       "destination": ".github/scripts/setup-sources.sh",
       "source_path": ".github/scripts/setup-sources.sh",
       "source_blob": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff",
-      "target_sha256": "9286fd7c6ff51664b903bc62bf3317fa3a9288dc6efc414d122a3f2b9b135e8c",
+      "target_sha256": "057b8501e276c61a5d4fef8905e2c81203a2fe4ea4aee66c7623cbfcf0c30e3e",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -474,6 +474,55 @@
         "path": "README.md",
         "mode": "100644",
         "sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b"
+      }
+    ]
+  },
+  "source_preparation": {
+    "schema": "source-registry-preparation/v1",
+    "source_files": {
+      ".github/scripts/setup-sources.sh": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff"
+    },
+    "integration": "explicit-existing-setup-sources-helper",
+    "adaptations": [
+      "Refuse unsafe repository-relative invocation ancestry and symlinked, obstructed or special registry paths before inspection or writing; no automatic repair or same-user race guarantee.",
+      "Preserve regular create/append, exact-heading duplicate no-op, write-free dry-run, bytes/modes, original preflight and pending-activation semantics; resolve specs pin from repository root for nested invocation.",
+      "Exercise installed registry-to-Task-to-unchanged-frontier flow only in stateful fake-GitHub fixtures; preparation proves neither activation nor context sufficiency nor dispatch authority."
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-and-stateful-fake-gh-only",
+    "target_files": [
+      {
+        "path": ".github/scripts/setup-sources.sh",
+        "mode": "100644",
+        "sha256": "057b8501e276c61a5d4fef8905e2c81203a2fe4ea4aee66c7623cbfcf0c30e3e"
+      }
+    ]
+  },
+  "task_creation": {
+    "schema": "task-creation-readback/v1",
+    "source_files": {
+      ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      ".github/skills/plan-management/scripts/new-task.sh": "1156b004fd554b12cdccf55bc5b62a98e3a82bda"
+    },
+    "cli_source": "cli/cli@b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0",
+    "cli_version": "2.96.0",
+    "strategy": "single-create-without-ready-verify-graph-optional-ready-verify-again",
+    "adaptations": [
+      "Retain source parent/blocker create flags and ready ownership validation; remove initial ai:ready because deferred linking is not atomic.",
+      "Bind repository and issue URLs, exact body/title, typed complete parent/blockers and labels before readiness, then verify the same identity and graph again.",
+      "Preserve uncertain write outcomes without automatic retry, deletion or repair; ai:ready means a complete brief, not closed blockers.",
+      "Bound and snapshot inputs; use real CLI export shapes with at most 50 complete blockers and fewer than 100 labels; keep private scratch data out of diagnostics."
+    ],
+    "evidence": "offline-real-bash-fake-gh-and-disposable-adopters-only",
+    "target_files": [
+      {
+        "path": ".agents/skills/plan-management/SKILL.md",
+        "mode": "100644",
+        "sha256": "38924886ddb7b92226da776aad241b1b66be6598fd9380de4a85186368b1b095"
+      },
+      {
+        "path": ".agents/skills/plan-management/scripts/new-task.sh",
+        "mode": "100644",
+        "sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c"
       }
     ]
   },

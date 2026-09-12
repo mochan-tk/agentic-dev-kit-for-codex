@@ -97,6 +97,18 @@ all closed.** This is the set an orchestrator may dispatch right now.
 
 ## Command cookbook
 
+If local source registration is needed, explicitly run
+`bash .github/scripts/setup-sources.sh --source builtin --yes` (or select
+`speckit`) before preparing Task inputs. This only prepares a pending registry
+for a human-reviewed activation PR; it proves neither activation nor context
+sufficiency. The helper refuses symlinked or obstructed registry paths and
+unsafe repository-relative invocation ancestry instead of repairing them.
+On refusal, stop this preparation sequence and inspect; do not create a Task
+as though preparation succeeded. `--dry-run` writes nothing but still performs
+the existing read-only GitHub preflight. No helper automatically invokes the
+next one or dispatches work. After approved context and a complete brief exist,
+use Task creation below; the frontier still separately checks open blockers.
+
 Body files start from the canonical templates bundled with this skill:
 `templates/epic-body.md` and `templates/task-body.md` (issue forms in
 `.github/ISSUE_TEMPLATE/` mirror the same sections but apply only to the
@@ -106,14 +118,12 @@ web UI).
 # Create an Epic (body: copy of templates/epic-body.md, filled in)
 gh issue create --title "Epic: <outcome>" --label "type:epic" --body-file epic-body.md
 
-# Create a Task under Epic #12, blocked by #14 and #15 — one call wires
-# parent, labels, and dependencies atomically
-# (.agents/skills/plan-management/scripts/new-task.sh wraps this call; body:
-#  copy of templates/task-body.md, filled in)
-gh issue create --title "<task title>" --label "type:task,exec:cloud,ai:ready" \
-  --body-file task-body.md --parent 12 --blocked-by 14,15
+# Create a Task under Epic #12, blocked by #14 and #15.
+# Body: copy of templates/task-body.md, filled in. Omit --ready for a draft.
+bash .agents/skills/plan-management/scripts/new-task.sh \
+  -t "<task title>" -b task-body.md -p 12 -e cloud -d 14,15 --ready
 
-# Re-wire ordering on an EXISTING issue (only here does edit stay in play)
+# Re-wire ordering on an EXISTING issue (explicit relationship change)
 gh issue edit 23 --add-blocked-by 22
 gh issue edit 23 --remove-blocked-by 14
 
@@ -121,6 +131,31 @@ gh issue edit 23 --remove-blocked-by 14
 gh issue view 23            # shows parent, Blocked by:, Blocking: rows
 gh issue list --label "ai:ready" --state open --json number,title,labels
 ```
+
+The helper creates once with parent and blocker flags but without `ai:ready`.
+One CLI call is not atomic: GitHub can create the issue before a deferred
+relationship update fails. It reads back exact issue identity, title/body,
+parent, complete requested blockers and required labels before optional ready
+labeling; it verifies the same state and identity again after adding readiness.
+Without `--ready`, it verifies the graph and never adds the label. Existing
+ownership-body validation still runs before a requested ready Task is created.
+
+Readiness means the brief is complete, not that blockers are closed; the
+unchanged frontier rule above decides dispatchability. An unavailable read,
+ambiguous create/link result or failed readiness operation is non-success.
+The server may already have changed, including an applied ready label. Inspect
+the known Task URL, when available, before another explicit invocation. Never
+automatically retry creation, delete the issue, repair relationships or infer
+that failure means no issue exists.
+
+Inputs are bounded to a 256-byte title, a nonempty body of at most 64 KiB and
+50 unique same-repository blocker numbers. Repository and issue URLs bind the
+selected host and repository. The helper uses the actual gh JSON export shapes:
+`parent` is an issue object, `blockedBy` has nodes and totalCount, and labels
+are a flat array. Missing/incomplete graph data or 100 labels refuse because
+that export cannot prove label completeness at its cap. Unsupported client
+responses also refuse. These are read-back guards, not an atomic transaction,
+authenticated actor boundary or protection from later concurrent changes.
 
 ## Roadmap scheduling
 

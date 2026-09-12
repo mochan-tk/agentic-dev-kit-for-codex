@@ -13,6 +13,39 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+SOURCE_PREPARATION_PATH = ".github/scripts/setup-sources.sh"
+SOURCE_PREPARATION_CONTRACT = {
+    "schema": "source-registry-preparation/v1",
+    "source_files": {".github/scripts/setup-sources.sh": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff"},
+    "integration": "explicit-existing-setup-sources-helper",
+    "adaptations": [
+        "Refuse unsafe repository-relative invocation ancestry and symlinked, obstructed or special registry paths before inspection or writing; no automatic repair or same-user race guarantee.",
+        "Preserve regular create/append, exact-heading duplicate no-op, write-free dry-run, bytes/modes, original preflight and pending-activation semantics; resolve specs pin from repository root for nested invocation.",
+        "Exercise installed registry-to-Task-to-unchanged-frontier flow only in stateful fake-GitHub fixtures; preparation proves neither activation nor context sufficiency nor dispatch authority.",
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-and-stateful-fake-gh-only",
+}
+TASK_CREATION_PATHS = (
+    ".agents/skills/plan-management/SKILL.md",
+    ".agents/skills/plan-management/scripts/new-task.sh",
+)
+TASK_CREATION_CONTRACT = {
+    "schema": "task-creation-readback/v1",
+    "source_files": {
+        ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
+        ".github/skills/plan-management/scripts/new-task.sh": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
+    },
+    "cli_source": "cli/cli@b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0",
+    "cli_version": "2.96.0",
+    "strategy": "single-create-without-ready-verify-graph-optional-ready-verify-again",
+    "adaptations": [
+        "Retain source parent/blocker create flags and ready ownership validation; remove initial ai:ready because deferred linking is not atomic.",
+        "Bind repository and issue URLs, exact body/title, typed complete parent/blockers and labels before readiness, then verify the same identity and graph again.",
+        "Preserve uncertain write outcomes without automatic retry, deletion or repair; ai:ready means a complete brief, not closed blockers.",
+        "Bound and snapshot inputs; use real CLI export shapes with at most 50 complete blockers and fewer than 100 labels; keep private scratch data out of diagnostics.",
+    ],
+    "evidence": "offline-real-bash-fake-gh-and-disposable-adopters-only",
+}
 KICKOFF_PATHS = (
     ".agents/skills/context-collection/SKILL.md",
     ".github/connectors/builtin.md",
@@ -373,6 +406,52 @@ def validate_context_kickoff(payload_data, parity):
                 errors.append("kickoff dangling installed resource: " + name)
     return errors
 
+def validate_task_creation(payload_data, parity):
+    """Pin the bounded helper adaptation; actual Bash fixtures test behavior."""
+    errors = []
+    record = parity.get("task_creation")
+    if not isinstance(record, dict) or set(record) != set(TASK_CREATION_CONTRACT) | {"target_files"}:
+        return ["task creation provenance fields are missing or unreviewed"]
+    if any(record.get(key) != value for key, value in TASK_CREATION_CONTRACT.items()):
+        errors.append("task creation source/readback/evidence contract drifted")
+    targets = record.get("target_files")
+    if (not isinstance(targets, list) or any(not isinstance(item, dict) for item in targets)
+            or [item.get("path") for item in targets] != list(TASK_CREATION_PATHS)):
+        return errors + ["task creation target inventory drifted"]
+    for item in targets:
+        if (set(item) != {"path", "mode", "sha256"} or item.get("mode") != "100644"
+                or item.get("sha256") != hashlib.sha256(payload_data[item["path"]]).hexdigest()):
+            errors.append("task creation target digest/mode/fields drifted")
+    script = payload_data[TASK_CREATION_PATHS[1]].decode()
+    if (script.count("gh issue create") != 1 or '--label "type:task,exec:$EXEC" --parent "$PARENT"' not in script
+            or '"$DEPS" =~ ^[1-9][0-9]*(,[1-9][0-9]*)*$' not in script
+            or 'read_back false || unconfirmed "Task read-back"' not in script
+            or 'read_back true || unconfirmed "Task readiness read-back"' not in script):
+        errors.append("task creation single-create/readiness guard drifted")
+    skill = payload_data[TASK_CREATION_PATHS[0]].decode()
+    if "dependencies atomically" in skill or 'exec:cloud,ai:ready"' in skill or "One CLI call is not atomic" not in skill:
+        errors.append("task creation Skill atomicity/readiness boundary drifted")
+    return errors
+
+def validate_source_preparation(payload_data, parity):
+    record = parity.get("source_preparation")
+    if not isinstance(record, dict) or set(record) != set(SOURCE_PREPARATION_CONTRACT) | {"target_files"}:
+        return ["source preparation provenance fields are missing or unreviewed"]
+    errors = []
+    if any(record.get(key) != value for key, value in SOURCE_PREPARATION_CONTRACT.items()):
+        errors.append("source preparation source/behavior/evidence contract drifted")
+    expected = [{"path": SOURCE_PREPARATION_PATH, "mode": "100644",
+                 "sha256": hashlib.sha256(payload_data[SOURCE_PREPARATION_PATH]).hexdigest()}]
+    if record.get("target_files") != expected:
+        errors.append("source preparation target digest/mode/fields drifted")
+    script = payload_data[SOURCE_PREPARATION_PATH].decode()
+    if (script.count("\ncheck_registry_path\n") != 3
+            or any(value not in script for value in ('[ -L "$path" ]', '[ -L "$REGISTRY" ]',
+                   '[ ! -L "$LOGICAL_ROOT" ]', '[ ! -L "$INVOCATION" ]',
+                   'status: pending-activation', 'git -C "$REPO_ROOT" log'))):
+        errors.append("source preparation path/pending-activation guard drifted")
+    return errors
+
 def validate(root):
     errors = []
     root = Path(root)
@@ -398,9 +477,11 @@ def validate(root):
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) != 0o644:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
+        errors.extend(validate_task_creation(payload_data, parity))
+        errors.extend(validate_source_preparation(payload_data, parity))
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
         if parity.get("limits") != INSTALLER_LIMITS:
