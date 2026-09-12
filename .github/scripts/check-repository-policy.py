@@ -67,6 +67,21 @@ T25_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43"
 T25_BRANCH = "codex/source-first-ritual-verification"
 T25_BASE_COMMIT = "d396865c0f5e23fa01bb790242835dda482d679d"
 T25_BASE_TREE = "17cf82b1cc305b3263e8a84e18beecdea91c32e5"
+T26_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/45"
+T26_BRANCH = "codex/source-first-completion-contract"
+T26_BASE_COMMIT = "4f34ffff13e82ca06b397fec4dae34483c9d9711"
+T26_BASE_TREE = "00a8a6eaa4fcc4ad1970f136ccd811a3b86e6fe6"
+EXPECTED_T26_PATHS = (
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/governance/source-first-completion.v1.json",
+    ".github/scripts/check-repository-policy.py",
+    "README.md",
+    "docs/agreements/source-first-completion.md",
+    "docs/distribution/source-first-installer.md",
+    "docs/known-limitations.md",
+    "tests/conformance/test_repository_policy.py",
+    "tests/conformance/test_source_first_completion.py",
+)
 EXPECTED_T25_PATHS = (
     ".github/distribution/payload.v1.tsv",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -1264,8 +1279,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T21 " + key + " drifted")
     entries = t21.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T21_PATHS if path not in EXPECTED_T22_PATHS and path not in EXPECTED_T25_PATHS):
-        errors.append("accepted ownership T21 must retain its reviewed three non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T21_PATHS if path not in EXPECTED_T22_PATHS and path not in EXPECTED_T25_PATHS and path not in EXPECTED_T26_PATHS):
+        errors.append("accepted ownership T21 must retain its reviewed two non-transferred paths")
     if t21.get("path_transitions") != []:
         errors.append("ownership T21 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1325,19 +1340,36 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t25, dict):
         errors.append("ownership manifest is missing T25")
         return
-    for key, expected in (("state", "active"), ("record", T25_RECORD),
+    for key, expected in (("state", "accepted"), ("record", T25_RECORD),
                           ("branch", T25_BRANCH), ("base_commit", T25_BASE_COMMIT),
                           ("base_tree", T25_BASE_TREE)):
         if t25.get(key) != expected:
             errors.append("ownership T25 " + key + " drifted")
     entries = t25.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != EXPECTED_T25_PATHS:
-        errors.append("ownership T25 must declare exactly the reviewed seventeen paths")
+    if actual != tuple(path for path in EXPECTED_T25_PATHS if path not in EXPECTED_T26_PATHS):
+        errors.append("accepted ownership T25 must retain its reviewed twelve non-transferred paths")
     if t25.get("path_transitions") != []:
         errors.append("ownership T25 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
         errors.append("ownership T25 paths must all use mode 100644")
+    t26 = task_by_id.get("T26")
+    if not isinstance(t26, dict):
+        errors.append("ownership manifest is missing T26")
+        return
+    for key, expected in (("state", "active"), ("record", T26_RECORD),
+                          ("branch", T26_BRANCH), ("base_commit", T26_BASE_COMMIT),
+                          ("base_tree", T26_BASE_TREE)):
+        if t26.get(key) != expected:
+            errors.append("ownership T26 " + key + " drifted")
+    entries = t26.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T26_PATHS:
+        errors.append("ownership T26 must declare exactly the reviewed nine paths")
+    if t26.get("path_transitions") != []:
+        errors.append("ownership T26 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T26 paths must all use mode 100644")
     if "T12" in task_by_id:
         errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 
@@ -3300,6 +3332,276 @@ def validate_hierarchy_and_completion(root: Path, errors: list[str]) -> None:
     )
 
 
+SOURCE_FIRST_RECORD = ".github/governance/source-first-completion.v1.json"
+SOURCE_FIRST_DEFINITION = "docs/agreements/source-first-completion.md"
+SF_MAX_BYTES = 524288
+SF_MAX_DEPTH = 12
+SF_MAX_NODES = 12000
+SF_MAX_STRING = 8192
+# Canonical UTF-8 JSON, sorted keys, no whitespace; a reviewed contract anchor,
+# not a signature, current GitHub attestation, or a future-HEAD self-binding.
+SF_REVIEWED_SEAL = "b6b54a55a3a00d594142cee1ec004e6899591320f7bb6e6986d78b7ada8c2da4"
+SF_DEFINITION_SHA = "c215cdc015f4cfac459c84d7f18042ab018944bed88976b1ec96d5278544988b"
+SF_SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
+SF_CRITERIA = [f"SF-{i:02d}" for i in range(1, 11)]
+SF_EVIDENCE = {
+    "E-01": ("source-provenance", "https://github.com/mochan-tk/agentic-dev-kit-for-copilot/tree/" + SF_SOURCE_COMMIT),
+    "E-02": ("historical-public-owner-acceptance", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-5645639250"),
+    "E-03": ("historical-public-planning-observation", PHASE2_EPIC + "#issuecomment-5632789475"),
+    "E-04": ("historical-public-aggregate", PHASE2_EPIC + "#issuecomment-5636800693"),
+    "E-05": ("required-ci-history", "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/34691197813"),
+    "E-06": ("historical-public-aggregate", PHASE2_EPIC + "#issuecomment-5645915187"),
+}
+SF_STATUS_MARKERS = (
+    "Source-first product completion",
+    "creation-time snapshot",
+    "original repository release gate",
+    "not acceptance evidence",
+)
+
+
+def source_first_json_limits(value: Any) -> None:
+    """Bound the parsed document iteratively, including object key strings."""
+    pending = [(value, 0)]
+    nodes = 0
+    while pending:
+        current, depth = pending.pop()
+        nodes += 1
+        if nodes > SF_MAX_NODES or depth > SF_MAX_DEPTH:
+            raise ValueError("source-first JSON structure limit")
+        if isinstance(current, str) and len(current) > SF_MAX_STRING:
+            raise ValueError("source-first JSON string limit")
+        if isinstance(current, dict):
+            pending.extend((item, depth + 1) for pair in current.items() for item in pair)
+        elif isinstance(current, list):
+            pending.extend((item, depth + 1) for item in current)
+
+
+def source_first_bytes(root: Path, relative: str) -> bytes:
+    """Read one bounded regular file with no-follow and stable directory/leaf bindings.
+
+    The trusted root is the caller's repository; this is not an isolation
+    guarantee against a malicious same-user process changing and restoring it.
+    """
+    if not valid_relative_path(relative):
+        raise ValueError("source-first relative path")
+    opened: list[int] = []
+    bindings: list[tuple[int, str, int]] = []
+    try:
+        root_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        opened.append(root_fd)
+        parent = root_fd
+        parts = PurePosixPath(relative).parts
+        for component in parts[:-1]:
+            child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+            opened.append(child)
+            bindings.append((parent, component, child))
+            parent = child
+        leaf = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+        opened.append(leaf)
+        before = os.fstat(leaf)
+        if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                or stat.S_IMODE(before.st_mode) != 0o644 or before.st_size > SF_MAX_BYTES):
+            raise ValueError("source-first file type, mode, links or size")
+        chunks = []
+        length = 0
+        while length <= SF_MAX_BYTES:
+            chunk = os.read(leaf, min(65536, SF_MAX_BYTES + 1 - length))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            length += len(chunk)
+        def identity(info: os.stat_result) -> tuple[int, ...]:
+            return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+                    info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+        if length > SF_MAX_BYTES or length != before.st_size:
+            raise ValueError("source-first unstable or oversized read")
+        if identity(before) != identity(os.fstat(leaf)) or identity(before) != identity(os.stat(parts[-1], dir_fd=parent, follow_symlinks=False)):
+            raise ValueError("source-first leaf binding drift")
+        for directory, name, descriptor in bindings:
+            path_stat = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            fd_stat = os.fstat(descriptor)
+            if not stat.S_ISDIR(path_stat.st_mode) or (path_stat.st_dev, path_stat.st_ino) != (fd_stat.st_dev, fd_stat.st_ino):
+                raise ValueError("source-first directory binding drift")
+        root_stat = os.stat(root, follow_symlinks=False)
+        root_open = os.fstat(root_fd)
+        if not stat.S_ISDIR(root_stat.st_mode) or (root_stat.st_dev, root_stat.st_ino) != (root_open.st_dev, root_open.st_ino):
+            raise ValueError("source-first root binding drift")
+        return b"".join(chunks)
+    finally:
+        for descriptor in reversed(opened):
+            os.close(descriptor)
+
+
+def source_first_json(root: Path, relative: str) -> dict[str, Any]:
+    def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("source-first duplicate JSON key")
+            result[key] = value
+        return result
+    def invalid_constant(_value: str) -> Any:
+        raise ValueError("source-first invalid JSON constant")
+    def bounded_integer(value: str) -> int:
+        if len(value) > 128:
+            raise ValueError("source-first integer token limit")
+        return int(value)
+    value = json.loads(source_first_bytes(root, relative).decode("utf-8"),
+                       object_pairs_hook=pairs, parse_constant=invalid_constant,
+                       parse_int=bounded_integer)
+    source_first_json_limits(value)
+    if not isinstance(value, dict):
+        raise ValueError("source-first JSON root")
+    return value
+
+
+def validate_source_first_completion(root: Path, errors: list[str]) -> None:
+    """Validate a closed creation-time product contract, never an acceptance verdict."""
+    try:
+        record = source_first_json(root, SOURCE_FIRST_RECORD)
+        if set(record) != {"schema", "product_state", "repository_state", "release_blocked",
+                           "snapshot", "current_acceptance_authority", "authority", "baseline",
+                           "source", "definition", "evidence_policy", "protected_files",
+                           "criteria", "contracts", "scenarios", "evidence"}:
+            raise ValueError("source-first root fields")
+        if (record["schema"] != "source-first-completion/v1"
+                or record["product_state"] != "incomplete" or record["repository_state"] != "incomplete"
+                or record["release_blocked"] is not True
+                or record["snapshot"] != "creation-time-not-current-github-outcome"
+                or record["current_acceptance_authority"] != [T26_RECORD, PHASE2_EPIC]):
+            raise ValueError("source-first status boundary")
+        if record["authority"] != {"task": T26_RECORD,
+                                   "plan": T26_RECORD + "#issuecomment-5647077467",
+                                   "owner_decision": PHASE2_EPIC + "#issuecomment-5647076985"}:
+            raise ValueError("source-first authority binding")
+        if record["baseline"] != {"commit": T26_BASE_COMMIT, "tree": T26_BASE_TREE}:
+            raise ValueError("source-first accepted baseline")
+        if record["source"] != {"repository": "mochan-tk/agentic-dev-kit-for-copilot", "commit": SF_SOURCE_COMMIT}:
+            raise ValueError("source-first source binding")
+        if record["definition"] != {"path": SOURCE_FIRST_DEFINITION, "sha256": SF_DEFINITION_SHA}:
+            raise ValueError("source-first definition binding")
+        if hashlib.sha256(source_first_bytes(root, SOURCE_FIRST_DEFINITION)).hexdigest() != SF_DEFINITION_SHA:
+            raise ValueError("source-first definition drift")
+        if record["evidence_policy"] != {
+            "checker_result": "contract-integrity-and-traceability-only",
+            "canonical_results": "unchanged-not-run-empty-release-blocked",
+            "historical_evidence": "requires-currentness-or-human-reviewed-equivalence",
+            "private_evidence": "public-aggregate-only-underlying-records-require-private-owner-verification",
+        }:
+            raise ValueError("source-first evidence policy")
+
+        def rows(value: Any, identifiers: list[str], fields: set[str]) -> list[dict[str, Any]]:
+            if (not isinstance(value, list) or len(value) != len(identifiers)
+                    or any(not isinstance(row, dict) or set(row) != fields for row in value)
+                    or [row["id"] for row in value] != identifiers):
+                raise ValueError("source-first row inventory or fields")
+            return value
+
+        evidence = rows(record["evidence"], list(SF_EVIDENCE),
+                        {"id", "evidence_class", "reference", "scope", "limitation"})
+        for row in evidence:
+            if (row["evidence_class"], row["reference"]) != SF_EVIDENCE[row["id"]]:
+                raise ValueError("source-first evidence class or locator")
+            if not all(isinstance(row[key], str) and row[key] for key in ("scope", "limitation")):
+                raise ValueError("source-first missing evidence limitation")
+        protected = record["protected_files"]
+        if not isinstance(protected, list) or not protected:
+            raise ValueError("source-first protected inventory")
+        seen: list[str] = []
+        for row in protected:
+            if not isinstance(row, dict) or set(row) != {"path", "mode", "sha256"} or row["mode"] != "100644":
+                raise ValueError("source-first protected fields")
+            if not isinstance(row["path"], str) or not valid_relative_path(row["path"]):
+                raise ValueError("source-first protected path")
+            seen.append(row["path"])
+            if hashlib.sha256(source_first_bytes(root, row["path"])).hexdigest() != row["sha256"]:
+                raise ValueError("source-first protected content drift")
+        if seen != sorted(set(seen)):
+            raise ValueError("source-first duplicate protected path")
+        parity = source_first_json(root, ".github/distribution/source-parity.v1.json")
+        source_blobs = {row["source_path"]: row["source_blob"] for row in parity["files"]}
+        for value in parity.values():
+            if isinstance(value, dict):
+                source_blobs.update(value.get("source_files", {}))
+        criteria = rows(record["criteria"], SF_CRITERIA,
+                        {"id", "capability", "source_files", "required_evidence", "evidence", "acceptance"})
+        for row in criteria:
+            if row["acceptance"] != "pending-current-owner-review":
+                raise ValueError("source-first unsupported criterion acceptance")
+            if not all(isinstance(row[key], str) and row[key] for key in ("capability", "required_evidence")):
+                raise ValueError("source-first missing criterion meaning")
+            if (not isinstance(row["evidence"], list) or not row["evidence"]
+                    or any(not isinstance(item, str) or item not in SF_EVIDENCE for item in row["evidence"])
+                    or len(row["evidence"]) != len(set(row["evidence"]))):
+                raise ValueError("source-first criterion evidence references")
+            sources = row["source_files"]
+            if not isinstance(sources, list) or not sources:
+                raise ValueError("source-first criterion source inventory")
+            seen_sources = []
+            for source in sources:
+                if not isinstance(source, dict) or set(source) != {"source_path", "source_blob", "target_path", "target_sha256"}:
+                    raise ValueError("source-first source fields")
+                if (not isinstance(source["source_path"], str)
+                        or source_blobs.get(source["source_path"]) != source["source_blob"]
+                        or not isinstance(source["target_path"], str)):
+                    raise ValueError("source-first frozen source blob")
+                if hashlib.sha256(source_first_bytes(root, source["target_path"])).hexdigest() != source["target_sha256"]:
+                    raise ValueError("source-first target source digest")
+                seen_sources.append((source["source_path"], source["target_path"]))
+            if len(seen_sources) != len(set(seen_sources)):
+                raise ValueError("source-first duplicate criterion source")
+        original = source_first_json(root, CONFORMANCE_MANIFEST)
+        contracts = rows(record["contracts"], [f"K{i:02d}" for i in range(1, 21)],
+                         {"id", "original_sha256", "criterion", "scope", "original_obligation"})
+        originals = {row["id"]: row for row in original["contracts"]}
+        for row in contracts:
+            if (row["original_sha256"] != hashlib.sha256(originals[row["id"]]["contract"].encode()).hexdigest()
+                    or row["criterion"] not in SF_CRITERIA or not isinstance(row["scope"], str) or not row["scope"]
+                    or row["original_obligation"] != "retained-in-repository-release-dod"):
+                raise ValueError("source-first original contract semantics")
+        catalog = source_first_json(root, "tests/conformance/catalog.json")
+        original_scenarios = [s for family in catalog["families"] for s in family["scenarios"]]
+        scenarios = rows(record["scenarios"], [s["id"] for s in original_scenarios],
+                         {"id", "title", "expected_sha256", "applicability", "criterion", "rationale", "original_verification_state"})
+        if len(scenarios) != 136:
+            raise ValueError("source-first original scenario count")
+        for row, original_row in zip(scenarios, original_scenarios):
+            if (row["title"] != original_row["title"]
+                    or row["expected_sha256"] != hashlib.sha256(original_row["expected"]["text"].encode()).hexdigest()
+                    or row["applicability"] not in ("retained", "adapted", "supplemental")
+                    or row["criterion"] not in SF_CRITERIA
+                    or not isinstance(row["rationale"], str) or not row["rationale"]
+                    or row["original_verification_state"] != "not-run"):
+                raise ValueError("source-first scenario meaning or result laundering")
+        coverage = source_first_json(root, COVERAGE)
+        results = source_first_json(root, CONFORMANCE_RESULTS)
+        if ([row["scenario"] for row in coverage["entries"]] != [s["id"] for s in original_scenarios]
+                or any(row["verification_state"] != "not-run" for row in coverage["entries"])
+                or results["results"] != [] or type(results["result_count"]) is not int or results["result_count"] != 0
+                or results["release_blocked"] is not True or original["results"] != [] or original["release_blocked"] is not True):
+            raise ValueError("source-first canonical results changed")
+        for relative in ("README.md", "docs/known-limitations.md", "docs/distribution/source-first-installer.md"):
+            text = " ".join(source_first_bytes(root, relative).decode("utf-8").split())
+            if any(marker not in text for marker in SF_STATUS_MARKERS):
+                raise ValueError("source-first user-facing status boundary")
+        # This guard supplements existing versioned command/discovery validation.
+        # Inspect executable syntax, not a comment containing the call name.
+        syntax = ast.parse(source_first_bytes(root, ".github/scripts/check-repository-policy.py"))
+        functions = [n for n in syntax.body if isinstance(n, ast.FunctionDef) and n.name == "validate_repository"]
+        calls = [n for n in functions[0].body if isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)
+                 and isinstance(n.value.func, ast.Name) and n.value.func.id == "validate_source_first_completion"] if len(functions) == 1 else []
+        if len(calls) != 1 or ast.dump(calls[0].value) != ast.dump(ast.parse("validate_source_first_completion(root, errors)").body[0].value):
+            raise ValueError("source-first unconditional policy call")
+        source_first_bytes(root, "tests/conformance/test_source_first_completion.py")
+        canonical = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != SF_REVIEWED_SEAL:
+            raise ValueError("source-first reviewed record drift")
+    except (OSError, ValueError, UnicodeError, RecursionError, KeyError, TypeError, AttributeError, SyntaxError):
+        # Bounded fixed diagnostic: never echo record text, private path or values.
+        errors.append("source-first completion contract: missing, unsafe, malformed or unreviewed evidence/traceability binding")
+
+
 def workflow_job_blocks(text: str) -> dict[str, str]:
     lines = text.splitlines()
     try:
@@ -3690,6 +3992,7 @@ def validate_repository(
     validate_invariants(root, policy, errors)
     validate_t11_agreement_v2(root, errors)
     validate_hierarchy_and_completion(root, errors)
+    validate_source_first_completion(root, errors)
     validate_workflows(root, policy, errors)
     validate_historical_phase1_checker_boundary(root, payload, policy, errors)
     validate_offline_runtime_checker_boundary(root, errors)

@@ -29,6 +29,17 @@ known source defects.
 
 ## Install the source-first kit locally
 
+### Source-first product completion
+
+The [additive product contract](docs/agreements/source-first-completion.md)
+defines ten adopter-facing acceptance criteria and maps all original contracts
+and scenarios without turning applicability into results. Its creation-time
+snapshot is incomplete; the current owner outcome is external Issue #45 /
+Epic #22 state. Contract-validation success is not acceptance evidence.
+The original repository release gate remains unchanged and incomplete:
+all 136 scenarios remain `not-run`, `results: []`, `release_blocked=true`.
+The accepted kit's local capabilities below do not require resuming T12.
+
 Review a local checkout, then run the explicit dry-run before applying to an
 existing adopter Git repository that you own exclusively during installation:
 

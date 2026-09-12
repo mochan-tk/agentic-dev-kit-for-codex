@@ -1,0 +1,1856 @@
+{
+  "schema": "source-first-completion/v1",
+  "product_state": "incomplete",
+  "repository_state": "incomplete",
+  "release_blocked": true,
+  "snapshot": "creation-time-not-current-github-outcome",
+  "current_acceptance_authority": [
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/45",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22"
+  ],
+  "authority": {
+    "task": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/45",
+    "plan": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/45#issuecomment-5647077467",
+    "owner_decision": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22#issuecomment-5647076985"
+  },
+  "baseline": {
+    "commit": "4f34ffff13e82ca06b397fec4dae34483c9d9711",
+    "tree": "00a8a6eaa4fcc4ad1970f136ccd811a3b86e6fe6"
+  },
+  "source": {
+    "repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
+  },
+  "definition": {
+    "path": "docs/agreements/source-first-completion.md",
+    "sha256": "c215cdc015f4cfac459c84d7f18042ab018944bed88976b1ec96d5278544988b"
+  },
+  "evidence_policy": {
+    "checker_result": "contract-integrity-and-traceability-only",
+    "canonical_results": "unchanged-not-run-empty-release-blocked",
+    "historical_evidence": "requires-currentness-or-human-reviewed-equivalence",
+    "private_evidence": "public-aggregate-only-underlying-records-require-private-owner-verification"
+  },
+  "protected_files": [
+    {
+      "path": ".github/distribution/payload.v1.tsv",
+      "mode": "100644",
+      "sha256": "9121ca678be6d890085a866a004ba48e09460afc7b9b4ed3cf0c6baac7a9819c"
+    },
+    {
+      "path": ".github/distribution/source-parity.v1.json",
+      "mode": "100644",
+      "sha256": "b7cf08567426f4dd2066c4caa2fbe3562c05d7ed43372752f1a0de8c04a6bf7c"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "sha256": "da613a06d56b09fc4d12cd8eb07b4f40a2cf26ea1d88990b6f9105ac6fdd2691"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "sha256": "86751d8aea8245da7286f0d5c57bf49f3b0027f1a86b5089fb183c344abe55fc"
+    },
+    {
+      "path": "docs/agreements/repository-completion.md",
+      "mode": "100644",
+      "sha256": "c1cf6dbb1efd0438f1387b33416743433fb94bf376a4c0fa9ecf76a8da3f880d"
+    },
+    {
+      "path": "docs/context/pins/PIN-0001.context-pin.v1.json",
+      "mode": "100644",
+      "sha256": "52fd6bfbe19fb2362491365abd2d5ae3da558b395fe52dc54e88f790845f879e"
+    },
+    {
+      "path": "docs/context/pins/PIN-0002.context-pin.v1.json",
+      "mode": "100644",
+      "sha256": "b10b18d19049c2c60d62c4eab91eecbc7bc422d873f68bcade6adbb36f9409eb"
+    },
+    {
+      "path": "docs/planning/phase-0-orientation.md",
+      "mode": "100644",
+      "sha256": "31f9b94fe8fdd71d747b647a2580a981f6502a3f007e736160f036ac7e4b1b0a"
+    },
+    {
+      "path": "tests/conformance/catalog.json",
+      "mode": "100644",
+      "sha256": "418bf8aa01674dc0c78cc615ad8e278ed06df1a952bb4670ec42e3bdd7dacc3d"
+    },
+    {
+      "path": "tests/conformance/coverage.json",
+      "mode": "100644",
+      "sha256": "e52fe6f3e73248b69114261d137aa775e9ce021b44602a78c8d10f8bfd327808"
+    },
+    {
+      "path": "tests/conformance/manifest.json",
+      "mode": "100644",
+      "sha256": "aa86970e10e615e89e2e313cb16a45e9d71dc0584060db69403d9e8800e9a3be"
+    },
+    {
+      "path": "tests/conformance/results.json",
+      "mode": "100644",
+      "sha256": "1316a58941f3c8aa6eab86132e27d879722934f117e8527089225c8cf69449fb"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "SF-01",
+      "capability": "Durable authority, roles, ownership and human gates",
+      "source_files": [
+        {
+          "source_path": "AGENTS.md",
+          "source_blob": "d575018d2d456c9376144495467cfcf8ac498b96",
+          "target_path": ".github/distribution/payload/AGENTS.md",
+          "target_sha256": "39cd615ea25de9d8b368d269facfdc6fec39490bb97db9633e3be6667becc5ae"
+        },
+        {
+          "source_path": "docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+          "source_blob": "f07906ce7eea7dc45b04cbdd1b739557ec018df8",
+          "target_path": ".github/distribution/payload/docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+          "target_sha256": "b2d95256c31e84fb9211485b34aef15447cc8fd44fc7969c2fe80f9a4c9c83e2"
+        },
+        {
+          "source_path": ".github/scripts/ownership-overlap.sh",
+          "source_blob": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
+          "target_path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+          "target_sha256": "825af02f0a749a83122670570ab8ef9b34952f7895b23f70a4949dd6ca40f002"
+        }
+      ],
+      "required_evidence": "Inspect source-derived instructions and exercise supported ownership and refusal behavior; no authenticated identity claim.",
+      "evidence": [
+        "E-01",
+        "E-02"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-02",
+      "capability": "Context collection, drafting, provenance and review",
+      "source_files": [
+        {
+          "source_path": ".github/skills/context-collection/SKILL.md",
+          "source_blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+          "target_path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+          "target_sha256": "b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97"
+        },
+        {
+          "source_path": ".github/skills/context-distillation/SKILL.md",
+          "source_blob": "4f2e57a7f613cdadb7c7d76306c3a04458ca7b08",
+          "target_path": ".github/distribution/payload/.agents/skills/context-distillation/SKILL.md",
+          "target_sha256": "3d6e4955a67f83758cf15ad96e4357de0a64a67e24394aed61f2c7d563f41a62"
+        },
+        {
+          "source_path": ".github/scripts/setup-sources.sh",
+          "source_blob": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff",
+          "target_path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+          "target_sha256": "535f3faaa8822bbdb3a87b187b300b2d39a78ca17fb9938a3771822f38f72d52"
+        }
+      ],
+      "required_evidence": "Separate helper structure and draft guidance from observed material quality, activation, pin authenticity and sufficiency.",
+      "evidence": [
+        "E-01",
+        "E-02"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-03",
+      "capability": "Epic/Task/PR ledgers and eight reachable Skills",
+      "source_files": [
+        {
+          "source_path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+          "source_blob": "f8d70b3d44f53de307d88284f192da79cdf45fdd",
+          "target_path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
+          "target_sha256": "228cf273cc279e696518a266b1f64d8da3ef45b2e021233b865582af1bbab3de"
+        },
+        {
+          "source_path": ".github/ISSUE_TEMPLATE/epic.yml",
+          "source_blob": "2fd09aceddf192a2d2c1816dcdc2a25873340da4",
+          "target_path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/epic.yml",
+          "target_sha256": "fa13a17f61dcde61d32f5f3477cc76005d34ec487603e361fe22253c1d081b3a"
+        },
+        {
+          "source_path": ".github/PULL_REQUEST_TEMPLATE.md",
+          "source_blob": "145a05bbc0050c215b397e7d7c029507c7f065fa",
+          "target_path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
+          "target_sha256": "a277e46753c687d79a5e67e29c0dd04c49e1bc3c48171a5e17e25def4c2955be"
+        },
+        {
+          "source_path": ".github/skills/context-collection/SKILL.md",
+          "source_blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+          "target_path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+          "target_sha256": "b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97"
+        },
+        {
+          "source_path": ".github/skills/context-distillation/SKILL.md",
+          "source_blob": "4f2e57a7f613cdadb7c7d76306c3a04458ca7b08",
+          "target_path": ".github/distribution/payload/.agents/skills/context-distillation/SKILL.md",
+          "target_sha256": "3d6e4955a67f83758cf15ad96e4357de0a64a67e24394aed61f2c7d563f41a62"
+        },
+        {
+          "source_path": ".github/skills/plan-management/SKILL.md",
+          "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
+          "target_path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+          "target_sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+        },
+        {
+          "source_path": ".github/skills/project-onboarding/SKILL.md",
+          "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
+          "target_path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+          "target_sha256": "96659cf8d0c291a904ed303196d1a9d4be0a95da221105d07188d54a3c25015a"
+        },
+        {
+          "source_path": ".github/skills/retro/SKILL.md",
+          "source_blob": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
+          "target_path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
+          "target_sha256": "e9fa3642573da3fa657dfeae2cafdea8cf393c53d3d51507d2c2b95494c1559a"
+        },
+        {
+          "source_path": ".github/skills/session-orchestration/SKILL.md",
+          "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+          "target_path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+          "target_sha256": "271204335f00e2c1cc09c051786ca034f27136eab90463db72702ef6044334dd"
+        },
+        {
+          "source_path": ".github/skills/task-routing/SKILL.md",
+          "source_blob": "30a6b0123f82b15f6379a4b1e62f5c6d30c7e984",
+          "target_path": ".github/distribution/payload/.agents/skills/task-routing/SKILL.md",
+          "target_sha256": "c378850de4a1b45471361c06438aa057603681c4073bfc5b113a8866577b4ac2"
+        },
+        {
+          "source_path": ".github/skills/verification/SKILL.md",
+          "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+          "target_path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "target_sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+        }
+      ],
+      "required_evidence": "Require complete payload and resource/trigger checks; named-client invocation is separate from static validation.",
+      "evidence": [
+        "E-01",
+        "E-02"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-04",
+      "capability": "Source-role execution guidance and explicit Codex handoff",
+      "source_files": [
+        {
+          "source_path": ".github/agents/orchestrator.agent.md",
+          "source_blob": "5574a1422f53651330a204dce08dce49ea4c1f59",
+          "target_path": ".github/distribution/payload/.codex/agents/orchestrator.toml",
+          "target_sha256": "516ac001433c8bae32c8c3ed3cfef26b4c08abaecf4a2ed85d4772b416b6bac9"
+        },
+        {
+          "source_path": ".github/agents/planner.agent.md",
+          "source_blob": "7227835f359f3383cd2ddbc47ffb69e5e1ce867e",
+          "target_path": ".github/distribution/payload/.codex/agents/planner.toml",
+          "target_sha256": "041d2818858e6369a60651fef5f273f840edc104560fd8b3d363f41db3be57f2"
+        },
+        {
+          "source_path": ".github/agents/reviewer.agent.md",
+          "source_blob": "36901b4a8835ebe8f0989994bf3847bcd2809beb",
+          "target_path": ".github/distribution/payload/.codex/agents/reviewer.toml",
+          "target_sha256": "24561aab8290a75b2ebed0037e5fc0a6ee641d05e32e7f85810ed1a2856b8ee5"
+        },
+        {
+          "source_path": ".github/skills/session-orchestration/SKILL.md",
+          "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+          "target_path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+          "target_sha256": "271204335f00e2c1cc09c051786ca034f27136eab90463db72702ef6044334dd"
+        },
+        {
+          "source_path": ".github/skills/task-routing/SKILL.md",
+          "source_blob": "30a6b0123f82b15f6379a4b1e62f5c6d30c7e984",
+          "target_path": ".github/distribution/payload/.agents/skills/task-routing/SKILL.md",
+          "target_sha256": "c378850de4a1b45471361c06438aa057603681c4073bfc5b113a8866577b4ac2"
+        }
+      ],
+      "required_evidence": "Three source roles, sibling-Epic coordination and manual fallback; native six-role, envelopes/events and adapter remain separate.",
+      "evidence": [
+        "E-01",
+        "E-02",
+        "E-03"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-05",
+      "capability": "Preservation-safe local install, update and operation rollback",
+      "source_files": [
+        {
+          "source_path": "README.md",
+          "source_blob": "76480f3ae0458926d854e62f51d10958ff229bd3",
+          "target_path": ".github/distribution/payload/README.md",
+          "target_sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b"
+        },
+        {
+          "source_path": ".github/scripts/scaffold-init.sh",
+          "source_blob": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+          "target_path": ".github/scripts/scaffold-init.sh",
+          "target_sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2"
+        }
+      ],
+      "required_evidence": "Actual Bash/disposable-adopter evidence; retain refusal of arbitrary partial bytes and affected-file edits, no whole-repository reset.",
+      "evidence": [
+        "E-01",
+        "E-02"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-06",
+      "capability": "Ordinary Task lifecycle, current read-backs and optional governance",
+      "source_files": [
+        {
+          "source_path": ".github/skills/plan-management/scripts/new-task.sh",
+          "source_blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
+          "target_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+          "target_sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c"
+        },
+        {
+          "source_path": ".github/skills/plan-management/scripts/frontier.sh",
+          "source_blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+          "target_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+          "target_sha256": "4bc5e92dd5054e09027238bafa77e4859fa0a4012f6398a7741bff16804aeb71"
+        },
+        {
+          "source_path": ".github/scripts/check-task-ritual.sh",
+          "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
+          "target_path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+          "target_sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
+        },
+        {
+          "source_path": ".github/skills/verification/SKILL.md",
+          "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+          "target_path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "target_sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+        },
+        {
+          "source_path": ".github/scripts/setup-ruleset.sh",
+          "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
+          "target_path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+          "target_sha256": "a2aebd9b863ebaaa49a9e7d322e4600975b928a3e38550ea1c2a52a1519d5cb8"
+        }
+      ],
+      "required_evidence": "Separate complete synthetic transport tests from actual GitHub state; optional setup is not automatically enabled governance.",
+      "evidence": [
+        "E-01",
+        "E-02"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-07",
+      "capability": "Privacy, explicit consent and bounded feedback/retro",
+      "source_files": [
+        {
+          "source_path": ".github/skills/retro/SKILL.md",
+          "source_blob": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
+          "target_path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
+          "target_sha256": "e9fa3642573da3fa657dfeae2cafdea8cf393c53d3d51507d2c2b95494c1559a"
+        },
+        {
+          "source_path": ".github/scripts/feedback-lib.sh",
+          "source_blob": "b09747ae0bc8ffa2183fec48b578b97cdb45c67b",
+          "target_path": ".github/scripts/feedback-lib.sh",
+          "target_sha256": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20"
+        }
+      ],
+      "required_evidence": "Fake-send and draft evidence are not public delivery, receiving workflow or a live learning loop.",
+      "evidence": [
+        "E-01",
+        "E-02"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-08",
+      "capability": "Current repository verification and documented source corrections",
+      "source_files": [
+        {
+          "source_path": ".github/skills/verification/SKILL.md",
+          "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+          "target_path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "target_sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+        }
+      ],
+      "required_evidence": "Current candidate checks are recorded externally; historical CI and totals do not satisfy individual scenarios or current product acceptance.",
+      "evidence": [
+        "E-01",
+        "E-02",
+        "E-05"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-09",
+      "capability": "Truthful scope, source adaptations and release separation",
+      "source_files": [
+        {
+          "source_path": "AGENTS.md",
+          "source_blob": "d575018d2d456c9376144495467cfcf8ac498b96",
+          "target_path": ".github/distribution/payload/AGENTS.md",
+          "target_sha256": "39cd615ea25de9d8b368d269facfdc6fec39490bb97db9633e3be6667becc5ae"
+        },
+        {
+          "source_path": "README.md",
+          "source_blob": "76480f3ae0458926d854e62f51d10958ff229bd3",
+          "target_path": ".github/distribution/payload/README.md",
+          "target_sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b"
+        }
+      ],
+      "required_evidence": "Keep N1, unmeasured platform/runtime clauses and original full repository DoD; no acceptance inferred from this record.",
+      "evidence": [
+        "E-01",
+        "E-02",
+        "E-03",
+        "E-04"
+      ],
+      "acceptance": "pending-current-owner-review"
+    },
+    {
+      "id": "SF-10",
+      "capability": "Meaningful observed adopter use and separately observed recovery",
+      "source_files": [
+        {
+          "source_path": ".github/skills/project-onboarding/SKILL.md",
+          "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
+          "target_path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+          "target_sha256": "96659cf8d0c291a904ed303196d1a9d4be0a95da221105d07188d54a3c25015a"
+        },
+        {
+          "source_path": ".github/skills/session-orchestration/SKILL.md",
+          "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+          "target_path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+          "target_sha256": "271204335f00e2c1cc09c051786ca034f27136eab90463db72702ef6044334dd"
+        },
+        {
+          "source_path": ".github/skills/verification/SKILL.md",
+          "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+          "target_path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "target_sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+        }
+      ],
+      "required_evidence": "Privately verify underlying accepted ordinary-use and replan/recovery evidence and compare relevant bytes to the completion head; cooperative replacement is not crash recovery.",
+      "evidence": [
+        "E-04",
+        "E-06"
+      ],
+      "acceptance": "pending-current-owner-review"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "K01",
+      "original_sha256": "f3e0b07a7750dc325d4e83ba3e7c738d7c0f59100d67db36e7fbda26d032cd6e",
+      "criterion": "SF-01",
+      "scope": "GitHub hierarchy and current evidence; board is optional.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K02",
+      "original_sha256": "9f17f5f32d371354f2b0e774e091a8be5b6f51c0c476ae8bbef687ea36056b34",
+      "criterion": "SF-01",
+      "scope": "Record, verify and escalate with explicit non-success.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K03",
+      "original_sha256": "8b54e8b127ad99166e5d2638c86f2af5a48f67bf71bda42062cc623ca418d352",
+      "criterion": "SF-01",
+      "scope": "Source supervisor/worker responsibility and approved exemptions; not authenticated six-role topology.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K04",
+      "original_sha256": "7fd9ac0ab57953524fecd21f6719b594737e86b21325da8e74f1d3bce18e5ff3",
+      "criterion": "SF-01",
+      "scope": "Exact declared ownership and one writer; no runtime isolation claim.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K05",
+      "original_sha256": "6ed8416ab438c678436e72c98459bbdc91cb2eb8b35cb0b26d5a0c5b3eef132d",
+      "criterion": "SF-01",
+      "scope": "Human agreement, risk and final acceptance authority.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K06",
+      "original_sha256": "c336f435b2d5f99738db696448708081fab7f62aee0dcdeeff651b8412362cb0",
+      "criterion": "SF-02",
+      "scope": "Connector-neutral procedure, provenance and review; structural checks do not prove live retrieval or sufficiency.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K07",
+      "original_sha256": "b56ca93762e18dd59479eaa8db18fd4383959f4c8143601e5a18bb6ae0646cbf",
+      "criterion": "SF-03",
+      "scope": "Source-derived Epic/Task/PR briefs and verified create/read-back; native runtime envelope fields separate.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K08",
+      "original_sha256": "e59ec576c1cbc91f15c6cae45bbc0abd176f5ec17e99df90759122f43282fc1e",
+      "criterion": "SF-03",
+      "scope": "Eight complete Skills with resolvable resources; selected-client actual use separate from exhaustive invocation parity.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K09",
+      "original_sha256": "a3b2713712caee85ff4743054288c3ffe6a5a00df0750580d5b14bf7a0ee0d63",
+      "criterion": "SF-04",
+      "scope": "Three source-role instruction definitions and manual fallback; original six-role runtime requirement retained separately.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K10",
+      "original_sha256": "ea2372d80540c3b6e05499f446d90ec6741075bf28842b00d5b2b1d24b911e7b",
+      "criterion": "SF-04",
+      "scope": "Durable scoped Task inputs only in this product slice; full task-execution-envelope contract remains supplemental.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K11",
+      "original_sha256": "3ea5c2956c47ac8a883b86287c4e1b96218519b70e93d49dab18d478395a28cf",
+      "criterion": "SF-04",
+      "scope": "Ordinary chronological durable evidence only in this product slice; full normalized loop-event runtime remains supplemental.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K12",
+      "original_sha256": "ebb4e5c9444ca8dd2b4ef28917287c9ad59f5acc542545946a8773116931b84a",
+      "criterion": "SF-04",
+      "scope": "Capability-checked Codex guidance/manual handoff only; pinned live adapter compatibility remains supplemental.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K13",
+      "original_sha256": "c243be4451e8acf4109b21f9d581e6d0cfb5b5dda56d886325922484f0f05ade",
+      "criterion": "SF-05",
+      "scope": "Local fixed-payload preservation and known-old operation rollback; no force, automatic staging, power-loss or Windows guarantee.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K14",
+      "original_sha256": "89b158d820b479293cf142500d1be6b582f4cdfb6ebd250c8e1778ea55b21708",
+      "criterion": "SF-06",
+      "scope": "Bounded ordinary ritual/current read-back; not atomic API observations or authenticated process chronology.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K15",
+      "original_sha256": "31f56ff03a5d3f8bdf9a80d22426e247716a0d28f52126cc7eddb26de89eb10d",
+      "criterion": "SF-06",
+      "scope": "Optional explicit source helpers and read-only sensors; no automatic managed Ruleset/board/CI setup.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K16",
+      "original_sha256": "9553d23dec4ba4cca547172d5f3395dca095ad8b4177a85d6c6e0645ab931264",
+      "criterion": "SF-07",
+      "scope": "Consent/privacy draft/send companion and retro guidance; no live receiving workflow or automatic transport.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K17",
+      "original_sha256": "a7c0704a6507c4ab7edc8410bcba96ec0b51e6ee984df3ce3f77b5d8e5eccf71",
+      "criterion": "SF-08",
+      "scope": "Exact candidate quality/conformance on source checkout; adopter CI is not installed.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K18",
+      "original_sha256": "eaf3cb7a20edfc9b0abf98cc5eb143a8ea33f562a9791f354d1659a21912ef20",
+      "criterion": "SF-08",
+      "scope": "Document and test source defects/adaptations without retroactive historical claims.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K19",
+      "original_sha256": "efd255001379f198cfc9d617e4ee6ce7e5b2be667fcf1474d615b5b986e1358e",
+      "criterion": "SF-09",
+      "scope": "Honest model/client limits and source-first topology; no repository-only authenticated control plane.",
+      "original_obligation": "retained-in-repository-release-dod"
+    },
+    {
+      "id": "K20",
+      "original_sha256": "b68598e95873a46086ed6c2b4254298064eaf3e0eaedb93b4c16a158a79c92e3",
+      "criterion": "SF-09",
+      "scope": "Complete source-first applicability and evidence review; original full parity and release gate remain incomplete.",
+      "original_obligation": "retained-in-repository-release-dod"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "C-001",
+      "title": "GitHub outranks thread narrative",
+      "expected_sha256": "3bc1c79c076efb6a5d160efa3c694d03cf412ca7916db1a730d5a4a55974420d",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: GitHub outranks thread narrative. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "C-002",
+      "title": "recovery without original thread",
+      "expected_sha256": "ae8af2b15bffb8993c284d40a2f4e6ea5cb3a15d6ac55678e0c607152a80175a",
+      "applicability": "adapted",
+      "criterion": "SF-01",
+      "rationale": "Reconstruct from GitHub and require a successor recovery/claim record; private prior reasoning is not a prerequisite. Generalized runtime recovery is not inferred.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "C-003",
+      "title": "stale thread versus current GitHub state",
+      "expected_sha256": "8a4874e654c7a70e1ae12b36793c2030605e51c4ad5715ab52b0cfc99ee32bc1",
+      "applicability": "adapted",
+      "criterion": "SF-01",
+      "rationale": "Detected current GitHub/head drift must block work or require explicit replan; read-back alone is not native-envelope enforcement.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "C-004",
+      "title": "Project view is not authority",
+      "expected_sha256": "69ab30f8449535d041b3c7e2a05c4651712527ee6ad28730844f20210ee94831",
+      "applicability": "adapted",
+      "criterion": "SF-01",
+      "rationale": "Issue-graph authority applies; no measured stale-Project flag is claimed by an absent or ignored board.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "C-005",
+      "title": "unknown evidence is explicit",
+      "expected_sha256": "c915b844208c3afb46a6478a03765fa4968605a817db11a18ad0115f545b4b72",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: unknown evidence is explicit. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "A-001",
+      "title": "root constitution discovery",
+      "expected_sha256": "3d25a02370e30a93c10154202f9b7a06060c3952156ef88ec72560fb9e0a5aba",
+      "applicability": "supplemental",
+      "criterion": "SF-01",
+      "rationale": "The original root constitution discovery obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "A-002",
+      "title": "nested instruction precedence",
+      "expected_sha256": "0304c8d3457275b359a005522398aa20fb05eefc12da8f36b2b0548a959eab38",
+      "applicability": "supplemental",
+      "criterion": "SF-01",
+      "rationale": "The original nested instruction precedence obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "A-003",
+      "title": "no duplicate constitution drift",
+      "expected_sha256": "eb51f47e3014cd13e60694c9b2f68bc985777184a439164b5b57cff4c368f9bc",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: no duplicate constitution drift. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "A-004",
+      "title": "instruction budget",
+      "expected_sha256": "5b19cef0e57d86b860233a63c8dea7b21f42511c2166767e772355d2f97c2d3c",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: instruction budget. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "A-005",
+      "title": "missing root constitution",
+      "expected_sha256": "2b19160e0f9f72e1917375ab6eb94129045567f8e30485357121ef38d33fd9f3",
+      "applicability": "adapted",
+      "criterion": "SF-01",
+      "rationale": "A missing root constitution must be non-success; installed tuning/status guidance is required but adopter CI is not shipped or automatically enabled.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "A-006",
+      "title": "unrelated directory isolation",
+      "expected_sha256": "1e80e18cc4b4b2ded843c5b01353bc83d520f2094b25ad29e9eaa2996f118c57",
+      "applicability": "supplemental",
+      "criterion": "SF-01",
+      "rationale": "The original unrelated directory isolation obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-001",
+      "title": "exactly eight normative Skills",
+      "expected_sha256": "fe53a02264c6c2e482327f02ac6e6a3ce264e8801310e0075f389055ddb6b453",
+      "applicability": "retained",
+      "criterion": "SF-03",
+      "rationale": "Required product behavior: exactly eight normative Skills. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-002",
+      "title": "explicit invocation",
+      "expected_sha256": "2bbf7e9b94ab92145ea11fdebf860d79c05367e57571f6125a88a1520ccf7bc2",
+      "applicability": "supplemental",
+      "criterion": "SF-03",
+      "rationale": "The original explicit invocation obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-003",
+      "title": "implicit trigger",
+      "expected_sha256": "707fe070bd63e0f42d026e726b765f82284cdea49979383a536198f341d4bd02",
+      "applicability": "supplemental",
+      "criterion": "SF-03",
+      "rationale": "The original implicit trigger obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-004",
+      "title": "progressive disclosure",
+      "expected_sha256": "9fe4c3a5e2b8fea08b5b9135446b8576e754d7167f2c43e88259247c449553a9",
+      "applicability": "supplemental",
+      "criterion": "SF-03",
+      "rationale": "The original progressive disclosure obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-005",
+      "title": "malformed Skill metadata",
+      "expected_sha256": "ec6b923b950dbaa8f4922872cfa8a1df55f5df6888c70e77efdb2171751594cb",
+      "applicability": "retained",
+      "criterion": "SF-03",
+      "rationale": "Required product behavior: malformed Skill metadata. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-006",
+      "title": "unresolved Skill resource",
+      "expected_sha256": "5c707eb6aaedc9b8b59beeaf7338e1d60136f39cac1bd750454814ac718b771a",
+      "applicability": "retained",
+      "criterion": "SF-03",
+      "rationale": "Required product behavior: unresolved Skill resource. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-007",
+      "title": "symlinked install destination",
+      "expected_sha256": "13e906140309ba682ba1a0acaaf34be9dea74d2e868397f2344b33f7192617a0",
+      "applicability": "adapted",
+      "criterion": "SF-03",
+      "rationale": "Refuse symlinked Skill destinations without escaped writes; force is unsupported and cannot bypass refusal. Resource resolution is a separate scenario.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "S-008",
+      "title": "source semantics retained",
+      "expected_sha256": "5fb472846cad5059b57567961af4234fd05fa2bd13929710d7a83d73007467e1",
+      "applicability": "retained",
+      "criterion": "SF-03",
+      "rationale": "Required product behavior: source semantics retained. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-001",
+      "title": "agent TOML schema",
+      "expected_sha256": "e8cc95aa67a0e36cf1c3214fdf6c7c3e21cfbedc3337298ee120c2a9e5350773",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: agent TOML schema. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-002",
+      "title": "orchestrator read-only",
+      "expected_sha256": "5803f457ed5757d7c84e3b686b81d33b10b97be6313ebda0b3fe0af2fa02262c",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "Preserve the orchestrator instruction to refuse application-code writing and route to a worker; declaration-only TOML does not prove runtime refusal or enforced read-only posture.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-003",
+      "title": "reviewer independence",
+      "expected_sha256": "c0929de5bdf5db5da61ac867907da50e80e1c4d1f6b6872aad598be27f91b3c2",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "A reviewer reports the failing criterion to the supervisor and does not repair that implementation; role instructions alone do not prove observed reviewer independence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-004",
+      "title": "worker bounded write",
+      "expected_sha256": "0d341c5e5496676b2a68b1bb99db316ef92162b5a630d26ff7f1552fd0115cf8",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original worker bounded write obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-005",
+      "title": "parallel read-only exploration",
+      "expected_sha256": "1d38c719c8c5c0f64b3b775b28a4e79ca89cfb796f3748fc818afd681b4251d3",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "Parallel exploration/manual handoff guidance remains relevant; prose does not measure actual concurrency.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-006",
+      "title": "parallel write collision",
+      "expected_sha256": "1a38fcfcdd0e5e9d307092eb665bcbc1add5b1d1f6ff4fc73bdcf4746fb9ddb0",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "Overlapping worker ownership must block one dispatch or serialize work; ownership-sensor output alone does not prove no concurrent writers.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-007",
+      "title": "second worker without release",
+      "expected_sha256": "fa753ce2d626a2ea42289c169991e959b6d927a27ff41611565c28d3b11d8689",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "A new worker dispatch must be rejected until the prior worker has a valid release record; capability guidance is not this chronological proof.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-008",
+      "title": "replacement after release",
+      "expected_sha256": "107736dcf26e69202e551686c9784bb926b37a22e4279c8db6a4ab283614d144",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "After valid release, the successor must supply current evidence and old receipts cannot satisfy the active attempt; measured native role selection remains separate.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-009",
+      "title": "declared role is not identity proof",
+      "expected_sha256": "285981cab539d3defd0e9b2a86a9112367c3c095419249978e13ae0783a2342a",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: declared role is not identity proof. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "R-010",
+      "title": "model-neutral role",
+      "expected_sha256": "830c46046d0f7a2cc00e531ba5b8c596cf305f9144cc0e046bfe42a4de4e3162",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: model-neutral role. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-001",
+      "title": "valid Task envelope",
+      "expected_sha256": "891051a8748452d84f7da324ead0b316b344a2cbea804604cf18c1b168e3984d",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original valid Task envelope obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-002",
+      "title": "stale base SHA",
+      "expected_sha256": "89f788622bf626d951b8e512ef5b0ba7fd37747476bdfbdae841bcfaebec014b",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "A stale recorded base must block work or require explicit rebase/replan with a durable decision; the original native-envelope start check remains separately unproven.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-003",
+      "title": "stale attempt completion",
+      "expected_sha256": "bfe5731823d242ebbc3bc4aa8b8e66d0bd6f8d44f6510893c1ba7b16ebb7c124",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "A released prior attempt completion remains historical and cannot satisfy the active attempt; current head/branch alone cannot prove current-attempt binding.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-004",
+      "title": "branch mismatch",
+      "expected_sha256": "7ed9dc14015c116986742486d208b50fb87b5457948f789b511f751235e29410",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "A declared branch differing from the PR head branch must refuse with both values; the original envelope-to-PR comparison is not established by generic scope references.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-005",
+      "title": "ownership expansion",
+      "expected_sha256": "5183516dc2ca78c905ee89eb3ea5fa507eb44fbb0c1c8ba39d9ff39387fd76a9",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "Declared ownership and diff checks apply; the original envelope-owned path enforcement clause remains separate.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-006",
+      "title": "malformed loop event",
+      "expected_sha256": "d2d911f9411a4134867ba1e1fd769ad08689bc25c08fa9d7e6b8d36f1a37f12c",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original malformed loop event obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-007",
+      "title": "event idempotency",
+      "expected_sha256": "2bbfc0c4543534124a2d7a5119166637731e857c483e46f73c2fece936555a1d",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original event idempotency obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-008",
+      "title": "event privacy",
+      "expected_sha256": "63ce241c841bf69459ec15da11e671d0d79d143a2890d8af25b4211f5fc4b284",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original event privacy obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-009",
+      "title": "event is not overclaimed as authority",
+      "expected_sha256": "6c8a12ef799abaa368fbc721435eaffcf589b389d6fc14564daace55d609abfb",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original event is not overclaimed as authority obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "E-010",
+      "title": "current head binding",
+      "expected_sha256": "d36d56b20ec0ac7a2be14caf4e2b06bd1d4563ac81237e7043a7d16af86dfca4",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: current head binding. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-001",
+      "title": "trusted project activation",
+      "expected_sha256": "83d7ac25d2032279b49f4b6cdd5929d03fd985be50f7d28ff670903686ecb02d",
+      "applicability": "adapted",
+      "criterion": "SF-09",
+      "rationale": "Truthfully document absent/inactive hooks; no hook execution or universal enforcement follows.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-002",
+      "title": "SessionStart envelope injection",
+      "expected_sha256": "88ed93ddd9e9892709c82e4fca14d52df942f81ef159dbfbb989e16dd5b6e5fd",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original SessionStart envelope injection obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-003",
+      "title": "missing Task context",
+      "expected_sha256": "a214c1b9d9415eba92b42609b96dbae17bb4bcdae73036b876da2c397b437a27",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original missing Task context obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-004",
+      "title": "PreToolUse ownership block",
+      "expected_sha256": "094d539ac7f52741d10beb0ae6388876e7149bcb1b027c521fdb42d5349eae1b",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original PreToolUse ownership block obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-005",
+      "title": "unsupported tool path",
+      "expected_sha256": "00372567f293a0066e80de346104d756b98d0bebdb20122dfb6f85f0f7660618",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original unsupported tool path obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-006",
+      "title": "SubagentStart receipt",
+      "expected_sha256": "83103dab1651d66a167edcbfc8a39fe4070dad2f1f10aa808dcc295b85408c6e",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original SubagentStart receipt obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-007",
+      "title": "SubagentStart veto limitation",
+      "expected_sha256": "4f373c58a60229c4ae612cf92523541f3a18ba4103169dab4666a167b727cd11",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original SubagentStart veto limitation obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-008",
+      "title": "Stop without handoff",
+      "expected_sha256": "b11fef707e2c440842cd6b167cdc8699b43df3ee219f3c77e5cce22bfb25b3c9",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original Stop without handoff obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-009",
+      "title": "hook concurrency",
+      "expected_sha256": "17b8a0804958f6eed72d8c5497259c3e06648e2ee5a6180d338a6c529fc91de5",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original hook concurrency obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "H-010",
+      "title": "malformed hook input",
+      "expected_sha256": "6f4a30cac73913b06d90844f97138fb80f920cdbc67df60bdd8c74ff2db0084f",
+      "applicability": "supplemental",
+      "criterion": "SF-09",
+      "rationale": "The original malformed hook input obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-001",
+      "title": "local read task",
+      "expected_sha256": "dd9ab259d578b21bf319e399318fac8194819b2366289fd375b4a9dcb2f59415",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: local read task. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-002",
+      "title": "write Task uses isolated worktree",
+      "expected_sha256": "2ca78a022da0e6a52c7f2068c8ce57d816c07a7eb17b8a2839a64dc266a0b12b",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: write Task uses isolated worktree. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-003",
+      "title": "detached worktree push attempt",
+      "expected_sha256": "85342a828668c95c8af947563c4dab3a0642e0216870fb2fdde5e9e7759e2366",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: detached worktree push attempt. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-004",
+      "title": "branch checked out elsewhere",
+      "expected_sha256": "78c0cc924f792dbbf65919b119c51f430b7f9dcecc2465c538d66f43d2fc0134",
+      "applicability": "retained",
+      "criterion": "SF-04",
+      "rationale": "Required product behavior: branch checked out elsewhere. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-005",
+      "title": "archive before evidence",
+      "expected_sha256": "b051a15558f0ffcac19b691fc3d98badc00c582421f60badad1790f4c7e33b33",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "Before archiving or deleting a worktree, require durable evidence/handoff and preserve recovery data; a supported execution surface does not prove this archive boundary.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-006",
+      "title": "cloud environment receipt",
+      "expected_sha256": "15a7660d85fc016a94c800bdb68290769b0375dba9e1c5790731209a7ec1bc5e",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original cloud environment receipt obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-007",
+      "title": "cloud capability unavailable",
+      "expected_sha256": "06042e99aaf1381a73e1db99e1338f98b0e0d0c309f58267962e6a998ec980f7",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original cloud capability unavailable obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-008",
+      "title": "`codex exec --json` valid stream",
+      "expected_sha256": "fa73da698002898001baed187ee097cb3824c0ad3255eef9ae83864d7cfa64ea",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original `codex exec --json` valid stream obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-009",
+      "title": "interrupted JSONL stream",
+      "expected_sha256": "34d4e58d7d1a85566e1faa94522d247958489c719e69d5823c8ec9c34bd8743a",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original interrupted JSONL stream obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-010",
+      "title": "resume wrong Task",
+      "expected_sha256": "28d4648642baf093c3c1bbf2cd5aecd5bd2ec26c04049453f133dd11792b9472",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original resume wrong Task obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-011",
+      "title": "workspace-write explicitness",
+      "expected_sha256": "3e9c8063d8d3cbff2db09872be6cd32ca01e69619ef64b000fa60b2b03a46ece",
+      "applicability": "supplemental",
+      "criterion": "SF-04",
+      "rationale": "The original workspace-write explicitness obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "W-012",
+      "title": "related versus independent chats",
+      "expected_sha256": "896982bb690c185e4e7784e30f03ecf66de5ad12048d0b95488e68b92f2568a7",
+      "applicability": "adapted",
+      "criterion": "SF-04",
+      "rationale": "Keep tightly related work together while independent Tasks use separate threads/worktrees, using supported controls or explicit manual coordination; no measured chat-management behavior is inferred.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-001",
+      "title": "onboarding adoption exemption",
+      "expected_sha256": "bdc9893cfd5bfafd32900d14965e1448cda563e5d18149911274f5eb3d16b7a8",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Exact-tree adoption proof replaces source marker/bootstrap shortcuts; ordinary Tasks cannot obtain a bootstrap exemption.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-002",
+      "title": "fake onboarding after adoption",
+      "expected_sha256": "1b42653475f9f2688c5a89f728cb30b33f89663417566c5ddb223c44b9c39176",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: fake onboarding after adoption. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-003",
+      "title": "missing Task link",
+      "expected_sha256": "83733af5588966b7d91afe2409773f3d9a92e3832ada5d66afcac872cb1b4a7a",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: missing Task link. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-004",
+      "title": "wrong issue type",
+      "expected_sha256": "8de1635401eef51fadfe37c726befa58483178504b3d70bcf0816c1688200195",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: wrong issue type. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-005",
+      "title": "plan before claim",
+      "expected_sha256": "3014f224b8d1d8db0cca44e811ad10c733a5d58f3966a054b8885ac72e698f48",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: plan before claim. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-006",
+      "title": "commit before plan",
+      "expected_sha256": "3014f224b8d1d8db0cca44e811ad10c733a5d58f3966a054b8885ac72e698f48",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: commit before plan. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-007",
+      "title": "edited claim/plan/dispatch/release",
+      "expected_sha256": "c55bae24086c9259765a244ed5eb728664fd92260a6d384364fc256c3bcd57a1",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: edited claim/plan/dispatch/release. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-008",
+      "title": "missing dispatch and exemption",
+      "expected_sha256": "83733af5588966b7d91afe2409773f3d9a92e3832ada5d66afcac872cb1b4a7a",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: missing dispatch and exemption. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-009",
+      "title": "no-worker exemption before first commit",
+      "expected_sha256": "ed81b1f440e120c03205cd9f81f991be1770e179a90be56831b76679ded98286",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: no-worker exemption before first commit. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-010",
+      "title": "late exemption",
+      "expected_sha256": "83733af5588966b7d91afe2409773f3d9a92e3832ada5d66afcac872cb1b4a7a",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: late exemption. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-011",
+      "title": "wrong plan URL",
+      "expected_sha256": "01bed9cbd997c707ed643b69893d62a85ca22c1537e5bd3b52608e0f5db35cd4",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: wrong plan URL. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-012",
+      "title": "thread/attempt receipt missing",
+      "expected_sha256": "9bb7e37e743a5b5483cb0383d67a678841328f48eef07dae8078113adb0bebb5",
+      "applicability": "supplemental",
+      "criterion": "SF-06",
+      "rationale": "The original thread/attempt receipt missing obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-013",
+      "title": "Codex thread receipt present",
+      "expected_sha256": "7811d3ac0cf509ae278109401f761add15c06fb44abbedd32e727bc5c2ac6c8f",
+      "applicability": "supplemental",
+      "criterion": "SF-06",
+      "rationale": "The original Codex thread receipt present obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-014",
+      "title": "non-allowlisted automation",
+      "expected_sha256": "48bb5c0132c3b73a97f585e2810b1e9a3936904db56d7d254e4bbbede87cfdff",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: non-allowlisted automation. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-015",
+      "title": "API transient retry",
+      "expected_sha256": "8064771f31e020dac1ecb57aab82485200c8d683212befddcd60e4b9003e8d92",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Bound API-read retries and retain fixed failure diagnostics after exhaustion; current helper no-retry refusal is an explicit narrower product policy, not proof of the original configured-retry behavior.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "T-016",
+      "title": "API unavailable",
+      "expected_sha256": "7bd066b0a3ab9575bb0ea07bebbfcb8232fece8a8461fe1ad6156f6fe57014b6",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: API unavailable. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-001",
+      "title": "exact path collision",
+      "expected_sha256": "bd97abcf3e8da42a63906b854fcdcdd01efccb11a78b8276464d13bb9a820e63",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: exact path collision. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-002",
+      "title": "broad-prefix collision",
+      "expected_sha256": "d39cc6ee4586dfc0e31c5ee5294d1ed1bb81cce4bfa02c7bb7c888601068f1e2",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: broad-prefix collision. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-003",
+      "title": "malformed ownership on ready Task",
+      "expected_sha256": "1a37ff62fd6c815e0d0390448fa99efb1a33d542be742e7eb0de0ae4d9447a77",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: malformed ownership on ready Task. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-004",
+      "title": "draft malformed ownership",
+      "expected_sha256": "46cd7f12511a66500ad663d07f2d6a6209bc3dc29045f14d8bed03d5263961c9",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: draft malformed ownership. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-005",
+      "title": "changelog shared writer",
+      "expected_sha256": "c0f762f8320fba15789ff6f99b3a78978a3f214885eaba9800cf34de028edecb",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: changelog shared writer. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-006",
+      "title": "non-overlapping ownership",
+      "expected_sha256": "e0d9ca8e61dcd3b8743b562c91e063674eb8a487e8c700283f7c1a49e5535d5b",
+      "applicability": "retained",
+      "criterion": "SF-01",
+      "rationale": "Required product behavior: non-overlapping ownership. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "O-007",
+      "title": "changed files versus ownership",
+      "expected_sha256": "3935de321cc770a99c88624330a33535532997711e086c4ccd56b49894bc65ec",
+      "applicability": "adapted",
+      "criterion": "SF-01",
+      "rationale": "Compare actual changed files with declared Task ownership and block scope expansion until approved; declarations alone do not prove the observed diff remains in scope.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-001",
+      "title": "clean install",
+      "expected_sha256": "b1d43f6e3ff36c2cd0bb3815314843832437c8deeabc65f80d895ce0319ccc1f",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Use reviewed local source, explicit dry-run/apply and no staging; source automatic staging/version-marker behavior is intentionally not reused.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-002",
+      "title": "dry run",
+      "expected_sha256": "27071376defd79d21d4001597a2ab072d9863c9e754f9a31ef4ea311def9f366",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: dry run. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-003",
+      "title": "collision refusal",
+      "expected_sha256": "562cf941bfa444be38e6e63fdddba58e6de7f8bbb0ac0387f90caa0e5e5603c1",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: collision refusal. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-004",
+      "title": "force cannot bypass symlink safety",
+      "expected_sha256": "d325ff8e2adad724d48108325208d1809703ef5bb3ed2f4accfe4502dae1da1e",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Refuse symlinked destinations under any force attempt with no escaped write; force is unsupported and cannot bypass preservation checks.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-005",
+      "title": "source SHA provenance",
+      "expected_sha256": "25ceefac8555c38aae971bf05ca283a26d19db98416122a0ec81558f84f554c6",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Bind the frozen donor revision separately from selected payload integrity. A source digest does not attest the selected local checkout clean commit; unverifiable revision information remains unknown, never invented.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-006",
+      "title": "existing application README/docs",
+      "expected_sha256": "774cb5a9fb303ba303fd13d56596523ae00160acc31e4c0e81af45512715d304",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: existing application README/docs. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-007",
+      "title": "source-only assets excluded",
+      "expected_sha256": "89ece885bea1e05f08ce63819120c013223d575ca57dee76bfcede0d2af5522c",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: source-only assets excluded. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-008",
+      "title": "engine refresh",
+      "expected_sha256": "62fbf44045daad64eb8015554d199922ccff5e878e091aef739a4affb091bd6c",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Update only exact known-old engine bytes/mode or recognize exact new bytes; arbitrary engine overwrite is refused.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-009",
+      "title": "tuned surface preservation",
+      "expected_sha256": "c5dd5f9bd731654d29a66912b54ed6549e119b64419df5258390c8c94098fb44",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Preservation and known-old refusal apply; general tuned-surface drift reporting remains unmeasured.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-010",
+      "title": "instance truth preservation",
+      "expected_sha256": "a11801fecaed403f48b2d559b9de4400458fe8ec905c52f7bc1dd58c2fe90b4b",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: instance truth preservation. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-011",
+      "title": "absent newly introduced file",
+      "expected_sha256": "de040a7bce342c8d72695c249eedbb4ad0fddcc6f8d2612c1657a7f004230fe1",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: absent newly introduced file. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-012",
+      "title": "project Codex config collision",
+      "expected_sha256": "3a8af9f73b3d5621eb076f84a65c84c91ca76dcf769646f9b7d9357eec831e4a",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Preserve existing project configuration; broader configuration merge/status guidance is not satisfied merely by excluding that file.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-013",
+      "title": "user configuration isolation",
+      "expected_sha256": "a76b7dc00e7d856d36a1d5106d3fd54cf9d5800b510868838686952d167db3bf",
+      "applicability": "retained",
+      "criterion": "SF-05",
+      "rationale": "Required product behavior: user configuration isolation. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-014",
+      "title": "Windows documented invocation",
+      "expected_sha256": "80724b9f7f5b556151ef6d7d4e2b2350072ca943bd1a54457bfd4d860b07de84",
+      "applicability": "supplemental",
+      "criterion": "SF-05",
+      "rationale": "The original Windows documented invocation obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "I-015",
+      "title": "upgrade governance drift",
+      "expected_sha256": "34da76a29dac630eeb0d7afc03cb0383d620e56fa236fa1d7e06c4211104ad3e",
+      "applicability": "adapted",
+      "criterion": "SF-05",
+      "rationale": "Bounded preservation tests do not establish generalized tuned-surface drift detection.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-001",
+      "title": "sensor GET-only wall",
+      "expected_sha256": "812e966427397adbbeea35e49b3c5bc78bbe2c73731cdc9789257929046c303e",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Optional read-only frontier/ritual observations apply; they do not implement the named governance-status sensor in full.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-002",
+      "title": "undeclared profile",
+      "expected_sha256": "4ebf1fe3791e2490caa4586b9f752ae88fe1d363cf70061b2f7c38ab0ba22dca",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "An undeclared governance profile remains UNKNOWN and must not be inferred from repository shape; source-first setup guidance does not prove this profile sensor.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-003",
+      "title": "solo profile",
+      "expected_sha256": "2e50c8efb6b6b0461f0244f2f8920120fab388ff0797e91867535a9a828e6ae3",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Assess declared solo-profile requirements and report observed stronger controls factually; optional helper availability is not a complete solo-profile assessment.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-004",
+      "title": "team profile source binding",
+      "expected_sha256": "eb968fd8c0a057f4619307649b64467e343dfb825a017b7d589739d68cdaf564",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Bind required check contexts only after verifying their common expected App ID; instructions/read-back alone do not prove issuer binding.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-005",
+      "title": "ambiguous check issuer",
+      "expected_sha256": "16143c1863b05e44784d27997acce3268af545d396c476f681189866a261c754",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Ambiguous check issuer identity must yield UNCHECKABLE and zero actuator writes; missing workflows cannot certify this refusal.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-006",
+      "title": "Ruleset noncanonical existing state",
+      "expected_sha256": "326443a36d9250b2acad0d186965e786fc4961abdaab493ca238140c5c9ea1d3",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Unknown/noncanonical existing Ruleset state must stop reconciliation rather than be rewritten; explicit setup permission does not override this refusal.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-007",
+      "title": "intent persistence failure",
+      "expected_sha256": "9ca2242f757bb66d66c016cbe0169b6bd84a223ad71514b59341aa17fc0dd764",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Failure to persist reviewed intent must prevent any subsequent Ruleset write; optional-helper scope does not establish this ordering.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-008",
+      "title": "merge queue applicability",
+      "expected_sha256": "8eac8be6cb75b2fcaa90f5474a3eecd11a3155218839cb70ae25346057526266",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Report merge queue as inapplicable for personal repositories; eligible organizations need effective rule and merge_group coverage. No automatic installation or live qualification is inferred.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-009",
+      "title": "CODEOWNERS target posture",
+      "expected_sha256": "3001ca3a275c69e1141eec13c13414fccf396ebae2aa10c020dacab99f2b4015",
+      "applicability": "adapted",
+      "criterion": "SF-06",
+      "rationale": "Distinguish source template placeholders from unresolved installed CODEOWNERS targets; unresolved team-profile targets must fail. No CODEOWNERS is installed by this payload.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-010",
+      "title": "Action SHA pins",
+      "expected_sha256": "e0f0a21a17a38c06c26f0cb426d81cd8823418b248bf656d65ea941b19fc373e",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: Action SHA pins. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-011",
+      "title": "least-privilege workflow",
+      "expected_sha256": "e40b51b69e77f3474c87ecf69e8e0b572357e6a8681aee79180e364dd18cf1e9",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: least-privilege workflow. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-012",
+      "title": "untrusted PR code",
+      "expected_sha256": "9cbcad197b5c156890d52569a32f382db05453baba7915f9b29300861701e359",
+      "applicability": "retained",
+      "criterion": "SF-06",
+      "rationale": "Required product behavior: untrusted PR code. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "G-013",
+      "title": "Codex Action output authority",
+      "expected_sha256": "80d67c9a183169c88b96067dbe7c80a5f0ec025841262c43b1355536aa35536d",
+      "applicability": "supplemental",
+      "criterion": "SF-06",
+      "rationale": "The original Codex Action output authority obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-001",
+      "title": "non-interactive failure silence",
+      "expected_sha256": "39a2b632b62442b43f538466746d04890af8e5f5094cb89fd98a183225e1dfb8",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "Noninteractive execution must neither prompt nor send feedback; the standalone report preserves the earlier installer result and does not claim to measure it or attach automatic traps.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-002",
+      "title": "CI failure silence",
+      "expected_sha256": "30b5061f9468a257a0773ac313cd742c8fda549db9ccb228c2ed2067f7dc8715",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "CI execution must not prompt or perform feedback network writes; standalone companion CI refusal does not measure or alter an earlier installer exit.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-003",
+      "title": "explicit consent",
+      "expected_sha256": "9354d737ba9829b798a110f8e414e627652d978087f5c1121d6e8f3adc699fc6",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "Show the exact preview and require literal y/Y before one allowlisted-field create attempt; no automatic instrumentation or claim to measure or change the earlier installer exit.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-004",
+      "title": "declined consent",
+      "expected_sha256": "e899febf4f9f6bfc829a160429ea0924c0e5f3141d64e8bc93c1574099d70ed0",
+      "applicability": "retained",
+      "criterion": "SF-07",
+      "rationale": "Required product behavior: declined consent. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-005",
+      "title": "environment injection attempt",
+      "expected_sha256": "fdafdfb270d74593a42e3e1bb1435710cf1c3486f5377a586580fc05562ecc1b",
+      "applicability": "retained",
+      "criterion": "SF-07",
+      "rationale": "Required product behavior: environment injection attempt. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-006",
+      "title": "private data in failure",
+      "expected_sha256": "241f11642fa5b6f8c55348e49d99a570aa1e7f77d4d05ddd1f266f6f3722c8f7",
+      "applicability": "retained",
+      "criterion": "SF-07",
+      "rationale": "Required product behavior: private data in failure. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-007",
+      "title": "repeated friction promotion",
+      "expected_sha256": "c02f293c0a7fa6bbbf935b9e5d74375c33021754572cf6f2bf7c9a9589dc0c59",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "Two independent occurrences of the same friction must yield an evidence-linked overdue/promotion-ready candidate; retro instructions alone do not demonstrate that transition.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-008",
+      "title": "one-off friction",
+      "expected_sha256": "c4776848d374d5ca9dc258351f8ddee26434fb9c2926b43fb4e81d275c706454",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "Record one-off friction without prematurely promoting a global rule; no automatic transport or operating retro loop is inferred.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-009",
+      "title": "mechanism preference",
+      "expected_sha256": "1b7aa66f2e3e029dbf32118515a846108c1b158f15e01ad516be4f24f8ad0a0b",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "Prefer a test, guard, schema or script over duplicated prose when proposing remediation; approval alone does not satisfy this mechanism preference.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-010",
+      "title": "capability checkpoint changed",
+      "expected_sha256": "dce77648247dc1663002e6eed67fa229430fe811b421dd0c3c3ba7ceffca0398",
+      "applicability": "supplemental",
+      "criterion": "SF-07",
+      "rationale": "The original capability checkpoint changed obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-011",
+      "title": "model retirement",
+      "expected_sha256": "e8045c28ad22a0162a04525559d02bd2b513afa4755c0380c72cb87fd241f6dd",
+      "applicability": "supplemental",
+      "criterion": "SF-07",
+      "rationale": "The original model retirement obligation is retained for supplemental runtime/platform/full-parity review; this product record neither waives it nor records execution success.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "P-012",
+      "title": "mechanism retirement",
+      "expected_sha256": "b409cf4451afde18bae627bba6f9990c860f1f5f231c1ed743bde91de892c67a",
+      "applicability": "adapted",
+      "criterion": "SF-07",
+      "rationale": "Retire obsolete/redundant controls only with evidence and owner approval; refusal-state documentation does not prove this retirement procedure.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "D-001",
+      "title": "ADR reference integrity",
+      "expected_sha256": "41b9475d013e676d57884263e5d9bfb74e641ca96a9920b9266ee3421baa42c7",
+      "applicability": "adapted",
+      "criterion": "SF-08",
+      "rationale": "An ADR reference to an unrelated or missing issue must fail or carry qualified provenance. Retain supported-reference/N1 limits; no full reference-resolution coverage is inferred.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "D-002",
+      "title": "changelog range is not existence",
+      "expected_sha256": "6e192ac645b94299a4d5a39a25496894d7ae18d01a78e2533c3e5dc2ace1c939",
+      "applicability": "retained",
+      "criterion": "SF-08",
+      "rationale": "Required product behavior: changelog range is not existence. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "D-003",
+      "title": "all governed Markdown references",
+      "expected_sha256": "748d2eb79ebd7f88fdc85bd6d9674de25f97c81f14c9ab77e832b2dc10aca7fa",
+      "applicability": "adapted",
+      "criterion": "SF-08",
+      "rationale": "Review configured local/cross-repository references across changelog, ADRs and normative Markdown; bounded offline checks do not establish authenticated integration coverage.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "D-004",
+      "title": "floating MCP dependency",
+      "expected_sha256": "e8dd28a06237293576dd41f1455f6f4a649b7bd4f0b4c5a7e44af5733e27ab0b",
+      "applicability": "adapted",
+      "criterion": "SF-08",
+      "rationale": "Retain supply-chain/privacy refusal intent; excluding private MCP bytes alone does not implement the full supply-chain check.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-001",
+      "title": "clean adopter normal Task",
+      "expected_sha256": "21338349dc9b27213571be6a25d6ba2147ec89b9bede7d772340266f77ee965d",
+      "applicability": "adapted",
+      "criterion": "SF-10",
+      "rationale": "Require actual installed-kit onboarding and ordinary Task use on a selected observed client, with durable records sufficient to reconstruct the flow without private thread history; synthetic copy/helper tests are insufficient.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-002",
+      "title": "interrupted worker recovery",
+      "expected_sha256": "a2ac6ac02e642e16352f54281c19099f89897e832600b43de8804f42ac754824",
+      "applicability": "adapted",
+      "criterion": "SF-10",
+      "rationale": "Require observed recovery/replacement evidence showing prior-attempt completion cannot satisfy the active Task, the successor supplies current evidence, and writers do not overlap. Label cooperative planned replacement accurately; it does not establish crash recovery or a generalized runtime guarantee.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-003",
+      "title": "ownership conflict across frontier",
+      "expected_sha256": "8e21f38aa0007d00647e190ac168911a75283269ed585cd4aaf295a321f962ce",
+      "applicability": "retained",
+      "criterion": "SF-10",
+      "rationale": "Required product behavior: ownership conflict across frontier. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-004",
+      "title": "high-risk Task",
+      "expected_sha256": "39bca45a1775fd7a606fa66c11c6d5375540336853e40378758a513f13e7db52",
+      "applicability": "retained",
+      "criterion": "SF-10",
+      "rationale": "Required product behavior: high-risk Task. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-005",
+      "title": "Codex client unavailable",
+      "expected_sha256": "01c143a78ad0e83506f89066c9c8f81c32b1086713e2dea365b8d23b22047a02",
+      "applicability": "adapted",
+      "criterion": "SF-10",
+      "rationale": "When a Codex client is unavailable, keep the portable lifecycle inspectable and classify unavailable probes as non-passes; installation fails only if that selected capability is required.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-006",
+      "title": "upgrade with local customization",
+      "expected_sha256": "c158071938464505522e12d8820a72427ab82bf33d3b6278db398cbaab04a833",
+      "applicability": "adapted",
+      "criterion": "SF-10",
+      "rationale": "Refresh known-old engines without a hidden commit while preserving adopter edits; separately reported tuned drift remains unproven by preservation-only tests.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-007",
+      "title": "false completion attempt",
+      "expected_sha256": "b84e0ab8bb076fc5d762616d50529c4a2e14324f22e661a201208b3af2327dba",
+      "applicability": "retained",
+      "criterion": "SF-10",
+      "rationale": "Required product behavior: false completion attempt. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    },
+    {
+      "id": "X-008",
+      "title": "post-merge deferred evidence",
+      "expected_sha256": "d8bdf0e07c00b9ab259b2081583b8d82e09eb6cf79f3dc46837102aac52e97ef",
+      "applicability": "retained",
+      "criterion": "SF-10",
+      "rationale": "Required product behavior: post-merge deferred evidence. Relevance is not implementation or measured satisfaction; review the complete original expectation and named evidence.",
+      "original_verification_state": "not-run"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E-01",
+      "evidence_class": "source-provenance",
+      "reference": "https://github.com/mochan-tk/agentic-dev-kit-for-copilot/tree/fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+      "scope": "Frozen source identities and accepted unchanged target payload.",
+      "limitation": "Provenance and static bytes, not a runtime observation."
+    },
+    {
+      "id": "E-02",
+      "evidence_class": "historical-public-owner-acceptance",
+      "reference": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-5645639250",
+      "scope": "Accepted T25 baseline and prior bounded implementation history.",
+      "limitation": "Historical accepted head; equivalence/current evidence must be reviewed before product acceptance."
+    },
+    {
+      "id": "E-03",
+      "evidence_class": "historical-public-planning-observation",
+      "reference": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22#issuecomment-5632789475",
+      "scope": "Source-role and platform-workaround planning observation.",
+      "limitation": "Not an accepted agreement amendment or native role/runtime execution proof."
+    },
+    {
+      "id": "E-04",
+      "evidence_class": "historical-public-aggregate",
+      "reference": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22#issuecomment-5636800693",
+      "scope": "Bounded initial-use aggregate with evidence classes.",
+      "limitation": "Public aggregate does not expose or independently verify underlying private records."
+    },
+    {
+      "id": "E-05",
+      "evidence_class": "required-ci-history",
+      "reference": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/34691197813",
+      "scope": "Accepted baseline quality/conformance.",
+      "limitation": "Historical run only; new PR CI is external and must bind its exact current head/tree."
+    },
+    {
+      "id": "E-06",
+      "evidence_class": "historical-public-aggregate",
+      "reference": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/22#issuecomment-5645915187",
+      "scope": "Published bounded observed replan/handoff aggregate.",
+      "limitation": "Underlying private evidence must be privately rechecked; no crash-recovery or full-runtime inference."
+    }
+  ]
+}
