@@ -324,7 +324,7 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "4fd1b3091616c70f7acb0783907cea9074d06fa1bf0f6ddcec955be823bb0447",
+      "target_sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
@@ -687,12 +687,13 @@
     "timestamp_profile": "whole-second-utc-calendar",
     "adaptations": [
       "Bind ordinary PR, Task, complete comment membership and selected plan observations before/after the verdict; retain narrow bot/bootstrap and source execution/reference semantics.",
+      "Consume all comment rows during exact plan membership matching so early grep exit cannot turn a valid long history into a pipefail mismatch; retain complete pages and final read-back.",
       "Require 1-250 unique typed commits including observed head, metadata count agreement and every valid selected date; preserve null/missing committer author fallback and equal-second chronology.",
       "Reach the installed mode-0644 sensor explicitly through Bash after PR creation; sensor observations do not replace CI/review/acceptance or authenticate chronology."
     ],
     "evidence": "offline-installed-bash-real-jq-stateful-paginated-fake-gh-only",
     "target_files": [
-      {"path": ".github/scripts/check-task-ritual.sh", "mode": "100644", "sha256": "4fd1b3091616c70f7acb0783907cea9074d06fa1bf0f6ddcec955be823bb0447"},
+      {"path": ".github/scripts/check-task-ritual.sh", "mode": "100644", "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"},
       {"path": ".agents/skills/verification/SKILL.md", "mode": "100644", "sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"}
     ]
   }

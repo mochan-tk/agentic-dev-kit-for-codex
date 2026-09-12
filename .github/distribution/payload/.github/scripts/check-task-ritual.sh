@@ -624,7 +624,7 @@ else
     ok=false
   elif plan_snapshot=$(observe_plan); then
     IFS=$'\t' read -r _kind plan_id _created _updated _encoded _url comment_kind <<< "$plan_snapshot"
-    if [[ "$plan_id" != "$comment_id" ]] || ! printf '%s\n' "$comment_rows" | grep -Fxq -- "${plan_snapshot%$'\t'*}"; then
+    if [[ "$plan_id" != "$comment_id" ]] || ! printf '%s\n' "$comment_rows" | grep -Fx -- "${plan_snapshot%$'\t'*}" >/dev/null; then
       echo "FAIL: PR #${PR}'s plan link does not match the observed Task comment."
       ok=false
     elif [[ "$comment_kind" != "plan" ]]; then

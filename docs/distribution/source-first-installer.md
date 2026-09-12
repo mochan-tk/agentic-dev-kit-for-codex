@@ -611,8 +611,10 @@ operation or full scenario/contract proof is claimed by these fixtures.
 
 ## Approved audit and adopter handoff correction
 
-The T25 supplement retains those two ritual/verification payload bytes and
-corrects six existing payload files. Cumulatively, exactly eight of 47 payload
+The T25 audit supplement at `0cb6972e498bc0d3868ebe2ce4ba17896cecac2f` retained
+those two ritual/verification payload bytes and corrected six existing payload
+files. The subsequent owner-authorized Pro F-01 correction changes only the
+ritual membership pipeline, as described below. Cumulatively, exactly eight of 47 payload
 files differ from the accepted T24 merge; 39 remain byte-identical, with no
 layout, preservation-class or mode changes. Frozen donor source identities
 remain unchanged; parity records describe the corrections and current hashes.
@@ -638,6 +640,28 @@ CLIs, disposable Git repositories, and executable documented preview/pin
 commands. These are offline, target-side checks, not live service or full
 adopter E2E evidence. The installer's preservation of an existing adopter
 README makes the explicit kit-to-adopter checkout handoff necessary.
+
+## Long ordinary comment histories (Pro F-01)
+
+Exact plan membership now consumes every comment row with `grep -Fx` and
+discards matched output, instead of using early-exit `grep -Fxq`. Under
+`pipefail`, early reader exit could give the Bash producer SIGPIPE and falsely
+reject a matching plan when later ordinary comments made the input large.
+The exact whole-line comparison, complete paginated observations, and final
+Task/comments/plan/PR read-back all remain mandatory; no input is truncated.
+
+The current ritual differs from the initial a498 implementation only through
+that pipeline correction. The verification Skill is still byte-identical.
+Historical equality records remain historical, with a current test enforcing
+the one allowed ritual delta. The 47-file layout, eight cumulative changed
+payloads, 39 unchanged payloads, modes/classes and frozen source IDs remain.
+
+Real installed Bash/jq regressions vary page count independently of body
+volume, check two reads of each bound observation, and retain exact plan-body
+mismatch, second-page final-body drift, selected-plan drift and incomplete
+page refusals. Fixture sizes are not universal pipe-capacity or failure
+thresholds. The supplied diagnostic probe's PIPESTATUS values are separate
+from its own exit code and from a production-helper verdict.
 
 ## Evidence boundary
 

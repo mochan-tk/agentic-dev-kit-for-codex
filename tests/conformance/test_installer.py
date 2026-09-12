@@ -733,6 +733,84 @@ sys.exit(0)
         records[issue]['comments'] = len(comments)
         self.assert_ritual_refuses(records)
 
+    def long_comment_records(self, number=20, length=8000):
+        records = self.ordinary_records()
+        issue = 'repos/{owner}/{repo}/issues/2'
+        comments = records[issue + '/comments']
+        for index in range(number):
+            item = copy.deepcopy(comments[0])
+            item['id'] = 1000 + index
+            item['created_at'] = item['updated_at'] = '2026-01-01T01:00:00Z'
+            item['body'] = 'Status evidence ' + str(index) + '\n' + 'x' * length
+            comments.append(item)
+        records[issue]['comments'] = len(comments)
+        records[issue + '/comments'] = {'__pages__': [comments[index:index + 100]
+                                                     for index in range(0, len(comments), 100)]}
+        return records
+
+    def test_ritual_long_comments_valid_pages_and_total_bytes_are_independent(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        # Count and body volume are separate coverage axes, not a universal
+        # pipe-capacity threshold. Ordinary status comments are valid evidence.
+        for number, length, page_count in ((20, 100, 1), (120, 10, 2),
+                                           (20, 8000, 1), (120, 2000, 2)):
+            with self.subTest(number=number, length=length, pages=page_count):
+                records = self.long_comment_records(number, length)
+                issue = 'repos/{owner}/{repo}/issues/2'
+                self.assertEqual(page_count, len(records[issue + '/comments']['__pages__']))
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn('PASS:', result.stdout)
+                for endpoint in ('repos/{owner}/{repo}/pulls/1', issue, issue + '/comments',
+                                 'repos/{owner}/{repo}/issues/comments/3'):
+                    reads = [call for call in self.last_gh_calls if call[0] == 'api' and call[1].split('?')[0] == endpoint]
+                    self.assertEqual(2, len(reads), endpoint)
+                    if endpoint.endswith('/comments'):
+                        self.assertTrue(all('--paginate' in call and '?per_page=100' in call[1] for call in reads))
+
+    def test_ritual_long_comments_still_refuse_exact_plan_body_mismatch(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for changed in ('listed-plan', 'linked-plan'):
+            with self.subTest(changed=changed):
+                records = self.long_comment_records()
+                if changed == 'listed-plan':
+                    plan = records['repos/{owner}/{repo}/issues/2/comments']['__pages__'][0][1]
+                else:
+                    plan = records['repos/{owner}/{repo}/issues/comments/3']
+                plan['body'] += '\n'
+                result = self.assert_ritual_refuses(records)
+                self.assertIn('plan link does not match the observed Task comment', result.stdout)
+
+    def test_ritual_long_comments_reach_and_enforce_final_readback(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for changed in ('comments', 'plan'):
+            with self.subTest(changed=changed):
+                records = self.long_comment_records(120, 2000)
+                endpoint = ('repos/{owner}/{repo}/issues/2/comments' if changed == 'comments'
+                            else 'repos/{owner}/{repo}/issues/comments/3')
+                initial = records[endpoint]
+                final = copy.deepcopy(initial)
+                if changed == 'comments':
+                    final['__pages__'][-1][-1]['body'] = final['__pages__'][-1][-1]['body'][:-1] + 'y'
+                else:
+                    final['body'] += '\nLater plan change'
+                records[endpoint] = {'__responses__': [initial, final]}
+                result = self.assert_ritual_refuses(records)
+                self.assertIn(changed + '-drift', result.stdout + result.stderr)
+                reads = [call for call in self.last_gh_calls if call[0] == 'api' and call[1].split('?')[0] == endpoint]
+                self.assertEqual(2, len(reads))
+
+    def test_ritual_long_comments_preserve_complete_page_refusals(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for defect in ('missing-page', 'failed-page'):
+            with self.subTest(defect=defect):
+                records = self.long_comment_records(120, 2000)
+                pages = records['repos/{owner}/{repo}/issues/2/comments']['__pages__']
+                if defect == 'missing-page': pages.pop()
+                else: pages[-1] = {'__error__': True}
+                result = self.assert_ritual_refuses(records)
+                self.assertIn('comments-completeness' if defect == 'missing-page' else 'comments-read', result.stdout + result.stderr)
+
     def test_f2_whole_legacy_and_tool_scoped_identifiers(self):
         for identifier in ('deadbeef', '6af9582d-42d1-425d-82c8-f9ec651225a8',
                            'a' * 128, '/root/worker', '/root/example_supervisor/example_worker',
@@ -1699,7 +1777,7 @@ sys.exit(result.returncode)
             entry = subprocess.check_output(['git', '-C', str(ROOT), 'ls-tree', RITUAL_INITIAL_HEAD, '--', PAYLOAD + '/' + name], text=True)
             self.assertTrue(entry.startswith('100644 blob '), entry)
 
-    def test_audit_cumulative_eight_payload_changes_preserve_39_and_original_ritual(self):
+    def test_audit_cumulative_eight_payload_changes_preserve_39_and_bounded_ritual_delta(self):
         accepted = subprocess.check_output(['git', '-C', str(ROOT), 'show', TASK_SELECTION_ACCEPTED + ':' + INVENTORY], text=True)
         old_rows = [line.split('\t') for line in accepted.splitlines() if line and not line.startswith('#')]
         rows = [line.split('\t') for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith('#')]
@@ -1711,6 +1789,11 @@ sys.exit(result.returncode)
             self.assertEqual(0o644, (ROOT / PAYLOAD / name).stat().st_mode & 0o777)
         for name in RITUAL_PATHS:
             original = subprocess.check_output(['git', '-C', str(ROOT), 'show', RITUAL_INITIAL_HEAD + ':' + PAYLOAD + '/' + name])
+            if name == RITUAL_PATH:
+                before = b"grep -Fxq -- \"${plan_snapshot%$'\\t'*}\";"
+                after = b"grep -Fx -- \"${plan_snapshot%$'\\t'*}\" >/dev/null;"
+                self.assertEqual(1, original.count(before))
+                original = original.replace(before, after, 1)
             self.assertEqual(original, (ROOT / PAYLOAD / name).read_bytes())
 
     def test_audit_upgrade_and_rollback_preserve_adopter_state(self):
@@ -1753,6 +1836,8 @@ sys.exit(result.returncode)
         source, checker = self.complete_checker_source()
         for name, before, after in (
             (RITUAL_PATH, 'commit_count <= 250', 'commit_count <= 999'),
+            (RITUAL_PATH, "grep -Fx -- \"${plan_snapshot%$'\\t'*}\" >/dev/null",
+             "grep -Fxq -- \"${plan_snapshot%$'\\t'*}\""),
             (RITUAL_PATH, 'valid_timestamp "$timestamp" || observation_fail commit-date', ': # omitted date check'),
             (RITUAL_PATH, '"$unique_commits" == "$commit_count"', 'true'),
             (RITUAL_PATH, '"$final_comments" == "$comment_snapshot"', 'true'),

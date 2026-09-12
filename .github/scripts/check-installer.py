@@ -28,6 +28,7 @@ RITUAL_CONTRACT = {
     "timestamp_profile": "whole-second-utc-calendar",
     "adaptations": [
         "Bind ordinary PR, Task, complete comment membership and selected plan observations before/after the verdict; retain narrow bot/bootstrap and source execution/reference semantics.",
+        "Consume all comment rows during exact plan membership matching so early grep exit cannot turn a valid long history into a pipefail mismatch; retain complete pages and final read-back.",
         "Require 1-250 unique typed commits including observed head, metadata count agreement and every valid selected date; preserve null/missing committer author fallback and equal-second chronology.",
         "Reach the installed mode-0644 sensor explicitly through Bash after PR creation; sensor observations do not replace CI/review/acceptance or authenticate chronology.",
     ],
@@ -550,6 +551,7 @@ def validate_ritual_verification(payload_data, parity):
                 '.commit.committer.date == null', 'if ! has_marker CLAIM;',
                 'if has_marker DISPATCH;', 'elif has_marker EXEMPT;',
                 '"$actual_comments" == "$comment_count"', '"$unique_comments" == "$comment_count"',
+                "grep -Fx -- \"${plan_snapshot%$'\\t'*}\" >/dev/null",
                 '"$final_pr" == "$pr_snapshot"', '"$final_task" == "$task_snapshot"',
                 '"$final_comments" == "$comment_snapshot"', '"$final_plan" == "$plan_snapshot"')
     if any(token not in helper for token in required):
