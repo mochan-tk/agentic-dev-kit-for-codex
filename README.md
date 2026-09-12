@@ -44,8 +44,10 @@ native Codex role definitions, issue/PR templates, optional explicit helpers,
 and empty adopter agreement/context seeds. Existing tuned and adopter-owned
 files are preserved; conflicting engine files and symlinks are refused.
 
-Inspect the changes, commit/push them yourself, and invoke
-`$project-onboarding` in Codex. Read the
+Inspect the changes and commit/push them yourself. Then open or select the adopter checkout in Codex
+before invoking `$project-onboarding` from its installed
+`.agents/skills/project-onboarding/SKILL.md`. The same-named development Skill
+in the kit checkout is not the adopter onboarding workflow. Read the
 [installer guide and limits](docs/distribution/source-first-installer.md).
 The kit-development `AGENTS.md`, Task IDs, context pins, sole-active ownership
 policy, and Colima qualification infrastructure are never exported.

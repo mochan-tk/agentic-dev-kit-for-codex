@@ -27,7 +27,10 @@ missing or unsuccessful conversion fails rather than prepending the current
 directory. This boundary is mocked in offline tests, not measured on Windows.
 
 Review the plan before apply. Review the resulting Git diff, then stage,
-commit, and push explicitly. Invoke `$project-onboarding` in Codex. Keep the
+commit, and push explicitly. Then open or select the adopter checkout in Codex
+and invoke `$project-onboarding` from its installed
+`.agents/skills/project-onboarding/SKILL.md`, not the same-named development
+Skill in this kit checkout. Keep the
 remote-default-before-GitHub-write, clean-checkout verify-by-running,
 evidence-PR, and durable deferred-work ledger gates from the source workflow.
 The installer itself runs none of the optional GitHub setup helpers.
@@ -591,8 +594,9 @@ remain narrow; ordinary Task work cannot use an onboarding bypass.
 
 The new `ritual_verification` parity record retains the six frozen source
 helper/Skill/test identities and records the bounded correction. This T25
-package changes exactly two of 47 payload files: ritual and verification
-Skill; the other 45 remain byte-identical to the accepted T24 merge, with all
+initial package at `a49847680ba39a2d901ae9b309bf72142ac9e46c` changed exactly
+two of 47 payload files: ritual and verification Skill; the other 45 were
+byte-identical to the accepted T24 merge, with all
 classes/modes and frontier anchors unchanged. Raw-JSON fixtures run actual
 installed Bash and jq queries, page/response sequences and broken installed
 copies. They reject write argv and cover known-old upgrade/rollback without
@@ -604,6 +608,36 @@ authenticate when a worker acted. The result is a sensor observation, not a
 runtime receipt, CI verdict, independent review or owner acceptance. Installing
 these files does not install a CI workflow or enable Rulesets. No live adopter
 operation or full scenario/contract proof is claimed by these fixtures.
+
+## Approved audit and adopter handoff correction
+
+The T25 supplement retains those two ritual/verification payload bytes and
+corrects six existing payload files. Cumulatively, exactly eight of 47 payload
+files differ from the accepted T24 merge; 39 remain byte-identical, with no
+layout, preservation-class or mode changes. Frozen donor source identities
+remain unchanged; parity records describe the corrections and current hashes.
+
+Repository visibility must be a JSON boolean before shell projection;
+unknown or malformed visibility refuses without writing the registry.
+Existing private-plan handling is preserved, not replaced by a new allowlist. Both
+production installer-provenance readers reject duplicate decoded keys, even
+equal values or escaped spellings. Deep ownership JSON is a classified
+non-success at current and historical/base reads, never an uncaught traceback.
+
+Installed onboarding carries its approved connector choice explicitly to the
+noninteractive registry command and distinguishes pending preparation from
+activation. Ruleset help names reviewed checks; the optional tuning summary
+points to the literal installed Skill. Spec-kit instructions verify actual
+tracking and exact pinned-tree presence separately from ignore diagnostics.
+The compact Task checklist retains supervisor/worker roles and the existing
+Refs-versus-Closes boundary. No new sensor, drift mechanism, runtime authority,
+automatic GitHub operation or expansion to other journey review notes is added.
+
+Regression evidence uses raw JSON with actual Bash/jq, public Python checker
+CLIs, disposable Git repositories, and executable documented preview/pin
+commands. These are offline, target-side checks, not live service or full
+adopter E2E evidence. The installer's preservation of an existing adopter
+README makes the explicit kit-to-adopter checkout handoff necessary.
 
 ## Evidence boundary
 

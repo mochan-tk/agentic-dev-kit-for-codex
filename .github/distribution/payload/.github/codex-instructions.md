@@ -84,13 +84,16 @@ The Task issue body is your work order: you read it, you never edit it
 references, Acceptance criteria, Out of scope, File ownership, Verification,
 and Routing. Read all of it before writing code.
 
-1. Comment on the issue that you are starting (one line is enough).
-2. Before changing any file, post your implementation plan as a comment on
-   the issue — the plan of record (format:
-   `.agents/skills/session-orchestration/SKILL.md`). If the plan changes
-   materially later, post an update comment.
-3. Work on branch `codex/task-<issue-number>-<short-slug>`. Touch only paths listed
-   under **File ownership**.
+1. The supervisor records the claim, plan and dispatch on the Task,
+   using `.agents/skills/session-orchestration/SKILL.md` before implementation.
+   A worker follows that approved plan and reports evidence to the supervisor;
+   it does not invent a second claim or supervisory plan. A declared
+   trivial-task exemption may combine these roles only as that Skill permits.
+2. Read the durable claim, plan and dispatch. If the plan changes materially,
+   stop for the supervisor's durable update before continuing affected work.
+3. Use the branch and worktree assigned by the durable plan (normally
+   `codex/task-<issue-number>-<short-slug>`). Touch only paths listed under
+   **File ownership**.
 4. Keep the PR description synchronized with reality: map each acceptance
    criterion to evidence using the table in the PR template, and link the
    plan comment (auto-written plan text in the description is a copy — the
@@ -101,15 +104,19 @@ and Routing. Read all of it before writing code.
 6. If the task turns out to be materially different from its description,
    follow the Ambiguity rule in `AGENTS.md` (comment, label `needs:human` or
    `needs:replan`, stop).
-7. Finish with the record-before-report comment on the issue: status, evidence,
-   deviations, follow-ups (format in
-   `.agents/skills/session-orchestration/SKILL.md`).
+7. The worker returns evidence, deviations and follow-ups; the supervisor
+   verifies them and records the record-before-report outcome on the issue
+   using `.agents/skills/session-orchestration/SKILL.md`. Missing post-merge
+   acceptance remains pending, not completed.
 
 ## Pull request conventions
 
 - Title: imperative mood, mirrors the Task issue title.
 - Body: fill `.github/PULL_REQUEST_TEMPLATE.md` completely, including
-  `Closes #<n>` and the evidence table.
+  the evidence table and authorized Task relationship. Use `Refs #<n>` when
+  acceptance requires post-merge evidence or this is a non-final/stacked PR.
+  Use `Closes #<n>` only for the authorized final relationship when merge may
+  complete the Task, following `AGENTS.md` and the session-orchestration Skill.
 - Keep PRs reviewable: one Task issue per PR; split only when ownership or review scope becomes unbounded; a source port
   may legitimately exceed a small line-count heuristic.
 

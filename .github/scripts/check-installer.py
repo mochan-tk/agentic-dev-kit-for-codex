@@ -489,6 +489,8 @@ def validate_source_preparation(payload_data, parity):
     if record.get("target_files") != expected:
         errors.append("source preparation target digest/mode/fields drifted")
     script = payload_data[SOURCE_PREPARATION_PATH].decode()
+    if 'if (.private | type) == "boolean" then .private else error("uncheckable repository visibility") end' not in script:
+        errors.append("source preparation typed visibility guard drifted")
     if (script.count("\ncheck_registry_path\n") != 3
             or any(value not in script for value in ('[ -L "$path" ]', '[ -L "$REGISTRY" ]',
                    '[ ! -L "$LOGICAL_ROOT" ]', '[ ! -L "$INVOCATION" ]',
@@ -558,6 +560,15 @@ def validate_ritual_verification(payload_data, parity):
         errors.append("ordinary ritual installed sensor handoff drifted")
     return errors
 
+def reject_duplicate_json_keys(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate provenance key")
+        value[key] = item
+    return value
+
+
 def validate(root):
     errors = []
     root = Path(root)
@@ -582,7 +593,7 @@ def validate(root):
                 errors.append("installer payload digest drift: " + name)
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) != 0o644:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
-        parity = json.loads(regular_bytes(root, PARITY))
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
         if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
@@ -680,7 +691,7 @@ def validate_connector_companion(root):
     try:
         if root.is_symlink():
             raise ValueError("root symlink")
-        parity = json.loads(regular_bytes(root, PARITY))
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
         companion = parity.get("connector_companion")
         if not isinstance(companion, dict) or set(companion) != set(CONNECTOR_CONTRACT) | {"target_files"}:
             return ["connector companion fields are missing or unreviewed"]

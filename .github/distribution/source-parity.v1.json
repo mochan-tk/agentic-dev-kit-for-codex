@@ -74,8 +74,9 @@
       "destination": ".agents/skills/project-onboarding/SKILL.md",
       "source_path": ".github/skills/project-onboarding/SKILL.md",
       "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
-      "target_sha256": "878563511e78dced8f32ef507c7af964990134755a85d727316b237cd831387a",
+      "target_sha256": "96659cf8d0c291a904ed303196d1a9d4be0a95da221105d07188d54a3c25015a",
       "adaptations": [
+        "Carry approved P2 choice into explicit noninteractive P4 --source commands; require write consent and distinguish pending preparation from reviewed activation.",
         "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff.",
         "Use explicit Bash for 0644 helpers; P0/P6 bind preserved adopter adoption and optional ritual proof to exact commits/trees rather than a changelog marker."
       ]
@@ -195,8 +196,9 @@
       "destination": ".github/codex-instructions.md",
       "source_path": ".github/copilot-instructions.md",
       "source_blob": "c2ec9fb4c156b5139b7d88624593216c69a800f0",
-      "target_sha256": "c4bdb13c1afa682273aa64c53932e57a062e7394ca4f1af47c7c12e4160100f0",
+      "target_sha256": "5712479a016a1daf344db6026614c98d6f3db9460e0488519c88a7608b6694db",
       "adaptations": [
+        "Align the compact Task checklist with existing supervisor claim/plan/dispatch/outcome, worker evidence, trivial exemption and Refs/post-merge/non-final PR rules.",
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
       ]
     },
@@ -231,8 +233,9 @@
       "destination": ".github/connectors/speckit.md",
       "source_path": ".github/connectors/speckit.md",
       "source_blob": "441b1c8e639813a49dcc200ae4c1c2b018f91a5a",
-      "target_sha256": "9bd166f0cc9b6dbd3e62a04cd45fa29e71b04066fcfd3cc7f1a5b159d9078684",
+      "target_sha256": "1f40d5bf8f4d4f89ece1d6d033da9de623a4b3ffbf19b4af5fc1ff497c64f16c",
       "adaptations": [
+        "Separate ignore diagnostics from tracked-file and exact intended pinned-tree blob verification; never substitute HEAD for a missing reviewed pin.",
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
       ]
     },
@@ -372,8 +375,9 @@
       "destination": ".github/scripts/setup-ruleset.sh",
       "source_path": ".github/scripts/setup-ruleset.sh",
       "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
-      "target_sha256": "7575657f7c399eb28e2ad019a8ca493243b4078ffd3f22e4568cae25ccdd97bc",
+      "target_sha256": "a2aebd9b863ebaaa49a9e7d322e4600975b928a3e38550ea1c2a52a1519d5cb8",
       "adaptations": [
+        "Make every help example carry reviewed adopter checks; preview without a pipeline that could mask helper failure. Mandatory check guards are unchanged.",
         "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
@@ -382,8 +386,9 @@
       "destination": ".github/scripts/setup-sources.sh",
       "source_path": ".github/scripts/setup-sources.sh",
       "source_blob": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff",
-      "target_sha256": "057b8501e276c61a5d4fef8905e2c81203a2fe4ea4aee66c7623cbfcf0c30e3e",
+      "target_sha256": "535f3faaa8822bbdb3a87b187b300b2d39a78ca17fb9938a3771822f38f72d52",
       "adaptations": [
+        "Require actual JSON boolean repository visibility before shell projection or registry writes; preserve existing private-plan gating and pending-activation semantics.",
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
@@ -392,8 +397,9 @@
       "destination": ".github/scripts/tuning-status.sh",
       "source_path": ".github/scripts/tuning-status.sh",
       "source_blob": "1b764f3bd67e897e64c11c98503e5750d73746dd",
-      "target_sha256": "10be82b1fd8c169e5fa605b78f20b6e219dd96e7177c58354757835ebf116c41",
+      "target_sha256": "9cdc77cd458064d3a7f3c81d42fcf0b6d391b56a41cf7a87af342a110bf9a0b7",
       "adaptations": [
+        "Emit the literal installed $project-onboarding Skill entry in the optional CI summary; retain sensor exit and write scope.",
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
       ]
@@ -495,7 +501,7 @@
       {
         "path": ".github/scripts/setup-sources.sh",
         "mode": "100644",
-        "sha256": "057b8501e276c61a5d4fef8905e2c81203a2fe4ea4aee66c7623cbfcf0c30e3e"
+        "sha256": "535f3faaa8822bbdb3a87b187b300b2d39a78ca17fb9938a3771822f38f72d52"
       }
     ]
   },

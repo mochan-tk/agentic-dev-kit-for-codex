@@ -110,7 +110,7 @@ Ask in sequence, second step branching on the first answer:
    handed over — through the built-in chat flow (default, needs no
    setup), or by adopting an existing spec-kit workspace already in this
    repo? "Don't know" is a safe answer — it means the default. *(This
-   picks a context connector — activation happens in P4, not here.)*
+   picks a context connector — P4 prepares its activation PR, not here.)*
 2. **Material intake.**
    - *Spec-kit*: confirm the workspace P1 found (name the directory), or
      ask for its path.
@@ -209,10 +209,16 @@ unrun command.
 - If the adopter already uses CODEOWNERS, verify its owners and rules. No
   CODEOWNERS file is installed or made mandatory; adding one is an explicit
   adopter governance decision.
-- Run `bash .github/scripts/setup-sources.sh` to activate the connector chosen
-  in P2 step 1 (records it in the SOURCES.md registry); the
-  `context-collection` skill is
-  the follow-on that lands future context through it. Skip only when the
+- Carry the P2 step 1 choice explicitly into registry preparation. After
+  explicit write consent for that choice, run exactly one of
+  `bash .github/scripts/setup-sources.sh --source builtin --yes` or
+  `bash .github/scripts/setup-sources.sh --source speckit --yes`.
+  These forms work without a TTY; `--yes` is not permission to invent consent.
+  Before consent, preview the selected source with `--dry-run` instead of
+  `--yes`. The entry remains `pending-activation`: preparation is not
+  activation, which requires the reviewed activation PR and sufficiency test
+  in `.github/connectors/README.md`. The `context-collection` skill is the
+  follow-on that lands future context through it. Skip only when the
   adopter kept the default and no spec-kit workspace exists — then note
   the wizard can be run later.
 - Seed material handed over in P2 step 2 into `.github/docs/context/<topic>/`, landed

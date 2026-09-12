@@ -30,6 +30,12 @@ TASK_SELECTION_BASE = "4e62351d3c053e6c72cc1d295df5567245340014"
 TASK_SELECTION_ACCEPTED = "d396865c0f5e23fa01bb790242835dda482d679d"
 RITUAL_PATH = ".github/scripts/check-task-ritual.sh"
 RITUAL_PATHS = (RITUAL_PATH, ".agents/skills/verification/SKILL.md")
+RITUAL_INITIAL_HEAD = "a49847680ba39a2d901ae9b309bf72142ac9e46c"
+AUDIT_PAYLOAD_PATHS = (
+    ".agents/skills/project-onboarding/SKILL.md", ".github/codex-instructions.md",
+    ".github/connectors/speckit.md", ".github/scripts/setup-ruleset.sh",
+    SOURCE_REGISTRY_PATH, ".github/scripts/tuning-status.sh",
+)
 TASK_SELECTION_PATHS = (".agents/skills/plan-management/SKILL.md",
                         ".agents/skills/plan-management/scripts/frontier.sh",
                         ".github/scripts/ownership-overlap.sh",
@@ -925,6 +931,163 @@ sys.exit(result.returncode)
         helper = (self.target if installed else ROOT / PAYLOAD) / SOURCE_REGISTRY_PATH
         return ["bash", str(helper)], env, state, events
 
+    def audit_source_records(self, visibility=False, plan="pro"):
+        return {"user": {"login": "fixture", "plan": {"name": plan}},
+                "repos/fixture/adopter": {"private": visibility, "owner": {"type": "User"}}}
+
+    def test_audit_visibility_requires_raw_boolean_without_registry_write(self):
+        self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+        registry = self.target / REGISTRY_REL
+        registry.parent.mkdir(parents=True)
+        registry.write_text("# Adopter registry\n")
+        registry.chmod(0o600)
+        before = self.snapshot(self.target)
+        for visibility in (None, "unknown", "true", "false", 1, {}, [], "missing"):
+            with self.subTest(visibility=visibility):
+                records = self.audit_source_records(visibility)
+                if visibility == "missing": records["repos/fixture/adopter"].pop("private")
+                result = self.packaged_json(SOURCE_REGISTRY_PATH, records, "--source", "builtin", "--yes")
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertEqual(before, self.snapshot(self.target))
+                self.assertEqual(0o600, registry.stat().st_mode & 0o777)
+
+    def test_audit_visibility_preserves_existing_plan_controls(self):
+        self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+        for visibility, plan, success in ((False, None, True), (True, "pro", True),
+                                          (True, "team", True), (True, "enterprise", True),
+                                          (True, "free", False), (True, None, False)):
+            with self.subTest(visibility=visibility, plan=plan):
+                before = self.snapshot(self.target)
+                result = self.packaged_json(SOURCE_REGISTRY_PATH, self.audit_source_records(visibility, plan),
+                                            "--source", "builtin", "--dry-run")
+                self.assertEqual(success, result.returncode == 0, result.stdout + result.stderr)
+                if success: self.assertIn("pending-activation", result.stdout)
+                self.assertEqual(before, self.snapshot(self.target))
+
+    def test_audit_visibility_broken_copy_and_resealed_checker_guard(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+        helper = self.target / SOURCE_REGISTRY_PATH
+        original = helper.read_text()
+        query = 'if (.private | type) == "boolean" then .private else error("uncheckable repository visibility") end'
+        self.assertIn(query, original)
+        helper.write_text(original.replace(query, '.private', 1))
+        result = self.packaged_json(SOURCE_REGISTRY_PATH, self.audit_source_records("false"),
+                                    "--source", "builtin", "--dry-run", installed=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+        helper.write_text(original)
+        result = self.packaged_json(SOURCE_REGISTRY_PATH, self.audit_source_records("false"),
+                                    "--source", "builtin", "--dry-run", installed=True)
+        self.assertNotEqual(0, result.returncode)
+        source, checker = self.complete_checker_source()
+        (source / PAYLOAD / SOURCE_REGISTRY_PATH).write_text(original.replace(query, '.private', 1))
+        self.reseal_payload(source)
+        self.assertIn("source preparation typed visibility guard drifted", checker.validate(source))
+
+    def test_audit_duplicate_provenance_rejected_by_composed_cli_and_both_readers(self):
+        source, checker = self.complete_checker_source()
+        target = source / checker.PARITY
+        original = target.read_text()
+        baseline = subprocess.run([sys.executable, "-I", str(ROOT / ".github/scripts/check-installer.py"),
+                                   "--root", str(source)], capture_output=True, text=True, timeout=15)
+        self.assertEqual(0, baseline.returncode, baseline.stdout)
+        for key, token in (("source_commit", '"source_commit":'),
+                           ("source_blob", '"source_blob":'),
+                           ("schema", '"schema": "connector-validation-companion/v1"')):
+            match = re.search(re.escape(token) + (r'\s*"[^"\n]+"' if key != "schema" else ''), original)
+            self.assertIsNotNone(match)
+            field = match.group(0)
+            wrong = json.dumps(key) + ': "wrong"'
+            escaped = field.replace(key, key[:-1] + '\\u%04x' % ord(key[-1]), 1)
+            for variant, replacement in (("wrong-first", wrong + ', ' + field),
+                                          ("wrong-last", field + ', ' + wrong),
+                                          ("same-value", field + ', ' + field),
+                                          ("escaped-key", field + ', ' + escaped)):
+                with self.subTest(key=key, variant=variant):
+                    target.write_text(original[:match.start()] + replacement + original[match.end():])
+                    result = subprocess.run([sys.executable, "-I", str(ROOT / ".github/scripts/check-installer.py"),
+                                             "--root", str(source)], capture_output=True, text=True, timeout=15)
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertIn("malformed or uncheckable", result.stdout)
+                    self.assertNotIn("Traceback", result.stdout + result.stderr)
+                    self.assertTrue(checker.validate(source))
+                    self.assertTrue(checker.validate_connector_companion(source))
+
+    def test_audit_onboarding_carries_approved_source_in_noninteractive_shell(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
+        skill = (self.target / ".agents/skills/project-onboarding/SKILL.md").read_text()
+        apply_section = skill.split("### P4 — Apply", 1)[1].split("### P5", 1)[0]
+        for source in ("builtin", "speckit"):
+            with self.subTest(source=source):
+                command = "bash .github/scripts/setup-sources.sh --source " + source + " --yes"
+                self.assertIn(command, apply_section)
+                result = self.packaged_json(SOURCE_REGISTRY_PATH, self.audit_source_records(),
+                                            *shlex.split(command)[2:], installed=True)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertIn("## " + source, (self.target / REGISTRY_REL).read_text())
+        self.assertIn("pending-activation", apply_section)
+        self.assertIn("explicit write consent", apply_section)
+
+    def test_audit_ruleset_help_examples_are_executable_previews(self):
+        helper = ".github/scripts/setup-ruleset.sh"
+        help_result = self.packaged_json(helper, {}, "--help")
+        self.assertEqual(0, help_result.returncode, help_result.stderr)
+        examples = [line.strip() for line in help_result.stdout.splitlines()
+                    if line.startswith("  bash .github/scripts/setup-ruleset.sh")]
+        self.assertEqual(3, len(examples))
+        for example in examples:
+            with self.subTest(example=example):
+                self.assertNotIn("|", example)
+                args = shlex.split(example)[2:]
+                self.assertIn("--checks", args)
+                if "--dry-run" not in args: args.append("--dry-run")
+                result = self.packaged_json(helper, {}, *args)
+                self.assertEqual(0, result.returncode, result.stderr)
+                payload = json.loads(result.stdout)
+                checks = next(row for row in payload["rules"] if row["type"] == "required_status_checks")
+                self.assertEqual(["lint", "test"], [item["context"] for item in checks["parameters"]["required_status_checks"]])
+                self.assertEqual([], self.last_gh_calls)
+
+    def test_audit_tuning_summary_names_literal_installed_skill(self):
+        self.assertEqual(0, self.run_install("--apply").returncode)
+        summary = self.base / "summary.md"
+        result = subprocess.run(["bash", str(self.target / ".github/scripts/tuning-status.sh"), "--ci"],
+                                cwd=self.target, env=dict(os.environ, GITHUB_STEP_SUMMARY=str(summary), project="expanded"),
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("`$project-onboarding`", summary.read_text())
+        self.assertNotIn("/onboard-project", summary.read_text())
+
+    def test_audit_speckit_proves_tracking_and_exact_pin_tree(self):
+        text = (ROOT / PAYLOAD / ".github/connectors/speckit.md").read_text()
+        block = re.search(r"```sh\n(spec_pin=.*?)\n```", text, re.S)
+        self.assertIsNotNone(block, "connector must give the pinned-tree verification command")
+        (self.target / "initial.txt").write_text("base\n")
+        old_pin = self.commit_adopter("before specs")
+        spec = self.target / "specs/example/plan.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text("reviewed specification\n")
+        def verify(pin):
+            command = re.sub(r"^spec_pin=.*$", "spec_pin=" + shlex.quote(pin), block.group(1), count=1, flags=re.M)
+            return subprocess.run(["bash", "-c", command], cwd=self.target, capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(0, verify(old_pin).returncode)  # Untracked, not ignored.
+        self.git("add", "--", "specs/example/plan.md")
+        self.assertNotEqual(0, verify(old_pin).returncode)  # Staged only.
+        current_pin = self.commit_adopter("commit specs")
+        self.assertNotEqual(0, verify(old_pin).returncode)  # Tracked now, absent at intended old pin.
+        self.assertEqual(0, verify(current_pin).returncode)
+        self.assertNotEqual(0, verify("0" * 40).returncode)
+
+    def test_audit_adopter_checkout_and_supervisor_ritual_handoffs(self):
+        for name in ("README.md", "docs/distribution/source-first-installer.md"):
+            text = (ROOT / name).read_text()
+            self.assertIn("open or select the adopter checkout in Codex", text)
+            self.assertIn(".agents/skills/project-onboarding/SKILL.md", text)
+        instructions = (ROOT / PAYLOAD / ".github/codex-instructions.md").read_text()
+        for token in ("supervisor", "claim", "dispatch", "worker", "trivial-task exemption", "Refs #<n>", "post-merge", "non-final"):
+            self.assertIn(token, instructions)
+
     def test_source_preparation_refuses_registry_symlink_without_changing_referent(self):
         command, env, _state, _events = self.source_preparation_inputs()
         registry = self.target / REGISTRY_REL
@@ -1481,13 +1644,34 @@ sys.exit(result.returncode)
     def test_ritual_two_payload_changes_preserve_45_and_layout_modes(self):
         accepted = subprocess.check_output(['git', '-C', str(ROOT), 'show', TASK_SELECTION_ACCEPTED + ':' + INVENTORY], text=True)
         old_rows = [line.split('\t') for line in accepted.splitlines() if line and not line.startswith('#')]
-        rows = [line.split('\t') for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith('#')]
+        historical = subprocess.check_output(['git', '-C', str(ROOT), 'show', RITUAL_INITIAL_HEAD + ':' + INVENTORY], text=True)
+        rows = [line.split('\t') for line in historical.splitlines() if line and not line.startswith('#')]
         self.assertEqual(47, len(rows))
         self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in rows])
         self.assertEqual(set(RITUAL_PATHS), {old[0] for old, new in zip(old_rows, rows) if old[2] != new[2]})
         for name, _kind, digest in rows:
+            data = subprocess.check_output(['git', '-C', str(ROOT), 'show', RITUAL_INITIAL_HEAD + ':' + PAYLOAD + '/' + name])
+            self.assertEqual(digest, hashlib.sha256(data).hexdigest())
+            entry = subprocess.check_output(['git', '-C', str(ROOT), 'ls-tree', RITUAL_INITIAL_HEAD, '--', PAYLOAD + '/' + name], text=True)
+            self.assertTrue(entry.startswith('100644 blob '), entry)
+
+    def test_audit_cumulative_eight_payload_changes_preserve_39_and_original_ritual(self):
+        accepted = subprocess.check_output(['git', '-C', str(ROOT), 'show', TASK_SELECTION_ACCEPTED + ':' + INVENTORY], text=True)
+        old_rows = [line.split('\t') for line in accepted.splitlines() if line and not line.startswith('#')]
+        rows = [line.split('\t') for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith('#')]
+        self.assertEqual(47, len(rows))
+        self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in rows])
+        self.assertEqual(set(RITUAL_PATHS + AUDIT_PAYLOAD_PATHS), {old[0] for old, new in zip(old_rows, rows) if old[2] != new[2]})
+        for name, _kind, digest in rows:
             self.assertEqual(digest, hashlib.sha256((ROOT / PAYLOAD / name).read_bytes()).hexdigest())
             self.assertEqual(0o644, (ROOT / PAYLOAD / name).stat().st_mode & 0o777)
+        for name in RITUAL_PATHS:
+            original = subprocess.check_output(['git', '-C', str(ROOT), 'show', RITUAL_INITIAL_HEAD + ':' + PAYLOAD + '/' + name])
+            self.assertEqual(original, (ROOT / PAYLOAD / name).read_bytes())
+
+    def test_audit_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(AUDIT_PAYLOAD_PATHS, RITUAL_INITIAL_HEAD,
+            changed=tuple(path for path in AUDIT_PAYLOAD_PATHS if path != ".github/codex-instructions.md"))
 
     def test_ritual_known_old_upgrade_and_rollback_preserve_adopter_state(self):
         self.assert_payload_upgrade_preserves_adopter_state(RITUAL_PATHS, TASK_SELECTION_ACCEPTED, changed=RITUAL_PATHS)
