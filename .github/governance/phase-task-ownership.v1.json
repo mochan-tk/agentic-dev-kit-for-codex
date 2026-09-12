@@ -629,10 +629,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
           "mode": "100644"
         },
@@ -673,19 +669,11 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/codex-instructions.md",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.github/connectors/CONNECTOR-TEMPLATE.md",
           "mode": "100644"
         },
         {
           "path": ".github/distribution/payload/.github/connectors/README.md",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.github/connectors/speckit.md",
           "mode": "100644"
         },
         {
@@ -734,14 +722,6 @@
         },
         {
           "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
-          "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
           "mode": "100644"
         },
         {
@@ -841,10 +821,6 @@
           "mode": "100644"
         },
         {
-          "path": "README.md",
-          "mode": "100644"
-        },
-        {
           "path": "docs/known-limitations.md",
           "mode": "100644"
         },
@@ -889,10 +865,6 @@
         {
           "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
           "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
-          "mode": "100644"
         }
       ]
     },
@@ -933,11 +905,35 @@
           "mode": "100644"
         },
         {
+          "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+          "mode": "100644"
+        },
+        {
           "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
           "mode": "100644"
         },
         {
+          "path": ".github/distribution/payload/.github/codex-instructions.md",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/connectors/speckit.md",
+          "mode": "100644"
+        },
+        {
           "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
           "mode": "100644"
         },
         {
@@ -954,6 +950,10 @@
         },
         {
           "path": ".github/scripts/check-repository-policy.py",
+          "mode": "100644"
+        },
+        {
+          "path": "README.md",
           "mode": "100644"
         },
         {
