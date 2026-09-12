@@ -85,7 +85,8 @@ this.
 ## The frontier
 
 **Frontier = open Task issues labeled `ai:ready` whose `blocked by` issues are
-all closed.** This is the set an orchestrator may dispatch right now.
+all closed.** This is a dependency-eligible set to consider for dispatch after
+checking the brief, ownership and the Task's execution authority.
 
 - Compute it with `bash .agents/skills/plan-management/scripts/frontier.sh`, or manually per issue:
   `gh issue view <n>` shows `Blocked by:` rows; each listed issue must be
@@ -94,6 +95,27 @@ all closed.** This is the set an orchestrator may dispatch right now.
   your version supports.)
 - Before dispatching two frontier tasks together, re-check ownership
   disjointness — the graph guarantees ordering, not file safety.
+
+The frontier resolves the selected repository and host before comparing bare
+issue numbers, repository objects and issue URLs. Supported dependencies stay
+on that host; cross-repository blockers are preserved. Duplicate identities,
+contradictory fields, unsupported foreign-host URLs, incomplete connections,
+unknown states and failed reads stop without a partial actionable list. A
+successful empty selection is distinct from an unavailable observation.
+
+For a proposed pair or group, explicitly run the installed ownership sensor:
+
+```bash
+bash .github/scripts/ownership-overlap.sh -R owner/repo 23 24
+```
+
+`NO_OVERLAP` means the supported declarations have disjoint conservative
+literal prefixes. `OVERLAP` requires serialization or a reviewed ownership
+change; `UNCHECKABLE` or an error requires inspection before dispatch. Interior
+`.` path components and repeated `/` separators are unsupported and refuse;
+one leading `./` is supported. Glob checks are conservative. These observations
+do not resolve filesystem symlink/inode aliases or establish process isolation.
+No helper automatically dispatches work or runs another helper.
 
 ## Command cookbook
 

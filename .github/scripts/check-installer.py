@@ -13,6 +13,28 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+TASK_SELECTION_PATHS = (
+    ".agents/skills/plan-management/SKILL.md",
+    ".agents/skills/plan-management/scripts/frontier.sh",
+    ".github/scripts/ownership-overlap.sh",
+    ".github/scripts/check-task-ritual.sh",
+)
+TASK_SELECTION_CONTRACT = {
+    "schema": "task-selection-observation/v1",
+    "source_files": {
+        ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
+        ".github/skills/plan-management/scripts/frontier.sh": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+        ".github/scripts/ownership-overlap.sh": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
+        ".github/scripts/check-task-ritual.sh": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
+    },
+    "adaptations": [
+        "Refuse interior-dot and repeated-separator lexical ownership aliases before conservative prefix comparison; no filesystem alias or process-isolation claim.",
+        "Normalize bare, repository-only and URL dependency identities to the selected host/repository/number before duplicate checks; preserve same-host cross-repository blockers and refuse unsupported foreign hosts without partial output.",
+        "Derive fake GitHub creation and label state from actual argv and body-file bytes; verify unchanged production Task snapshot/readback with deliberate broken copies.",
+        "Add only the exact current frontier blob to the ritual anchor allowlist; retain historical anchors, equal base/head anchors and complete exact-tree/readback guards.",
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-stateful-fake-gh-only",
+}
 SOURCE_PREPARATION_PATH = ".github/scripts/setup-sources.sh"
 SOURCE_PREPARATION_CONTRACT = {
     "schema": "source-registry-preparation/v1",
@@ -452,6 +474,35 @@ def validate_source_preparation(payload_data, parity):
         errors.append("source preparation path/pending-activation guard drifted")
     return errors
 
+def validate_task_selection(payload_data, parity):
+    record = parity.get("task_selection")
+    if not isinstance(record, dict) or set(record) != set(TASK_SELECTION_CONTRACT) | {"target_files"}:
+        return ["task selection provenance fields are missing or unreviewed"]
+    errors = []
+    if any(record.get(key) != value for key, value in TASK_SELECTION_CONTRACT.items()):
+        errors.append("task selection source/observation/evidence contract drifted")
+    expected = [{"path": name, "mode": "100644", "sha256": hashlib.sha256(payload_data[name]).hexdigest()}
+                for name in TASK_SELECTION_PATHS]
+    if record.get("target_files") != expected:
+        errors.append("task selection target digest/mode/fields drifted")
+    frontier = payload_data[TASK_SELECTION_PATHS[1]]
+    blob = hashlib.sha1(b"blob " + str(len(frontier)).encode() + b"\0" + frontier).hexdigest()
+    ritual = payload_data[TASK_SELECTION_PATHS[3]].decode()
+    anchor = ritual.split("reviewed_adoption_anchor() {", 1)[-1].split("\n}", 1)[0]
+    matches = re.findall(r"100644\\tblob\\t([0-9a-f]{40})", anchor)
+    if (matches != ["f66d3aa5e73abf24052c70f557cd6df9177ca012", "cc888c829bc5957871376004cb59a93b4980b50f", blob]
+            or '*) return 1 ;;' not in anchor
+            or '[[ "$base_anchor" == "$head_anchor" ]] || return 1' not in ritual):
+        errors.append("task selection exact ritual anchor compatibility drifted")
+    ownership = payload_data[TASK_SELECTION_PATHS[2]].decode()
+    if '.|./*|*/.|*/./*|*//*) invalid=1; continue ;;' not in ownership:
+        errors.append("task selection lexical alias refusal drifted")
+    if any(value not in frontier.decode() for value in (
+            '($url.host | ascii_downcase) == $host', '($repo // $selected)',
+            'unique_by([.[0], (.[1] | ascii_downcase)])')):
+        errors.append("task selection normalized identity guard drifted")
+    return errors
+
 def validate(root):
     errors = []
     root = Path(root)
@@ -477,11 +528,12 @@ def validate(root):
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) != 0o644:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
         errors.extend(validate_source_preparation(payload_data, parity))
+        errors.extend(validate_task_selection(payload_data, parity))
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
         if parity.get("limits") != INSTALLER_LIMITS:

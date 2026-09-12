@@ -503,6 +503,55 @@ No workflow, registry, installed payload, existing feedback behavior or N1
 limitation changes. These tests are not canonical scenario passes or full K06,
 runtime, K16, Phase 2 or release completion evidence.
 
+## Task selection observations
+
+T24 retains the existing frontier and ownership sensors and planning Skill.
+Readiness still describes a complete Task brief; frontier membership means the
+observed dependencies are closed. Before delegating multiple Tasks, explicitly
+check their ownership with
+`bash .github/scripts/ownership-overlap.sh -R owner/repo 23 24` and apply the
+Task's execution authority. Nothing here automatically dispatches work.
+
+The ownership sensor rejects interior `.` components and redundant `/`
+separators as `UNCHECKABLE` (exit 3) before comparing literal prefixes. One
+leading `./`, ordinary paths and conservative glob overlap remain supported.
+`OVERLAP` (exit 1) requires serialization or reviewed repartitioning;
+`NO_OVERLAP` (exit 0) is only a supported declaration observation. No symlink,
+inode, filesystem alias resolution or process isolation is claimed.
+
+The frontier first resolves the selected repository through a read-only
+`gh repo view`. Bare numbers, repository objects and URL references become
+case-normalized host/repository/number identities before duplicate detection.
+Valid cross-repository blockers on the selected host remain supported, including
+identical numbers belonging to different repositories. Foreign-host references
+are unsupported and refuse. Missing or contradictory identities, duplicate
+aliases, incomplete connections, unknown states and failed reads produce no
+partial actionable output. Complete gh connections and tested legacy arrays
+retain their existing support and limits; an empty ready list remains a
+successful observation distinct from a failed read.
+
+The stateful fake GitHub fixture now creates its synthetic issue from actual
+argv and actual body-file bytes, then applies explicit response defects. Label
+edits likewise use the requested labels and exact target. Deliberate installed
+helper copies sending an empty or wrong body file or incorrect readiness label
+must fail. The unchanged production Task helper retains its private body
+snapshot even if the caller file changes before creation. This is offline
+transport fidelity evidence, not a live GitHub transaction claim.
+
+The only ritual change adds the exact new frontier blob to the existing
+adoption-anchor allowlist. Both accepted historical anchors remain; unknown
+anchors, mixed base/head anchors, malformed or incomplete tree observations and
+PR drift still refuse. Current-payload initial adoption and onboarding run
+against the new anchor without substituting historical payload bytes.
+
+This package retains all 47 payload paths, preservation classes and mode 0644.
+Only the frontier, ownership and ritual engines and planning Skill change;
+the remaining 43 payload files are byte-identical to the accepted T23 base.
+Known-old upgrade and operation-scoped rollback fixtures prove preservation
+of tuned surfaces, adopter registry bytes/modes and unrelated Git state.
+`task_selection` in the existing parity JSON binds frozen source provenance
+and exact target bytes. No existing adopter is migrated by these tests.
+
 ## Evidence boundary
 
 Disposable local adopter tests cover real copy/dry-run/preservation, rejection,
