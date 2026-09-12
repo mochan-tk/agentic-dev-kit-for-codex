@@ -729,10 +729,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.github/scripts/run.ps1",
           "mode": "100644"
         },
@@ -787,10 +783,6 @@
       "base_tree": "87d2e889b88ff3a37e5809741ac3e7fa81a5e94a",
       "path_transitions": [],
       "owned_paths": [
-        {
-          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
-          "mode": "100644"
-        },
         {
           "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
           "mode": "100644"
@@ -896,10 +888,29 @@
     {
       "id": "T23",
       "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/39",
-      "state": "active",
+      "state": "accepted",
       "branch": "codex/source-first-task-creation",
       "base_commit": "7565593f470fa6515a138c730f2545595cbd888f",
       "base_tree": "1fb6d53a58568a6a62ae9dfe5b2a6759d2f60273",
+      "path_transitions": [],
+      "owned_paths": [
+        {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+          "mode": "100644"
+        }
+      ]
+    },
+    {
+      "id": "T24",
+      "record": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/41",
+      "state": "active",
+      "branch": "codex/source-first-task-selection",
+      "base_commit": "4e62351d3c053e6c72cc1d295df5567245340014",
+      "base_tree": "eab568e5eee0bc09889f67764655d07ab0d31142",
       "path_transitions": [],
       "owned_paths": [
         {
@@ -911,11 +922,11 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+          "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+          "path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
           "mode": "100644"
         },
         {
