@@ -3,7 +3,7 @@
 .agents/skills/context-distillation/SKILL.md	engine	3d6e4955a67f83758cf15ad96e4357de0a64a67e24394aed61f2c7d563f41a62
 .agents/skills/plan-management/SKILL.md	engine	56cc9de21e31780f3197456c2159e8f21a2f5e7fb5044695b31b5f1a6294bd63
 .agents/skills/plan-management/scripts/frontier.sh	engine	bf94a75bea1318049c4b142ff7efcf927ddb374c314cd7531c163344cbbe6745
-.agents/skills/plan-management/scripts/new-task.sh	engine	5691beaeb16a9a4318666f86ad316fd1cd7098c96028567014c80ea65b8613bf
+.agents/skills/plan-management/scripts/new-task.sh	engine	8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c
 .agents/skills/plan-management/templates/epic-body.md	engine	28adc386b85e5d9a4861aede3a476606b9b826a74d08308ac69461232aa248b4
 .agents/skills/plan-management/templates/task-body.md	engine	f3f89d95012c653587ba807a2928b1d34da65e9b563826b6db91f27ddf1b512b
 .agents/skills/project-onboarding/SKILL.md	engine	878563511e78dced8f32ef507c7af964990134755a85d727316b237cd831387a

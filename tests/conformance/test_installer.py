@@ -590,6 +590,13 @@ sys.exit(result.returncode)
         self.assertIn("invalid or incomplete Task inputs", result.stderr)
         self.assertNotIn(str(self.base), result.stderr + result.stdout)
 
+    def test_task_creation_rejects_entire_dependency_value_before_any_gh_call(self):
+        for dependencies in ("14,15\n", "14,15\r", "14,15\n,16", "14,15\n]", "14,15\t", "14,15\x01"):
+            with self.subTest(dependencies=repr(dependencies)):
+                result, events = self.task_creation_fixture(dependencies=dependencies)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual([], events)
+
     def complete_checker_source(self):
         source = self.clone_source()
         checker = self.kickoff_checker()
@@ -784,6 +791,7 @@ sys.exit(result.returncode)
             ('--label "type:task,exec:$EXEC"', '--label "type:task,exec:$EXEC,ai:ready"'),
             ('read_back false || unconfirmed "Task read-back"', ': # omitted read-back'),
             ('read_back true || unconfirmed "Task readiness read-back"', ': # omitted final verification'),
+            ('"$DEPS" =~ ^[1-9][0-9]*(,[1-9][0-9]*)*$', 'true'),
         ):
             with self.subTest(replacement=replacement):
                 self.assertIn(old, original)

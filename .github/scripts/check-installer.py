@@ -412,6 +412,7 @@ def validate_task_creation(payload_data, parity):
             errors.append("task creation target digest/mode/fields drifted")
     script = payload_data[TASK_CREATION_PATHS[1]].decode()
     if (script.count("gh issue create") != 1 or '--label "type:task,exec:$EXEC" --parent "$PARENT"' not in script
+            or '"$DEPS" =~ ^[1-9][0-9]*(,[1-9][0-9]*)*$' not in script
             or 'read_back false || unconfirmed "Task read-back"' not in script
             or 'read_back true || unconfirmed "Task readiness read-back"' not in script):
         errors.append("task creation single-create/readiness guard drifted")

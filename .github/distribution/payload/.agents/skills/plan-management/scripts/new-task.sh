@@ -44,7 +44,8 @@ if [[ -n "$REQUESTED_REPO" ]]; then
 fi
 DEP_IDS=()
 if [[ -n "$DEPS" ]]; then
-  [[ ${#DEPS} -le 549 && "$DEPS" != ,* && "$DEPS" != *, && "$DEPS" != *,,* ]] || bad_input
+  # Validate the entire value before read splits it (read stops at a newline).
+  [[ ${#DEPS} -le 549 && "$DEPS" =~ ^[1-9][0-9]*(,[1-9][0-9]*)*$ ]] || bad_input
   IFS=, read -r -a DEP_IDS <<< "$DEPS"
   [[ ${#DEP_IDS[@]} -le 50 ]] || bad_input
   checked=","

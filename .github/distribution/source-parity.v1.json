@@ -46,7 +46,7 @@
       "destination": ".agents/skills/plan-management/scripts/new-task.sh",
       "source_path": ".github/skills/plan-management/scripts/new-task.sh",
       "source_blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
-      "target_sha256": "5691beaeb16a9a4318666f86ad316fd1cd7098c96028567014c80ea65b8613bf",
+      "target_sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -502,7 +502,7 @@
       {
         "path": ".agents/skills/plan-management/scripts/new-task.sh",
         "mode": "100644",
-        "sha256": "5691beaeb16a9a4318666f86ad316fd1cd7098c96028567014c80ea65b8613bf"
+        "sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c"
       }
     ]
   },
