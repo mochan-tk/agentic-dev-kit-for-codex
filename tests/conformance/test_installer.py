@@ -51,6 +51,10 @@ class InstallerTests(unittest.TestCase):
         self.target = self.base / "adopter with spaces"
         self.target.mkdir()
         subprocess.run(["git", "-c", "init.defaultBranch=main", "init", "-q", str(self.target)], check=True)
+        # Full .git bytes/modes are preservation evidence: fixture commits must
+        # not start independent housekeeping while those snapshots are taken.
+        self.git("config", "--local", "gc.auto", "0")
+        self.git("config", "--local", "maintenance.auto", "false")
 
     def run_install(self, *args, source=ROOT, target=None):
         env = dict(os.environ, SCAFFOLD_SOURCE_DIR=str(source), LC_ALL="C")
@@ -72,6 +76,46 @@ class InstallerTests(unittest.TestCase):
         self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
                  "commit", "-qm", message)
         return self.git("rev-parse", "HEAD")
+
+    def test_fixture_git_housekeeping_cannot_mutate_preservation_snapshots(self):
+        # Real Git control: a tiny threshold packs reachable loose objects on
+        # commit. Foreground maintenance makes this mechanism deterministic;
+        # it does not claim to reproduce the timing of a particular CI race.
+        defaults = self.base / "adversarial-gitconfig"
+        defaults.write_text("[gc]\n auto = 1\n autoDetach = false\n"
+                            "[maintenance]\n auto = true\n autoDetach = false\n")
+        environment = dict(os.environ, GIT_CONFIG_GLOBAL=str(defaults), GIT_CONFIG_NOSYSTEM="1")
+        blobs = []
+        for nonce in range(10000):
+            content = ("maintenance fixture " + str(nonce) + "\n").encode()
+            oid = hashlib.sha1(b"blob " + str(len(content)).encode() + b"\0" + content).hexdigest()
+            if oid.startswith("17"):
+                blobs.append((oid, content))
+                if len(blobs) == 2: break
+        self.assertEqual(2, len(blobs))
+        control = self.base / "unisolated control"
+        subprocess.run(["git", "-c", "init.defaultBranch=main", "init", "-q", str(control)], check=True)
+        for repository, isolated in ((control, False), (self.target, True)):
+            with self.subTest(isolated=isolated):
+                for index, (_oid, content) in enumerate(blobs):
+                    (repository / ("probe-" + str(index))).write_bytes(content)
+                def git_probe(*args):
+                    return subprocess.run(["git", "-C", str(repository), *args], env=environment,
+                                          capture_output=True, text=True, timeout=15, check=True)
+                git_probe("add", "--all")
+                git_probe("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                          "commit", "-qm", "reachable maintenance probes")
+                loose = [repository / ".git/objects" / oid[:2] / oid[2:] for oid, _content in blobs]
+                for oid, _content in blobs: git_probe("cat-file", "-e", oid)
+                self.assertEqual([isolated, isolated], [path.is_file() for path in loose])
+                if isolated:
+                    self.assertEqual("0", git_probe("config", "--local", "--get", "gc.auto").stdout.strip())
+                    self.assertEqual("false", git_probe("config", "--local", "--get", "maintenance.auto").stdout.strip())
+                    before = self.snapshot(repository / ".git")
+                    modes = {p.relative_to(repository): p.stat().st_mode for p in (repository / ".git").rglob("*")}
+                    git_probe("gc", "--auto")
+                    self.assertEqual(before, self.snapshot(repository / ".git"))
+                    self.assertEqual(modes, {p.relative_to(repository): p.stat().st_mode for p in (repository / ".git").rglob("*")})
 
     def adoption_fixture(self, *, initial=False, preserved=False, tune=True, application=False,
                          anchor=None, head_anchor=None):
