@@ -13,6 +13,26 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+RITUAL_PATHS = (".github/scripts/check-task-ritual.sh", ".agents/skills/verification/SKILL.md")
+RITUAL_CONTRACT = {
+    "schema": "ordinary-ritual-observation/v1",
+    "source_files": {
+        ".github/scripts/check-task-ritual.sh": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
+        ".github/scripts/tests/test-task-ritual.sh": "de5ae5b2265c8ae8c8aa406586259bf70d427551",
+        ".github/scripts/tests/test-ritual-chronology.sh": "f4e7a5805d940ac00db3c2fafa29f27936a56f28",
+        ".github/scripts/tests/test-ritual-linkage.sh": "478c514b3ce9245395baf3c8c3772ca7c2be041c",
+        ".github/scripts/tests/lib.sh": "afa5384e9fde7f42f0551a3a6668c1d2e3e2a164",
+        ".github/skills/verification/SKILL.md": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+    },
+    "commit_limit": 250,
+    "timestamp_profile": "whole-second-utc-calendar",
+    "adaptations": [
+        "Bind ordinary PR, Task, complete comment membership and selected plan observations before/after the verdict; retain narrow bot/bootstrap and source execution/reference semantics.",
+        "Require 1-250 unique typed commits including observed head, metadata count agreement and every valid selected date; preserve null/missing committer author fallback and equal-second chronology.",
+        "Reach the installed mode-0644 sensor explicitly through Bash after PR creation; sensor observations do not replace CI/review/acceptance or authenticate chronology.",
+    ],
+    "evidence": "offline-installed-bash-real-jq-stateful-paginated-fake-gh-only",
+}
 TASK_SELECTION_PATHS = (
     ".agents/skills/plan-management/SKILL.md",
     ".agents/skills/plan-management/scripts/frontier.sh",
@@ -21,6 +41,8 @@ TASK_SELECTION_PATHS = (
 )
 TASK_SELECTION_CONTRACT = {
     "schema": "task-selection-observation/v1",
+    "accepted_commit": "d396865c0f5e23fa01bb790242835dda482d679d",
+    "accepted_tree": "17cf82b1cc305b3263e8a84e18beecdea91c32e5",
     "source_files": {
         ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
         ".github/skills/plan-management/scripts/frontier.sh": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
@@ -481,7 +503,9 @@ def validate_task_selection(payload_data, parity):
     errors = []
     if any(record.get(key) != value for key, value in TASK_SELECTION_CONTRACT.items()):
         errors.append("task selection source/observation/evidence contract drifted")
-    expected = [{"path": name, "mode": "100644", "sha256": hashlib.sha256(payload_data[name]).hexdigest()}
+    expected = [{"path": name, "mode": "100644", "sha256":
+                 "7f23226c2edd0e2e5c943fa19a0b2f575e3d72e42aed9a02700d0ba091f128b9"
+                 if name == ".github/scripts/check-task-ritual.sh" else hashlib.sha256(payload_data[name]).hexdigest()}
                 for name in TASK_SELECTION_PATHS]
     if record.get("target_files") != expected:
         errors.append("task selection target digest/mode/fields drifted")
@@ -501,6 +525,37 @@ def validate_task_selection(payload_data, parity):
             '($url.host | ascii_downcase) == $host', '($repo // $selected)',
             'unique_by([.[0], (.[1] | ascii_downcase)])')):
         errors.append("task selection normalized identity guard drifted")
+    return errors
+
+def validate_ritual_verification(payload_data, parity):
+    record = parity.get("ritual_verification")
+    if not isinstance(record, dict) or set(record) != set(RITUAL_CONTRACT) | {"target_files"}:
+        return ["ordinary ritual provenance fields are missing or unreviewed"]
+    errors = []
+    if any(record.get(key) != value for key, value in RITUAL_CONTRACT.items()):
+        errors.append("ordinary ritual source/observation/evidence contract drifted")
+    expected = [{"path": name, "mode": "100644", "sha256": hashlib.sha256(payload_data[name]).hexdigest()}
+                for name in RITUAL_PATHS]
+    if record.get("target_files") != expected:
+        errors.append("ordinary ritual target digest/mode/fields drifted")
+    helper = payload_data[RITUAL_PATHS[0]].decode()
+    required = ('for attempt in 1 2 3;', 'length == 40', 'length != 40',
+                'selected_repo=$(api "repos/{owner}/{repo}"', 'observation_fail repository-identity',
+                'valid_timestamp "$timestamp" || observation_fail commit-date',
+                'valid_timestamp "$created" && valid_timestamp "$updated"',
+                'commit_count <= 250', '"$actual_commits" == "$commit_count"',
+                '"$unique_commits" == "$commit_count"', 'grep -Fxq "$observed_head"',
+                '.commit.committer.date == null', 'if ! has_marker CLAIM;',
+                'if has_marker DISPATCH;', 'elif has_marker EXEMPT;',
+                '"$actual_comments" == "$comment_count"', '"$unique_comments" == "$comment_count"',
+                '"$final_pr" == "$pr_snapshot"', '"$final_task" == "$task_snapshot"',
+                '"$final_comments" == "$comment_snapshot"', '"$final_plan" == "$plan_snapshot"')
+    if any(token not in helper for token in required):
+        errors.append("ordinary ritual completeness/date/snapshot guard drifted")
+    skill = payload_data[RITUAL_PATHS[1]].decode()
+    if any(token not in skill for token in ('bash .github/scripts/check-task-ritual.sh 123',
+            'After PR creation, before ready-for-review', 'not atomic', 'owner acceptance')):
+        errors.append("ordinary ritual installed sensor handoff drifted")
     return errors
 
 def validate(root):
@@ -528,12 +583,13 @@ def validate(root):
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) != 0o644:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
         errors.extend(validate_source_preparation(payload_data, parity))
         errors.extend(validate_task_selection(payload_data, parity))
+        errors.extend(validate_ritual_verification(payload_data, parity))
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
         if parity.get("limits") != INSTALLER_LIMITS:

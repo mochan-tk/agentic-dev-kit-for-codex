@@ -538,7 +538,7 @@ must fail. The unchanged production Task helper retains its private body
 snapshot even if the caller file changes before creation. This is offline
 transport fidelity evidence, not a live GitHub transaction claim.
 
-The only ritual change adds the exact new frontier blob to the existing
+The T24 ritual change added the exact new frontier blob to the existing
 adoption-anchor allowlist. Both accepted historical anchors remain; unknown
 anchors, mixed base/head anchors, malformed or incomplete tree observations and
 PR drift still refuse. Current-payload initial adoption and onboarding run
@@ -550,7 +550,60 @@ the remaining 43 payload files are byte-identical to the accepted T23 base.
 Known-old upgrade and operation-scoped rollback fixtures prove preservation
 of tuned surfaces, adopter registry bytes/modes and unrelated Git state.
 `task_selection` in the existing parity JSON binds frozen source provenance
-and exact target bytes. No existing adopter is migrated by these tests.
+and the accepted T24 ritual bytes at merge `d396865c0f5e23fa01bb790242835dda482d679d`
+(tree `17cf82b1cc305b3263e8a84e18beecdea91c32e5`). Its four-file comparison
+remains bound to that accepted merge, not every future HEAD. No existing
+adopter is migrated by these tests.
+
+## Ordinary Task verification handoff
+
+After creating the actual PR, before marking it ready, invoke the installed
+mode-0644 helper from the adopter repository with Bash and the actual number:
+
+```sh
+bash .github/scripts/check-task-ritual.sh 123
+```
+
+The installed verification Skill now reaches this existing read-only sensor.
+Record its result and exact observed head/base in the PR evidence table. The
+ordinary path checks one typed PR snapshot, Task metadata/labels, complete
+comment membership and the selected Plan comment, then compares those
+observations again before PASS. Relevant body changes, new/deleted decisions,
+failed reads and incomplete observations are non-success. Marker existence
+uses the exact marker column, not matching words inside dispatch display text.
+
+All supported PR commits must be typed, unique, include the observed head and
+match the PR's reported count. The REST PR-commits endpoint is capped at 250
+commits; `--paginate` does not remove that cap. This sensor supports complete
+lists of 1-250, requests pages of 100, and refuses larger or inconsistent
+observations instead of introducing a Git-history crawler. GitHub documents
+the [endpoint cap and page limit](https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request);
+the CLI documents [separate page outputs and pagination](https://cli.github.com/manual/gh_api).
+
+Every selected commit date and comment timestamp is validated before sorting
+or comparing. The supported API profile is `YYYY-MM-DDTHH:MM:SSZ`, calendar-valid
+whole-second UTC (no leap-second normalization). Null/missing committer dates
+may use valid author dates; empty, false or malformed present values do not.
+Equal-second chronology, source two-tier priority over exemption, legitimate
+worker references, branch suffixes, releases and Task/Plan linkage retain
+their existing meaning. Bot allowlisting and exact-tree bootstrap exceptions
+remain narrow; ordinary Task work cannot use an onboarding bypass.
+
+The new `ritual_verification` parity record retains the six frozen source
+helper/Skill/test identities and records the bounded correction. This T25
+package changes exactly two of 47 payload files: ritual and verification
+Skill; the other 45 remain byte-identical to the accepted T24 merge, with all
+classes/modes and frontier anchors unchanged. Raw-JSON fixtures run actual
+installed Bash and jq queries, page/response sequences and broken installed
+copies. They reject write argv and cover known-old upgrade/rollback without
+altering adopter instance/tuned files or unrelated application state.
+
+Before/after reads are not atomic GitHub transactions and cannot detect an
+intervening change-and-revert or later edits. Git dates/comments do not
+authenticate when a worker acted. The result is a sensor observation, not a
+runtime receipt, CI verdict, independent review or owner acceptance. Installing
+these files does not install a CI workflow or enable Rulesets. No live adopter
+operation or full scenario/contract proof is claimed by these fixtures.
 
 ## Evidence boundary
 

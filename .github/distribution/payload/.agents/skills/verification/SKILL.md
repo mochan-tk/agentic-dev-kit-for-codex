@@ -79,6 +79,28 @@ blocks `Outcome: completed` until the requester revises the work order
 (session-orchestration skill, Outcome notes); "pass (untested)" is not a
 result.
 
+## After PR creation, before ready-for-review
+
+Once the PR has its actual number, run the installed read-only ritual sensor
+from the adopter repository, replacing `123` with that number:
+
+```sh
+bash .github/scripts/check-task-ritual.sh 123
+```
+
+The helper is installed as mode 0644, so invoke it with Bash. Record its result
+and observed head/base in the existing evidence table; rerun if that head or
+the Task/plan evidence changes. Ordinary success requires complete evidence
+for 1-250 PR commits, valid whole-second UTC dates, the Task/plan relationship,
+and matching final PR/Task/comment observations. Unavailable, malformed,
+incomplete or changed evidence is non-success, not a deferred PASS.
+
+This sensor does not replace implementation tests, current-head CI,
+independent review or owner acceptance. Matching before/after API reads are
+not atomic and Git dates do not authenticate worker actions. Installation
+enables neither a CI workflow nor a Ruleset; consult the adopter's actual
+required checks separately. No Issue, label or PR mutation is performed.
+
 **Reference, don't paste.** Evidence sometimes involves real data. PII,
 credentials, and customer records never land in issues, PRs, or commit
 messages — they live in access-controlled storage and the ledger links to

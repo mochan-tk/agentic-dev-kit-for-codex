@@ -2,6 +2,7 @@
 
 import hashlib
 import base64
+import copy
 import importlib.util
 import json
 import os
@@ -26,6 +27,9 @@ TASK_CREATION_PATHS = (".agents/skills/plan-management/SKILL.md",
                        ".agents/skills/plan-management/scripts/new-task.sh")
 SOURCE_REGISTRY_PATH = ".github/scripts/setup-sources.sh"
 TASK_SELECTION_BASE = "4e62351d3c053e6c72cc1d295df5567245340014"
+TASK_SELECTION_ACCEPTED = "d396865c0f5e23fa01bb790242835dda482d679d"
+RITUAL_PATH = ".github/scripts/check-task-ritual.sh"
+RITUAL_PATHS = (RITUAL_PATH, ".agents/skills/verification/SKILL.md")
 TASK_SELECTION_PATHS = (".agents/skills/plan-management/SKILL.md",
                         ".agents/skills/plan-management/scripts/frontier.sh",
                         ".github/scripts/ownership-overlap.sh",
@@ -91,11 +95,18 @@ class InstallerTests(unittest.TestCase):
     def ritual(self, base, head, *, initial=False, defect=None, ordinary=False):
         # GitHub projections are fixtures derived from real local Git objects.
         # The fake transports data only; all proof decisions remain in the helper.
+        if ordinary:
+            # Ordinary proof uses real queries/raw JSON, never bootstrap trees.
+            return self.packaged_json(RITUAL_PATH, self.ordinary_records(), '1', installed=True)
         prefix = "repos/{owner}/{repo}"
         replies = {}
         def reply(endpoint, query, output, rc=0):
             replies[endpoint + "\n" + query] = [rc, output]
         meta = prefix + "/pulls/1"
+        helper = (self.target / RITUAL_PATH).read_text()
+        pr_query = helper.split("pr_query='", 1)[1].split("'", 1)[0]
+        reply(meta, pr_query, '\t'.join(['1', base, head, 'fixture-branch', '1',
+                                       'fixture/adopter', 'b', 'owner', 'User']))
         for query, value in {
             '[.user.login, .user.type] | @tsv': 'owner\tUser',
             '.body // ""': ('Refs #2\nPlan: https://github.com/fixture/adopter/issues/2#issuecomment-3'
@@ -154,19 +165,6 @@ class InstallerTests(unittest.TestCase):
             reply(prefix + "/git/blobs/" + oid,
                   '.content | type' if defect == "blob-type" else '.content',
                   'array' if defect == "blob-type" else base64.b64encode(b"altered\n").decode())
-        if ordinary:
-            helper = (self.target / '.github/scripts/check-task-ritual.sh').read_text()
-            marker_query = helper.split('markers=$(api ', 1)[1].split("--jq '", 1)[1].split("'", 1)[0]
-            resolved_query = helper.split('elif resolved=$(api ', 1)[1].split("--jq '", 1)[1].split("'", 1)[0]
-            reply(prefix + '/issues/2/comments', marker_query,
-                  'CLAIM\t2026-01-01T00:00:00Z\t2026-01-01T00:00:00Z\n'
-                  'PLAN\t2026-01-01T00:01:00Z\t2026-01-01T00:01:00Z\n'
-                  'EXEMPT\t2026-01-01T00:01:00Z\t2026-01-01T00:01:00Z')
-            reply(meta + '/commits', '.[].commit | ((.committer.date // .author.date) // empty)',
-                  '2026-01-01T00:02:00Z')
-            reply(prefix + '/issues/2', '[.labels[].name] | join(" ")', 'type:task')
-            reply(prefix, '.full_name', 'fixture/adopter')
-            reply(prefix + '/issues/comments/3', resolved_query, '2\tplan')
         fake = self.base / "ritual-bin"
         fake.mkdir(exist_ok=True)
         records = self.base / "github-fixture.json"
@@ -280,11 +278,16 @@ print(value[1]); sys.exit(value[0])
         fake.mkdir(exist_ok=True)
         fixture = self.base / "raw-github.json"
         fixture.write_text(json.dumps(records))
+        calls = self.base / "raw-github-calls.jsonl"
+        calls.write_text("")
         gh = fake / "gh"
         gh.write_text("""#!/usr/bin/env python3
 import json, os, subprocess, sys
 args=sys.argv[1:]
 records=json.load(open(os.environ['RAW_GITHUB_FIXTURE']))
+call_path=os.environ['RAW_GITHUB_CALLS']
+previous=[json.loads(line) for line in open(call_path)]
+with open(call_path,'a') as stream: stream.write(json.dumps(args)+'\\n')
 if args[:2] == ['issue','list']:
     value=records['list']
     if value is None: sys.exit(90)
@@ -294,7 +297,9 @@ if args[:2] == ['repo','view']:
     key='repository'
     records.setdefault(key, {'url':'https://github.com/fixture/adopter','nameWithOwner':'fixture/adopter'})
 elif args[0] == 'api':
-    key=args[1]
+    method=args[args.index('--method')+1] if '--method' in args else args[args.index('-X')+1] if '-X' in args else 'GET'
+    if method!='GET' or any(x in args for x in ('-f','-F','--field','--raw-field','--input')): sys.exit(94)
+    key=args[1].split('?')[0]
 elif args[:2] == ['issue','view']:
     repo=args[args.index('--repo')+1] if '--repo' in args else args[args.index('-R')+1] if '-R' in args else 'fixture/adopter'
     key=repo+'#'+args[2]+':'+args[args.index('--json')+1]
@@ -306,14 +311,29 @@ elif args[:2] == ['issue','view']:
 else: sys.exit(91)
 if key not in records or records[key] is None: sys.exit(92)
 if '--jq' not in args: sys.exit(93)
-sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
-    input=json.dumps(records[key]),text=True).returncode)
+value=records[key]
+if isinstance(value,dict) and '__responses__' in value:
+    count=sum(1 for old in previous if old[:1]==['api'] and old[1].split('?')[0]==key)
+    value=value['__responses__'][min(count,len(value['__responses__'])-1)]
+if value is None: sys.exit(92)
+pages=value.get('__pages__') if isinstance(value,dict) else None
+if pages is None: pages=[value]
+if '--paginate' not in args: pages=pages[:1]
+if '--slurp' in args: pages=[pages]
+for page in pages:
+    if isinstance(page,dict) and '__error__' in page:
+        print('synthetic transport error',file=sys.stderr); sys.exit(95)
+    result=subprocess.run(['jq','-r',args[args.index('--jq')+1]],input=json.dumps(page),text=True)
+    if result.returncode: sys.exit(result.returncode)
+sys.exit(0)
 """)
         gh.chmod(0o755)
-        return subprocess.run(["bash", str((self.target if installed else ROOT / PAYLOAD) / helper), *args], cwd=self.target,
+        result = subprocess.run(["bash", str((self.target if installed else ROOT / PAYLOAD) / helper), *args], cwd=self.target,
             env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"],
-                     RAW_GITHUB_FIXTURE=str(fixture), RITUAL_API_RETRY_DELAY="0"),
+                     RAW_GITHUB_FIXTURE=str(fixture), RAW_GITHUB_CALLS=str(calls), RITUAL_API_RETRY_DELAY="0"),
             capture_output=True, text=True, timeout=15)
+        self.last_gh_calls = [json.loads(line) for line in calls.read_text().splitlines()]
+        return result
 
     def test_ownership_lexical_aliases_never_report_disjoint(self):
         self.assertEqual(0, self.run_install('--apply').returncode)
@@ -412,11 +432,12 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         self.assertEqual(body, json.loads(state.read_text())['issue']['body'])
         self.assertEqual('Later caller edit\n', (self.base / 'task body.md').read_text())
 
-    def ordinary_ritual(self, identifier="6af9582d-42d1-425d-82c8-f9ec651225a8", *, defect=None):
+    def ordinary_records(self, identifier="6af9582d-42d1-425d-82c8-f9ec651225a8", *, defect=None, count=1):
         prefix = 'repos/{owner}/{repo}'
         def comment(body, minute):
             stamp = f'2026-01-01T00:{minute:02}:00Z'
-            return {'body': body, 'created_at': stamp, 'updated_at': stamp}
+            return {'id': minute + 2, 'body': body, 'created_at': stamp, 'updated_at': stamp,
+                    'issue_url': 'https://api.github.com/repos/fixture/adopter/issues/2'}
         dispatch = f'Dispatching worker: Task #2 worker (session {identifier}), branch codex/task-2-fix'
         comments = [comment('Starting in session fixture-supervisor', 0),
                     comment('## Plan\nImplement the bounded Task.', 1), comment(dispatch, 2)]
@@ -436,19 +457,231 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         if defect == 'wrong-plan-issue': body = body.replace('/issues/2#', '/issues/4#')
         if defect == 'missing-plan-link': body = 'Refs #2'
         records = {
-            prefix + '/pulls/1': {'user': {'login': 'owner', 'type': 'User'}, 'body': body,
-                                 'head': {'ref': 'codex/task-2-fix'}},
+            prefix + '/pulls/1': {'number': 1, 'user': {'login': 'owner', 'type': 'User'}, 'body': body,
+                                 'title': 'Task fixture', 'commits': count,
+                                 'base': {'sha': 'a' * 40, 'ref': 'main', 'repo': {'full_name': 'fixture/adopter'}},
+                                 'head': {'ref': 'codex/task-2-fix', 'sha': f'{count:040x}'}},
             prefix + '/issues/2/comments': comments,
-            prefix + '/pulls/1/commits': [{'commit': {'committer': {'date': '2026-01-01T00:05:00Z'}}}],
-            prefix + '/issues/2': {'labels': [{'name': 'type:task'}]},
+            prefix + '/pulls/1/commits': [{'sha': f'{i + 1:040x}', 'commit': {
+                'committer': {'date': '2026-01-01T00:05:00Z'}}} for i in range(count)],
+            prefix + '/issues/2': {'number': 2, 'state': 'open', 'body': 'Task fixture',
+                                    'comments': len(comments), 'labels': [{'name': 'type:task'}]},
             prefix: {'full_name': 'fixture/adopter'},
-            prefix + '/issues/comments/3': {'issue_url': 'https://api.github.com/repos/fixture/adopter/issues/2',
-                                          'body': '## Plan\nImplement the bounded Task.'},
+            prefix + '/issues/comments/3': copy.deepcopy(comments[1]),
         }
         if defect == 'wrong-plan-resolution': records[prefix + '/issues/comments/3']['issue_url'] = 'issues/4'
         if defect == 'non-plan-comment': records[prefix + '/issues/comments/3']['body'] = 'Starting in session fixture'
         if defect == 'missing-task-label': records[prefix + '/issues/2']['labels'] = []
-        return self.packaged_json('.github/scripts/check-task-ritual.sh', records, '1')
+        return records
+
+    def ordinary_ritual(self, identifier="6af9582d-42d1-425d-82c8-f9ec651225a8", *, defect=None):
+        return self.packaged_json(RITUAL_PATH, self.ordinary_records(identifier, defect=defect), '1')
+
+    def assert_ritual_refuses(self, records):
+        result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+        self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertNotIn('PASS:', result.stdout + result.stderr)
+        return result
+
+    def test_ritual_commit_collection_fail_closed(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        for defect in ('empty', 'missing-date', 'mixed-missing-date', 'invalid-date', 'false-date',
+                       'duplicate', 'missing-head', 'count-mismatch', 'oversize', 'non-array',
+                       'partial-page', 'failed-page'):
+            with self.subTest(defect=defect):
+                records = self.ordinary_records(count=2)
+                commits = records[pr + '/commits']
+                if defect == 'empty': records[pr + '/commits'] = []
+                if defect in ('missing-date', 'mixed-missing-date'):
+                    commits[0]['commit'] = {}
+                    if defect == 'missing-date': commits[1]['commit'] = {}
+                if defect in ('invalid-date', 'false-date'):
+                    commits[0]['commit'] = {'committer': {'date': '2026-02-30T00:05:00Z' if defect == 'invalid-date' else False},
+                                             'author': {'date': '2026-01-01T00:05:00Z'}}
+                if defect == 'duplicate': commits[0]['sha'] = commits[1]['sha']
+                if defect == 'missing-head': records[pr]['head']['sha'] = 'f' * 40
+                if defect == 'count-mismatch': records[pr]['commits'] = 3
+                if defect == 'oversize': records[pr]['commits'] = 251
+                if defect == 'non-array': records[pr + '/commits'] = {'unexpected': commits[0]}
+                if defect == 'partial-page': records[pr + '/commits'] = {'__pages__': [commits[:1]]}
+                if defect == 'failed-page': records[pr + '/commits'] = {'__pages__': [commits[:1], {'__error__': True}]}
+                self.assert_ritual_refuses(records)
+
+    def test_ritual_pr_snapshot_drift_refuses(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        for field in ('head', 'base', 'ref', 'body', 'count', 'repository', 'unavailable'):
+            with self.subTest(field=field):
+                records = self.ordinary_records()
+                changed = copy.deepcopy(records[pr])
+                if field in ('head', 'base'): changed[field]['sha'] = 'f' * 40
+                if field == 'ref': changed['head']['ref'] = 'codex/other'
+                if field == 'body': changed['body'] += '\nChanged Task plan context.'
+                if field == 'count': changed['commits'] = 2
+                if field == 'repository': changed['base']['repo']['full_name'] = 'other/repo'
+                records[pr] = {'__responses__': [records[pr], None if field == 'unavailable' else changed]}
+                self.assert_ritual_refuses(records)
+
+    def test_ritual_comment_dates_and_record_drift_refuse(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        issue = 'repos/{owner}/{repo}/issues/2'
+        for defect in ('missing-created', 'missing-updated', 'bad-created', 'bad-updated',
+                       'edit-body', 'delete-plan', 'new-dispatch', 'label-drift', 'plan-drift'):
+            with self.subTest(defect=defect):
+                records = self.ordinary_records()
+                comments = records[issue + '/comments']
+                if defect == 'missing-created': comments[0].pop('created_at')
+                if defect == 'missing-updated': comments[0].pop('updated_at')
+                if defect == 'bad-created': comments[0]['created_at'] = '2026-13-01T00:00:00Z'
+                if defect == 'bad-updated': comments[0]['updated_at'] = False
+                changed = copy.deepcopy(comments)
+                if defect == 'edit-body': changed[1]['body'] += '\nAltered work order.'
+                if defect == 'delete-plan': changed.pop(1)
+                if defect == 'new-dispatch':
+                    extra = copy.deepcopy(changed[-1]); extra['id'] = 90; changed.append(extra)
+                if defect in ('edit-body', 'delete-plan', 'new-dispatch'):
+                    records[issue + '/comments'] = {'__responses__': [comments, changed]}
+                if defect == 'label-drift':
+                    changed_issue = copy.deepcopy(records[issue]); changed_issue['labels'] = []
+                    records[issue] = {'__responses__': [records[issue], changed_issue]}
+                if defect == 'plan-drift':
+                    plan = 'repos/{owner}/{repo}/issues/comments/3'
+                    changed_plan = copy.deepcopy(records[plan]); changed_plan['body'] += '\nChanged.'
+                    records[plan] = {'__responses__': [records[plan], changed_plan]}
+                self.assert_ritual_refuses(records)
+
+    def test_ritual_complete_paginated_counts_and_retry_are_bound(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        for count in (1, 30, 31, 100, 101, 200, 250):
+            with self.subTest(count=count):
+                records = self.ordinary_records(count=count)
+                commits = records[pr + '/commits']
+                records[pr + '/commits'] = {'__pages__': [commits[i:i + 100] for i in range(0, count, 100)]}
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn(f'head {count:040x}', result.stdout)
+                self.assertIn(f'{count} commits;', result.stdout)
+                commit_calls = [call for call in self.last_gh_calls if call[1].split('?')[0] == pr + '/commits']
+                self.assertEqual(1, len(commit_calls))
+                self.assertIn('--paginate', commit_calls[0])
+                self.assertIn('per_page=100', commit_calls[0][1])
+        # A failed later page may print valid partial data before failure. The
+        # helper must discard that attempt, then consume the successful retry once.
+        records = self.ordinary_records(count=101)
+        commits = records[pr + '/commits']
+        records[pr + '/commits'] = {'__responses__': [
+            {'__pages__': [commits[:100], {'__error__': True}]},
+            {'__pages__': [commits[:100], commits[100:]]}]}
+        result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn('101 commits;', result.stdout)
+        self.assertNotIn('synthetic transport error', result.stdout + result.stderr)
+        self.assertEqual(2, sum(call[1].split('?')[0] == pr + '/commits' for call in self.last_gh_calls))
+
+    def test_ritual_calendar_validation_and_author_fallback(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        issue = 'repos/{owner}/{repo}/issues/2'
+        bad = ('', None, False, 12, [], {}, '2026-01-01T00:05:00Z\n', '2026-01-01T00:05:00Zjunk',
+               '2023-02-29T00:05:00Z', '1900-02-29T00:05:00Z', '2026-04-31T00:05:00Z',
+               '2026-00-01T00:05:00Z', '2026-13-01T00:05:00Z', '2026-01-00T00:05:00Z',
+               '2026-01-01T24:05:00Z', '2026-01-01T00:60:00Z', '2026-01-01T00:05:60Z')
+        for value in bad:
+            with self.subTest(value=value):
+                records = self.ordinary_records()
+                records[pr + '/commits'][0]['commit']['committer']['date'] = value
+                self.assert_ritual_refuses(records)
+                if value is not None:
+                    records[pr + '/commits'][0]['commit']['author'] = {'date': '2026-01-01T00:05:00Z'}
+                    self.assert_ritual_refuses(records)
+        for committer in (None, {}, {'date': None}, {'date': '2026-01-01T00:05:00Z'}):
+            records = self.ordinary_records()
+            records[pr + '/commits'][0]['commit'] = {
+                'committer': committer, 'author': {'date': '2026-01-01T00:05:00Z'}}
+            result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        # Committer date takes precedence; an old author date is not a violation.
+        records[pr + '/commits'][0]['commit']['author']['date'] = '1900-01-01T00:00:00Z'
+        self.assertEqual(0, self.packaged_json(RITUAL_PATH, records, '1', installed=True).returncode)
+        for stamp in ('2024-02-29T00:00:00Z', '2000-02-29T00:00:00Z'):
+            records = self.ordinary_records()
+            records[pr + '/commits'][0]['commit']['committer']['date'] = stamp
+            for comment in records[issue + '/comments']:
+                comment['created_at'] = comment['updated_at'] = stamp
+            records['repos/{owner}/{repo}/issues/comments/3'] = copy.deepcopy(records[issue + '/comments'][1])
+            result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_ritual_typed_identity_and_comment_completeness(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        issue = 'repos/{owner}/{repo}/issues/2'
+        for defect in ('sha-newline', 'sha-short', 'sha-null', 'sha-number', 'head-null', 'base-null',
+                       'ref-empty', 'count-string', 'count-fraction', 'comment-count', 'comment-duplicate',
+                       'comment-page-object', 'comment-dates-empty', 'comment-dates-null', 'plan-id', 'plan-url', 'foreign-repository'):
+            with self.subTest(defect=defect):
+                records = self.ordinary_records()
+                if defect.startswith('sha-'):
+                    sha = {'sha-newline': '1' * 40 + '\n', 'sha-short': '1' * 39,
+                           'sha-null': None, 'sha-number': 1}[defect]
+                    records[pr]['head']['sha'] = records[pr + '/commits'][0]['sha'] = sha
+                if defect in ('head-null', 'base-null'): records[pr][defect.split('-')[0]]['sha'] = None
+                if defect == 'ref-empty': records[pr]['head']['ref'] = ''
+                if defect == 'count-string': records[pr]['commits'] = '1'
+                if defect == 'count-fraction': records[pr]['commits'] = 1.5
+                if defect == 'comment-count': records[issue]['comments'] += 1
+                if defect == 'comment-duplicate': records[issue + '/comments'][1]['id'] = 2
+                if defect == 'comment-page-object': records[issue + '/comments'] = {'unexpected': []}
+                if defect in ('comment-dates-empty', 'comment-dates-null'):
+                    records[issue + '/comments'][0]['created_at'] = records[issue + '/comments'][0]['updated_at'] = '' if defect.endswith('empty') else None
+                if defect == 'plan-id': records['repos/{owner}/{repo}/issues/comments/3']['id'] = 4
+                if defect == 'plan-url': records['repos/{owner}/{repo}/issues/comments/3']['issue_url'] = 'https://api.github.com/repos/other/repo/issues/2'
+                if defect == 'foreign-repository':
+                    records[pr]['base']['repo']['full_name'] = 'other/repo'
+                    records[pr]['body'] = records[pr]['body'].replace('fixture/adopter', 'other/repo')
+                    for comment in records[issue + '/comments'] + [records['repos/{owner}/{repo}/issues/comments/3']]:
+                        comment['issue_url'] = comment['issue_url'].replace('fixture/adopter', 'other/repo')
+                self.assert_ritual_refuses(records)
+
+    def test_ritual_exemption_priority_and_later_comment_membership(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        issue = 'repos/{owner}/{repo}/issues/2'
+        for dispatch in (False, True):
+            records = self.ordinary_records()
+            comments = records[issue + '/comments']
+            comments[1]['body'] += '\nno worker will be spawned'
+            if not dispatch: comments.pop()
+            records[issue]['comments'] = len(comments)
+            records['repos/{owner}/{repo}/issues/comments/3'] = copy.deepcopy(comments[1])
+            result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn('two-tier' if dispatch else 'declared small-task exemption', result.stdout)
+        records = self.ordinary_records()
+        comments = records[issue + '/comments']
+        for number in range(10, 112):
+            item = copy.deepcopy(comments[0]); item['id'] = number; item['body'] = 'Unrelated comment.'
+            comments.append(item)
+        records[issue]['comments'] = len(comments)
+        pages = {'__pages__': [comments[:100], comments[100:]]}
+        records[issue + '/comments'] = pages
+        result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        changed = copy.deepcopy(pages)
+        changed['__pages__'][1][-1]['body'] = 'Releasing worker: changed later page'
+        records[issue + '/comments'] = {'__responses__': [pages, changed]}
+        self.assert_ritual_refuses(records)
+
+    def test_ritual_marker_names_inside_dispatch_are_not_claims(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        records = self.ordinary_records()
+        issue = 'repos/{owner}/{repo}/issues/2'
+        comments = records[issue + '/comments']
+        comments.pop(0)
+        comments[-1]['body'] = comments[-1]['body'].replace('Task #2 worker', 'CLAIM PLAN EXEMPT worker')
+        records[issue]['comments'] = len(comments)
+        self.assert_ritual_refuses(records)
 
     def test_f2_whole_legacy_and_tool_scoped_identifiers(self):
         for identifier in ('deadbeef', '6af9582d-42d1-425d-82c8-f9ec651225a8',
@@ -1063,8 +1296,10 @@ sys.exit(result.returncode)
         value = json.loads(parity.read_text())
         for row in value["files"]:
             row["target_sha256"] = digests[row["destination"]]
-        for component in ("context_kickoff", "task_creation", "source_preparation", "task_selection"):
+        for component in ("context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification"):
             for row in value.get(component, {}).get("target_files", []):
+                if component == "task_selection" and row["path"] == RITUAL_PATH:
+                    continue  # The T24 ritual digest is bound to its accepted merge.
                 row["sha256"] = digests[row["path"]]
         parity.write_text(json.dumps(value))
 
@@ -1232,13 +1467,89 @@ sys.exit(result.returncode)
     def test_task_selection_four_payload_changes_preserve_layout_modes_and_other_43(self):
         old = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_SELECTION_BASE + ":" + INVENTORY], text=True)
         old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
-        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        accepted = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_SELECTION_ACCEPTED + ":" + INVENTORY], text=True)
+        new_rows = [line.split("\t") for line in accepted.splitlines() if line and not line.startswith("#")]
         self.assertEqual(47, len(new_rows))
         self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
         self.assertEqual(set(TASK_SELECTION_PATHS), {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
         for name, _kind, digest in new_rows:
+            data = subprocess.check_output(['git', '-C', str(ROOT), 'show', TASK_SELECTION_ACCEPTED + ':' + PAYLOAD + '/' + name])
+            self.assertEqual(digest, hashlib.sha256(data).hexdigest())
+            entry = subprocess.check_output(['git', '-C', str(ROOT), 'ls-tree', TASK_SELECTION_ACCEPTED, '--', PAYLOAD + '/' + name], text=True)
+            self.assertTrue(entry.startswith('100644 blob '), entry)
+
+    def test_ritual_two_payload_changes_preserve_45_and_layout_modes(self):
+        accepted = subprocess.check_output(['git', '-C', str(ROOT), 'show', TASK_SELECTION_ACCEPTED + ':' + INVENTORY], text=True)
+        old_rows = [line.split('\t') for line in accepted.splitlines() if line and not line.startswith('#')]
+        rows = [line.split('\t') for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith('#')]
+        self.assertEqual(47, len(rows))
+        self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in rows])
+        self.assertEqual(set(RITUAL_PATHS), {old[0] for old, new in zip(old_rows, rows) if old[2] != new[2]})
+        for name, _kind, digest in rows:
             self.assertEqual(digest, hashlib.sha256((ROOT / PAYLOAD / name).read_bytes()).hexdigest())
             self.assertEqual(0o644, (ROOT / PAYLOAD / name).stat().st_mode & 0o777)
+
+    def test_ritual_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(RITUAL_PATHS, TASK_SELECTION_ACCEPTED, changed=RITUAL_PATHS)
+
+    def test_ritual_broken_installed_copies_expose_guards(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        helper = self.target / RITUAL_PATH
+        original = helper.read_text()
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        for defect, before, after in (
+            ('head', '[[ "$final_pr" == "$pr_snapshot" ]] || observation_fail pr-drift', ': # omitted snapshot comparison'),
+            ('date', 'valid_timestamp "$timestamp" || observation_fail commit-date', ': # omitted calendar check'),
+            ('claim', 'if ! has_marker CLAIM; then', 'if [[ "$markers" != *CLAIM* ]]; then'),
+        ):
+            with self.subTest(defect=defect):
+                self.assertIn(before, original)
+                helper.write_text(original.replace(before, after, 1))
+                records = self.ordinary_records()
+                if defect == 'head':
+                    changed = copy.deepcopy(records[pr]); changed['head']['sha'] = 'f' * 40
+                    records[pr] = {'__responses__': [records[pr], changed]}
+                elif defect == 'date': records[pr + '/commits'][0]['commit']['committer']['date'] = '2026-02-30T00:05:00Z'
+                else:
+                    issue = 'repos/{owner}/{repo}/issues/2'
+                    records[issue + '/comments'].pop(0)
+                    records[issue + '/comments'][-1]['body'] = records[issue + '/comments'][-1]['body'].replace('Task #2 worker', 'CLAIM worker')
+                    records[issue]['comments'] = 2
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn('PASS:', result.stdout)
+                helper.write_text(original)
+                self.assert_ritual_refuses(records)
+
+    def test_ritual_checker_rejects_resealed_guard_and_provenance_drift(self):
+        source, checker = self.complete_checker_source()
+        for name, before, after in (
+            (RITUAL_PATH, 'commit_count <= 250', 'commit_count <= 999'),
+            (RITUAL_PATH, 'valid_timestamp "$timestamp" || observation_fail commit-date', ': # omitted date check'),
+            (RITUAL_PATH, '"$unique_commits" == "$commit_count"', 'true'),
+            (RITUAL_PATH, '"$final_comments" == "$comment_snapshot"', 'true'),
+            (RITUAL_PATHS[1], 'bash .github/scripts/check-task-ritual.sh 123', '.github/scripts/check-task-ritual.sh 123'),
+        ):
+            with self.subTest(before=before):
+                path = source / PAYLOAD / name
+                original = path.read_text(); self.assertIn(before, original)
+                path.write_text(original.replace(before, after)); self.reseal_payload(source)
+                self.assertTrue(any('ordinary ritual' in error for error in checker.validate(source)))
+                path.write_text(original); self.reseal_payload(source)
+        parity = source / '.github/distribution/source-parity.v1.json'
+        original = parity.read_text()
+        for defect in ('missing', 'source', 'limit', 'target', 'extra'):
+            value = json.loads(original)
+            record = value['ritual_verification']
+            if defect == 'missing': del value['ritual_verification']
+            if defect == 'source': record['source_files'][RITUAL_PATH] = '0' * 40
+            if defect == 'limit': record['commit_limit'] = 999
+            if defect == 'target': record['target_files'][0]['mode'] = '100755'
+            if defect == 'extra': record['runtime_authenticated'] = True
+            parity.write_text(json.dumps(value))
+            self.assertTrue(any('ordinary ritual' in error for error in checker.validate(source)))
+        parity.write_text(original)
+        self.assertEqual([], checker.validate(source))
 
     def test_task_selection_known_old_upgrade_and_rollback_preserve_adopter_state(self):
         self.assert_payload_upgrade_preserves_adopter_state(TASK_SELECTION_PATHS, TASK_SELECTION_BASE,
