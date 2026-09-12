@@ -97,6 +97,18 @@ all closed.** This is the set an orchestrator may dispatch right now.
 
 ## Command cookbook
 
+If local source registration is needed, explicitly run
+`bash .github/scripts/setup-sources.sh --source builtin --yes` (or select
+`speckit`) before preparing Task inputs. This only prepares a pending registry
+for a human-reviewed activation PR; it proves neither activation nor context
+sufficiency. The helper refuses symlinked or obstructed registry paths and
+unsafe repository-relative invocation ancestry instead of repairing them.
+On refusal, stop this preparation sequence and inspect; do not create a Task
+as though preparation succeeded. `--dry-run` writes nothing but still performs
+the existing read-only GitHub preflight. No helper automatically invokes the
+next one or dispatches work. After approved context and a complete brief exist,
+use Task creation below; the frontier still separately checks open blockers.
+
 Body files start from the canonical templates bundled with this skill:
 `templates/epic-body.md` and `templates/task-body.md` (issue forms in
 `.github/ISSUE_TEMPLATE/` mirror the same sections but apply only to the

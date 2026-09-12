@@ -526,7 +526,7 @@ class RepositoryPolicyTest(unittest.TestCase):
             self.checker.EXPECTED_T23_PATHS,
             tuple(entry["path"] for entry in active[0]["owned_paths"]),
         )
-        self.assertEqual(10, len(active[0]["owned_paths"]))
+        self.assertEqual(11, len(active[0]["owned_paths"]))
         self.assertEqual('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/39', active[0]['record'])
         self.assertEqual('7565593f470fa6515a138c730f2545595cbd888f', active[0]['base_commit'])
         self.assertEqual('1fb6d53a58568a6a62ae9dfe5b2a6759d2f60273', active[0]['base_tree'])
@@ -557,7 +557,7 @@ class RepositoryPolicyTest(unittest.TestCase):
                          tuple(entry['path'] for entry in t19['owned_paths']))
         t14 = next(task for task in payload['tasks'] if task['id'] == 'T14')
         self.assertEqual('accepted', t14['state'])
-        self.assertEqual(41, len(t14['owned_paths']))
+        self.assertEqual(40, len(t14['owned_paths']))
         t18 = next(task for task in payload['tasks'] if task['id'] == 'T18')
         self.assertEqual('accepted', t18['state'])
         self.assertEqual(3, len(t18['owned_paths']))
@@ -873,7 +873,7 @@ class RepositoryPolicyTest(unittest.TestCase):
         task["owned_paths"].sort(key=lambda item: item["path"])
         self.write_ownership(fixture, payload)
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed ten paths"
+            self.errors_for(fixture), "exactly the reviewed eleven paths"
         )
 
     def test_undeclared_live_path_is_rejected(self):
@@ -2210,7 +2210,7 @@ jobs:
             "secondary.yml",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed ten paths"
+            self.errors_for(fixture), "exactly the reviewed eleven paths"
         )
 
     def test_extra_workflow_cannot_set_explicit_or_dynamic_job_name(self):
@@ -2519,7 +2519,7 @@ jobs:
                 commands.append(command)
                 self.set_quality_registry(fixture, commands)
                 self.assert_rejected(
-                    self.errors_for(fixture), "exactly the reviewed ten paths"
+                    self.errors_for(fixture), "exactly the reviewed eleven paths"
                 )
 
         temporary, fixture = self.copy_fixture()
@@ -2531,7 +2531,7 @@ jobs:
             "    def test_future(self):\n        self.assertTrue(True)\n",
         )
         self.assert_rejected(
-            self.errors_for(fixture), "exactly the reviewed ten paths"
+            self.errors_for(fixture), "exactly the reviewed eleven paths"
         )
 
     def test_command_registry_rejects_shell_escapes_even_when_ci_matches(self):

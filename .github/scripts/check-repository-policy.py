@@ -63,6 +63,7 @@ EXPECTED_T23_PATHS = (
     ".github/distribution/payload.v1.tsv",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
     ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+    ".github/distribution/payload/.github/scripts/setup-sources.sh",
     ".github/distribution/source-parity.v1.json",
     ".github/governance/phase-task-ownership.v1.json",
     ".github/scripts/check-installer.py",
@@ -1152,7 +1153,7 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     entries = t14.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
     if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS and path not in EXPECTED_T23_PATHS):
-        errors.append("accepted ownership T14 must retain its reviewed 41 non-transferred paths")
+        errors.append("accepted ownership T14 must retain its reviewed 40 non-transferred paths")
     if t14.get("path_transitions") != []:
         errors.append("ownership T14 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1254,7 +1255,7 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     entries = t23.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
     if actual != EXPECTED_T23_PATHS:
-        errors.append("ownership T23 must declare exactly the reviewed ten paths")
+        errors.append("ownership T23 must declare exactly the reviewed eleven paths")
     if t23.get("path_transitions") != []:
         errors.append("ownership T23 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):

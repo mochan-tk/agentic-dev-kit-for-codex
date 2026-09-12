@@ -210,7 +210,8 @@ repository/create/edit output at 4 KiB. Raw body/tool output is not printed.
 Scratch data is removed on ordinary exit; no general crash/process supervisor
 or hostile same-user race guarantee is claimed.
 
-Only the two planning engine files change; the other 45 payload byte sequences
+With the owner-approved source-preparation supplement below, three engine
+files change; the other 44 payload byte sequences
 and all 47 paths/classes/modes remain unchanged from accepted T22. Existing
 parity records bind original frozen helper/Skill blobs, the reviewed gh source
 revision and new target digests. Actual Bash fake-gh fixtures test sequencing,
@@ -218,6 +219,48 @@ failure boundaries and real jq evaluation of the same query against raw CLI
 shapes. Disposable install/known-old upgrade/operation rollback preserves
 adopter README, tuned/instance/application content and Git state. No modified
 helper is run against a live service, and no runtime or completion claim follows.
+
+## Safe source preparation and the planning path
+
+The same T23 package also updates the existing mode-0644
+`.github/scripts/setup-sources.sh`. The
+[frozen donor helper](https://github.com/mochan-tk/agentic-dev-kit-for-copilot/blob/fd265ddef150fab86cd54d0e383c2c25fe297ffb/.github/scripts/setup-sources.sh)
+follows registry symlinks when inspecting/appending and can create through a
+dangling link. That is source-inherited behavior, not a reported real-adopter
+incident. The target adds a bounded repository-relative refusal before registry
+inspection and writing: reject symlinked invocation ancestry within the checkout,
+symlinked registry parents or leaf (including dangling links), special-file or
+directory destinations, and non-directory parent obstructions. Do not remove
+or repair these entries. OS ancestors above the repository are outside this
+check; no hostile same-user race, locking or power-loss transaction is claimed.
+
+Ordinary root and nested invocation retain the existing remote/auth/plan checks,
+connector choice, confirmation and pending-activation instructions. Speckit
+history is now read from repository-root `specs/` even when invoked below root;
+the inherited cwd-relative lookup otherwise missed that pin. New registry mode
+continues to follow the caller's umask. Appending preserves existing bytes and
+mode; an exact duplicate heading is a no-op. Dry-run previews even a duplicate
+without writes or confirmation, but is not offline: preflight still makes
+read-only GitHub queries. A registry is not collected material, reviewed
+activation, a sufficient context package, or authority to dispatch a Task.
+
+Actual installed Bash helpers are chained only by disposable tests, sharing a
+stateful fake GitHub transport: prepare a pending registry, create and verify
+the Task, then call the unchanged frontier. A ready Task remains blocked while
+fixture blockers are OPEN and becomes actionable only when all observed
+blockers are CLOSED. No-ready and failed/incomplete observations produce no
+actionable Task. Unsafe registry preparation stops the test driver before any
+Task call. The fake persists actual creation and label effects; frontier reads
+those labels rather than a preloaded ready row. This is deterministic plumbing
+evidence, not context quality, activation, real GitHub or runtime proof.
+
+The combined 11-file scope retains all 47 payload paths/classes/modes and
+changes only the planning Skill, Task helper and source-preparation helper;
+the other 44 files remain byte-identical to accepted T22. Original source blobs
+remain pinned beside new target digests. A real Bash known-old upgrade and
+operation-scoped rollback covers all three engines while preserving adopter
+registry, README, tuned/instance/application bytes and modes. No new production
+orchestrator, Skill, frontier rule, Task ritual or activation actuator is added.
 
 ## Preservation-safe local upgrade and operation-scoped rollback
 

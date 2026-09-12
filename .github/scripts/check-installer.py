@@ -13,6 +13,18 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+SOURCE_PREPARATION_PATH = ".github/scripts/setup-sources.sh"
+SOURCE_PREPARATION_CONTRACT = {
+    "schema": "source-registry-preparation/v1",
+    "source_files": {".github/scripts/setup-sources.sh": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff"},
+    "integration": "explicit-existing-setup-sources-helper",
+    "adaptations": [
+        "Refuse unsafe repository-relative invocation ancestry and symlinked, obstructed or special registry paths before inspection or writing; no automatic repair or same-user race guarantee.",
+        "Preserve regular create/append, exact-heading duplicate no-op, write-free dry-run, bytes/modes, original preflight and pending-activation semantics; resolve specs pin from repository root for nested invocation.",
+        "Exercise installed registry-to-Task-to-unchanged-frontier flow only in stateful fake-GitHub fixtures; preparation proves neither activation nor context sufficiency nor dispatch authority.",
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-and-stateful-fake-gh-only",
+}
 TASK_CREATION_PATHS = (
     ".agents/skills/plan-management/SKILL.md",
     ".agents/skills/plan-management/scripts/new-task.sh",
@@ -421,6 +433,25 @@ def validate_task_creation(payload_data, parity):
         errors.append("task creation Skill atomicity/readiness boundary drifted")
     return errors
 
+def validate_source_preparation(payload_data, parity):
+    record = parity.get("source_preparation")
+    if not isinstance(record, dict) or set(record) != set(SOURCE_PREPARATION_CONTRACT) | {"target_files"}:
+        return ["source preparation provenance fields are missing or unreviewed"]
+    errors = []
+    if any(record.get(key) != value for key, value in SOURCE_PREPARATION_CONTRACT.items()):
+        errors.append("source preparation source/behavior/evidence contract drifted")
+    expected = [{"path": SOURCE_PREPARATION_PATH, "mode": "100644",
+                 "sha256": hashlib.sha256(payload_data[SOURCE_PREPARATION_PATH]).hexdigest()}]
+    if record.get("target_files") != expected:
+        errors.append("source preparation target digest/mode/fields drifted")
+    script = payload_data[SOURCE_PREPARATION_PATH].decode()
+    if (script.count("\ncheck_registry_path\n") != 3
+            or any(value not in script for value in ('[ -L "$path" ]', '[ -L "$REGISTRY" ]',
+                   '[ ! -L "$LOGICAL_ROOT" ]', '[ ! -L "$INVOCATION" ]',
+                   'status: pending-activation', 'git -C "$REPO_ROOT" log'))):
+        errors.append("source preparation path/pending-activation guard drifted")
+    return errors
+
 def validate(root):
     errors = []
     root = Path(root)
@@ -446,10 +477,11 @@ def validate(root):
             if stat.S_IMODE((root / PAYLOAD / name).stat().st_mode) != 0o644:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY))
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
+        errors.extend(validate_source_preparation(payload_data, parity))
         if parity.get("schema") != "source-first-installer-parity/v1" or parity.get("source_repository") != "mochan-tk/agentic-dev-kit-for-copilot" or parity.get("source_commit") != SOURCE_COMMIT:
             errors.append("installer frozen source provenance drifted")
         if parity.get("limits") != INSTALLER_LIMITS:
