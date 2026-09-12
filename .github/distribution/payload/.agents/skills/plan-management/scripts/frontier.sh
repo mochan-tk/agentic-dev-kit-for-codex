@@ -37,6 +37,28 @@ while [ "$#" -gt 0 ]; do
 done
 fail() { printf 'UNCHECKABLE: %s\n' "$1" >&2; exit 1; }
 command -v gh >/dev/null 2>&1 || fail 'gh CLI not found'
+# Resolve one selected host/repository before comparing bare, repository-only
+# and URL-qualified dependency identities. Foreign-host edges are unsupported.
+REPO_VIEW_ARGS=()
+if [ -n "${REPO_ARGS[1]:-}" ]; then REPO_VIEW_ARGS=("${REPO_ARGS[1]}"); fi
+# shellcheck disable=SC2016
+REPOSITORY="$(gh repo view ${REPO_VIEW_ARGS[@]+"${REPO_VIEW_ARGS[@]}"} --json url,nameWithOwner --jq '
+  if (.url | type) != "string" or (.nameWithOwner | type) != "string"
+  then error("missing repository identity") else
+    (.url | capture("^https://(?<host>[A-Za-z0-9][A-Za-z0-9.-]{0,252})/(?<repo>[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99})\\z")) as $url |
+    if ($url.repo | ascii_downcase) == (.nameWithOwner | ascii_downcase)
+    then [$url.host, $url.repo] | map(ascii_downcase) | @tsv
+    else error("inconsistent repository identity") end
+  end')" || fail 'selected repository identity unavailable'
+repository_pattern=$'^[a-z0-9][a-z0-9.-]{0,252}\t[a-z0-9][a-z0-9-]{0,38}/[a-z0-9_][a-z0-9_.-]{0,99}$'
+[[ "$REPOSITORY" =~ $repository_pattern ]] || fail 'malformed selected repository identity'
+HOST="${REPOSITORY%%$'\t'*}"
+REPO="${REPOSITORY#*$'\t'}"
+if [ -n "${REPO_ARGS[1]:-}" ]; then
+  requested="$(printf '%s' "${REPO_ARGS[1]}" | tr '[:upper:]' '[:lower:]')"
+  [ "$requested" = "$REPO" ] || [ "$requested" = "$HOST/$REPO" ] || fail 'selected repository differs from request'
+fi
+REPO_ARGS=(--repo "$HOST/$REPO")
 # Main-shell capture: a command failure cannot masquerade as an empty list.
 LIST="$(gh issue list ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --state open --label type:task --label ai:ready \
   --limit 200 --json number,title --template '{{range .}}{{.number}}{{"\t"}}{{.title}}{{"\n"}}{{end}}')" \
@@ -56,7 +78,7 @@ while IFS= read -r line; do
   # it is not a claim about every gh version. Missing data is never empty.
   # shellcheck disable=SC2016
   refs="$(gh issue view "$num" ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --json blockedBy \
-    --jq '
+    --jq '"'"$HOST"'" as $host | "'"$REPO"'" as $selected |
       def integer: type == "number" and . >= 0 and . == floor;
       def repo_name: type == "string" and length <= 140 and
         test("^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}\\z");
@@ -88,12 +110,13 @@ while IFS= read -r line; do
             ((.url | test("^https://[A-Za-z0-9][A-Za-z0-9.-]{0,252}/[^/]+/[^/]+/issues/[1-9][0-9]*\\z")) | not)
           then error("invalid blocker URL") else
             (.url | capture("^https://(?<host>[^/]+)/(?<repo>[^/]+/[^/]+)/issues/(?<number>[0-9]+)\\z")) as $url |
-            if ($url.repo | repo_name) and ($url.number | tonumber) == $node.number and
+            if ($url.repo | repo_name) and ($url.host | ascii_downcase) == $host and
+              ($url.number | tonumber) == $node.number and
               ($repo == null or ($repo | ascii_downcase) == ($url.repo | ascii_downcase))
-            then [$node.number, ($url.host + "/" + $url.repo)]
+            then [$node.number, ($host + "/" + ($url.repo | ascii_downcase))]
             else error("inconsistent blocker identity") end
           end
-        else [$node.number, ($repo // "-")] end
+        else [$node.number, ($host + "/" + (($repo // $selected) | ascii_downcase))] end
       ) | if (unique_by([.[0], (.[1] | ascii_downcase)]) | length) == length then .[] | @tsv
           else error("duplicate blocker identity") end')" \
     || fail 'dependency retrieval failed or unsupported; inspect the Issue graph manually'

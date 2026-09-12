@@ -25,7 +25,7 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "38924886ddb7b92226da776aad241b1b66be6598fd9380de4a85186368b1b095",
+      "target_sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -35,7 +35,7 @@
       "destination": ".agents/skills/plan-management/scripts/frontier.sh",
       "source_path": ".github/skills/plan-management/scripts/frontier.sh",
       "source_blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
-      "target_sha256": "bf94a75bea1318049c4b142ff7efcf927ddb374c314cd7531c163344cbbe6745",
+      "target_sha256": "4bc5e92dd5054e09027238bafa77e4859fa0a4012f6398a7741bff16804aeb71",
       "adaptations": [
         "Retain Task/frontier computation; fail closed on list/dependency/state errors and truncation; no unchecked text fallback; embed original MIT notice.",
         "Accept typed complete gh 2.96.0 blockedBy connections and tested legacy arrays; preserve supplied repository/URL identity, reject inconsistent, duplicate (including case aliases) or incomplete data, and retain manual graph fallback without partial output.",
@@ -320,7 +320,7 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "ab0b2b48fdf048952dcd6f6503fb2831706c80729aa7c3150c95727e08e73412",
+      "target_sha256": "7f23226c2edd0e2e5c943fa19a0b2f575e3d72e42aed9a02700d0ba091f128b9",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
@@ -331,7 +331,7 @@
       "destination": ".github/scripts/ownership-overlap.sh",
       "source_path": ".github/scripts/ownership-overlap.sh",
       "source_blob": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
-      "target_sha256": "b0599e051b1782b78cd3df809eae80168ec2cdb86207ab996badb3fbcfd9907c",
+      "target_sha256": "825af02f0a749a83122670570ab8ef9b34952f7895b23f70a4949dd6ca40f002",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -517,7 +517,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "38924886ddb7b92226da776aad241b1b66be6598fd9380de4a85186368b1b095"
+        "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
       },
       {
         "path": ".agents/skills/plan-management/scripts/new-task.sh",
@@ -624,5 +624,43 @@
     "Rollback preserves unrelated edits and refuses changed affected files; exclusive-writer local fixtures do not prove power-loss atomicity or malicious same-user race resistance.",
     "No live Codex, Windows or GitHub-helper execution proof; no VM prerequisite.",
     "Development-only AGENTS/PIN/Task IDs/governance/results are excluded."
-  ]
+  ],
+  "task_selection": {
+    "schema": "task-selection-observation/v1",
+    "source_files": {
+      ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      ".github/skills/plan-management/scripts/frontier.sh": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+      ".github/scripts/ownership-overlap.sh": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
+      ".github/scripts/check-task-ritual.sh": "9365796d80e80e6ee1a94bc6e0cb08686682852c"
+    },
+    "adaptations": [
+      "Refuse interior-dot and repeated-separator lexical ownership aliases before conservative prefix comparison; no filesystem alias or process-isolation claim.",
+      "Normalize bare, repository-only and URL dependency identities to the selected host/repository/number before duplicate checks; preserve same-host cross-repository blockers and refuse unsupported foreign hosts without partial output.",
+      "Derive fake GitHub creation and label state from actual argv and body-file bytes; verify unchanged production Task snapshot/readback with deliberate broken copies.",
+      "Add only the exact current frontier blob to the ritual anchor allowlist; retain historical anchors, equal base/head anchors and complete exact-tree/readback guards."
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-stateful-fake-gh-only",
+    "target_files": [
+      {
+        "path": ".agents/skills/plan-management/SKILL.md",
+        "mode": "100644",
+        "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+      },
+      {
+        "path": ".agents/skills/plan-management/scripts/frontier.sh",
+        "mode": "100644",
+        "sha256": "4bc5e92dd5054e09027238bafa77e4859fa0a4012f6398a7741bff16804aeb71"
+      },
+      {
+        "path": ".github/scripts/ownership-overlap.sh",
+        "mode": "100644",
+        "sha256": "825af02f0a749a83122670570ab8ef9b34952f7895b23f70a4949dd6ca40f002"
+      },
+      {
+        "path": ".github/scripts/check-task-ritual.sh",
+        "mode": "100644",
+        "sha256": "7f23226c2edd0e2e5c943fa19a0b2f575e3d72e42aed9a02700d0ba091f128b9"
+      }
+    ]
+  }
 }

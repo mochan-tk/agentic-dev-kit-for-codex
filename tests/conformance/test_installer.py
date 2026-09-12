@@ -25,6 +25,11 @@ TASK_CREATION_BASE = "7565593f470fa6515a138c730f2545595cbd888f"
 TASK_CREATION_PATHS = (".agents/skills/plan-management/SKILL.md",
                        ".agents/skills/plan-management/scripts/new-task.sh")
 SOURCE_REGISTRY_PATH = ".github/scripts/setup-sources.sh"
+TASK_SELECTION_BASE = "4e62351d3c053e6c72cc1d295df5567245340014"
+TASK_SELECTION_PATHS = (".agents/skills/plan-management/SKILL.md",
+                        ".agents/skills/plan-management/scripts/frontier.sh",
+                        ".github/scripts/ownership-overlap.sh",
+                        ".github/scripts/check-task-ritual.sh")
 REGISTRY_REL = ".github/docs/context/SOURCES.md"
 
 
@@ -267,7 +272,7 @@ print(value[1]); sys.exit(value[0])
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn('ritual in order', result.stdout)
 
-    def packaged_json(self, helper, records, *args):
+    def packaged_json(self, helper, records, *args, installed=False):
         # Execute the helper's actual --jq expression against raw GitHub JSON.
         # No preprojected IDs/markers can hide a broken query in these fixtures.
         self.assertIsNotNone(shutil.which("jq"), "real jq is required for helper regressions")
@@ -284,11 +289,20 @@ if args[:2] == ['issue','list']:
     value=records['list']
     if value is None: sys.exit(90)
     print(value, end=''); sys.exit(0)
-if args[0] == 'api':
+if args[:2] == ['auth','status']: sys.exit(0)
+if args[:2] == ['repo','view']:
+    key='repository'
+    records.setdefault(key, {'url':'https://github.com/fixture/adopter','nameWithOwner':'fixture/adopter'})
+elif args[0] == 'api':
     key=args[1]
 elif args[:2] == ['issue','view']:
-    repo=args[args.index('--repo')+1] if '--repo' in args else 'fixture/adopter'
+    repo=args[args.index('--repo')+1] if '--repo' in args else args[args.index('-R')+1] if '-R' in args else 'fixture/adopter'
     key=repo+'#'+args[2]+':'+args[args.index('--json')+1]
+    host=records.get('repository',{}).get('url','https://github.com/fixture/adopter').split('/')[2]
+    def canonical(value):
+        return (host+'/'+value if value.split('#')[0].count('/')==1 else value).lower()
+    records={canonical(k) if '#' in k else k:v for k,v in records.items()}
+    key=canonical(key)
 else: sys.exit(91)
 if key not in records or records[key] is None: sys.exit(92)
 if '--jq' not in args: sys.exit(93)
@@ -296,10 +310,107 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
     input=json.dumps(records[key]),text=True).returncode)
 """)
         gh.chmod(0o755)
-        return subprocess.run(["bash", str(ROOT / PAYLOAD / helper), *args], cwd=self.target,
+        return subprocess.run(["bash", str((self.target if installed else ROOT / PAYLOAD) / helper), *args], cwd=self.target,
             env=dict(os.environ, PATH=str(fake) + os.pathsep + os.environ["PATH"],
                      RAW_GITHUB_FIXTURE=str(fixture), RITUAL_API_RETRY_DELAY="0"),
             capture_output=True, text=True, timeout=15)
+
+    def test_ownership_lexical_aliases_never_report_disjoint(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for path in ('src/./target.py', 'src//target.py', './src/./target.py',
+                     'src///target.py', 'src/./**'):
+            with self.subTest(path=path):
+                records = {'fixture/adopter#1:body': {'body': '## File ownership\n\n- ' + path + '\n'},
+                           'fixture/adopter#2:body': {'body': '## File ownership\n\n- src/target.py\n'}}
+                result = self.packaged_json(TASK_SELECTION_PATHS[2], records, '-R', 'fixture/adopter', '1', '2', installed=True)
+                self.assertIn(result.returncode, (1, 3), result.stdout + result.stderr)
+                self.assertNotIn('NO_OVERLAP', result.stdout)
+
+    def test_ownership_preserves_ordinary_glob_and_refusal_results(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for left, right, expected in (
+            ('src/a.py', 'src/a.py', 1), ('./src/a.py', 'src/a.py', 1),
+            ('src/a.py', 'test/a.py', 0), ('src/**', 'src/a.py', 1),
+            ('**/a.py', 'other/a.py', 1), ('src/[ab].py', 'src/a.py', 1),
+            ('../src/a.py', 'src/a.py', 3), ('src/../a.py', 'src/a.py', 3),
+            ('/src/a.py', 'src/a.py', 3), ('C:/src/a.py', 'src/a.py', 3),
+            ('`broken', 'src/a.py', 3), ('', 'src/a.py', 3)):
+            with self.subTest(left=left, right=right):
+                records = {f'fixture/adopter#{n}:body': {'body': '## File ownership\n\n- ' + path + '\n'}
+                           for n, path in ((1, left), (2, right))}
+                result = self.packaged_json(TASK_SELECTION_PATHS[2], records, '-R', 'fixture/adopter', '1', '2', installed=True)
+                self.assertEqual(expected, result.returncode, result.stdout + result.stderr)
+                self.assertEqual(expected == 0, 'NO_OVERLAP' in result.stdout)
+
+    def test_frontier_mixed_dependency_identity_never_publishes(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        local = [{'number': 3}, {'number': 3, 'repository': {'nameWithOwner': 'Fixture/Adopter'}},
+                 {'number': 3, 'url': 'https://GitHub.Com/fixture/adopter/issues/3'}]
+        cross = [{'number': 3, 'repository': {'name': 'dependency', 'owner': {'login': 'other'}}},
+                 {'number': 3, 'url': 'https://github.com/Other/Dependency/issues/3'}]
+        for nodes in ([local[0], local[1]], [local[0], local[2]], [local[1], local[2]], cross):
+            for shape in ('connection', 'legacy-array'):
+                with self.subTest(nodes=nodes, shape=shape):
+                    blockers = {'nodes': nodes, 'totalCount': 2} if shape == 'connection' else nodes
+                    records = {'list': '1\tReady\n2\tAmbiguous\n',
+                               'fixture/adopter#1:blockedBy': {'blockedBy': []},
+                               'fixture/adopter#2:blockedBy': {'blockedBy': blockers}}
+                    for repo in ('fixture/adopter', 'Fixture/Adopter', 'github.com/fixture/adopter',
+                                 'GitHub.Com/fixture/adopter', 'other/dependency', 'github.com/Other/Dependency'):
+                        records[repo + '#3:state'] = {'state': 'CLOSED'}
+                    result = self.packaged_json(TASK_SELECTION_PATHS[1], records, '-R', 'fixture/adopter', installed=True)
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertEqual('', result.stdout)
+
+    def test_task_creation_fake_transport_uses_actual_arguments_and_body(self):
+        command, env, state, _events = self.task_creation_inputs(ready=False)
+        body = self.base / 'actual transport body.md'
+        body.write_bytes(b'Actual transport bytes\r\n\n')
+        create = ['gh', 'issue', 'create', '--repo', 'github.com/fixture/adopter', '--title', 'Actual title',
+                  '--body-file', str(body), '--parent', '11', '--blocked-by', '18,19', '--label', 'type:task,exec:ide']
+        result = subprocess.run(create, env=env, capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+        issue = json.loads(state.read_text())['issue']
+        self.assertEqual('Actual transport bytes\r\n\n', issue['body'])
+        self.assertEqual('Actual title', issue['title'])
+        self.assertEqual(11, issue['parent']['number'])
+        self.assertEqual([18, 19], [node['number'] for node in issue['blockedBy']['nodes']])
+        self.assertEqual(['type:task', 'exec:ide'], [label['name'] for label in issue['labels']])
+        result = subprocess.run(['gh', 'issue', 'edit', '40', '--repo', 'github.com/fixture/adopter',
+                                 '--add-label', 'needs:human'], env=env, capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+        names = {label['name'] for label in json.loads(state.read_text())['issue']['labels']}
+        self.assertIn('needs:human', names)
+        self.assertNotIn('ai:ready', names)
+
+    def test_task_creation_fake_transport_detects_broken_helper_copies(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        helper = self.target / TASK_CREATION_PATHS[1]
+        original = helper.read_text()
+        for before, after in (
+            ('--body-file "$WORK/body"', '--body-file /dev/null'),
+            ('--body-file "$WORK/body"', '--body-file "$WORK/repo"'),
+            ('--add-label ai:ready', '--add-label needs:human'),
+        ):
+            with self.subTest(mutation=after):
+                self.assertIn(before, original)
+                helper.write_text(original.replace(before, after))
+                result, events = self.task_creation_fixture(installed=True)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertNotIn('Created and verified', result.stdout)
+                self.assertEqual(1, sum(event[:2] == ['issue', 'create'] for event in events))
+        helper.write_text(original)
+        result, _events = self.task_creation_fixture(installed=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_task_creation_snapshot_survives_later_caller_body_edit(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        body = '## File ownership\n\n- src/**\n\n## Notes\n\n日本語\n\n'
+        command, env, state, _events = self.task_creation_inputs('caller-body-drift', installed=True, body=body)
+        result = subprocess.run(command, cwd=self.target, env=env, capture_output=True, text=True, timeout=15)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(body, json.loads(state.read_text())['issue']['body'])
+        self.assertEqual('Later caller edit\n', (self.base / 'task body.md').read_text())
 
     def ordinary_ritual(self, identifier="6af9582d-42d1-425d-82c8-f9ec651225a8", *, defect=None):
         prefix = 'repos/{owner}/{repo}'
@@ -378,6 +489,20 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         result = self.ritual(base, head)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
+    def test_f2_bootstrap_retains_t18_anchor(self):
+        old = subprocess.check_output(['git', '-C', str(ROOT), 'cat-file', 'blob',
+                                       'cc888c829bc5957871376004cb59a93b4980b50f'])
+        base, head = self.adoption_fixture(anchor=old)
+        result = self.ritual(base, head)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_f2_bootstrap_rejects_t18_to_current_mixed_anchors(self):
+        old = subprocess.check_output(['git', '-C', str(ROOT), 'cat-file', 'blob',
+                                       'cc888c829bc5957871376004cb59a93b4980b50f'])
+        new = (ROOT / PAYLOAD / TASK_SELECTION_PATHS[1]).read_bytes()
+        base, head = self.adoption_fixture(anchor=old, head_anchor=new)
+        self.assertNotEqual(0, self.ritual(base, head).returncode)
+
     def test_f2_bootstrap_rejects_unknown_and_mixed_anchors(self):
         old = subprocess.check_output(['git', '-C', str(ROOT), 'cat-file', 'blob',
                                        'f66d3aa5e73abf24052c70f557cd6df9177ca012'])
@@ -419,6 +544,7 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         elif all(part.isdigit() for part in dependencies.split(",")):
             numbers = [int(part) for part in dependencies.split(",")]
             value["blockedBy"] = {"nodes": [related(n) for n in numbers], "totalCount": len(numbers)}
+        original_value = json.loads(json.dumps(value))
         mutations = {
             "wrong-body": lambda v: v.update(body=v["body"] + "changed"),
             "wrong-title": lambda v: v.update(title="Other Task"),
@@ -446,12 +572,15 @@ sys.exit(subprocess.run(['jq','-r',args[args.index('--jq')+1]],
         }
         if defect in mutations:
             mutations[defect](value)
+        faults = {key: item for key, item in value.items() if item != original_value[key]}
         directory = self.base / "task-bin"
         directory.mkdir(exist_ok=True)
         state = self.base / "task-fixture.json"
         events = self.base / "task-events.jsonl"
         events.write_text("")
-        state.write_text(json.dumps({"issue": value, "defect": defect, "views": 0, "edited": False, "created": False}))
+        state.write_text(json.dumps({"issue": value, "faults": faults, "defect": defect,
+                                     "views": 0, "edited": False, "created": False,
+                                     "caller_body": str(body_path)}))
         fake = directory / "gh"
         fake.write_text("""#!/usr/bin/env python3
 import json, os, subprocess, sys
@@ -466,8 +595,30 @@ elif args[:2]==['api','repos/fixture/adopter']:
     value={'private':defect in ('setup-private-free','setup-private-unknown'),'owner':{'type':'User'}}
 elif args[:2]==['repo','view']:
     if defect=='repo-read-error': sys.exit(1)
+    if defect=='caller-body-drift': Path(s['caller_body']).write_text('Later caller edit\\n')
     value={'url':'https://github.com/fixture/adopter','nameWithOwner':'fixture/adopter'}
 elif args[:2]==['issue','create']:
+    options={}
+    for i in range(2,len(args),2):
+        if i+1>=len(args) or args[i] not in ('--repo','--title','--body-file','--parent','--blocked-by','--label') or args[i] in options: sys.exit(95)
+        options[args[i]]=args[i+1]
+    if not {'--repo','--title','--body-file','--parent','--label'} <= options.keys(): sys.exit(95)
+    repo=options['--repo']
+    if repo.count('/')==1: repo='github.com/'+repo
+    if repo!='github.com/fixture/adopter': sys.exit(95)
+    def related(number):
+        return {'id':'I_fixture_'+str(number),'number':number,'title':'Related issue',
+                'url':'https://'+repo+'/issues/'+str(number),'state':'OPEN'}
+    try:
+        body=Path(options['--body-file']).read_bytes().decode('utf-8')
+        blockers=[related(int(n)) for n in options.get('--blocked-by','').split(',') if n]
+        s['issue']={**related(40),'title':options['--title'],'body':body,
+                    'parent':related(int(options['--parent'])),
+                    'blockedBy':{'nodes':blockers,'totalCount':len(blockers)},
+                    'labels':[{'name':name} for name in options['--label'].split(',')]}
+    except (OSError,ValueError): sys.exit(95)
+    # Explicit server-response faults apply after actual argument transport.
+    s['issue'].update(s['faults'])
     s['created']=True; path.write_text(json.dumps(s))
     if defect=='create-link-failure': sys.exit(1)
     if defect=='create-failed-known': print('https://github.com/fixture/adopter/issues/40'); sys.exit(1)
@@ -477,8 +628,11 @@ elif args[:2]==['issue','create']:
     if defect=='create-nul': sys.stdout.buffer.write(b'https://github.com/fixture/adopter/issues/40\\0\\n'); sys.exit(0)
     print('https://github.com/fixture/adopter/issues/40'); sys.exit(0)
 elif args[:2]==['issue','edit']:
+    if not s['created'] or args[2]!='40' or len(args)!=7 or args[3]!='--repo' or args[4]!='github.com/fixture/adopter' or args[5]!='--add-label': sys.exit(95)
     s['edited']=True
-    if defect!='ready-not-applied': s['issue']['labels'].append({'name':'ai:ready'})
+    if defect!='ready-not-applied':
+        names={label['name'] for label in s['issue']['labels']}
+        s['issue']['labels'].extend({'name':name} for name in args[6].split(',') if name not in names)
     path.write_text(json.dumps(s))
     if defect=='ready-write-error': sys.exit(1)
     print('https://github.com/fixture/adopter/issues/40'); sys.exit(0)
@@ -656,7 +810,15 @@ sys.exit(result.returncode)
 
     def test_source_preparation_chains_installed_pending_registry_task_and_frontier(self):
         self.assertEqual(0, self.run_install("--apply").returncode)
-        task, env, state, events = self.task_creation_inputs(installed=True)
+        brief = ("## Objective\n\nImplement the synthetic application change.\n\n"
+                 "## Context & references\n\n- Epic: #12\n- Derived from: #14\n\n"
+                 "## Acceptance criteria\n\n- [ ] Application tests pass.\n\n"
+                 "## Out of scope\n\n- Production deployment.\n\n"
+                 "## File ownership\n\n- app/**\n\n"
+                 "## Verification\n\nRun the synthetic application test suite.\n\n"
+                 "## Routing\n\n- Surface: exec:cli\n- Parallel-safe: yes, subject to ownership checks.\n\n"
+                 "## Handoff notes\n\n- Wait for #14 and #15 to close.\n")
+        task, env, state, events = self.task_creation_inputs(installed=True, body=brief)
         self.git("remote", "add", "origin", "https://github.com/fixture/adopter.git")
         setup = ["bash", str(self.target / SOURCE_REGISTRY_PATH), "--source", "builtin", "--yes"]
         frontier = ["bash", str(self.target / ".agents/skills/plan-management/scripts/frontier.sh"), "-R", "fixture/adopter", "--all"]
@@ -679,6 +841,11 @@ sys.exit(result.returncode)
         self.assertEqual(0, actionable.returncode, actionable.stderr)
         self.assertIn("== Actionable frontier (all dependency observations succeeded) ==\n#40\tFixture Task", actionable.stdout)
         self.assertNotIn("== Blocked ==", actionable.stdout)
+        body_check = run(["bash", str(self.target / TASK_SELECTION_PATHS[2]),
+                          "--validate-body", str(self.base / "task body.md")])
+        self.assertEqual(0, body_check.returncode, body_check.stderr)
+        self.assertIn('VALID', body_check.stdout)
+        self.assertEqual(brief, json.loads(state.read_text())['issue']['body'])
         self.assertEqual(registry, (self.target / REGISTRY_REL).read_bytes())
         calls = [json.loads(line) for line in events.read_text().splitlines()]
         self.assertEqual(["api", "api", "repo", "issue", "issue", "issue", "issue"], [call[0] for call in calls[:7]])
@@ -896,7 +1063,7 @@ sys.exit(result.returncode)
         value = json.loads(parity.read_text())
         for row in value["files"]:
             row["target_sha256"] = digests[row["destination"]]
-        for component in ("context_kickoff", "task_creation", "source_preparation"):
+        for component in ("context_kickoff", "task_creation", "source_preparation", "task_selection"):
             for row in value.get(component, {}).get("target_files", []):
                 row["sha256"] = digests[row["path"]]
         parity.write_text(json.dumps(value))
@@ -1055,14 +1222,61 @@ sys.exit(result.returncode)
     def test_task_creation_changes_only_three_payload_bytes_and_no_layout_or_modes(self):
         old = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_CREATION_BASE + ":" + INVENTORY], text=True)
         old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
-        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        accepted = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_SELECTION_BASE + ":" + INVENTORY], text=True)
+        new_rows = [line.split("\t") for line in accepted.splitlines() if line and not line.startswith("#")]
         self.assertEqual(47, len(new_rows))
         self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
         self.assertEqual(set(TASK_CREATION_PATHS + (SOURCE_REGISTRY_PATH,)),
                          {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
+
+    def test_task_selection_four_payload_changes_preserve_layout_modes_and_other_43(self):
+        old = subprocess.check_output(["git", "-C", str(ROOT), "show", TASK_SELECTION_BASE + ":" + INVENTORY], text=True)
+        old_rows = [line.split("\t") for line in old.splitlines() if line and not line.startswith("#")]
+        new_rows = [line.split("\t") for line in (ROOT / INVENTORY).read_text().splitlines() if line and not line.startswith("#")]
+        self.assertEqual(47, len(new_rows))
+        self.assertEqual([row[:2] for row in old_rows], [row[:2] for row in new_rows])
+        self.assertEqual(set(TASK_SELECTION_PATHS), {old[0] for old, new in zip(old_rows, new_rows) if old[2] != new[2]})
         for name, _kind, digest in new_rows:
             self.assertEqual(digest, hashlib.sha256((ROOT / PAYLOAD / name).read_bytes()).hexdigest())
             self.assertEqual(0o644, (ROOT / PAYLOAD / name).stat().st_mode & 0o777)
+
+    def test_task_selection_known_old_upgrade_and_rollback_preserve_adopter_state(self):
+        self.assert_payload_upgrade_preserves_adopter_state(TASK_SELECTION_PATHS, TASK_SELECTION_BASE,
+                                                          changed=TASK_SELECTION_PATHS)
+
+    def test_task_selection_checker_rejects_resealed_guards_and_provenance_drift(self):
+        source, checker = self.complete_checker_source()
+        for name, before, after in (
+            (TASK_SELECTION_PATHS[2], '.|./*|*/.|*/./*|*//*) invalid=1; continue ;;', '.|./*) invalid=1; continue ;;'),
+            (TASK_SELECTION_PATHS[1], '($url.host | ascii_downcase) == $host', 'true'),
+            (TASK_SELECTION_PATHS[1], '($repo // $selected)', '($repo // "-")'),
+            (TASK_SELECTION_PATHS[3], '*) return 1 ;;', '*) return 0 ;;'),
+            (TASK_SELECTION_PATHS[3], '[[ "$base_anchor" == "$head_anchor" ]] || return 1', ': # omitted exact comparison'),
+        ):
+            with self.subTest(name=name, guard=before):
+                path = source / PAYLOAD / name
+                original = path.read_text()
+                self.assertIn(before, original)
+                path.write_text(original.replace(before, after))
+                self.reseal_payload(source)
+                self.assertTrue(any('task selection' in error for error in checker.validate(source)))
+                path.write_text(original)
+                self.reseal_payload(source)
+        parity = source / '.github/distribution/source-parity.v1.json'
+        original = parity.read_text()
+        for mutation in ('missing', 'source', 'extra', 'digest', 'mode'):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original)
+                record = value['task_selection']
+                if mutation == 'missing': del value['task_selection']
+                elif mutation == 'source': record['source_files']['.github/scripts/ownership-overlap.sh'] = '0' * 40
+                elif mutation == 'extra': record['automatic_dispatch'] = True
+                elif mutation == 'digest': record['target_files'][0]['sha256'] = '0' * 64
+                else: record['target_files'][0]['mode'] = '100755'
+                parity.write_text(json.dumps(value))
+                self.assertTrue(any('task selection' in error for error in checker.validate(source)))
+        parity.write_text(original)
+        self.assertEqual([], checker.validate(source))
 
     def test_task_creation_checker_rejects_resealed_unsafe_readiness_and_source_drift(self):
         source, checker = self.complete_checker_source()
@@ -1695,6 +1909,7 @@ esac
                 'url': 'https://github.example/other/dependency/issues/3',
                 'repository': {'nameWithOwner': 'other/dependency'}}
         records = {'list': '2\tDependent Task\n',
+            'repository': {'url': 'https://github.example/fixture/adopter', 'nameWithOwner': 'fixture/adopter'},
             'fixture/adopter#2:blockedBy': {'blockedBy': {'nodes': [node], 'totalCount': 1}},
             'fixture/adopter#3:state': {'state': 'CLOSED'},
             'other/dependency#3:state': {'state': 'CLOSED'},
@@ -1711,6 +1926,36 @@ esac
                 result = self.packaged_json('.agents/skills/plan-management/scripts/frontier.sh', records)
                 self.assertNotEqual(0, result.returncode)
                 self.assertEqual('', result.stdout)
+
+    def test_frontier_selected_repository_and_foreign_host_refuse_before_output(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        records = {'list': '1\tReady\n2\tForeign\n',
+                   'fixture/adopter#1:blockedBy': {'blockedBy': []},
+                   'fixture/adopter#2:blockedBy': {'blockedBy': [
+                       {'number': 3, 'url': 'https://other.example/fixture/adopter/issues/3'}]},
+                   'other.example/fixture/adopter#3:state': {'state': 'CLOSED'}}
+        result = self.packaged_json(TASK_SELECTION_PATHS[1], records, installed=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual('', result.stdout)
+        for repository in (None, {}, {'url': 'https://github.com/fixture/adopter', 'nameWithOwner': 'other/repo'},
+                           {'url': 'https://github.com/fixture/adopter\n', 'nameWithOwner': 'fixture/adopter'},
+                           {'url': 'https://github.com/other/repo', 'nameWithOwner': 'other/repo'}):
+            with self.subTest(repository=repository):
+                result = self.packaged_json(TASK_SELECTION_PATHS[1], {'list': '', 'repository': repository},
+                                            '-R', 'fixture/adopter', installed=True)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual('', result.stdout)
+
+    def test_frontier_same_number_different_repositories_stays_blocked(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for shape in ('connection', 'legacy-array'):
+            nodes = [{'number': 3}, {'number': 3, 'repository': {'nameWithOwner': 'other/dependency'}}]
+            blockers = {'nodes': nodes, 'totalCount': 2} if shape == 'connection' else nodes
+            records = {'list': '2\tDependent\n', 'fixture/adopter#2:blockedBy': {'blockedBy': blockers},
+                       'fixture/adopter#3:state': {'state': 'CLOSED'}, 'other/dependency#3:state': {'state': 'OPEN'}}
+            result = self.packaged_json(TASK_SELECTION_PATHS[1], records, '--all', installed=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn('== Blocked ==\n#2\tDependent', result.stdout)
 
     def test_frontier_missing_malformed_and_incomplete_dependencies_never_publish(self):
         invalid = [None, {}, {'blockedBy': None}, {'blockedBy': {}},

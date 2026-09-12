@@ -48,6 +48,11 @@ parse_body() {
     case "$check" in
       ""|/*|[A-Za-z]:[\\/]*|..|../*|*/..|*/../*) invalid=1; continue ;;
     esac
+    # Reject unsupported lexical aliases before prefix comparison. No filesystem
+    # lookup: this sensor does not establish symlink/inode or process isolation.
+    case "$check" in
+      .|./*|*/.|*/./*|*//*) invalid=1; continue ;;
+    esac
     printf '%s\n' "$path" >> "$output"
     paths=$((paths + 1))
   done < "$body"

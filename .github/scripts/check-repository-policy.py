@@ -59,6 +59,24 @@ T23_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/39"
 T23_BRANCH = "codex/source-first-task-creation"
 T23_BASE_COMMIT = "7565593f470fa6515a138c730f2545595cbd888f"
 T23_BASE_TREE = "1fb6d53a58568a6a62ae9dfe5b2a6759d2f60273"
+T24_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/41"
+T24_BRANCH = "codex/source-first-task-selection"
+T24_BASE_COMMIT = "4e62351d3c053e6c72cc1d295df5567245340014"
+T24_BASE_TREE = "eab568e5eee0bc09889f67764655d07ab0d31142"
+EXPECTED_T24_PATHS = (
+    ".github/distribution/payload.v1.tsv",
+    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+    ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+    ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+    ".github/distribution/source-parity.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-installer.py",
+    ".github/scripts/check-repository-policy.py",
+    "docs/distribution/source-first-installer.md",
+    "tests/conformance/test_installer.py",
+    "tests/conformance/test_repository_policy.py",
+)
 EXPECTED_T23_PATHS = (
     ".github/distribution/payload.v1.tsv",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1152,8 +1170,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T14 " + key + " drifted")
     entries = t14.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS and path not in EXPECTED_T23_PATHS):
-        errors.append("accepted ownership T14 must retain its reviewed 40 non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS and path not in EXPECTED_T23_PATHS and path not in EXPECTED_T24_PATHS):
+        errors.append("accepted ownership T14 must retain its reviewed 39 non-transferred paths")
     if t14.get("path_transitions") != []:
         errors.append("ownership T14 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1169,8 +1187,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T18 " + key + " drifted")
     entries = t18.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T18_PATHS if path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS):
-        errors.append("accepted ownership T18 must retain its reviewed three non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T18_PATHS if path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS and path not in EXPECTED_T24_PATHS):
+        errors.append("accepted ownership T18 must retain its reviewed one non-transferred path")
     if t18.get("path_transitions") != []:
         errors.append("ownership T18 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1247,19 +1265,36 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t23, dict):
         errors.append("ownership manifest is missing T23")
         return
-    for key, expected in (("state", "active"), ("record", T23_RECORD),
+    for key, expected in (("state", "accepted"), ("record", T23_RECORD),
                           ("branch", T23_BRANCH), ("base_commit", T23_BASE_COMMIT),
                           ("base_tree", T23_BASE_TREE)):
         if t23.get(key) != expected:
             errors.append("ownership T23 " + key + " drifted")
     entries = t23.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != EXPECTED_T23_PATHS:
-        errors.append("ownership T23 must declare exactly the reviewed eleven paths")
+    if actual != tuple(path for path in EXPECTED_T23_PATHS if path not in EXPECTED_T24_PATHS):
+        errors.append("accepted ownership T23 must retain its reviewed two non-transferred paths")
     if t23.get("path_transitions") != []:
         errors.append("ownership T23 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
         errors.append("ownership T23 paths must all use mode 100644")
+    t24 = task_by_id.get("T24")
+    if not isinstance(t24, dict):
+        errors.append("ownership manifest is missing T24")
+        return
+    for key, expected in (("state", "active"), ("record", T24_RECORD),
+                          ("branch", T24_BRANCH), ("base_commit", T24_BASE_COMMIT),
+                          ("base_tree", T24_BASE_TREE)):
+        if t24.get(key) != expected:
+            errors.append("ownership T24 " + key + " drifted")
+    entries = t24.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T24_PATHS:
+        errors.append("ownership T24 must declare exactly the reviewed twelve paths")
+    if t24.get("path_transitions") != []:
+        errors.append("ownership T24 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T24 paths must all use mode 100644")
     if "T12" in task_by_id:
         errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 
