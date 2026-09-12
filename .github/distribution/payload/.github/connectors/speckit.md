@@ -25,10 +25,25 @@ feature) and usually `.specify/` scaffolding. Enumerate the feature
 directories and report which Contract conditions their content already
 meets — spec-kit's requirement keys satisfy condition 1 (stable IDs) and
 its committed markdown satisfies conditions 3–4 (in-repo, referenceable).
-Confirm the spec files are actually tracked: `git check-ignore
-specs/*/plan.md` must find nothing (an overly broad ignore rule — in
-any `.gitignore` on the path — silently drops spec content out of the
-Contract; fix the ignore rule before activating).
+Check ignore rules separately from tracking: `git check-ignore --no-index
+specs/*/plan.md` reporting a match means an ignore rule needs review; exit 1
+means no match, not that a file is tracked (other errors are uncheckable).
+For every required spec file, verify both its tracked index entry and its
+presence as a blob in the exact intended activation or working pin. Replace
+the example path and pin below with the reviewed file and full commit SHA:
+
+```sh
+spec_pin=REVIEWED_FULL_COMMIT_SHA
+spec_file=specs/example/plan.md
+git cat-file -e "$spec_pin^{commit}" &&
+git ls-files --error-unmatch -- "$spec_file" >/dev/null &&
+test "$(git cat-file -t "$spec_pin:$spec_file")" = blob
+```
+
+Every command must succeed before accepting the reference. An untracked
+file, a staged-only addition, or a file tracked now but absent from the
+intended pinned tree is not sufficient. Stop and resolve the missing
+reviewed commit; do not silently substitute HEAD or update a historical pin.
 
 ## retrieve
 

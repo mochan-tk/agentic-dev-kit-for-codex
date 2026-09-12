@@ -108,8 +108,31 @@ api() {
   return 1
 }
 
-meta=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '[.user.login, .user.type] | @tsv')
-IFS=$'\t' read -r author author_type <<< "$meta"
+# Ordinary verdicts bind one typed PR observation, not independent mutable
+# field reads. Base64 preserves body bytes without evaluating shell content.
+observation_fail() {
+  echo "FAIL: PR #${PR} ritual observation unavailable, malformed or changed ($1)." >&2
+  exit 1
+}
+[[ "$PR" =~ ^[1-9][0-9]*$ ]] || observation_fail pr-number
+pr_query='
+  def token: type == "string" and length > 0 and (test("[\\x00-\\x20\\x7f\\\\]") | not);
+  def sha: type == "string" and length == 40 and test("^[0-9a-f]{40}$");
+  if type != "object" or (.number | type != "number" or . < 1 or floor != .)
+    or (.base.sha | sha | not) or (.head.sha | sha | not)
+    or (.head.ref | token | not) or (.base.repo.full_name | token | not)
+    or (.commits | type != "number" or . < 0 or floor != .)
+    or (.user.login | token | not) or (.user.type | token | not)
+    or (.body != null and (.body | type != "string"))
+  then error("invalid PR observation") else
+    [.number, .base.sha, .head.sha, .head.ref, .commits, .base.repo.full_name,
+     ("b" + ((.body // "") | @base64)), .user.login, .user.type] | @tsv
+  end'
+observe_pr() { api "repos/{owner}/{repo}/pulls/${PR}" --jq "$pr_query" 2>/dev/null; }
+pr_snapshot=$(observe_pr) || observation_fail pr-read
+IFS=$'\t' read -r observed_pr observed_base observed_head head_ref commit_count repo_full body_encoded author author_type <<< "$pr_snapshot"
+[[ "$observed_pr" == "$PR" ]] || observation_fail pr-identity
+body=$(printf '%s' "${body_encoded#b}" | base64 -d) || observation_fail pr-body
 
 # Only dependency bots are exempt — they do not hold sessions. Cloud coding
 # agents also author PRs as bots (user.type == "Bot"), and those *do* run
@@ -125,8 +148,6 @@ if [[ "$author_type" == "Bot" || "$author" == *"[bot]" ]]; then
       ;;
   esac
 fi
-
-body=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.body // ""')
 
 # Bootstrap exceptions use immutable PR commits and complete trees, not a
 # mutable branch name, title alone, or a seed changelog. The installed frontier
@@ -271,29 +292,90 @@ if [[ -z "$link" ]]; then
 fi
 issue="${link##*#}"
 
+# Preserve the source's selected-repository check: the PR response cannot
+# define its own repository authority independently of the gh target.
+selected_repo=$(api "repos/{owner}/{repo}" --jq '
+  if (.full_name | type) == "string" then .full_name else error("invalid repository") end
+' 2>/dev/null) || observation_fail repository-read
+[[ "$(printf '%s' "$selected_repo" | tr '[:upper:]' '[:lower:]')" == "$(printf '%s' "$repo_full" | tr '[:upper:]' '[:lower:]')" ]] || observation_fail repository-identity
+
+# Whole-second UTC is the API timestamp profile supported by this sensor.
+# Validate calendar values explicitly: platform date parsers can normalize
+# impossible dates and jq date functions differ between supported hosts.
+valid_timestamp() {
+  local value="$1" year month day hour minute second maximum
+  local LC_ALL=C
+  [[ ${#value} -eq 20 && "$value" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})Z$ ]] || return 1
+  year=$((10#${BASH_REMATCH[1]})); month=$((10#${BASH_REMATCH[2]})); day=$((10#${BASH_REMATCH[3]}))
+  hour=$((10#${BASH_REMATCH[4]})); minute=$((10#${BASH_REMATCH[5]})); second=$((10#${BASH_REMATCH[6]}))
+  ((year >= 1 && month >= 1 && month <= 12 && day >= 1 && hour < 24 && minute < 60 && second < 60)) || return 1
+  case "$month" in
+    4|6|9|11) maximum=30 ;;
+    2) maximum=28; if ((year % 400 == 0 || (year % 4 == 0 && year % 100 != 0))); then maximum=29; fi ;;
+    *) maximum=31 ;;
+  esac
+  ((day <= maximum))
+}
+
+task_query='
+  if type != "object" or (.number | type != "number" or . < 1 or floor != .)
+    or (.state != "open" and .state != "closed")
+    or (.comments | type != "number" or . < 0 or floor != .)
+    or (.body != null and (.body | type != "string"))
+    or (.labels | type != "array")
+    or any(.labels[]; type != "object" or (.name | type != "string" or length == 0))
+  then error("invalid Task observation") else
+    [.number, .state, .comments, ("b" + ((.body // "") | @base64)),
+     ("b" + ([.labels[].name] | sort | tojson | @base64)),
+     any(.labels[]; .name == "type:task")] | @tsv
+  end'
+observe_task() { api "repos/{owner}/{repo}/issues/${issue}" --jq "$task_query" 2>/dev/null; }
+task_snapshot=$(observe_task) || observation_fail task-read
+IFS=$'\t' read -r observed_issue _task_state comment_count _task_body _task_labels is_task <<< "$task_snapshot"
+[[ "$observed_issue" == "$issue" ]] || observation_fail task-identity
+
 # One pass over the issue's comments, emitting a TSV marker per ritual
 # artifact: TYPE, created_at, updated_at. The API returns ascending
 # created_at, but earliest-of is computed with an explicit sort anyway.
-markers=$(api "repos/{owner}/{repo}/issues/${issue}/comments" --paginate --jq '
+comment_query='
+  if type != "array" then error("invalid comments page") else . end |
   .[] |
+  if type != "object" or (.id | type != "number" or . < 1 or floor != .)
+    or (.body | type != "string") or (.created_at | type != "string")
+    or (.updated_at | type != "string") or (.issue_url | type != "string")
+  then error("invalid comment") else . end |
+  (["COMMENT", .id, .created_at, .updated_at, ("b" + (.body | @base64)), .issue_url] | @tsv),
   (if (.body | test("^(Starting|Resuming) in session")) then [ "CLAIM", .created_at, .updated_at ] | @tsv else empty end),
   (if ((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) then [ "PLAN", .created_at, .updated_at ] | @tsv else empty end),
   (if (.body | test("^Dispatching worker")) then [ "DISPATCH", .created_at, .updated_at, (.body | split("\n")[0]) ] | @tsv else empty end),
   (if (.body | test("^Releasing worker")) then [ "RELEASE", .created_at, .updated_at ] | @tsv else empty end),
   (if (((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) and (.body | ascii_downcase | contains("no worker will be spawned"))) then [ "EXEMPT", .created_at, .updated_at ] | @tsv else empty end)
-')
+'
+observe_comments() { api "repos/{owner}/{repo}/issues/${issue}/comments?per_page=100" --paginate --jq "$comment_query" 2>/dev/null; }
+comment_snapshot=$(observe_comments) || observation_fail comments-read
+comment_rows=$(printf '%s\n' "$comment_snapshot" | awk -F '\t' '$1 == "COMMENT"')
+actual_comments=$(printf '%s\n' "$comment_rows" | awk 'NF {n++} END {print n+0}')
+unique_comments=$(printf '%s\n' "$comment_rows" | awk -F '\t' 'NF {print $2}' | sort -u | awk 'NF {n++} END {print n+0}')
+[[ "$actual_comments" == "$comment_count" && "$unique_comments" == "$comment_count" ]] || observation_fail comments-completeness
+while IFS=$'\t' read -r _kind _id created updated _encoded issue_url; do
+  [[ -n "$_kind" ]] || continue
+  if ! { valid_timestamp "$created" && valid_timestamp "$updated"; }; then
+    observation_fail comment-date
+  fi
+  [[ "$(printf '%s' "$issue_url" | tr '[:upper:]' '[:lower:]')" == "https://api.github.com/repos/$(printf '%s' "$repo_full" | tr '[:upper:]' '[:lower:]')/issues/${issue}" ]] || observation_fail comment-identity
+done <<< "$comment_rows"
+markers=$(printf '%s\n' "$comment_snapshot" | awk -F '\t' '$1 != "COMMENT"')
 
 ok=true
-case "$markers" in
-  *CLAIM*) ;;
-  *) echo "FAIL: issue #${issue} has no start claim comment ('Starting in session …' or 'Resuming in session …')."
-     ok=false ;;
-esac
-case "$markers" in
-  *PLAN*) ;;
-  *) echo "FAIL: issue #${issue} has no plan comment (a '## Plan' heading, or a body starting 'Plan:')."
-     ok=false ;;
-esac
+has_marker() { printf '%s\n' "$markers" | awk -F '\t' -v kind="$1" '$1 == kind {found=1} END {exit !found}'; }
+if ! has_marker CLAIM; then
+  echo "FAIL: issue #${issue} has no start claim comment ('Starting in session …' or 'Resuming in session …')."
+  ok=false
+fi
+if ! has_marker PLAN; then
+  echo "FAIL: issue #${issue} has no plan comment (a '## Plan' heading, or a body starting 'Plan:')."
+  ok=false
+fi
 
 if ! $ok; then
   echo "      Post the missing comment(s) on #${issue} — session-orchestration start ritual, steps 4-5 — then re-run this check."
@@ -328,9 +410,30 @@ fi
 # while amends preserve the author date — an author date may predate the
 # plan even when the code followed it. Author date is only a fallback for
 # commit objects lacking a committer date.
-first_commit=$(api "repos/{owner}/{repo}/pulls/${PR}/commits" --paginate \
-  --jq '.[].commit | ((.committer.date // .author.date) // empty)' | sort | head -n1)
-if [[ -n "$first_commit" && "$earliest_plan" > "$first_commit" ]]; then
+# The PR commits endpoint caps its entire response at 250, even paginated.
+# No empty/partial list is chronology, and no invalid row may be discarded.
+if [[ ! "$commit_count" =~ ^[0-9]{1,3}$ ]] || ! ((commit_count >= 1 && commit_count <= 250)); then
+  observation_fail commit-limit
+fi
+# shellcheck disable=SC2016 # $date is a jq binding, not a shell expansion.
+commit_rows=$(api "repos/{owner}/{repo}/pulls/${PR}/commits?per_page=100" --paginate --jq '
+  if type != "array" then error("invalid commits page") else . end | .[] |
+  if type != "object" or (.sha | type != "string" or length != 40 or (test("^[0-9a-f]{40}$") | not))
+    or (.commit | type != "object")
+    or (.commit.committer != null and (.commit.committer | type != "object"))
+  then error("invalid commit") else . end |
+  (if .commit.committer.date == null then .commit.author.date else .commit.committer.date end) as $date |
+  if ($date | type != "string") then error("missing commit date") else [.sha, $date] | @tsv end
+' 2>/dev/null) || observation_fail commits-read
+actual_commits=$(printf '%s\n' "$commit_rows" | awk 'NF {n++} END {print n+0}')
+unique_commits=$(printf '%s\n' "$commit_rows" | cut -f1 | sort -u | awk 'NF {n++} END {print n+0}')
+[[ "$actual_commits" == "$commit_count" && "$unique_commits" == "$commit_count" ]] || observation_fail commits-completeness
+printf '%s\n' "$commit_rows" | cut -f1 | grep -Fxq "$observed_head" || observation_fail commit-head
+while IFS=$'\t' read -r _sha timestamp; do
+  valid_timestamp "$timestamp" || observation_fail commit-date
+done <<< "$commit_rows"
+first_commit=$(printf '%s\n' "$commit_rows" | cut -f2 | sort | head -n1)
+if [[ "$earliest_plan" > "$first_commit" ]]; then
   echo "FAIL: PR #${PR}'s first commit (${first_commit}, committer date) predates the plan comment on issue #${issue} (${earliest_plan})."
   echo "      The plan of record is posted before implementation begins (AGENTS.md §2)."
   ok=false
@@ -365,7 +468,7 @@ valid_session_reference() {
     rest="${rest#*/}"
   done
 }
-if [[ "$markers" == *DISPATCH* ]]; then
+if has_marker DISPATCH; then
   earliest_dispatch=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH" { print $2 }' | sort | head -n1)
   mode_desc="two-tier (dispatch ${earliest_dispatch})"
 
@@ -376,7 +479,6 @@ if [[ "$markers" == *DISPATCH* ]]; then
   # no API here can enumerate them, so it is required as a durable record for
   # humans and audits, never treated as proof. What this wall can show is
   # that the supervisor claimed a specific session and a matching branch.
-  head_ref=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.head.ref')
   while IFS=$'\t' read -r _kind _created _updated first_line; do
     [[ -n "$first_line" ]] || continue
     # Match one complete field and branch, rejecting delimiters, escaped TSV
@@ -425,7 +527,7 @@ EOF
   # dispatch precedes the PR's first commit. Committer-date semantics as
   # above: rebases move committer dates forward, which only widens the
   # margin; equal stamps prove nothing, so ties pass.
-  if [[ -n "$first_commit" && "$earliest_dispatch" > "$first_commit" ]]; then
+  if [[ "$earliest_dispatch" > "$first_commit" ]]; then
     echo "FAIL: PR #${PR}'s first commit (${first_commit}, committer date) predates the worker-dispatch comment on issue #${issue} (${earliest_dispatch})."
     echo "      The supervisor dispatches the worker before implementation begins (ADR-0003; session-orchestration skill)."
     ok=false
@@ -457,7 +559,7 @@ EOF
     fi
     prev_dispatch="$d"
   done <<< "$dispatches"
-elif [[ "$markers" == *EXEMPT* ]]; then
+elif has_marker EXEMPT; then
   mode_desc="declared small-task exemption"
 
   # The exemption is a declaration made *before* implementing, mirroring
@@ -465,7 +567,7 @@ elif [[ "$markers" == *EXEMPT* ]]; then
   # the work still satisfies the mode check — the exemption becomes something
   # claimed in hindsight rather than a decision the trail records.
   earliest_exempt=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "EXEMPT" { print $2 }' | sort | head -n1)
-  if [[ -n "$first_commit" && "$earliest_exempt" > "$first_commit" ]]; then
+  if [[ "$earliest_exempt" > "$first_commit" ]]; then
     echo "FAIL: PR #${PR}'s first commit (${first_commit}, committer date) predates the small-task exemption on issue #${issue} (${earliest_exempt})."
     echo "      Declare the exemption in the plan comment before implementing (AGENTS.md §4; session-orchestration skill)."
     ok=false
@@ -479,17 +581,8 @@ fi
 # Routing — the linked issue must be a Task in the tracking graph. The
 # ai-task template applies 'type:task'; without it the issue is invisible
 # to label-driven frontier queries, so a PR closing it lands untracked work.
-if labels=$(api "repos/{owner}/{repo}/issues/${issue}" --jq '[.labels[].name] | join(" ")'); then
-  case " ${labels} " in
-    *" type:task "*) ;;
-    *)
-      echo "FAIL: issue #${issue} lacks the 'type:task' label (has: ${labels:-none})."
-      echo "      Apply it with: gh issue edit ${issue} --add-label type:task (labels: .github/scripts/setup-labels.sh)."
-      ok=false
-      ;;
-  esac
-else
-  echo "FAIL: could not read issue #${issue} metadata for the label check."
+if [[ "$is_task" != true ]]; then
+  echo "FAIL: issue #${issue} lacks the 'type:task' label."
   ok=false
 fi
 
@@ -513,23 +606,26 @@ else
   # The comment-id lookup below is repository-scoped, so a link naming a
   # foreign repository could otherwise resolve to an unrelated local
   # comment that happens to share the id — reject it outright.
-  if ! repo_full=$(api "repos/{owner}/{repo}" --jq '.full_name'); then
-    echo "FAIL: could not resolve this repository's full name for the plan-link check."
-    ok=false
-  elif [[ "$link_repo" != "$(printf '%s' "$repo_full" | tr '[:upper:]' '[:lower:]')" ]]; then
+  plan_query='
+    if type != "object" or (.id | type != "number" or . < 1 or floor != .)
+      or (.body | type != "string") or (.issue_url | type != "string")
+      or (.created_at | type != "string") or (.updated_at | type != "string")
+    then error("invalid plan") else
+      ["COMMENT", .id, .created_at, .updated_at, ("b" + (.body | @base64)), .issue_url,
+       (if ((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) then "plan" else "other" end)] | @tsv
+    end'
+  observe_plan() { api "repos/{owner}/{repo}/issues/comments/${comment_id}" --jq "$plan_query" 2>/dev/null; }
+  if [[ "$link_repo" != "$(printf '%s' "$repo_full" | tr '[:upper:]' '[:lower:]')" ]]; then
     echo "FAIL: PR #${PR}'s plan link points at repository ${link_repo}, but the linked task lives in ${repo_full}."
     echo "      Link the plan comment on the linked Task in this repository."
     ok=false
   elif [[ "$link_issue" != "$issue" ]]; then
     echo "FAIL: PR #${PR}'s plan link points at issue #${link_issue}, but the PR's task link is #${issue}."
     ok=false
-  elif resolved=$(api "repos/{owner}/{repo}/issues/comments/${comment_id}" --jq '
-      [ (.issue_url | sub(".*/"; "")),
-        (if ((.body | test("(^|\\n)## Plan\\b")) or (.body | startswith("Plan:"))) then "plan" else "other" end)
-      ] | @tsv' 2>/dev/null); then
-    IFS=$'\t' read -r comment_issue comment_kind <<< "$resolved"
-    if [[ "$comment_issue" != "$issue" ]]; then
-      echo "FAIL: PR #${PR}'s plan link resolves to issue #${comment_issue}, not the linked task #${issue}."
+  elif plan_snapshot=$(observe_plan); then
+    IFS=$'\t' read -r _kind plan_id _created _updated _encoded _url comment_kind <<< "$plan_snapshot"
+    if [[ "$plan_id" != "$comment_id" ]] || ! printf '%s\n' "$comment_rows" | grep -Fx -- "${plan_snapshot%$'\t'*}" >/dev/null; then
+      echo "FAIL: PR #${PR}'s plan link does not match the observed Task comment."
       ok=false
     elif [[ "$comment_kind" != "plan" ]]; then
       echo "FAIL: PR #${PR}'s plan link resolves to a comment that is not a plan comment (no '## Plan' heading or 'Plan:' prefix)."
@@ -544,4 +640,16 @@ fi
 
 $ok || exit 1
 
-echo "PASS: PR #${PR} → issue #${issue} ritual in order: claim ${earliest_claim} → plan ${earliest_plan} → first commit ${first_commit:-none}; mode: ${mode_desc}; plan link and type:task verified."
+# Re-observe membership as well as selected IDs, so added/deleted/revised
+# decisions cannot escape the final check. These are bounded API observations,
+# not an atomic transaction or an authenticated account of worker actions.
+final_task=$(observe_task) || observation_fail task-readback
+[[ "$final_task" == "$task_snapshot" ]] || observation_fail task-drift
+final_comments=$(observe_comments) || observation_fail comments-readback
+[[ "$final_comments" == "$comment_snapshot" ]] || observation_fail comments-drift
+final_plan=$(observe_plan) || observation_fail plan-readback
+[[ "$final_plan" == "$plan_snapshot" ]] || observation_fail plan-drift
+final_pr=$(observe_pr) || observation_fail pr-readback
+[[ "$final_pr" == "$pr_snapshot" ]] || observation_fail pr-drift
+
+echo "PASS: PR #${PR} at head ${observed_head} (base ${observed_base}) → issue #${issue} ritual in order: claim ${earliest_claim} → plan ${earliest_plan} → first commit ${first_commit}; ${commit_count} commits; mode: ${mode_desc}; stable Task/plan observation and type:task verified."

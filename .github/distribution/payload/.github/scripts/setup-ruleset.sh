@@ -56,9 +56,9 @@ Options:
                            without making any API call.
   -h, --help               Show this help and exit.
 
-Examples:
-  bash .github/scripts/setup-ruleset.sh --dry-run | jq .
-  bash .github/scripts/setup-ruleset.sh -R owner/repo
+Examples (replace lint,test with the reviewed existing adopter checks):
+  bash .github/scripts/setup-ruleset.sh --checks lint,test --dry-run
+  bash .github/scripts/setup-ruleset.sh -R owner/repo --checks lint,test
   bash .github/scripts/setup-ruleset.sh -R owner/repo --checks lint,test --enforcement active
 
 Inspect or remove a created ruleset:

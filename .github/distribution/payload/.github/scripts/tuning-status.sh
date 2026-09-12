@@ -74,7 +74,7 @@ case "$MODE" in
       {
         echo "## ⚠️ Scaffold not onboarded"
         echo
-        echo "Run \`/onboard-project\` (the project-onboarding skill) to tune"
+        echo "Run \`\$project-onboarding\` (the installed project-onboarding Skill) to tune"
         echo "this scaffold to its project. Findings:"
         echo
         echo '```text'

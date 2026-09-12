@@ -63,6 +63,29 @@ T24_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/41"
 T24_BRANCH = "codex/source-first-task-selection"
 T24_BASE_COMMIT = "4e62351d3c053e6c72cc1d295df5567245340014"
 T24_BASE_TREE = "eab568e5eee0bc09889f67764655d07ab0d31142"
+T25_RECORD = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43"
+T25_BRANCH = "codex/source-first-ritual-verification"
+T25_BASE_COMMIT = "d396865c0f5e23fa01bb790242835dda482d679d"
+T25_BASE_TREE = "17cf82b1cc305b3263e8a84e18beecdea91c32e5"
+EXPECTED_T25_PATHS = (
+    ".github/distribution/payload.v1.tsv",
+    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+    ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+    ".github/distribution/payload/.github/codex-instructions.md",
+    ".github/distribution/payload/.github/connectors/speckit.md",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+    ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+    ".github/distribution/payload/.github/scripts/setup-sources.sh",
+    ".github/distribution/payload/.github/scripts/tuning-status.sh",
+    ".github/distribution/source-parity.v1.json",
+    ".github/governance/phase-task-ownership.v1.json",
+    ".github/scripts/check-installer.py",
+    ".github/scripts/check-repository-policy.py",
+    "README.md",
+    "docs/distribution/source-first-installer.md",
+    "tests/conformance/test_installer.py",
+    "tests/conformance/test_repository_policy.py",
+)
 EXPECTED_T24_PATHS = (
     ".github/distribution/payload.v1.tsv",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -413,6 +436,9 @@ def read_json(path: Path, errors: list[str], label: str) -> dict[str, Any]:
             path.read_text(encoding="utf-8"),
             object_pairs_hook=reject_duplicate_json_keys,
         )
+    except RecursionError:
+        errors.append(f"{label} is not valid UTF-8 JSON: nesting exceeds parser limit")
+        return {}
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         errors.append(f"{label} is not valid UTF-8 JSON: {exc}")
         return {}
@@ -1170,8 +1196,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T14 " + key + " drifted")
     entries = t14.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS and path not in EXPECTED_T23_PATHS and path not in EXPECTED_T24_PATHS):
-        errors.append("accepted ownership T14 must retain its reviewed 39 non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T14_PATHS if path not in EXPECTED_T18_PATHS and path not in EXPECTED_T19_PATHS and path not in EXPECTED_T22_PATHS and path not in EXPECTED_T23_PATHS and path not in EXPECTED_T24_PATHS and path not in EXPECTED_T25_PATHS):
+        errors.append("accepted ownership T14 must retain its reviewed 33 non-transferred paths")
     if t14.get("path_transitions") != []:
         errors.append("ownership T14 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1238,8 +1264,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T21 " + key + " drifted")
     entries = t21.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T21_PATHS if path not in EXPECTED_T22_PATHS):
-        errors.append("accepted ownership T21 must retain its reviewed four non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T21_PATHS if path not in EXPECTED_T22_PATHS and path not in EXPECTED_T25_PATHS):
+        errors.append("accepted ownership T21 must retain its reviewed three non-transferred paths")
     if t21.get("path_transitions") != []:
         errors.append("ownership T21 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1272,8 +1298,8 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
             errors.append("ownership T23 " + key + " drifted")
     entries = t23.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != tuple(path for path in EXPECTED_T23_PATHS if path not in EXPECTED_T24_PATHS):
-        errors.append("accepted ownership T23 must retain its reviewed two non-transferred paths")
+    if actual != tuple(path for path in EXPECTED_T23_PATHS if path not in EXPECTED_T24_PATHS and path not in EXPECTED_T25_PATHS):
+        errors.append("accepted ownership T23 must retain its reviewed one non-transferred path")
     if t23.get("path_transitions") != []:
         errors.append("ownership T23 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
@@ -1282,19 +1308,36 @@ def validate_phase2_frontier(payload: dict[str, Any], errors: list[str]) -> None
     if not isinstance(t24, dict):
         errors.append("ownership manifest is missing T24")
         return
-    for key, expected in (("state", "active"), ("record", T24_RECORD),
+    for key, expected in (("state", "accepted"), ("record", T24_RECORD),
                           ("branch", T24_BRANCH), ("base_commit", T24_BASE_COMMIT),
                           ("base_tree", T24_BASE_TREE)):
         if t24.get(key) != expected:
             errors.append("ownership T24 " + key + " drifted")
     entries = t24.get("owned_paths")
     actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
-    if actual != EXPECTED_T24_PATHS:
-        errors.append("ownership T24 must declare exactly the reviewed twelve paths")
+    if actual != tuple(path for path in EXPECTED_T24_PATHS if path not in EXPECTED_T25_PATHS):
+        errors.append("ownership T24 must retain exactly the reviewed three paths")
     if t24.get("path_transitions") != []:
         errors.append("ownership T24 path_transitions must remain empty")
     if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
         errors.append("ownership T24 paths must all use mode 100644")
+    t25 = task_by_id.get("T25")
+    if not isinstance(t25, dict):
+        errors.append("ownership manifest is missing T25")
+        return
+    for key, expected in (("state", "active"), ("record", T25_RECORD),
+                          ("branch", T25_BRANCH), ("base_commit", T25_BASE_COMMIT),
+                          ("base_tree", T25_BASE_TREE)):
+        if t25.get(key) != expected:
+            errors.append("ownership T25 " + key + " drifted")
+    entries = t25.get("owned_paths")
+    actual = tuple(entry.get("path") for entry in entries if isinstance(entry, dict)) if isinstance(entries, list) else ()
+    if actual != EXPECTED_T25_PATHS:
+        errors.append("ownership T25 must declare exactly the reviewed seventeen paths")
+    if t25.get("path_transitions") != []:
+        errors.append("ownership T25 path_transitions must remain empty")
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) or entry.get("mode") != "100644" for entry in entries):
+        errors.append("ownership T25 paths must all use mode 100644")
     if "T12" in task_by_id:
         errors.append("paused unmerged T12 ownership must not enter this accepted-main branch")
 
@@ -2309,7 +2352,7 @@ def validate_accepted_transition_evidence(
                 manifest_bytes.decode("utf-8"),
                 object_pairs_hook=reject_duplicate_json_keys,
             )
-        except (UnicodeError, json.JSONDecodeError, ValueError):
+        except (UnicodeError, json.JSONDecodeError, ValueError, RecursionError):
             errors.append(f"{label} base ownership manifest is invalid")
             continue
         if not isinstance(base_payload, dict):
@@ -2399,7 +2442,7 @@ def validate_path_transitions(
             base_manifest_bytes.decode("utf-8"),
             object_pairs_hook=reject_duplicate_json_keys,
         )
-    except (UnicodeError, json.JSONDecodeError, ValueError):
+    except (UnicodeError, json.JSONDecodeError, ValueError, RecursionError):
         errors.append("ownership manifest in the Task base is not valid unique-key JSON")
         return
     if not isinstance(base_payload, dict):

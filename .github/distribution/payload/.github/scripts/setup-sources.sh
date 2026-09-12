@@ -146,7 +146,9 @@ command -v gh >/dev/null 2>&1 \
 LOGIN="$(gh api user --jq .login 2>/dev/null)" \
   || fail "gh is not authenticated" "run: gh auth login"
 
-PRIVATE="$(gh api "repos/$OWNER_REPO" --jq .private 2>/dev/null)" \
+# Validate the JSON type before projecting: strings "true"/"false" are not
+# repository visibility observations, even though their shell text is identical.
+PRIVATE="$(gh api "repos/$OWNER_REPO" --jq 'if (.private | type) == "boolean" then .private else error("uncheckable repository visibility") end' 2>/dev/null)" \
   || fail "cannot read repos/$OWNER_REPO via gh api" \
           "check the remote URL and your access to the repository"
 
