@@ -786,10 +786,6 @@
         {
           "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
           "mode": "100644"
-        },
-        {
-          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
-          "mode": "100644"
         }
       ]
     },
@@ -923,6 +919,10 @@
         },
         {
           "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
           "mode": "100644"
         },
         {
