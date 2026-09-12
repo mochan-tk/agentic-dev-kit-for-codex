@@ -749,10 +749,6 @@
           "mode": "100644"
         },
         {
-          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
-          "mode": "100644"
-        },
-        {
           "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
           "mode": "100644"
         },
@@ -916,6 +912,10 @@
         },
         {
           "path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+          "mode": "100644"
+        },
+        {
+          "path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
           "mode": "100644"
         },
         {
