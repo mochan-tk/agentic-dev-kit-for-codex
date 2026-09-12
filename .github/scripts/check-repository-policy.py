@@ -3340,7 +3340,7 @@ SF_MAX_NODES = 12000
 SF_MAX_STRING = 8192
 # Canonical UTF-8 JSON, sorted keys, no whitespace; a reviewed contract anchor,
 # not a signature, current GitHub attestation, or a future-HEAD self-binding.
-SF_REVIEWED_SEAL = "b6b54a55a3a00d594142cee1ec004e6899591320f7bb6e6986d78b7ada8c2da4"
+SF_REVIEWED_SEAL = "4f2cf6c8e93c7a7194c3d2d8d4f529c70a8fdd2ed4b9c597172198a41f54d2b2"
 SF_DEFINITION_SHA = "c215cdc015f4cfac459c84d7f18042ab018944bed88976b1ec96d5278544988b"
 SF_SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 SF_CRITERIA = [f"SF-{i:02d}" for i in range(1, 11)]

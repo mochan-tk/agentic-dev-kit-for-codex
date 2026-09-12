@@ -1265,7 +1265,7 @@
       "expected_sha256": "8064771f31e020dac1ecb57aab82485200c8d683212befddcd60e4b9003e8d92",
       "applicability": "adapted",
       "criterion": "SF-06",
-      "rationale": "Bound API-read retries and retain fixed failure diagnostics after exhaustion; current helper no-retry refusal is an explicit narrower product policy, not proof of the original configured-retry behavior.",
+      "rationale": "The shipped ritual helper retries API reads up to three times and refuses after exhaustion; bounded fixtures and diagnostic behavior require named evidence against the original configured-retry expectation, which remains not-run.",
       "original_verification_state": "not-run"
     },
     {
