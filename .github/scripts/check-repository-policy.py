@@ -3400,8 +3400,10 @@ def source_first_bytes(root: Path, relative: str) -> bytes:
         leaf = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
         opened.append(leaf)
         before = os.fstat(leaf)
+        # Git mode 100644 permits ordinary read/write variants from checkout umask.
+        unsafe_permissions = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH | stat.S_ISUID | stat.S_ISGID | stat.S_ISVTX
         if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
-                or stat.S_IMODE(before.st_mode) != 0o644 or before.st_size > SF_MAX_BYTES):
+                or before.st_mode & unsafe_permissions or before.st_size > SF_MAX_BYTES):
             raise ValueError("source-first file type, mode, links or size")
         chunks = []
         length = 0

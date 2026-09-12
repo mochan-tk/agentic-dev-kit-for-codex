@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -33,6 +34,14 @@ class SourceFirstCompletionTest(unittest.TestCase):
         root = Path(temp.name) / "repository"
         shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git", "__pycache__"))
         return root
+
+    def fixture_git(self, root, *arguments, umask=-1):
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        environment.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
+        result = subprocess.run(["git", "-c", "core.autocrlf=false", "-C", str(root), *arguments],
+                                env=environment, umask=umask, capture_output=True, text=True, timeout=30)
+        self.assertEqual(0, result.returncode, result.stderr)
+        return result.stdout.strip()
 
     def record(self, root=ROOT):
         return json.loads((root / RECORD).read_text())
@@ -206,6 +215,59 @@ class SourceFirstCompletionTest(unittest.TestCase):
         self.assertTrue(self.check(root))
         with mock.patch.object(self.policy.os, "read", side_effect=PermissionError):
             self.assertTrue(self.check(ROOT))
+
+    def test_clean_git_checkouts_with_ordinary_umasks_are_structurally_valid(self):
+        source = self.fixture()
+        self.fixture_git(source, "init", "--quiet", "--template=")
+        self.fixture_git(source, "add", "--all")
+        tree = self.fixture_git(source, "write-tree")
+        commit = self.fixture_git(source, "-c", "user.name=Fixture", "-c",
+                                  "user.email=fixture@example.invalid", "commit-tree", tree,
+                                  "-m", "Synthetic checkout fixture; not historical authorization evidence")
+        self.fixture_git(source, "update-ref", "HEAD", commit)
+        for mask, mode in ((0o022, 0o644), (0o077, 0o600), (0o027, 0o640), (0o002, 0o664)):
+            with self.subTest(umask=f"{mask:03o}"):
+                root = source.parent / f"clone-{mask:03o}"
+                self.fixture_git(source.parent, "clone", "--quiet", "--no-hardlinks",
+                                 str(source), str(root), umask=mask)
+                self.assertEqual(tree, self.fixture_git(root, "rev-parse", "HEAD^{tree}"))
+                entries = self.fixture_git(root, "ls-files", "--stage").splitlines()
+                self.assertTrue(entries)
+                self.assertEqual({"100644"}, {entry.split()[0] for entry in entries})
+                for relative in (RECORD, "README.md"):
+                    self.assertEqual(mode, stat.S_IMODE((root / relative).stat().st_mode))
+                self.assertEqual("", self.fixture_git(root, "status", "--porcelain", "--untracked-files=no"))
+                # Run production structural checks; synthetic history cannot authorize a Task.
+                self.assertEqual([], self.policy.validate_repository(root, verify_git=False))
+                self.fixture_git(root, "diff", "--exit-code")
+                self.fixture_git(root, "diff", "--cached", "--exit-code")
+
+    def test_readable_nonexecutable_permissions_are_accepted(self):
+        for mode in (0o600, 0o640, 0o644, 0o664, 0o444):
+            for relative in (RECORD, "README.md"):
+                with self.subTest(mode=f"{mode:04o}", path=relative):
+                    root = self.fixture()
+                    (root / relative).chmod(mode)
+                    self.assertEqual(mode, stat.S_IMODE((root / relative).stat().st_mode))
+                    with mock.patch.object(self.policy, "filesystem_mode", side_effect=AssertionError(
+                            "secure source-first reads must use descriptor metadata")):
+                        self.assertEqual([], self.check(root))
+
+    def test_each_executable_permission_bit_refuses(self):
+        for mode in (0o744, 0o654, 0o645):
+            with self.subTest(mode=f"{mode:04o}"):
+                root = self.fixture()
+                (root / RECORD).chmod(mode)
+                self.assertEqual(mode, stat.S_IMODE((root / RECORD).stat().st_mode))
+                self.assertTrue(self.check(root))
+
+    def test_each_special_permission_bit_refuses(self):
+        for mode in (0o4644, 0o2644, 0o1644):
+            with self.subTest(mode=f"{mode:04o}"):
+                root = self.fixture()
+                (root / RECORD).chmod(mode)
+                self.assertEqual(mode, stat.S_IMODE((root / RECORD).stat().st_mode))
+                self.assertTrue(self.check(root))
 
     def test_leaf_replacement_during_read_refuses(self):
         root = self.fixture()
