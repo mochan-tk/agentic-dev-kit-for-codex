@@ -1,0 +1,829 @@
+{
+  "schema": "source-first-installer-parity/v1",
+  "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+  "source_commit": "fd265ddef150fab86cd54d0e383c2c25fe297ffb",
+  "files": [
+    {
+      "destination": ".agents/skills/context-collection/SKILL.md",
+      "source_path": ".github/skills/context-collection/SKILL.md",
+      "source_blob": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+      "target_sha256": "b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/context-distillation/SKILL.md",
+      "source_path": ".github/skills/context-distillation/SKILL.md",
+      "source_blob": "4f2e57a7f613cdadb7c7d76306c3a04458ca7b08",
+      "target_sha256": "3d6e4955a67f83758cf15ad96e4357de0a64a67e24394aed61f2c7d563f41a62",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/SKILL.md",
+      "source_path": ".github/skills/plan-management/SKILL.md",
+      "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      "target_sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/scripts/frontier.sh",
+      "source_path": ".github/skills/plan-management/scripts/frontier.sh",
+      "source_blob": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+      "target_sha256": "4bc5e92dd5054e09027238bafa77e4859fa0a4012f6398a7741bff16804aeb71",
+      "adaptations": [
+        "Retain Task/frontier computation; fail closed on list/dependency/state errors and truncation; no unchecked text fallback; embed original MIT notice.",
+        "Accept typed complete gh 2.96.0 blockedBy connections and tested legacy arrays; preserve supplied repository/URL identity, reject inconsistent, duplicate (including case aliases) or incomplete data, and retain manual graph fallback without partial output.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/scripts/new-task.sh",
+      "source_path": ".github/skills/plan-management/scripts/new-task.sh",
+      "source_blob": "1156b004fd554b12cdccf55bc5b62a98e3a82bda",
+      "target_sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/templates/epic-body.md",
+      "source_path": ".github/skills/plan-management/templates/epic-body.md",
+      "source_blob": "b01a35256b48f1c1e1c31c4d1e35822767bd5551",
+      "target_sha256": "28adc386b85e5d9a4861aede3a476606b9b826a74d08308ac69461232aa248b4",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/plan-management/templates/task-body.md",
+      "source_path": ".github/skills/plan-management/templates/task-body.md",
+      "source_blob": "2338d2e79db0afad54e498d5582b80ad63fa198f",
+      "target_sha256": "f3f89d95012c653587ba807a2928b1d34da65e9b563826b6db91f27ddf1b512b",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".agents/skills/project-onboarding/SKILL.md",
+      "source_path": ".github/skills/project-onboarding/SKILL.md",
+      "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
+      "target_sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b",
+      "adaptations": [
+        "Carry approved P2 choice into explicit noninteractive P4 --source commands; require write consent and distinguish pending preparation from reviewed activation.",
+        "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff.",
+        "Use explicit Bash for 0644 helpers; P0/P6 bind preserved adopter adoption and optional ritual proof to exact commits/trees rather than a changelog marker.",
+        "Align explicit profile and new/canonical reconciliation with the installed setup helper; execute consent and preview blocks without guessing intent or weakening refusal gates."
+      ]
+    },
+    {
+      "destination": ".agents/skills/retro/SKILL.md",
+      "source_path": ".github/skills/retro/SKILL.md",
+      "source_blob": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
+      "target_sha256": "3ea6db90c6f44eb0709124b4c409d89bb7865395187a65bfad79c1aeb1e2de54",
+      "adaptations": [
+        "Retain candidate/occurrence/retro loop; source-only platform polling/monthly workflow not shipped; upstream writes require permission."
+      ]
+    },
+    {
+      "destination": ".agents/skills/session-orchestration/SKILL.md",
+      "source_path": ".github/skills/session-orchestration/SKILL.md",
+      "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+      "target_sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b",
+      "adaptations": [
+        "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI.",
+        "Explain bounded whole legacy/tool-scoped identifiers, separate actual reference from navigation/display names, and avoid a future PR-number requirement or identity/authentication claims."
+      ]
+    },
+    {
+      "destination": ".agents/skills/task-routing/SKILL.md",
+      "source_path": ".github/skills/task-routing/SKILL.md",
+      "source_blob": "30a6b0123f82b15f6379a4b1e62f5c6d30c7e984",
+      "target_sha256": "c378850de4a1b45471361c06438aa057603681c4073bfc5b113a8866577b4ac2",
+      "adaptations": [
+        "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI."
+      ]
+    },
+    {
+      "destination": ".agents/skills/verification/SKILL.md",
+      "source_path": ".github/skills/verification/SKILL.md",
+      "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
+      "target_sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
+        "After actual PR creation, reach the installed mode-0644 ritual sensor through Bash; distinguish observed head-bound evidence from CI, review and acceptance."
+      ]
+    },
+    {
+      "destination": ".codex/agents/orchestrator.toml",
+      "source_path": ".github/agents/orchestrator.agent.md",
+      "source_blob": "5574a1422f53651330a204dce08dce49ea4c1f59",
+      "target_sha256": "516ac001433c8bae32c8c3ed3cfef26b4c08abaecf4a2ed85d4772b416b6bac9",
+      "adaptations": [
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".codex/agents/planner.toml",
+      "source_path": ".github/agents/planner.agent.md",
+      "source_blob": "7227835f359f3383cd2ddbc47ffb69e5e1ce867e",
+      "target_sha256": "041d2818858e6369a60651fef5f273f840edc104560fd8b3d363f41db3be57f2",
+      "adaptations": [
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee."
+      ]
+    },
+    {
+      "destination": ".codex/agents/reviewer.toml",
+      "source_path": ".github/agents/reviewer.agent.md",
+      "source_blob": "36901b4a8835ebe8f0989994bf3847bcd2809beb",
+      "target_sha256": "24561aab8290a75b2ebed0037e5fc0a6ee641d05e32e7f85810ed1a2856b8ee5",
+      "adaptations": [
+        "Translate source Markdown role to native Codex TOML guidance only; no runtime permission/model override or authenticated role guarantee."
+      ]
+    },
+    {
+      "destination": ".gitattributes",
+      "source_path": ".gitattributes",
+      "source_blob": "beda7eb8fb0d073281b23f758094da7348e92ee8",
+      "target_sha256": "ab80c861d48f16d34e0057c069d0e6149a806488529cfa25ae3dadc2ddbb0363",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "source_path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "source_blob": "f8d70b3d44f53de307d88284f192da79cdf45fdd",
+      "target_sha256": "228cf273cc279e696518a266b1f64d8da3ef45b2e021233b865582af1bbab3de",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/ISSUE_TEMPLATE/config.yml",
+      "source_path": ".github/ISSUE_TEMPLATE/config.yml",
+      "source_blob": "a3649e71ac42fee71010da2292893c900536e650",
+      "target_sha256": "1ebcfe46aed6d581a1403b98000ee097b1ebd41206dd534cae49143688e09f74",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/ISSUE_TEMPLATE/epic.yml",
+      "source_path": ".github/ISSUE_TEMPLATE/epic.yml",
+      "source_blob": "2fd09aceddf192a2d2c1816dcdc2a25873340da4",
+      "target_sha256": "fa13a17f61dcde61d32f5f3477cc76005d34ec487603e361fe22253c1d081b3a",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/PULL_REQUEST_TEMPLATE.md",
+      "source_path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "source_blob": "145a05bbc0050c215b397e7d7c029507c7f065fa",
+      "target_sha256": "a277e46753c687d79a5e67e29c0dd04c49e1bc3c48171a5e17e25def4c2955be",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/codex-instructions.md",
+      "source_path": ".github/copilot-instructions.md",
+      "source_blob": "c2ec9fb4c156b5139b7d88624593216c69a800f0",
+      "target_sha256": "5712479a016a1daf344db6026614c98d6f3db9460e0488519c88a7608b6694db",
+      "adaptations": [
+        "Align the compact Task checklist with existing supervisor claim/plan/dispatch/outcome, worker evidence, trivial exemption and Refs/post-merge/non-final PR rules.",
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/CONNECTOR-TEMPLATE.md",
+      "source_path": ".github/connectors/CONNECTOR-TEMPLATE.md",
+      "source_blob": "997e2dc5825d2cabeafbbbe01ab997ae86b958d4",
+      "target_sha256": "b9fb8eebe51b7dedcb5d5ae92dd5cd5f827563a9624346ca73bcd16a143a92ea",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/README.md",
+      "source_path": ".github/connectors/README.md",
+      "source_blob": "386639f24f8323ce92bed53c5ea6518bc50c2dc5",
+      "target_sha256": "5c80ab5deaaa7d130d91d2acf75b2fc4a67bf3abe73f702b1be622da3b948180",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/builtin.md",
+      "source_path": ".github/connectors/builtin.md",
+      "source_blob": "3bf19026be22f7d167f9c26d82410c4b9b9ca022",
+      "target_sha256": "a0efecd6fecbb206fa83dc2d62c5ff0cac4177cb14cc0adb3ff1e4c0111ceaff",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/connectors/speckit.md",
+      "source_path": ".github/connectors/speckit.md",
+      "source_blob": "441b1c8e639813a49dcc200ae4c1c2b018f91a5a",
+      "target_sha256": "1f40d5bf8f4d4f89ece1d6d033da9de623a4b3ffbf19b4af5fc1ff497c64f16c",
+      "adaptations": [
+        "Separate ignore diagnostics from tracked-file and exact intended pinned-tree blob verification; never substitute HEAD for a missing reviewed pin.",
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/README.md",
+      "source_path": ".github/docs/agreements/README.md",
+      "source_blob": "413054a2fb8f80406c62491fdb558efa302c43f0",
+      "target_sha256": "c573f1dc6d285294b1d85abdf99004a728af7efe32a0e5dccb90829b4205436a",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/adr/ADR-0000-template.md",
+      "source_path": ".github/docs/agreements/adr/ADR-0000-template.md",
+      "source_blob": "269f127a929cf24e2f9979c189a725b2683bb80d",
+      "target_sha256": "7f6442e1155ea7acbc808d4be62d6177e53e500130444f6c7f206d5ecb78b5d3",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/glossary.md",
+      "source_path": ".github/docs/agreements/glossary.md",
+      "source_blob": "cc5336086dd24145067be37c4282288cd2fa8709",
+      "target_sha256": "9b58195e57846404a2e1e2c93e75b343ae28e6807703db5aac7da83c3bfce504",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/non-goals.md",
+      "source_path": ".github/docs/agreements/non-goals.md",
+      "source_blob": "abd4ca28ba184f6aa5173b383afab873038577f0",
+      "target_sha256": "2446ce092a2d96998f1e7626a620218e6c7709dd9cf5aebc42dbe5e4892c0b41",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/requirements.md",
+      "source_path": ".github/docs/agreements/requirements.md",
+      "source_blob": "f68e5804e54c7e71ce65775794685bab70270676",
+      "target_sha256": "c8081a1b26f62cd58464ffcd33ce3887a66a35c3e3ea762e876639b34a0c23f8",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/docs/agreements/retro-log.md",
+      "source_path": ".github/docs/agreements/retro-log.md",
+      "source_blob": "f401f268702fd21efeb8db85e7b380ef69f3de5d",
+      "target_sha256": "a86441a480003f676a2063c320e70ee44312c2ce9d6b319fb131a8d02941219d",
+      "adaptations": [
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+      ]
+    },
+    {
+      "destination": ".github/docs/context/README.md",
+      "source_path": ".github/docs/context/README.md",
+      "source_blob": "3b915dda3cd9968757c90d8d3a03f11e6378e0b6",
+      "target_sha256": "5317fc5f84ee992d4b9491e44d12793db8d7fde443998c465d407b4beb76797f",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/instructions/code-review.instructions.md",
+      "source_path": ".github/instructions/code-review.instructions.md",
+      "source_blob": "1336728a7d8f72520bec2b97a2ed25568e17d0b3",
+      "target_sha256": "a328ab03546b8f5b7f3f91b31c9bd97e98dd807ae8610600c5d43c5dd5fc0edb",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/instructions/docs.instructions.md",
+      "source_path": ".github/instructions/docs.instructions.md",
+      "source_blob": "68ff889b87df96282cdb014f1ee88a1922dfc072",
+      "target_sha256": "66bba659c1034b72227824332c0aff8c1c2fb3bf693b6c37389a507fd3b4399e",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/scripts/check-task-ritual.sh",
+      "source_path": ".github/scripts/check-task-ritual.sh",
+      "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
+      "target_sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
+        "Validate one bounded whole dispatch reference and preserve ordinary branch, plan, chronology and release gates; retain exact old/new frontier anchors with equal onboarding base/head anchors.",
+        "Bind ordinary typed PR/Task/complete comment/plan observations before and after validation; require complete supported commit evidence and calendar-valid timestamps without authenticating chronology."
+      ]
+    },
+    {
+      "destination": ".github/scripts/ownership-overlap.sh",
+      "source_path": ".github/scripts/ownership-overlap.sh",
+      "source_blob": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
+      "target_sha256": "825af02f0a749a83122670570ab8ef9b34952f7895b23f70a4949dd6ca40f002",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".github/scripts/run.ps1",
+      "source_path": ".github/scripts/run.ps1",
+      "source_blob": "269b798e1d163b0832a3036114c9550684a1aa76",
+      "target_sha256": "c8e8b2027c2845260807dec8b58d5c6e2549b4306481c9746c01fdef7c9d6eee",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-labels.sh",
+      "source_path": ".github/scripts/setup-labels.sh",
+      "source_blob": "f76b67dcbe9563cfb61bd56451f7c51a68f8afca",
+      "target_sha256": "b47319fc5c5afded9f6babe178e1682a0fcbc539933435a31ef64eb28035daa1",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-project.sh",
+      "source_path": ".github/scripts/setup-project.sh",
+      "source_blob": "4dd5b61186b8488e5e8fff143e5b40d3958087ca",
+      "target_sha256": "3cf882ba6d557b13417c518d02f3828dfb0a4b5de37c754a64afe14cd47e5b5f",
+      "adaptations": [
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-ruleset.sh",
+      "source_path": ".github/scripts/setup-ruleset.sh",
+      "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
+      "target_sha256": "8afc08904d9c9f1b564709d25e2130500546d441ebb586c6a3e28af95d054c02",
+      "adaptations": [
+        "Make every help example carry reviewed adopter checks; preview without a pipeline that could mask helper failure. Mandatory check guards are unchanged.",
+        "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".github/scripts/setup-sources.sh",
+      "source_path": ".github/scripts/setup-sources.sh",
+      "source_blob": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff",
+      "target_sha256": "535f3faaa8822bbdb3a87b187b300b2d39a78ca17fb9938a3771822f38f72d52",
+      "adaptations": [
+        "Require actual JSON boolean repository visibility before shell projection or registry writes; preserve existing private-plan gating and pending-activation semantics.",
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".github/scripts/tuning-status.sh",
+      "source_path": ".github/scripts/tuning-status.sh",
+      "source_blob": "1b764f3bd67e897e64c11c98503e5750d73746dd",
+      "target_sha256": "9cdc77cd458064d3a7f3c81d42fcf0b6d391b56a41cf7a87af342a110bf9a0b7",
+      "adaptations": [
+        "Emit the literal installed $project-onboarding Skill entry in the optional CI summary; retain sensor exit and write scope.",
+        "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+      ]
+    },
+    {
+      "destination": ".gitignore",
+      "source_path": ".gitignore",
+      "source_blob": "8b8c60b83d8d879d40b0c803931a1d68d76ab742",
+      "target_sha256": "60e314fa9bf4c55a26ca39b280535a3824fa9a034359067910537eb99b887b72",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": "AGENTS.md",
+      "source_path": "AGENTS.md",
+      "source_blob": "d575018d2d456c9376144495467cfcf8ac498b96",
+      "target_sha256": "39cd615ea25de9d8b368d269facfdc6fec39490bb97db9633e3be6667becc5ae",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    },
+    {
+      "destination": "README.md",
+      "source_path": "README.md",
+      "source_blob": "76480f3ae0458926d854e62f51d10958ff229bd3",
+      "target_sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b",
+      "adaptations": [
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+      ]
+    },
+    {
+      "destination": "SCAFFOLD-CHANGELOG.md",
+      "source_path": "SCAFFOLD-CHANGELOG.md",
+      "source_blob": "c0898a331200d0a332c5c4423fefc9017531a95f",
+      "target_sha256": "e826bef0731477e141a7c336b7ad9877a006a8ba6e896c6a5d8487aefc1cc1fb",
+      "adaptations": [
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+      ]
+    },
+    {
+      "destination": "docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+      "source_path": "docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+      "source_blob": "f07906ce7eea7dc45b04cbdd1b739557ec018df8",
+      "target_sha256": "b2d95256c31e84fb9211485b34aef15447cc8fd44fc7969c2fe80f9a4c9c83e2",
+      "adaptations": [
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+      ]
+    }
+  ],
+  "context_kickoff": {
+    "schema": "builtin-context-kickoff/v1",
+    "source_files": {
+      ".github/prompts/kickoff-context.prompt.md": "9b565657def003a3c04cfd9ec6e67578ff7d2906",
+      ".github/skills/context-collection/SKILL.md": "cead6452f8a7015ef2070596bde26da3e2ae2cfd",
+      ".github/connectors/builtin.md": "3bf19026be22f7d167f9c26d82410c4b9b9ca022",
+      "README.md": "76480f3ae0458926d854e62f51d10958ff229bd3"
+    },
+    "prompt_sha256": "f11922e1f96ccf5f9e827a77db1f06455f05991d63c20b0ef95fc2ce8b46228c",
+    "integration": "explicit-route-in-existing-context-collection-skill",
+    "adaptations": [
+      "Reuse frozen kickoff routing into builtin.retrieve and collection; retain the existing normative builtin procedure and ordinary collection path.",
+      "Replace Copilot prompt aliases and topic interpolation with explicit installed Skill/resource guidance and a chosen topic; no ninth Skill or implicit preload.",
+      "Preserve iterative candidate drafts, bounded questions, human stop, provenance, redaction and the human-reviewed distillation promotion gate.",
+      "Document optional registry preparation separately from reviewed activation and sufficiency; preserve existing adopter README and tuned files."
+    ],
+    "evidence": "offline-installed-instructions-and-disposable-bash-fixtures-only",
+    "target_files": [
+      {
+        "path": ".agents/skills/context-collection/SKILL.md",
+        "mode": "100644",
+        "sha256": "b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97"
+      },
+      {
+        "path": ".github/connectors/builtin.md",
+        "mode": "100644",
+        "sha256": "a0efecd6fecbb206fa83dc2d62c5ff0cac4177cb14cc0adb3ff1e4c0111ceaff"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b"
+      }
+    ]
+  },
+  "source_preparation": {
+    "schema": "source-registry-preparation/v1",
+    "source_files": {
+      ".github/scripts/setup-sources.sh": "e60fe75c1fd47f5ca7ccfb8ae80f395162f196ff"
+    },
+    "integration": "explicit-existing-setup-sources-helper",
+    "adaptations": [
+      "Refuse unsafe repository-relative invocation ancestry and symlinked, obstructed or special registry paths before inspection or writing; no automatic repair or same-user race guarantee.",
+      "Preserve regular create/append, exact-heading duplicate no-op, write-free dry-run, bytes/modes, original preflight and pending-activation semantics; resolve specs pin from repository root for nested invocation.",
+      "Exercise installed registry-to-Task-to-unchanged-frontier flow only in stateful fake-GitHub fixtures; preparation proves neither activation nor context sufficiency nor dispatch authority."
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-and-stateful-fake-gh-only",
+    "target_files": [
+      {
+        "path": ".github/scripts/setup-sources.sh",
+        "mode": "100644",
+        "sha256": "535f3faaa8822bbdb3a87b187b300b2d39a78ca17fb9938a3771822f38f72d52"
+      }
+    ]
+  },
+  "task_creation": {
+    "schema": "task-creation-readback/v1",
+    "source_files": {
+      ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      ".github/skills/plan-management/scripts/new-task.sh": "1156b004fd554b12cdccf55bc5b62a98e3a82bda"
+    },
+    "cli_source": "cli/cli@b300f2ec7ec9dc9addc39b2ad88c54097ded7ca0",
+    "cli_version": "2.96.0",
+    "strategy": "single-create-without-ready-verify-graph-optional-ready-verify-again",
+    "adaptations": [
+      "Retain source parent/blocker create flags and ready ownership validation; remove initial ai:ready because deferred linking is not atomic.",
+      "Bind repository and issue URLs, exact body/title, typed complete parent/blockers and labels before readiness, then verify the same identity and graph again.",
+      "Preserve uncertain write outcomes without automatic retry, deletion or repair; ai:ready means a complete brief, not closed blockers.",
+      "Bound and snapshot inputs; use real CLI export shapes with at most 50 complete blockers and fewer than 100 labels; keep private scratch data out of diagnostics."
+    ],
+    "evidence": "offline-real-bash-fake-gh-and-disposable-adopters-only",
+    "target_files": [
+      {
+        "path": ".agents/skills/plan-management/SKILL.md",
+        "mode": "100644",
+        "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+      },
+      {
+        "path": ".agents/skills/plan-management/scripts/new-task.sh",
+        "mode": "100644",
+        "sha256": "8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c"
+      }
+    ]
+  },
+  "feedback_companion": {
+    "schema": "installer-feedback-companion/v1",
+    "source_files": {
+      ".github/scripts/feedback-lib.sh": "b09747ae0bc8ffa2183fec48b578b97cdb45c67b",
+      ".github/scripts/tests/test-feedback-lib.sh": "fce1632234b8e9f64ab374130cb39c667eafb7b5",
+      ".github/scripts/scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+      "docs/agreements/adr/ADR-0002-consent-gated-adopter-feedback.md": "65c4c20ee9fd2c91d0738a38fa8558be8761dc42",
+      "docs/context/feedback-loop/privacy-posture.md": "d417b2c7114913aaea80b03014f3c5f7e5458fe8"
+    },
+    "target_files": [
+      {
+        "path": ".github/scripts/feedback-lib.sh",
+        "mode": "100644",
+        "sha256": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20"
+      },
+      {
+        "path": ".github/scripts/report-installer-failure.sh",
+        "mode": "100644",
+        "sha256": "9880d074c768c694816181af1f94e0288afa9a7cc15dc22537d701fcc9bd5e07"
+      },
+      {
+        "path": "tests/conformance/test_installer_feedback.py",
+        "mode": "100644",
+        "sha256": "09f6b8a633a33c6089ffa5bdf8c30efbfc5ed23bee06b62fbe6302bf40d5a27d"
+      }
+    ],
+    "fields": [
+      "Script",
+      "Failing line",
+      "Exit code",
+      "OS / arch",
+      "bash version",
+      "gh version",
+      "jq version",
+      "Scaffold version"
+    ],
+    "recipient": "https://github.com/mochan-tk/agentic-dev-kit-for-codex",
+    "integration": "standalone-opt-in-outside-payload",
+    "adaptations": [
+      "Reuse source bounded fields, TTY/CI gates, preview-before-consent and one create attempt; standalone opt-in replaces automatic ERR/EXIT integration.",
+      "Fixed public github.com recipient replaces adopter changelog routing; Scaffold version is unknown and caller failure metadata is user-reported, not historical proof.",
+      "Draft requires no gh/account; no auth, labels, retry or receiving workflow. Failed/lost/invalid create response is submission-unconfirmed, never confirmed absence.",
+      "Narrow version/system grammars and bounded tool-output capture reject unsafe observations; actual Bash/fake-gh/PTY tests replace the source TTY override seam.",
+      "Literal terminal consent and tool-output limits preserve byte distinctions before Bash string normalization."
+    ],
+    "evidence": "offline-real-bash-fake-gh-pty-only"
+  },
+  "connector_companion": {
+    "schema": "connector-validation-companion/v1",
+    "source_files": {
+      ".github/scripts/check-connectors.sh": "8a598ab8fd5b54f0fe48b5daf3dc91abc86cadf9",
+      ".github/scripts/tests/test-connectors.sh": "ee17fa9a52d9e0b5cef3428360f0407a8cda59a1"
+    },
+    "integration": "explicit-target-read-only-outside-payload",
+    "fields": [
+      "name",
+      "access",
+      "reach",
+      "trust-default",
+      "status"
+    ],
+    "operations": [
+      "discover",
+      "retrieve",
+      "pin",
+      "verify"
+    ],
+    "statuses": [
+      "core",
+      "community",
+      "experimental"
+    ],
+    "adaptations": [
+      "Reuse source err/check_connector, framework checks, Metadata extraction, field/heading grammar and twelve fixture cases; payload builtin/speckit supplies separate smoke evidence.",
+      "Require an explicit existing target; reject empty names, symlink/non-regular inputs, failed enumeration/reads and NUL before Bash normalization; include hidden Markdown definitions.",
+      "Limit each input to 1 MiB, definitions to 128 and itemized diagnostics to 32; publish fixed field/role labels instead of filenames or raw values.",
+      "Standalone Bash companion is not installed or automatically wired into adopter CI; no Git, network, auth, model, activation, auto-fix or writes.",
+      "Trusted local tools and no concurrent writer; no hostile namespace-race guarantee, full Markdown parser, content sufficiency, pin authenticity, reachability or runtime proof."
+    ],
+    "evidence": "offline-real-bash-disposable-fixtures-only",
+    "target_files": [
+      {
+        "path": ".github/scripts/check-connectors.sh",
+        "mode": "100644",
+        "sha256": "a9c4941b5802f5607d9dc0d37f87b7658a3b798c85c511ae3042ef27f10f413d"
+      },
+      {
+        "path": "tests/conformance/test_connector_validation.py",
+        "mode": "100644",
+        "sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778"
+      }
+    ]
+  },
+  "installer_source": {
+    "scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+    "scaffold-init.ps1": "6baa8ca94535d25c3b3b1cc1e4ac4ba95542321f",
+    "test-scaffold-init.sh": "e060e59ef1fc4c8dabdae2de091ed8eabafba8a9"
+  },
+  "limits": [
+    "Local-source explicit install/known-old upgrade and operation-scoped rollback; no auto download/init/stage/commit/force.",
+    "Source class dispatch and two-version preservation tests are reused; old-byte/mode checks, prewrite backups and explicit rollback are Codex-target safety adaptations, not source-provided transactions.",
+    "Rollback preserves unrelated edits and refuses changed affected files; exclusive-writer local fixtures do not prove power-loss atomicity or malicious same-user race resistance.",
+    "No live Codex, Windows or GitHub-helper execution proof; no VM prerequisite.",
+    "Development-only AGENTS/PIN/Task IDs/governance/results are excluded."
+  ],
+  "task_selection": {
+    "schema": "task-selection-observation/v1",
+    "accepted_commit": "d396865c0f5e23fa01bb790242835dda482d679d",
+    "accepted_tree": "17cf82b1cc305b3263e8a84e18beecdea91c32e5",
+    "source_files": {
+      ".github/skills/plan-management/SKILL.md": "4c76ec1a95516358b038f915668e01eac7f126e5",
+      ".github/skills/plan-management/scripts/frontier.sh": "af0905cb90626001c50c2937d35ba7ea5f9d077c",
+      ".github/scripts/ownership-overlap.sh": "7ed866ebd4baaf5d73f2a3ebcb1dedb35638a52a",
+      ".github/scripts/check-task-ritual.sh": "9365796d80e80e6ee1a94bc6e0cb08686682852c"
+    },
+    "adaptations": [
+      "Refuse interior-dot and repeated-separator lexical ownership aliases before conservative prefix comparison; no filesystem alias or process-isolation claim.",
+      "Normalize bare, repository-only and URL dependency identities to the selected host/repository/number before duplicate checks; preserve same-host cross-repository blockers and refuse unsupported foreign hosts without partial output.",
+      "Derive fake GitHub creation and label state from actual argv and body-file bytes; verify unchanged production Task snapshot/readback with deliberate broken copies.",
+      "Add only the exact current frontier blob to the ritual anchor allowlist; retain historical anchors, equal base/head anchors and complete exact-tree/readback guards."
+    ],
+    "evidence": "offline-real-bash-disposable-adopters-stateful-fake-gh-only",
+    "target_files": [
+      {
+        "path": ".agents/skills/plan-management/SKILL.md",
+        "mode": "100644",
+        "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+      },
+      {
+        "path": ".agents/skills/plan-management/scripts/frontier.sh",
+        "mode": "100644",
+        "sha256": "4bc5e92dd5054e09027238bafa77e4859fa0a4012f6398a7741bff16804aeb71"
+      },
+      {
+        "path": ".github/scripts/ownership-overlap.sh",
+        "mode": "100644",
+        "sha256": "825af02f0a749a83122670570ab8ef9b34952f7895b23f70a4949dd6ca40f002"
+      },
+      {
+        "path": ".github/scripts/check-task-ritual.sh",
+        "mode": "100644",
+        "sha256": "7f23226c2edd0e2e5c943fa19a0b2f575e3d72e42aed9a02700d0ba091f128b9"
+      }
+    ]
+  },
+  "ritual_verification": {
+    "schema": "ordinary-ritual-observation/v1",
+    "source_files": {
+      ".github/scripts/check-task-ritual.sh": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
+      ".github/scripts/tests/test-task-ritual.sh": "de5ae5b2265c8ae8c8aa406586259bf70d427551",
+      ".github/scripts/tests/test-ritual-chronology.sh": "f4e7a5805d940ac00db3c2fafa29f27936a56f28",
+      ".github/scripts/tests/test-ritual-linkage.sh": "478c514b3ce9245395baf3c8c3772ca7c2be041c",
+      ".github/scripts/tests/lib.sh": "afa5384e9fde7f42f0551a3a6668c1d2e3e2a164",
+      ".github/skills/verification/SKILL.md": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a"
+    },
+    "commit_limit": 250,
+    "timestamp_profile": "whole-second-utc-calendar",
+    "adaptations": [
+      "Bind ordinary PR, Task, complete comment membership and selected plan observations before/after the verdict; retain narrow bot/bootstrap and source execution/reference semantics.",
+      "Consume all comment rows during exact plan membership matching so early grep exit cannot turn a valid long history into a pipefail mismatch; retain complete pages and final read-back.",
+      "Require 1-250 unique typed commits including observed head, metadata count agreement and every valid selected date; preserve null/missing committer author fallback and equal-second chronology.",
+      "Reach the installed mode-0644 sensor explicitly through Bash after PR creation; sensor observations do not replace CI/review/acceptance or authenticate chronology."
+    ],
+    "evidence": "offline-installed-bash-real-jq-stateful-paginated-fake-gh-only",
+    "target_files": [
+      {
+        "path": ".github/scripts/check-task-ritual.sh",
+        "mode": "100644",
+        "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
+      },
+      {
+        "path": ".agents/skills/verification/SKILL.md",
+        "mode": "100644",
+        "sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+      }
+    ]
+  },
+  "governance_procedures": {
+    "schema": "governance-worktree-retro-procedures/v1",
+    "source_files": {
+      ".github/scripts/governance-status.sh": "5011dd461523eb72916a930db58ae2d35d99fbf3",
+      ".github/scripts/tests/test-governance-status.sh": "ce0bef43fcc3b53fd97f5ba6c5aea543d49aff1b",
+      ".github/scripts/setup-ruleset.sh": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
+      ".github/scripts/tests/test-setup-ruleset.sh": "f9a33237d1a353083a1a1d7b9494aafd55f5424e",
+      ".github/skills/session-orchestration/SKILL.md": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
+      ".github/skills/retro/SKILL.md": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
+      ".github/skills/project-onboarding/SKILL.md": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943"
+    },
+    "integration": "explicit-governance-and-worktree-companions-outside-47-payload;existing-retro-skill-blocks",
+    "baseline_commit": "bb9a55973d2cbbe640472691d239f85ce8d59449",
+    "baseline_tree": "05ec8c5ccfb711e104c656d05d1109c6e9ba28fe",
+    "clauses": [
+      "G-002",
+      "G-003",
+      "G-004",
+      "G-005",
+      "G-006",
+      "G-007",
+      "G-008",
+      "G-009",
+      "W-003",
+      "W-004",
+      "W-005",
+      "P-007",
+      "P-012"
+    ],
+    "adaptations": [
+      "Reuse source sensor aggregation, status/exit precedence and raw fixture semantics; require explicit repository, check contexts and source-template/adopter posture without assuming donor CI names.",
+      "Validate bounded complete raw API pages, typed common App IDs and canonical existing rules before setup; legacy no-profile writes refuse and reviewed intent must persist before any ruleset write.",
+      "Observe actual Git branch/worktree occupancy and declared claims read-only; detached push and conflicts refuse, archive always warns without treating local links as durable authority.",
+      "Execute named candidate and retirement-diff blocks in the existing retro Skill; count distinct supporting occurrences and bind the requested retirement to the exact current blob/path/line and recorded decision.",
+      "Execute installed onboarding consent/profile/new-or-canonical commands against the real helper; distinguish offline and GET-only previews and observe lawful actor-type-specific null IDs without approving bypass."
+    ],
+    "limits": [
+      "Companions are invoked from a reviewed kit checkout and are not installed or wired into adopter CI; exactly four payload contents change including onboarding, the other forty-three and all classes/Git modes remain unchanged.",
+      "Real Bash/jq, synthetic GitHub and disposable Git tests are bounded evidence, not live governance changes, authenticated roles, actual owner approval, runtime learning or product/release acceptance.",
+      "Conservative merge_group syntax recognition can return UNKNOWN for unsupported YAML; CODEOWNERS membership/coverage and occurrence independence still require human inspection.",
+      "No push/delete/force/unlock/prune, process-stop, native archive or exclusive-lock guarantee; no automatic retirement application, scheduler, feedback delivery or upstream publication."
+    ],
+    "evidence": "offline-real-bash-jq-raw-fake-github-real-disposable-git-and-extracted-skill-blocks",
+    "target_files": [
+      {
+        "path": ".github/scripts/governance-status.sh",
+        "mode": "100644",
+        "sha256": "ebd7d548506797edc5ee04c7203b468d7ec69417b0bcb06d7fde88fb53593624"
+      },
+      {
+        "path": ".github/scripts/worktree-preflight.sh",
+        "mode": "100644",
+        "sha256": "5a6d3cfa7260e641380cf78766afd60198c9af4968bb8238afa3f2c684589c20"
+      },
+      {
+        "path": "tests/conformance/test_source_first_governance.py",
+        "mode": "100644",
+        "sha256": "f496f8e29f0bdc60ca3d4572c9fc64822e800a52d4465f71783d29c4e39c89bb"
+      },
+      {
+        "path": "tests/conformance/test_source_first_procedures.py",
+        "mode": "100644",
+        "sha256": "49ef35ed74a4e6727869fed22d664cdd41bec6d3496ae172db1900b2c93eb94c"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+        "mode": "100644",
+        "sha256": "8afc08904d9c9f1b564709d25e2130500546d441ebb586c6a3e28af95d054c02"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+        "mode": "100644",
+        "sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
+        "mode": "100644",
+        "sha256": "3ea6db90c6f44eb0709124b4c409d89bb7865395187a65bfad79c1aeb1e2de54"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+        "mode": "100644",
+        "sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b"
+      }
+    ]
+  },
+  "bootstrap": {
+    "source_files": {
+      ".github/scripts/scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+      ".github/scripts/scaffold-init.ps1": "6baa8ca94535d25c3b3b1cc1e4ac4ba95542321f"
+    },
+    "transport": "public-https-pinned-bare-git-object-projection-no-checkout",
+    "external": "default-apply-stage-only-created-raw-blobs",
+    "local": "unchanged-engine-default-dry-run-no-stage",
+    "trust": "initial-bootstrap-trusted-code-hashes-are-integrity-not-authentication",
+    "limits": "exclusive-target-partial-failure-manual-recovery-native-windows-unmeasured",
+    "target_files": [
+      {
+        "path": ".github/scripts/scaffold-init.sh",
+        "mode": "100644",
+        "sha256": "928773b97262a56edbf4f67b7d0e09fa5fbcc1580707b1cd68a8ccf13e0895b0"
+      },
+      {
+        "path": ".github/scripts/scaffold-init.ps1",
+        "mode": "100644",
+        "sha256": "90644be9a877b1614d5458ba558014e02a8664db1c9636b216ad0c7e086aa291"
+      },
+      {
+        "path": ".github/scripts/scaffold-install.sh",
+        "mode": "100644",
+        "sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2"
+      }
+    ]
+  }
+}

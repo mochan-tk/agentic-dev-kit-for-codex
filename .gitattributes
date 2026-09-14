@@ -1,0 +1,14 @@
+# Keep governance, automation, and agent-facing text stable across platforms.
+* text=auto
+*.md text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.toml text eol=lf
+*.tsv text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.github/** text eol=lf
+.agents/** text eol=lf
+.codex/** text eol=lf
+AGENTS.md text eol=lf

@@ -1,0 +1,25 @@
+name: Product proposal
+description: Coordinate related product tasks.
+title: "[Proposal] "
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective and scope
+      description: Explain the user need, intended outcome and excluded work.
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Related tasks and dependencies
+      description: Link bounded Issues and identify dependencies and overlapping ownership.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and risks
+      description: State the evidence and human decisions required.
+    validations:
+      required: true

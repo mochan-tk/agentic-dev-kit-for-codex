@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Validate product export, fixtures, navigation and policy
+        run: python3 -I .github/scripts/check-product.py
+      - name: Validate source-first installer payload and parity
+        run: python3 -I .github/scripts/check-installer.py
+      - name: Test local-source installer entrypoints
+        run: bash .github/scripts/tests/test-scaffold-init.sh
+      - name: Install and verify pinned CI tools
+        run: python3 -I .github/scripts/install-ci-tools.py --lock .github/governance/ci-tools.lock.v1.json --destination "$RUNNER_TEMP/agentic-ci-tools" --check-repository
+      - name: Validate repository Action pins
+        run: bash .github/scripts/check-action-pins.sh
+      - name: Test Action-pin guard
+        run: bash .github/scripts/tests/test-action-pins.sh
+      - name: Validate repository workflow permissions
+        run: bash .github/scripts/check-workflow-permissions.sh
+      - name: Test workflow-permission guard
+        run: bash .github/scripts/tests/test-workflow-permissions.sh
+      - name: Compile Python checks
+        run: python3 -I -m compileall -q .github/scripts tests/conformance
+
+  conformance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Require real PowerShell test host
+        run: pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+      - name: Run product conformance tests
+        run: python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'

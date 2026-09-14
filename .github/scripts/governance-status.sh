@@ -1,0 +1,403 @@
+#!/usr/bin/env bash
+# governance-status.sh — read-only default-branch governance sensor
+# (ADR-0004 decisions 1, 2, 4, 5). Compares effective branch rules, Actions
+# posture, CODEOWNERS tuning, and merge-queue applicability against an
+# explicitly declared solo or team intent (solo = the setup-ruleset.sh
+# minimum; stronger observed settings never make solo unhealthy). Aggregates
+# every active rule source including parent rulesets, qualifies
+# ruleset-derived controls with their bypass actors, and reports missing
+# evidence as UNKNOWN or UNCHECKABLE — never as safe. GET-only; nothing is
+# mutated and no profile is persisted.
+#
+# Output: deterministic `key<TAB>state<TAB>detail` lines.
+# Exit: 0 healthy with complete evidence; 1 required control OFF;
+#       2 usage or dependency error; 3 required evidence missing (beats 1).
+
+set -uo pipefail
+
+usage() {
+  echo "Usage: governance-status.sh -R owner/repo [--profile solo|team]" >&2
+  echo "       --checks ctx1,ctx2,... --posture source-template|adopter" >&2
+  exit 2
+}
+
+REPO="" PROFILE="" POSTURE="" CHECKS=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -R|--repo) [ -n "${2:-}" ] || usage; REPO="$2"; shift 2 ;;
+    --profile)
+      case "${2:-}" in solo|team) PROFILE="$2" ;; *) usage ;; esac
+      shift 2 ;;
+    --checks) [ -n "${2:-}" ] || usage; CHECKS="$2"; shift 2 ;;
+    --posture) case "${2:-}" in source-template|adopter) POSTURE="$2" ;; *) usage ;; esac; shift 2 ;;
+    *) usage ;;
+  esac
+done
+[ -n "$POSTURE" ] || usage
+[[ "$REPO" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$ ]] || usage
+[[ "$CHECKS" =~ ^[A-Za-z0-9._/\ -]+(,[A-Za-z0-9._/\ -]+)*$ ]] || usage
+for t in gh jq; do command -v "$t" >/dev/null 2>&1 || { echo "error: $t not found" >&2; exit 2; }; done
+CHECKS="$(jq -ner --arg c "$CHECKS" '$c|split(",")|map(gsub("^ +| +$";""))|select(length <= 64 and all(.[];length>0 and length<=100) and (unique|length)==length)|join(",")')" || usage
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/governance-status.XXXXXX")" || exit 2
+trap 'rm -rf "$WORK"' EXIT
+TAB="$(printf '\t')"
+
+BASE=0 TEAM=0 UNMET=0 MISSING=0 PROFILE_ACTIVE=0
+[ -z "$PROFILE" ] || PROFILE_ACTIVE=1
+
+# fetch <name> <path> [raw|page] — read-only GET; records ok|404|fail in
+# $WORK/<name>.rc. The only gh invocation shapes this sensor ever uses.
+fetch() {
+  local name="$1" path="$2" rc=0
+  if [ "${3:-}" = raw ]; then
+    gh api --method GET -H "Accept: application/vnd.github.raw" "$path" \
+      > "$WORK/$name.json" 2> "$WORK/$name.err" || rc=$?
+  elif [ "${3:-}" = page ]; then
+    gh api --method GET --paginate "$path" > "$WORK/$name.json" 2> "$WORK/$name.err" || rc=$?
+  else
+    gh api --method GET "$path" > "$WORK/$name.json" 2> "$WORK/$name.err" || rc=$?
+  fi
+  if [ "$rc" -eq 0 ] && [ "$(wc -c < "$WORK/$name.json")" -le 1048576 ]; then echo ok
+  elif grep -q "HTTP 404" "$WORK/$name.err"; then echo 404
+  else echo fail
+  fi > "$WORK/$name.rc"
+}
+st() { cat "$WORK/$1.rc" 2>/dev/null || echo fail; }
+jqr() { jq -r "$1" "$WORK/$2.json"; }
+valid() {
+  [ "$(st "$1")" = ok ] || return 1
+  jq -es "$2" "$WORK/$1.json" >/dev/null 2>&1 || { echo fail > "$WORK/$1.rc"; return 1; }
+}
+# Validate complete bounded page documents before querying their contents.
+valid_runs() {
+  valid runs 'def nat: type=="number" and .>=0 and floor==.;
+    length>0 and length<=20 and all(.[];type=="object" and (.total_count|nat) and .total_count<=2000 and (.check_runs|type)=="array")
+    and ([.[].total_count]|unique|length)==1
+    and ([.[].check_runs[]]|length)==.[0].total_count
+    and all(.[].check_runs[];type=="object" and (.id|nat) and (.name|type)=="string" and (.name|length)>0)
+    and ([.[].check_runs[].id]|unique|length)==.[0].total_count'
+}
+
+# An explicit profile is a one-shot override. Otherwise, consume only the
+# exact persisted string; invalid or unreadable evidence remains unknown.
+if [ "$PROFILE_ACTIVE" = 0 ]; then
+  fetch profile "repos/$REPO/actions/variables/SCAFFOLD_GOVERNANCE_PROFILE"
+  if valid profile 'length==1 and (.[0]|type=="object")' &&
+     jq -e '.value | type == "string" and (. == "solo" or . == "team")' \
+       "$WORK/profile.json" >/dev/null 2>&1 &&
+     jq -r '.value' "$WORK/profile.json" > "$WORK/profile.value" 2>/dev/null &&
+     IFS= read -r PROFILE < "$WORK/profile.value"; then
+    PROFILE_ACTIVE=1
+  fi
+fi
+[ "$PROFILE_ACTIVE" != 1 ] || BASE=1
+[ "$PROFILE" != team ] || TEAM=1
+
+# emit <key> <state> <detail> <required-flag> — required OFF counts toward
+# exit 1; required UNKNOWN/UNCHECKABLE counts toward exit 3 (which outranks).
+emit() {
+  printf '%s\t%s\t%s\n' "$1" "$2" "$3"
+  [ "${4:-0}" = 1 ] || return 0
+  case "$2" in
+    OFF) UNMET=$((UNMET + 1)) ;;
+    UNKNOWN|UNCHECKABLE) MISSING=$((MISSING + 1)) ;;
+  esac
+}
+
+fetch repo "repos/$REPO"
+DEFB="" OWNER=""
+if valid repo 'length==1 and (.[0]|type=="object" and (.default_branch|type)=="string" and (.default_branch|test("^[^[:cntrl:]]+$")) and (.owner.type=="User" or .owner.type=="Organization") and (.private|type)=="boolean")'; then
+  DEFB="$(jqr '.default_branch // empty' repo)"; OWNER="$(jqr '.owner.type // empty' repo)"
+fi
+if [ -n "$DEFB" ]; then
+  BRANCH_URI="$(jq -nr --arg b "$DEFB" '$b|@uri')"
+  fetch rules "repos/$REPO/rules/branches/$BRANCH_URI?per_page=100" page
+  if valid rules 'length>0 and length<=20 and all(.[];type=="array" and length<=100) and (.[-1]|length)<100'; then
+    jq -s 'add' "$WORK/rules.json" > "$WORK/rules.complete" && mv "$WORK/rules.complete" "$WORK/rules.json" || echo fail > "$WORK/rules.rc"
+  fi
+  fetch wf "repos/$REPO/actions/permissions/workflow"
+  fetch runs "repos/$REPO/commits/$BRANCH_URI/check-runs?filter=latest&per_page=100" page
+  valid_runs || true
+  valid wf 'length==1 and (.[0]|type=="object" and (.default_workflow_permissions=="read" or .default_workflow_permissions=="write") and (.can_approve_pull_request_reviews|type)=="boolean")' || true
+else
+  for name in rules wf runs clog; do echo fail > "$WORK/$name.rc"; done; fi
+RULES=0
+if valid rules 'def nat: type=="number" and .>=0 and floor==.;
+  length==1 and (.[0]|type=="array" and length<=1000 and all(.[];
+    type=="object" and (.type|type)=="string" and (.ruleset_id|nat) and .ruleset_id>0
+    and ((.ruleset_source_type=="Repository" and (.ruleset_source|test("^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"))) or (.ruleset_source_type=="Organization" and (.ruleset_source|test("^[A-Za-z0-9][A-Za-z0-9-]*$"))))
+    and (if .type=="pull_request" then (.parameters.required_approving_review_count|nat) else true end)))' 2>/dev/null; then RULES=1; fi
+# Validate the boolean fields separately; jq truthiness must never turn a
+# string, missing value or malformed control into an observed ACTIVE fact.
+if [ "$RULES" = 1 ]; then
+  valid rules 'length==1 and all(.[0][];
+    if .type=="pull_request" then (.parameters|(.required_approving_review_count|type)=="number" and all([.dismiss_stale_reviews_on_push,.require_last_push_approval,.require_code_owner_review,.required_review_thread_resolution][];type=="boolean"))
+    elif .type=="required_status_checks" then (.parameters|(.strict_required_status_checks_policy|type)=="boolean" and (.required_status_checks|type)=="array" and all(.required_status_checks[];(.context|type)=="string" and (.context|length)>0 and (if has("integration_id") then (.integration_id|type)=="number" and .integration_id>=0 and (.integration_id|floor)==.integration_id else true end)))
+    else true end)' || RULES=0
+fi
+
+# Aggregate every effective rule of a type across all active sources: the
+# strongest approval threshold, any-source booleans, and the union of
+# contributing ruleset ids. One named ruleset is never the answer.
+PRN=0 APPR=0 DSM=false LPA=false COR=false RTR=false STRICT=false MQN=0
+PRSRC="" RSCSRC="" MQSRC=""
+if [ "$RULES" = 1 ]; then
+  # shellcheck disable=SC2016  # single-quoted jq program, as in setup-ruleset.sh
+  IFS="$TAB" read -r PRN APPR DSM LPA COR RTR STRICT MQN PRSRC RSCSRC MQSRC <<EOF
+$(jqr '[.[]|select(.type=="pull_request")] as $p
+  | [.[]|select(.type=="required_status_checks")] as $c
+  | [.[]|select(.type=="merge_queue")] as $m
+  | def srcs(x): ([x[].ruleset_id]|unique|map(tostring)|join(","))
+      | if . == "" then "-" else . end;
+  [($p|length),
+   ([$p[].parameters.required_approving_review_count]|max // 0),
+   ([$p[].parameters.dismiss_stale_reviews_on_push]|any),
+   ([$p[].parameters.require_last_push_approval]|any),
+   ([$p[].parameters.require_code_owner_review]|any),
+   ([$p[].parameters.required_review_thread_resolution]|any),
+   ([$c[].parameters.strict_required_status_checks_policy]|any),
+   ($m|length), srcs($p), srcs($c), srcs($m)] | @tsv' rules)
+EOF
+  [ -n "$PRN" ] || RULES=0
+  for v in PRSRC RSCSRC MQSRC; do
+    eval "[ \"\$$v\" != - ] || $v=\"\""
+  done
+fi
+
+# Fetch every contributing ruleset detail: bypass actors qualify the claim,
+# and a failed detail read is UNKNOWN, never an empty bypass list.
+if [ "$RULES" = 1 ]; then
+  jqr '[.[]|{id:.ruleset_id,t:.ruleset_source_type,s:.ruleset_source}]
+    | unique_by(.id)[] | "\(.id)\t\(.t)\t\(.s)"' rules > "$WORK/srcs"
+else
+  : > "$WORK/srcs"
+fi
+while IFS="$TAB" read -r rid rtyp rsrc; do
+  [ -n "$rid" ] || continue
+  case "$rtyp" in
+    Repository) fetch "rs$rid" "repos/$rsrc/rulesets/$rid" ;;
+    Organization) fetch "rs$rid" "orgs/$rsrc/rulesets/$rid" ;;
+    *) echo fail > "$WORK/rs$rid.rc" ;;
+  esac
+  # A complete observed actor record is required, even for an ignored ID.
+  # Supported modes stay bounded; documented but unsupported modes are UNKNOWN.
+  valid "rs$rid" "
+    def numeric_id: type==\"number\" and .>=0 and floor==.;
+    length==1 and (.[0]|type==\"object\" and .id==$rid
+      and (.bypass_actors|type)==\"array\"
+      and all(.bypass_actors[]; type==\"object\" and has(\"actor_id\")
+        and (.bypass_mode==\"always\" or .bypass_mode==\"pull_request\")
+        and (if .actor_type==\"DeployKey\" then
+               .actor_id==null and .bypass_mode==\"always\"
+             elif .actor_type==\"OrganizationAdmin\" then
+               \"$OWNER\"==\"Organization\" and (.actor_id==null or (.actor_id|numeric_id))
+             elif (.actor_type==\"Integration\" or .actor_type==\"RepositoryRole\"
+                   or .actor_type==\"Team\" or .actor_type==\"User\") then
+               (.actor_id|numeric_id)
+             else false end)))" || continue
+  jqr '.bypass_actors // [] | sort_by(.actor_type, .actor_id)[]
+    | "actor_type=\(.actor_type) actor_id=\(.actor_id // "none") bypass_mode=\(.bypass_mode)"' \
+    "rs$rid" > "$WORK/actors.$rid"
+  jqr '.bypass_actors // [] | sort_by(.actor_type, .actor_id)
+    | map("\(.actor_type):\(.actor_id // "none"):\(.bypass_mode)") | join(",")' \
+    "rs$rid" > "$WORK/qual.$rid"
+done < "$WORK/srcs"
+
+# qual_for <csv-ruleset-ids> — visible bypass qualifier for a ruleset-derived
+# control; unknown evidence is surfaced, never dropped.
+qual_for() {
+  local ids="$1" id q acc=""
+  QUAL=""
+  [ -n "$ids" ] || return 0
+  printf '%s\n' "$ids" | tr ',' '\n' > "$WORK/qids"
+  while IFS= read -r id; do
+    if [ "$(st "rs$id")" != ok ]; then QUAL=" bypass=unknown"; return 0; fi
+    q="$(cat "$WORK/qual.$id")"
+    [ -z "$q" ] || acc="$acc,$q"
+  done < "$WORK/qids"
+  [ -z "$acc" ] || QUAL=" bypass=${acc#,}"
+}
+qual_for "$PRSRC"; PQ="$QUAL"
+qual_for "$RSCSRC"; CQ="$QUAL"
+qual_for "$MQSRC"; MQQ="$QUAL"
+
+if [ -n "$DEFB" ]; then emit repository.default_branch ACTIVE "$DEFB" "$BASE"
+else emit repository.default_branch UNKNOWN "repository metadata unavailable" "$BASE"; fi
+if [ "$PROFILE_ACTIVE" = 1 ]; then emit governance.profile ACTIVE "$PROFILE" 1
+else emit governance.profile UNKNOWN "persisted profile unavailable or invalid; expected exact solo|team" 1; fi
+if [ "$(st runs)" != ok ]; then emit check_runs.evidence UNKNOWN "incomplete, malformed or unreadable check-run pages" "$BASE"; fi
+if [ "$RULES" != 1 ]; then
+  emit pull_request.required_approving_review_count UNKNOWN "effective rules unavailable" "$BASE"
+elif [ "$PRN" = 0 ] || [ "$APPR" -lt 1 ]; then
+  emit pull_request.required_approving_review_count OFF "count=$APPR (no approving-review requirement)" "$BASE"
+else
+  emit pull_request.required_approving_review_count ACTIVE "count=$APPR$PQ" "$BASE"
+fi
+
+# rule_row <key> <rule-count> <bool> <qual> <absent-detail> <required>
+rule_row() {
+  if [ "$RULES" != 1 ]; then emit "$1" UNKNOWN "effective rules unavailable" "$6"
+  elif [ "$2" = 0 ]; then emit "$1" OFF "$5" "$6"
+  elif [ "$3" = true ]; then emit "$1" ACTIVE "true$4" "$6"
+  else emit "$1" OFF "false$4" "$6"
+  fi
+}
+rule_row pull_request.dismiss_stale_reviews "$PRN" "$DSM" "$PQ" "no pull_request rule in effect" "$TEAM"
+rule_row pull_request.require_last_push_approval "$PRN" "$LPA" "$PQ" "no pull_request rule in effect" "$TEAM"
+rule_row pull_request.require_code_owner_review "$PRN" "$COR" "$PQ" "no pull_request rule in effect" "$TEAM"
+rule_row pull_request.required_review_thread_resolution "$PRN" "$RTR" "$PQ" "no pull_request rule in effect" "$TEAM"
+RSCN=0
+[ -z "$RSCSRC" ] || RSCN=1
+rule_row required_checks.strict_policy "$RSCN" "$STRICT" "$CQ" "no required_status_checks rule in effect" "$TEAM"
+
+# Requested contexts: presence is required for both profiles; source binding
+# (configured integration vs the observed issuing GitHub App ID — an App ID,
+# not an installation ID) is informational N/A for solo, required for team.
+printf '%s\n' "$CHECKS" | tr ',' '\n' > "$WORK/ctxs"
+COMMON_OBS=unknown
+if [ "$(st runs)" = ok ]; then
+  COMMON_OBS="$(jq -sr --arg checks "$CHECKS" '($checks|split(",")) as $want | [.[].check_runs[]|select(.name as $n|$want|index($n))|.app.id] | unique|length' "$WORK/runs.json")"
+fi
+while IFS= read -r ctx; do
+  [ -n "$ctx" ] || continue
+  pres=unknown cfg=unknown obs=unknown
+  if [ "$RULES" = 1 ]; then
+    IFS="$TAB" read -r pres cfg <<EOF
+$(jq -r --arg c "$ctx" '[.[]|select(.type=="required_status_checks")
+  .parameters.required_status_checks[]|select(.context==$c)] as $e
+  | [($e|length), ([$e[].integration_id // empty]|unique|map(tostring)
+  | join(",") | if . == "" then "none" else . end)] | @tsv' "$WORK/rules.json")
+EOF
+  fi
+  if [ "$(st runs)" = ok ]; then
+    # -n + inputs unions runs across all --paginate page documents.
+    obs="$(jq -rn --arg c "$ctx" '[inputs.check_runs[]?|select(.name==$c)|.app.id // "none"]
+      | unique|map(tostring)|join(",") | if . == "" then "none" else . end' "$WORK/runs.json")"
+    if ! jq -es --arg c "$ctx" 'all(.[].check_runs[]|select(.name==$c); (.app.id|type)=="number" and .app.id>=0 and (.app.id|floor)==.app.id)' "$WORK/runs.json" >/dev/null 2>&1; then obs=invalid; fi
+  fi
+  if [ "$pres" = unknown ]; then emit "required_checks.context.$ctx" UNKNOWN "effective rules unavailable" "$BASE"
+  elif [ "$pres" -gt 0 ]; then emit "required_checks.context.$ctx" ACTIVE "required by effective rules$CQ" "$BASE"
+  else emit "required_checks.context.$ctx" OFF "not required by effective rules" "$BASE"; fi
+  det="configured=$cfg observed=$obs"
+  if [ "$TEAM" != 1 ]; then emit "required_check_source.$ctx" N/A "$det (informational for solo intent)" 0
+  elif [ "$cfg" = unknown ]; then emit "required_check_source.$ctx" UNKNOWN "$det; effective rules unavailable" 1
+  elif [ "$obs" = unknown ]; then emit "required_check_source.$ctx" UNKNOWN "$det; check-run evidence unavailable" 1
+  elif [ "$obs" = none ]; then emit "required_check_source.$ctx" UNCHECKABLE "$det; no check run observed" 1
+  elif [ "$obs" = invalid ]; then emit "required_check_source.$ctx" UNCHECKABLE "invalid issuing App ID" 1
+  elif [ "${obs#*,}" != "$obs" ]; then emit "required_check_source.$ctx" UNCHECKABLE "multiple issuing app ids: $obs" 1
+  elif [ "$COMMON_OBS" != 1 ]; then emit "required_check_source.$ctx" UNCHECKABLE "requested contexts have different issuing App IDs" 1
+  elif [ "$cfg" != "$obs" ]; then emit "required_check_source.$ctx" OFF "$det" 1
+  else emit "required_check_source.$ctx" ACTIVE "$det" 1; fi
+done < "$WORK/ctxs"
+
+if [ "$(st wf)" = ok ]; then
+  PERM="$(jqr '.default_workflow_permissions // "unknown"' wf)"
+  APPROVE="$(jqr '.can_approve_pull_request_reviews' wf)"
+  if [ "$PERM" = read ]; then emit actions.default_workflow_permissions ACTIVE read "$BASE"
+  else emit actions.default_workflow_permissions OFF "$PERM (expected read)" "$BASE"; fi
+  if [ "$APPROVE" = false ]; then emit actions.can_approve_pull_request_reviews ACTIVE false "$BASE"
+  else emit actions.can_approve_pull_request_reviews OFF "$APPROVE (expected false)" "$BASE"; fi
+else
+  emit actions.default_workflow_permissions UNKNOWN "actions permissions unavailable" "$BASE"
+  emit actions.can_approve_pull_request_reviews UNKNOWN "actions permissions unavailable" "$BASE"
+fi
+
+# Posture is explicit caller intent. Missing source markers never imply a
+# template, and source-template N/A is not installed ownership acceptance.
+if [ "$POSTURE" = source-template ]; then
+  emit codeowners.tuning N/A "explicit source-template posture; ownership tuning not asserted" 0
+elif [ -z "$DEFB" ]; then
+  emit codeowners.tuning UNKNOWN "default branch unavailable" "$TEAM"
+else
+  fetch co "repos/$REPO/contents/.github/CODEOWNERS?ref=$BRANCH_URI" raw
+  case "$(st co)" in
+    ok)
+      if grep -Eq 'CUSTOMIZE|@owner([[:space:]]|$)|@your[-_]' "$WORK/co.json" || ! awk '!/^[[:space:]]*#/ && NF>=2 && $2 ~ /^@[A-Za-z0-9]/ {n++} END{exit !n}' "$WORK/co.json"; then
+        emit codeowners.tuning OFF "adopted tree with unresolved CUSTOMIZE ownership" "$TEAM"
+      else
+        emit codeowners.tuning ACTIVE "ownership entries observed; membership and coverage require human review" "$TEAM"
+      fi ;;
+    404) emit codeowners.tuning OFF "adopted tree without .github/CODEOWNERS" "$TEAM" ;;
+    *) emit codeowners.tuning UNKNOWN "CODEOWNERS evidence unreadable" "$TEAM" ;;
+  esac
+fi
+
+if [ "$(st repo)" != ok ]; then emit merge_queue.applicability UNKNOWN "repository metadata unavailable" "$BASE"
+elif [ "$OWNER" = User ]; then emit merge_queue.applicability N/A "owner_type=User; merge queue not applicable" 0
+else
+  # Public repositories are eligible by repository evidence alone; private
+  # ones require a recognized plan from GET /orgs/{owner}, failing closed.
+  PRIV="$(jqr '.private' repo)" OPLAN=eligible
+  if [ "$PRIV" = true ]; then
+    fetch orgp "orgs/${REPO%%/*}"
+    OPLAN=""; if valid orgp 'length==1 and (.[0].plan.name|type)=="string"'; then OPLAN="$(jqr '.plan.name' orgp)"; fi
+  fi
+  if [ -z "$OPLAN" ] || { [ "$PRIV" = true ] && [ "$OPLAN" != free ] && [ "$OPLAN" != team ] && [ "$OPLAN" != enterprise ]; }; then emit merge_queue.applicability UNKNOWN "organization plan evidence unavailable" "$BASE"
+  elif [ "$PRIV" = true ] && { [ "$OPLAN" = free ] || [ "$OPLAN" = team ]; }; then emit merge_queue.applicability N/A "private repository plan=$OPLAN is ineligible" 0
+  elif [ "$RULES" != 1 ]; then emit merge_queue.applicability UNKNOWN "effective rules unavailable" "$BASE"
+  elif [ "$MQN" -gt 0 ]; then
+    MQCOV=0
+    fetch wfd "repos/$REPO/contents/.github/workflows?ref=$BRANCH_URI"
+    if [ "$(st wfd)" = ok ]; then valid wfd 'length==1 and (.[0]|type=="array" and length<1000 and all(.[];type=="object" and (.type|type)=="string" and (.name|type)=="string" and (.name|test("^[A-Za-z0-9._-]+$"))))' || true; fi
+    if [ "$(st wfd)" = fail ]; then MQCOV=unknown
+    elif [ "$(st wfd)" = ok ]; then
+      while IFS= read -r wfn; do
+        [ -n "$wfn" ] || continue
+        fetch wff "repos/$REPO/contents/.github/workflows/$wfn?ref=$BRANCH_URI" raw
+        if [ "$(st wff)" != ok ]; then MQCOV=unknown; break; fi
+        # Coverage means a genuine merge_group trigger under a top-level on:
+        # block; comments, quotes, script strings, and scalars never count.
+        # Conservative YAML subset: a top-level on mapping or plain event
+        # list. Unsupported aliases, scalars, duplicate keys and indentation
+        # ambiguity cannot certify coverage. This is not a full YAML parser.
+        coverage=0
+        awk '
+          /^[[:blank:]]*#/ || /^[[:blank:]]*$/ {next}
+          /^["\047]on["\047][[:blank:]]*:/ {bad=1; block=0; next}
+          /^on[[:blank:]]*:/ {
+            if (++keys>1) bad=1; block=0; indent=0
+            line=$0; sub(/[[:blank:]]*#.*/,"",line)
+            if (line ~ /^on:[[:blank:]]*$/) {block=1; next}
+            if (line ~ /^on:[[:blank:]]*\[[A-Za-z_,[:blank:]]+\][[:blank:]]*$/) {
+              if (line ~ /[[,[:blank:]]merge_group([],[:blank:]]|$)/) found=1
+            } else bad=1
+            next
+          }
+          /^[^[:blank:]]/ {block=0}
+          block {
+            match($0,/[^ ]/); depth=RSTART-1
+            if (!indent) indent=depth
+            if ($0 ~ /\t/ || depth<indent) bad=1
+            if (depth==indent && $0 ~ /^[ ]+merge_group:[[:blank:]]*(#.*)?$/) found=1
+            if (depth==indent && $0 !~ /^[ ]+[A-Za-z_]+:[[:blank:]]*(#.*)?$/) bad=1
+            if (depth>indent && $0 !~ /^[ ]+(types|branches|branches-ignore):[[:blank:]]*\[[A-Za-z0-9_*,.\/ -]+\][[:blank:]]*(#.*)?$/) bad=1
+          }
+          END {if(bad)exit 2; if(!found)exit 1}' "$WORK/wff.json" || coverage=$?
+        if [ "$coverage" = 2 ]; then MQCOV=unknown; break
+        elif [ "$coverage" = 0 ]; then MQCOV=$((MQCOV + 1)); fi
+      done <<EOF
+$(jqr '.[]? | select(.type == "file" and (.name|test("\\.(yml|yaml)$"))) | .name' wfd)
+EOF
+    fi
+    if [ "$MQCOV" = unknown ]; then emit merge_queue.applicability UNKNOWN "merge_group workflow coverage evidence unavailable" "$BASE"
+    elif [ "$MQCOV" -gt 0 ]; then emit merge_queue.applicability ACTIVE "merge_queue rule active$MQQ; merge_group coverage in $MQCOV workflow(s)" 0
+    else emit merge_queue.applicability UNCHECKABLE "merge_queue rule active without observed merge_group workflow coverage" "$BASE"; fi
+  else emit merge_queue.applicability UNCHECKABLE "eligible repository without a merge_queue rule" "$BASE"; fi
+fi
+
+while IFS="$TAB" read -r rid rtyp rsrc; do
+  [ -n "$rid" ] || continue
+  if [ "$(st "rs$rid")" = ok ]; then
+    n="$(wc -l < "$WORK/actors.$rid" | tr -d ' ')"
+    emit "bypass.ruleset.$rid" ACTIVE "source=$rtyp:$rsrc actors=$n" "$BASE"
+    i=0; while IFS= read -r actor; do
+      i=$((i + 1)); emit "bypass.ruleset.$rid.actor.$i" ACTIVE "$actor" 0
+    done < "$WORK/actors.$rid"
+  else
+    emit "bypass.ruleset.$rid" UNKNOWN "ruleset detail unavailable ($rtyp:$rsrc)" "$BASE"
+  fi
+done < "$WORK/srcs"
+
+[ "$MISSING" -eq 0 ] || exit 3
+[ "$UNMET" -eq 0 ] || exit 1
+exit 0

@@ -1,0 +1,25 @@
+name: Product task
+description: Report a product defect or propose a bounded change.
+title: "[Task] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected behavior
+      description: Include a minimal reproduction or concrete user need. Do not include private data.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and ownership
+      description: State the affected product behavior and files. Identify the single writer when work starts.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and verification
+      description: Describe observable success, test commands, risks and compatibility limits.
+    validations:
+      required: true

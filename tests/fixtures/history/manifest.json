@@ -1,0 +1,166 @@
+{
+  "schema": "immutable-regression-fixtures/v1",
+  "purpose": "Offline old/new behavior regressions only; never fetched or installed by the product.",
+  "entries": [
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "219202b28c980e417283d761dbd8515c8b38e69f",
+      "source_path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md",
+      "source_blob": "18e3e5a366740850c3944138c6601fac29770891",
+      "mode": "100644",
+      "sha256": "90edc067f5dde208f93def58d63b162aaa76d8a393cdae08ede3f44886c472cb"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "219202b28c980e417283d761dbd8515c8b38e69f",
+      "source_path": ".github/distribution/payload/.github/connectors/builtin.md",
+      "source_blob": "f4defed4523447d1daa24e690e1defdac2f6a8ba",
+      "mode": "100644",
+      "sha256": "14b2c8997a203de2d394f0a66cddbca1161f3139185fff4c751c9383977f5b31"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "219202b28c980e417283d761dbd8515c8b38e69f",
+      "source_path": ".github/distribution/payload/README.md",
+      "source_blob": "42255fec009d63bfc7282703e399038031d9ccc6",
+      "mode": "100644",
+      "sha256": "be3f6a0ecf930765bdb8bd286fb913c6e76856b2552ac337777779192d8a33b3"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "4e62351d3c053e6c72cc1d295df5567245340014",
+      "source_path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+      "source_blob": "8d8b0d07a39bf32007c14b95f508a31fab00afdb",
+      "mode": "100644",
+      "sha256": "38924886ddb7b92226da776aad241b1b66be6598fd9380de4a85186368b1b095"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "4e62351d3c053e6c72cc1d295df5567245340014",
+      "source_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+      "source_blob": "cc888c829bc5957871376004cb59a93b4980b50f",
+      "mode": "100644",
+      "sha256": "bf94a75bea1318049c4b142ff7efcf927ddb374c314cd7531c163344cbbe6745"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "4e62351d3c053e6c72cc1d295df5567245340014",
+      "source_path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+      "source_blob": "0665629b429c0bdc68033e60d38d879c359a2b7f",
+      "mode": "100644",
+      "sha256": "ab0b2b48fdf048952dcd6f6503fb2831706c80729aa7c3150c95727e08e73412"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "4e62351d3c053e6c72cc1d295df5567245340014",
+      "source_path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh",
+      "source_blob": "3fe514e2fd6db6202c2c2e9ff60d9ff1095c9981",
+      "mode": "100644",
+      "sha256": "b0599e051b1782b78cd3df809eae80168ec2cdb86207ab996badb3fbcfd9907c"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "7565593f470fa6515a138c730f2545595cbd888f",
+      "source_path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+      "source_blob": "8163ed2a5bee65d8e6e26c2673964d2ff3ee22f8",
+      "mode": "100644",
+      "sha256": "c88b2fe20240fa31aa34628e3937e972278c8a59c88a99b1a57e8ade42a5a7e2"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "7565593f470fa6515a138c730f2545595cbd888f",
+      "source_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh",
+      "source_blob": "aaffe845af05b064cbf9cc9c17dec2e3577ec18a",
+      "mode": "100644",
+      "sha256": "f96952a901917918f1cec29485a7bd12dc078d30a90c691b6dd943e8c43c486d"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "7565593f470fa6515a138c730f2545595cbd888f",
+      "source_path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+      "source_blob": "571ac6e1dfbca2c725379ebb024d52400860cabf",
+      "mode": "100644",
+      "sha256": "9286fd7c6ff51664b903bc62bf3317fa3a9288dc6efc414d122a3f2b9b135e8c"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "a49847680ba39a2d901ae9b309bf72142ac9e46c",
+      "source_path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+      "source_blob": "64230fb3f1d02e820fb26ac581ac587ff213610c",
+      "mode": "100644",
+      "sha256": "878563511e78dced8f32ef507c7af964990134755a85d727316b237cd831387a"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "a49847680ba39a2d901ae9b309bf72142ac9e46c",
+      "source_path": ".github/distribution/payload/.github/codex-instructions.md",
+      "source_blob": "87d75620332e2f64f2ec643f8d6da9490234ddf0",
+      "mode": "100644",
+      "sha256": "c4bdb13c1afa682273aa64c53932e57a062e7394ca4f1af47c7c12e4160100f0"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "a49847680ba39a2d901ae9b309bf72142ac9e46c",
+      "source_path": ".github/distribution/payload/.github/connectors/speckit.md",
+      "source_blob": "827985845adf490ebea537bcfdcc4eeabcead93b",
+      "mode": "100644",
+      "sha256": "9bd166f0cc9b6dbd3e62a04cd45fa29e71b04066fcfd3cc7f1a5b159d9078684"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "a49847680ba39a2d901ae9b309bf72142ac9e46c",
+      "source_path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+      "source_blob": "f5b5f3b93762fab119d57f7e264f20abad4c0d24",
+      "mode": "100644",
+      "sha256": "7575657f7c399eb28e2ad019a8ca493243b4078ffd3f22e4568cae25ccdd97bc"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "a49847680ba39a2d901ae9b309bf72142ac9e46c",
+      "source_path": ".github/distribution/payload/.github/scripts/setup-sources.sh",
+      "source_blob": "625e2eb3a8d0b6dd49858de1e3f8bcc38856e141",
+      "mode": "100644",
+      "sha256": "057b8501e276c61a5d4fef8905e2c81203a2fe4ea4aee66c7623cbfcf0c30e3e"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "a49847680ba39a2d901ae9b309bf72142ac9e46c",
+      "source_path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
+      "source_blob": "0d2c90ff7fa1d75c3c155bc87be44ef472ba1502",
+      "mode": "100644",
+      "sha256": "10be82b1fd8c169e5fa605b78f20b6e219dd96e7177c58354757835ebf116c41"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "ab7789274aae99cb4fd8f781672bcb89c71d80ec",
+      "source_path": ".github/scripts/scaffold-init.sh",
+      "source_blob": "3bee8dd3974d4714de2c43a5df027c8b6f210851",
+      "mode": "100644",
+      "sha256": "9280d4ab32f793df71e8d68e970b04917abfd8ff92978a518c3f083b8836f647"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "d36fad317947364a602ee5cdbe54903e68478b44",
+      "source_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh",
+      "source_blob": "f66d3aa5e73abf24052c70f557cd6df9177ca012",
+      "mode": "100644",
+      "sha256": "a6d451092bd963f988e311876f8c2062a978e29b1b9d9a5fe2b1ab02a30f32b6"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "d396865c0f5e23fa01bb790242835dda482d679d",
+      "source_path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+      "source_blob": "43537fb28539b5920f37742aab47a54ba650ab63",
+      "mode": "100644",
+      "sha256": "9f03cb5fdfacad6580e2c704d9b036a60fccb4d7273e3cb15ef7f3de4e8ab572"
+    },
+    {
+      "source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "source_commit": "d396865c0f5e23fa01bb790242835dda482d679d",
+      "source_path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+      "source_blob": "078a935a17e22fae3d0284f668f190222445478e",
+      "mode": "100644",
+      "sha256": "7f23226c2edd0e2e5c943fa19a0b2f575e3d72e42aed9a02700d0ba091f128b9"
+    }
+  ]
+}
