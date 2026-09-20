@@ -135,6 +135,58 @@ class ProductTests(unittest.TestCase):
                     else: os.mkfifo(path)
                 self.assertTrue(self.checker.validate_export(root))
 
+    def test_native_powershell_ci_step_is_required(self):
+        root = self.fixture()
+        workflow = root / ".github/workflows/ci.yml"
+        original = workflow.read_text()
+        self.assertEqual([], self.checker.validate_policy(root))
+        for replacement in ("", "        shell: bash\n", "        shell: sh\n",
+                            "        # shell: pwsh\n"):
+            with self.subTest(shell=replacement.strip()):
+                workflow.write_text(original.replace("        shell: pwsh\n", replacement))
+                self.assertIn("mandatory native PowerShell CI step missing or changed",
+                              self.checker.validate_policy(root))
+        workflow.write_text(original.replace("        shell: pwsh\n", "").replace(
+            "      - name: Run product conformance tests\n",
+            "      - name: Run product conformance tests\n        shell: pwsh\n"))
+        self.assertIn("mandatory native PowerShell CI step missing or changed",
+                      self.checker.validate_policy(root))
+
+    def test_powershell_ci_requires_the_actual_version_command(self):
+        root = self.fixture()
+        workflow = root / ".github/workflows/ci.yml"
+        original = workflow.read_text()
+        command = "        run: $PSVersionTable.PSVersion.ToString()\n"
+        for replacement in ("", "        # run: $PSVersionTable.PSVersion.ToString()\n",
+                            "        run: echo '$PSVersionTable.PSVersion.ToString()'\n",
+                            "        run: true\n",
+                            "        run: pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'\n"):
+            with self.subTest(command=replacement.strip()):
+                workflow.write_text(original.replace(command, replacement))
+                self.assertIn("mandatory product CI edge missing",
+                              self.checker.validate_policy(root))
+
+    def test_powershell_ci_cannot_be_commented_skipped_or_suppressed(self):
+        root = self.fixture()
+        workflow = root / ".github/workflows/ci.yml"
+        original = workflow.read_text()
+        step = ("      - name: Require real PowerShell test host\n"
+                "        shell: pwsh\n"
+                "        run: $PSVersionTable.PSVersion.ToString()\n")
+        for replacement in ("", "\n".join("# " + line for line in step.splitlines()) + "\n",
+                            step + "        if: false\n",
+                            step + "        continue-on-error: true\n",
+                            step + "        shell: bash\n",
+                            step + "      # misleading step boundary\n        shell: bash\n"):
+            with self.subTest(step=replacement):
+                workflow.write_text(original.replace(step, replacement))
+                self.assertIn("mandatory native PowerShell CI step missing or changed",
+                              self.checker.validate_policy(root))
+        workflow.write_text(original.replace("  conformance:\n",
+                                             "  conformance:\n    if: false\n"))
+        self.assertIn("unsupported or bypassed product CI edge",
+                      self.checker.validate_policy(root))
+
 
 if __name__ == "__main__":
     unittest.main()

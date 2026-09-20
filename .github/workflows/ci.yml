@@ -46,6 +46,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Require real PowerShell test host
-        run: pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+        shell: pwsh
+        run: $PSVersionTable.PSVersion.ToString()
       - name: Run product conformance tests
         run: python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'
