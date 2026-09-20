@@ -190,12 +190,18 @@ def validate_policy(root):
                     "bash .github/scripts/check-workflow-permissions.sh",
                     "bash .github/scripts/tests/test-workflow-permissions.sh",
                     "python3 -I -m compileall -q .github/scripts tests/conformance",
-                    "pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'",
+                    "$PSVersionTable.PSVersion.ToString()",
                     "python3 -I -m unittest discover -s tests/conformance -p 'test_*.py'")
         runs = re.findall(r"^        run: ([^\n]+)$", workflow, re.M)
         if (any(token not in workflow for token in required)
                 or runs != list(commands)):
             errors.append("mandatory product CI edge missing")
+        # Bind the native shell to the complete required step, not a token elsewhere.
+        pwsh_step = ("      - name: Require real PowerShell test host\n"
+                     "        shell: pwsh\n"
+                     "        run: $PSVersionTable.PSVersion.ToString()\n")
+        if pwsh_step not in re.split(r"(?=^      - )", workflow, flags=re.M):
+            errors.append("mandatory native PowerShell CI step missing or changed")
         if re.search(r"check-phase|check-runtime|check-repository-policy|conformance-catalog|check-skills|check-ledger|check-portable|continue-on-error|if:", workflow):
             errors.append("unsupported or bypassed product CI edge")
         actual = {p.name for p in (root / "tests/conformance").glob("test_*.py")}
