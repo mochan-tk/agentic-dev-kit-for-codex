@@ -634,7 +634,7 @@ def validate(root):
             if (root / PAYLOAD / name).stat().st_mode & 0o7111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
@@ -824,11 +824,73 @@ def validate_bootstrap(root):
     return errors
 
 
+UPDATE_PATHS = (".github/scripts/scaffold-update.sh", ".github/scripts/scaffold-update.ps1",
+                "tests/conformance/test_installer_update.py")
+UPDATE_CONTRACT = {
+    "source_repository": "mochan-tk/agentic-dev-kit-for-codex",
+    "source_commit": "2a016af9993b1e86905d34fdf51b01fbc64c222f",
+    "source_tree": "38847c8d1349dec8fbab0af8833d60e194c63125",
+    "source_files": {
+        ".github/scripts/scaffold-init.sh": "d02e068f100dc03a401a9b1608f13d39c88e5861",
+        ".github/scripts/scaffold-init.ps1": "ce1804cfed061133f8b82a22edfd163d91fb6028",
+        ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd",
+    },
+    "transport": "anonymous-https-exact-old-new-commits-bare-git-object-projection",
+    "engine_sha256": LOCAL_ENGINE_SHA256,
+    "preservation": "fixed-47-path-class-layout-known-old-engine-only-no-stage-commit-push",
+    "preview": "default-owned-scratch-only-target-index-requested-recovery-unchanged",
+    "recovery": "fresh-private-root-retained-old-new-transaction-siblings-offline-bound-rollback",
+    "trust": "downloaded-entry-trusted-code-selected-updaters-never-executed-hashes-not-authentication",
+    "limits": "explicit-versions-exclusive-target-no-force-no-auto-update-native-windows-unmeasured",
+    "fixture_adaptation": {
+        "path": "tests/conformance/test_connector_validation.py",
+        "export_source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+        "export_source_commit": "609362b327a4362b5f5eadcf5f8bdc8935948b98",
+        "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
+        "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
+        "export_mode": "100644",
+        "target_blob": "595acf87f02fc79d0785af924859e2154629c641",
+        "target_sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884",
+        "target_mode": "100644",
+        "scope": "copy-required-update-paths-and-assert-complete-updater-fixture",
+    },
+}
+
+
+def validate_explicit_update(root):
+    """Mandatory current-product extension; predecessor/export records stay frozen."""
+    root = Path(root)
+    errors = []
+    try:
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
+        record = parity.get("explicit_update")
+        if not isinstance(record, dict) or set(record) != set(UPDATE_CONTRACT) | {"target_files"}:
+            return ["explicit update provenance fields missing or unreviewed"]
+        if any(record.get(key) != value for key, value in UPDATE_CONTRACT.items()):
+            errors.append("explicit update source, preservation or recovery contract drifted")
+        expected = []
+        for path in UPDATE_PATHS:
+            data = regular_bytes(root, path)
+            if (root / path).stat().st_mode & 0o7111:
+                errors.append("explicit update mode must be 100644: " + path)
+            expected.append({"path": path, "mode": "100644", "sha256": hashlib.sha256(data).hexdigest()})
+        if record.get("target_files") != expected:
+            errors.append("explicit update target digest, inventory or mode drifted")
+        engine = regular_bytes(root, ".github/scripts/scaffold-install.sh")
+        if hashlib.sha256(engine).hexdigest() != LOCAL_ENGINE_SHA256:
+            errors.append("explicit update engine must remain byte-identical")
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError):
+        errors.append("explicit update missing, unsafe or malformed")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
-    errors = validate(args.root) + validate_connector_companion(args.root) + validate_governance_procedures(args.root) + validate_bootstrap(args.root)
+    errors = (validate(args.root) + validate_connector_companion(args.root)
+              + validate_governance_procedures(args.root) + validate_bootstrap(args.root)
+              + validate_explicit_update(args.root))
     for error in errors:
         print("ERROR: " + error)
     if errors:

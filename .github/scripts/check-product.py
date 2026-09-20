@@ -20,9 +20,30 @@ SOURCE_TREE = "bf38214c82484a5edb47d467a4be951f9c53bea6"
 # Reviewed public records; an intentional product change updates these bindings.
 EXPORT_SHA256 = "fc48db9474c8cd1a8320805a0c61afe60cd831f3291e3b984315925cf533d4b8"
 HISTORY_SHA256 = "d1adafd9d9b91a8ac82648013cb3d720ef5fd85d79e156b4c808f66ddd9f7dd3"
+# This single reviewed fixture adaptation has separate current-target evidence.
+# The immutable export still describes its original bytes, not the adapted file.
+CONNECTOR_FIXTURE_PATH = "tests/conformance/test_connector_validation.py"
+CONNECTOR_FIXTURE_EXPORT = {
+    "path": CONNECTOR_FIXTURE_PATH,
+    "mode": "100644",
+    "source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
+    "sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
+}
+CONNECTOR_FIXTURE_ADAPTATION = {
+    "path": CONNECTOR_FIXTURE_PATH,
+    "export_source_repository": SOURCE,
+    "export_source_commit": SOURCE_COMMIT,
+    "export_source_blob": CONNECTOR_FIXTURE_EXPORT["source_blob"],
+    "export_sha256": CONNECTOR_FIXTURE_EXPORT["sha256"],
+    "export_mode": "100644",
+    "target_blob": "595acf87f02fc79d0785af924859e2154629c641",
+    "target_sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884",
+    "target_mode": "100644",
+    "scope": "copy-required-update-paths-and-assert-complete-updater-fixture",
+}
 TEST_MODULES = (
     "test_ci_toolchain.py", "test_connector_validation.py", "test_installer.py",
-    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_product.py",
+    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py",
     "test_source_first_governance.py", "test_source_first_procedures.py",
 )
 PUBLIC_DOCS = (
@@ -105,6 +126,26 @@ def history_bytes(root, *, commit=None, path=None, blob=None):
     return data
 
 
+def validate_connector_fixture_adaptation(root, export_row):
+    """Accept only the exact approved delta, independently of installer checks."""
+    errors = []
+    try:
+        if export_row != CONNECTOR_FIXTURE_EXPORT:
+            errors.append("connector fixture original export binding drifted")
+        parity = json.loads(read_bytes(root, ".github/distribution/source-parity.v1.json"),
+                            object_pairs_hook=unique_keys)
+        if parity["explicit_update"]["fixture_adaptation"] != CONNECTOR_FIXTURE_ADAPTATION:
+            errors.append("connector fixture current adaptation binding drifted")
+        data = read_bytes(root, CONNECTOR_FIXTURE_PATH)
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        if (digest(data) != CONNECTOR_FIXTURE_ADAPTATION["target_sha256"]
+                or blob != CONNECTOR_FIXTURE_ADAPTATION["target_blob"]):
+            errors.append("connector fixture differs from exact approved adaptation")
+    except (OSError, ValueError, UnicodeError, KeyError, TypeError, AttributeError):
+        errors.append("connector fixture adaptation is missing, unsafe or unbound")
+    return errors
+
+
 def validate_export(root):
     errors = []
     try:
@@ -113,6 +154,9 @@ def validate_export(root):
                 or record["source_tree"] != SOURCE_TREE or record["payload_count"] != 47):
             raise ValueError("source identity")
         for row in record["frozen_files"]:
+            if row["path"] == CONNECTOR_FIXTURE_PATH:
+                errors.extend(validate_connector_fixture_adaptation(root, row))
+                continue
             data = read_bytes(root, row["path"])
             git_blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
             if digest(data) != row["sha256"] or git_blob != row["source_blob"] or row["mode"] != "100644":
@@ -231,7 +275,8 @@ def validate(root):
         checker = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(checker)
         errors += (checker.validate(root) + checker.validate_connector_companion(root)
-                   + checker.validate_governance_procedures(root) + checker.validate_bootstrap(root))
+                   + checker.validate_governance_procedures(root) + checker.validate_bootstrap(root)
+                   + checker.validate_explicit_update(root))
     except (OSError, ValueError, ImportError, AttributeError, TypeError):
         errors.append("mandatory installer validation unavailable")
     return errors

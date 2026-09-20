@@ -22,6 +22,24 @@ Native Windows installation is unmeasured. PowerShell-host tests use synthetic
 HTTP responses and Git Bash path conversion fixtures. They do not qualify
 Git for Windows, Windows filesystem behavior or every shell environment.
 
+The network updater requires exact old/new commit IDs supplied by the caller;
+there is no version registry, automatic detection, scheduled update or force.
+Both revisions must use the fixed 47-file layout and the supported unchanged
+engine. Arbitrary historical or upstream versions are not supported. The entry
+code revision is a separate trust choice from those payload revisions.
+Anonymous Git acquisition uses an empty private transport home, disables user
+configuration and credential helpers, and refuses authentication/TLS overrides;
+this does not protect the caller's initial download of the entry code.
+
+Apply creates a fresh private recovery root and retains it on success or failure.
+Do not move, replace or delete its old/new source roots or transaction; rollback
+binds the new source's path and filesystem identity. An acquisition/preparation
+failure can leave retained inputs without a complete rollback record. An
+already-new update retains sources but creates no transaction. Recovery records
+are private local data, not bug-report attachments. Preview uses owned temporary
+scratch and does not create the requested recovery directory. Exclusive access
+is required; neither updates nor rollback promise power-loss atomicity.
+
 ## Workflow and helpers
 
 Skill discovery, named roles, delegation and handoffs depend on the selected

@@ -1636,12 +1636,14 @@ sys.exit(result.returncode)
     def complete_checker_source(self):
         source = self.clone_source()
         checker = self.kickoff_checker()
-        for name in (*checker.FEEDBACK_PATHS, *checker.CONNECTOR_PATHS, *checker.GOVERNANCE_PROCEDURE_PATHS):
+        for name in (*checker.FEEDBACK_PATHS, *checker.CONNECTOR_PATHS,
+                     *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS):
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, destination)
         self.assertEqual([], checker.validate(source))
         self.assertEqual([], checker.validate_connector_companion(source))
+        self.assertEqual([], checker.validate_explicit_update(source))
         return source, checker
 
     def reseal_payload(self, source):

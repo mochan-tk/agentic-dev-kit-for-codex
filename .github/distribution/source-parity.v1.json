@@ -624,7 +624,7 @@
       {
         "path": "tests/conformance/test_connector_validation.py",
         "mode": "100644",
-        "sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778"
+        "sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884"
       }
     ]
   },
@@ -823,6 +823,52 @@
         "path": ".github/scripts/scaffold-install.sh",
         "mode": "100644",
         "sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2"
+      }
+    ]
+  },
+  "explicit_update": {
+    "source_repository": "mochan-tk/agentic-dev-kit-for-codex",
+    "source_commit": "2a016af9993b1e86905d34fdf51b01fbc64c222f",
+    "source_tree": "38847c8d1349dec8fbab0af8833d60e194c63125",
+    "source_files": {
+      ".github/scripts/scaffold-init.sh": "d02e068f100dc03a401a9b1608f13d39c88e5861",
+      ".github/scripts/scaffold-init.ps1": "ce1804cfed061133f8b82a22edfd163d91fb6028",
+      ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd"
+    },
+    "transport": "anonymous-https-exact-old-new-commits-bare-git-object-projection",
+    "engine_sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2",
+    "preservation": "fixed-47-path-class-layout-known-old-engine-only-no-stage-commit-push",
+    "preview": "default-owned-scratch-only-target-index-requested-recovery-unchanged",
+    "recovery": "fresh-private-root-retained-old-new-transaction-siblings-offline-bound-rollback",
+    "trust": "downloaded-entry-trusted-code-selected-updaters-never-executed-hashes-not-authentication",
+    "limits": "explicit-versions-exclusive-target-no-force-no-auto-update-native-windows-unmeasured",
+    "fixture_adaptation": {
+      "path": "tests/conformance/test_connector_validation.py",
+      "export_source_repository": "mochan-tk/agentic-dev-kit-for-codex-pre",
+      "export_source_commit": "609362b327a4362b5f5eadcf5f8bdc8935948b98",
+      "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
+      "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
+      "export_mode": "100644",
+      "target_blob": "595acf87f02fc79d0785af924859e2154629c641",
+      "target_sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884",
+      "target_mode": "100644",
+      "scope": "copy-required-update-paths-and-assert-complete-updater-fixture"
+    },
+    "target_files": [
+      {
+        "path": ".github/scripts/scaffold-update.sh",
+        "mode": "100644",
+        "sha256": "615e965884fc1d3cbc080ee2a1985994bb9c36346bb5bc7e087458f03b2d06f5"
+      },
+      {
+        "path": ".github/scripts/scaffold-update.ps1",
+        "mode": "100644",
+        "sha256": "fa67ae0811ad604d854ee88609e8ccc2638e75c36dacdade1cdfcc012e4d3bd6"
+      },
+      {
+        "path": "tests/conformance/test_installer_update.py",
+        "mode": "100644",
+        "sha256": "1bc5b4985152b4e586c881a500f26248a48a9596cc4c761ac10edd38bf8a017a"
       }
     ]
   }
