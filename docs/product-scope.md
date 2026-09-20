@@ -11,6 +11,13 @@ created files. A reviewed local checkout supports explicit install, known-old
 upgrade and operation-scoped rollback. Existing project-owned content is
 preserved; conflicting engine files and unsafe inputs refuse.
 
+A separate public Bash and thin PowerShell/Git Bash updater needs no advance
+clone. It requires exact old/new commit IDs and a fresh recovery directory,
+defaults to preview, and updates only known-old engine files on explicit apply.
+It preserves customized tuned/instance/seed files, retains validated sources
+and any operation record outside the adopter, and supports the unchanged
+engine's offline rollback. It never stages or detects the installed version.
+
 Four companions run explicitly from a reviewed kit checkout:
 `governance-status.sh`, `worktree-preflight.sh`, `check-connectors.sh` and
 `report-installer-failure.sh`. They are outside the installed payload. The

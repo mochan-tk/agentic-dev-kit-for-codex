@@ -153,6 +153,48 @@ Review the Task, diff, and evidence—not only the final chat message. Accept,
 redirect, or reject the result. Use the retrospective workflow when repeated
 friction suggests a reusable improvement.
 
+### 5. Update explicitly when you choose
+
+You do not need a kit clone. Supply the full 40-character commit IDs for the
+version previously installed (`FROM`) and the reviewed new version (`TO`).
+Use the previous installation's recorded `source-commit` or accepted adoption
+record for `FROM`; if it is unknown, inspect that record before updating.
+Choose a **new recovery directory outside your project**, with an existing
+parent. Run from your project root; keep exclusive ownership during the update.
+
+```sh
+FROM=FULL_OLD_COMMIT_SHA
+TO=FULL_NEW_COMMIT_SHA
+RECOVERY=/path/to/new-private-recovery
+set -o pipefail
+curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-update.sh | bash -s -- --from "$FROM" --to "$TO" --recovery "$RECOVERY"
+```
+
+The default previews the update without changing project files, the index, or
+the requested recovery directory. Apply that explicit update with:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-update.sh | bash -s -- --from "$FROM" --to "$TO" --recovery "$RECOVERY" --apply
+```
+
+PowerShell with Git Bash uses the same inputs and default preview:
+
+```powershell
+$From = 'FULL_OLD_COMMIT_SHA'
+$To = 'FULL_NEW_COMMIT_SHA'
+$Recovery = 'D:\private-recovery\new-update'
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-update.ps1))) --from $From --to $To --recovery $Recovery
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-update.ps1))) --from $From --to $To --recovery $Recovery --apply
+```
+
+Known-old engine files update; tuned instructions, instance records, existing
+seed files and unrelated work are preserved. Unknown engine edits refuse the
+whole update. Nothing is staged, committed or pushed. Keep the private recovery
+directory at its original location, including after a failed apply. See
+[offline rollback and fixed-entry selection](docs/distribution/source-first-installer.md#one-command-explicit-update)
+before changing or deleting retained recovery inputs. Native Windows remains
+unmeasured; updates are explicit and do not detect installed versions.
+
 ## How it works
 
 GitHub is the durable work record. Codex sessions carry out the work; they do
@@ -224,7 +266,7 @@ autonomous service or a guarantee that generated code is correct.
 | Boundary | What to expect |
 |---|---|
 | Existing project assets | Installation preserves project-owned content and stops on unsafe conflicts |
-| Updates and recovery | Reviewed local sources support known-old engine updates and operation-scoped rollback; not automatic or whole-repository recovery |
+| Updates and recovery | Explicit old/new commit IDs support a one-command update with preserved customizations and retained offline operation rollback; no automatic or whole-repository recovery |
 | Governance helpers | Reads report missing evidence as non-success; setup writes require separate, explicit authority |
 | Feedback and retro | Reporting is consent-gated; retrospective proposals do not approve or retire controls automatically |
 | Codex compatibility | Evidence is specific to the observed client and invocation path; cross-client parity and universal automatic Skill discovery are not promised |

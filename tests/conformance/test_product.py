@@ -1,5 +1,6 @@
 """Clean-root export regressions; real Git checkout modes, no old Git history."""
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -41,10 +42,40 @@ class ProductTests(unittest.TestCase):
             cwd=root, capture_output=True, text=True, timeout=30)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         for path in (RECORD, "tests/fixtures/history/manifest.json", "tests/conformance/test_source_first_procedures.py",
-                     ".github/scripts/scaffold-install.sh"):
+                     ".github/scripts/scaffold-install.sh", ".github/scripts/scaffold-update.sh",
+                     ".github/scripts/scaffold-update.ps1", "tests/conformance/test_installer_update.py"):
             altered = self.fixture()
             (altered / path).unlink()
             self.assertTrue(self.checker.validate(altered))
+
+    def test_explicit_update_contract_and_required_guard_fail_closed(self):
+        root = self.fixture()
+        path = root / ".github/distribution/source-parity.v1.json"
+        original = path.read_text()
+        for mutation in ("missing", "source", "source-blob", "mode", "digest", "extra", "reordered"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original)
+                record = value["explicit_update"]
+                if mutation == "missing": del value["explicit_update"]
+                elif mutation == "source": record["source_commit"] = "0" * 40
+                elif mutation == "source-blob": record["source_files"][".github/scripts/scaffold-init.sh"] = "0" * 40
+                elif mutation == "mode": record["target_files"][0]["mode"] = "100755"
+                elif mutation == "digest": record["target_files"][0]["sha256"] = "0" * 64
+                elif mutation == "extra": record["automatic"] = True
+                else: record["target_files"].reverse()
+                path.write_text(json.dumps(value))
+                self.assertTrue(any("explicit update" in error for error in self.checker.validate(root)))
+                result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts/check-installer.py")],
+                                        capture_output=True, text=True, timeout=30)
+                self.assertNotEqual(0, result.returncode)
+        path.write_text(original)
+        entry = root / ".github/scripts/scaffold-update.sh"
+        entry.write_bytes(entry.read_bytes() + b"\n# drift\n")
+        self.assertTrue(any("explicit update" in error for error in self.checker.validate(root)))
+        root = self.fixture()
+        checker = root / ".github/scripts/check-installer.py"
+        checker.write_text(checker.read_text().replace("def validate_explicit_update(root):", "def removed_update_guard(root):"))
+        self.assertIn("mandatory installer validation unavailable", self.checker.validate(root))
 
     def test_clean_git_checkouts_with_ordinary_umasks_are_structurally_valid(self):
         source = self.fixture()
@@ -71,6 +102,63 @@ class ProductTests(unittest.TestCase):
                 self.assertNotEqual(0, missing.returncode)
                 self.git(root, "diff", "--exit-code")
                 self.git(root, "diff", "--cached", "--exit-code")
+
+    def test_connector_fixture_adaptation_binds_exact_original_and_current_metadata(self):
+        root = self.fixture()
+        parity = root / ".github/distribution/source-parity.v1.json"
+        original = parity.read_text()
+        self.assertEqual([], self.checker.validate_export(root))
+        for key, wrong in (("path", "tests/conformance/test_installer_feedback.py"),
+                           ("export_source_repository", "unknown/repository"),
+                           ("export_source_commit", "0" * 40),
+                           ("export_source_blob", "0" * 40), ("export_sha256", "0" * 64),
+                           ("export_mode", "100755"), ("target_sha256", "0" * 64),
+                           ("target_blob", "0" * 40), ("target_mode", "100755"),
+                           ("scope", "arbitrary-changes"), ("extra", "unapproved")):
+            with self.subTest(key=key):
+                value = json.loads(original)
+                value["explicit_update"]["fixture_adaptation"][key] = wrong
+                parity.write_text(json.dumps(value))
+                self.assertTrue(self.checker.validate_export(root))
+        value = json.loads(original)
+        del value["explicit_update"]["fixture_adaptation"]
+        parity.write_text(json.dumps(value))
+        self.assertTrue(self.checker.validate_export(root))
+        for key in self.checker.CONNECTOR_FIXTURE_ADAPTATION:
+            with self.subTest(missing=key):
+                value = json.loads(original)
+                del value["explicit_update"]["fixture_adaptation"][key]
+                parity.write_text(json.dumps(value))
+                self.assertTrue(self.checker.validate_export(root))
+        parity.write_text(original)
+        for key, wrong in (("path", "README.md"), ("source_blob", "0" * 40),
+                           ("sha256", "0" * 64), ("mode", "100755"), ("extra", "unapproved")):
+            with self.subTest(original_binding=key):
+                row = dict(self.checker.CONNECTOR_FIXTURE_EXPORT, **{key: wrong})
+                self.assertTrue(self.checker.validate_connector_fixture_adaptation(root, row))
+
+    def test_connector_fixture_resealed_drift_cannot_exempt_any_export(self):
+        root = self.fixture()
+        fixture = root / self.checker.CONNECTOR_FIXTURE_PATH
+        fixture.write_bytes(fixture.read_bytes() + b"\n# unapproved drift\n")
+        current_hash = hashlib.sha256(fixture.read_bytes()).hexdigest()
+        parity = root / ".github/distribution/source-parity.v1.json"
+        value = json.loads(parity.read_text())
+        value["explicit_update"]["fixture_adaptation"]["target_sha256"] = current_hash
+        data = fixture.read_bytes()
+        value["explicit_update"]["fixture_adaptation"]["target_blob"] = hashlib.sha1(
+            b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        for row in value["connector_companion"]["target_files"]:
+            if row["path"] == self.checker.CONNECTOR_FIXTURE_PATH:
+                row["sha256"] = current_hash
+        parity.write_text(json.dumps(value))
+        self.assertTrue(self.checker.validate_export(root))
+        self.assertTrue(self.checker.validate(root))
+        root = self.fixture()
+        unrelated = root / "tests/conformance/test_installer_feedback.py"
+        unrelated.write_bytes(unrelated.read_bytes() + b"\n# unrelated drift\n")
+        self.assertIn("approved export file changed: tests/conformance/test_installer_feedback.py",
+                      self.checker.validate_export(root))
 
     def test_readable_nonexecutable_permissions_are_accepted(self):
         for mode in (0o600, 0o640, 0o644, 0o664, 0o444):

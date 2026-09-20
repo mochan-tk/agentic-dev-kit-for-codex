@@ -271,6 +271,79 @@ during rollback remain partial/non-success. There is no automatic crash recovery
 whole-project reset, power-loss atomicity, concurrent-writer guarantee or
 malicious same-user race resistance. Keep exclusive ownership for the operation.
 
+## One-command explicit update
+
+The [README update commands](../../README.md#5-update-explicitly-when-you-choose)
+invoke `scaffold-update.sh` or its thin PowerShell/Git Bash entry. No advance
+kit clone is needed. `--from` and `--to` require full lowercase 40-character
+commit IDs, and `--recovery` requires a fresh directory with an existing parent
+outside the adopter. The optional final target defaults to the current directory,
+which must be the Git repository root. Branches, tags, short SHAs, duplicate flags and local-source
+overrides refuse. Preview is the default; `--apply` is explicit.
+
+The downloaded entry itself is trusted code. Select its reviewed revision
+separately from the two payload pins. For Bash, substitute the reviewed entry
+commit for `main` in the README URL. For PowerShell, use that commit in the
+PowerShell URL **and** set `$env:SCAFFOLD_UPDATE_REF` to the same commit so the
+thin entry downloads the corresponding Bash code. `SCAFFOLD_REPO` selects one
+public owner/repository for both payloads (default this repository). There is
+no authentication or automatic retry. `SCAFFOLD_REF` does not select updater
+payloads or entry code. Keep caller-side `pipefail` for Bash download failures.
+
+Both exact commits are fetched into a private bare Git object store using
+anonymous HTTPS, an empty transport home, and disabled user configuration,
+credential helpers, templates and hooks. Unsupported Git context and client
+certificate/TLS override variables refuse. Strict object checks precede bounded
+projection: exact regular-blob modes, the fixed 47-path/class layout, complete
+payload enumeration, Git blob hashes, payload SHA-256 values and the fixed engine
+hash must pass for both revisions. Only that unchanged engine executes; selected
+updater or bootstrap code is not projected or executed. Integrity checks do not
+authenticate a publisher. Normal trusted Git, Bash and Unix tools are required.
+
+Preview acquires sources in owned temporary scratch and removes that scratch
+on exit. It changes no target bytes, index entries or requested recovery path.
+Apply exclusively creates a mode-0700 recovery root. `old`, `new`, `objects.git`,
+`transport-home` and, when changes are required, `transaction` are separate
+children. All retained payload files have mode 0644. The engine validates the
+complete inventory before any target write, preserves existing tuned/instance/
+seed content, and replaces engine files only when they match the old version.
+Missing payload files can be installed. Already-new files are unchanged.
+
+Recovery inputs remain at their final paths after wrapper exit on success or
+failure. No files are staged, committed or pushed; HEAD and unrelated index
+state are preserved. Inspect the diff and follow your normal review process.
+An already-new operation retains sources without creating a transaction. A
+failure during acquisition or record preparation may need manual inspection;
+retained inputs alone are not proof of a complete rollback record.
+
+For a completed or modeled interrupted update with a complete transaction,
+run the retained engine without a network connection (Git Bash on Windows):
+
+```sh
+RECOVERY=/path/to/the-original-private-recovery
+TARGET=/path/to/adopter
+SCAFFOLD_SOURCE_DIR="$RECOVERY/new" bash "$RECOVERY/new/.github/scripts/scaffold-install.sh" --rollback --transaction "$RECOVERY/transaction" --dry-run "$TARGET"
+SCAFFOLD_SOURCE_DIR="$RECOVERY/new" bash "$RECOVERY/new/.github/scripts/scaffold-install.sh" --rollback --transaction "$RECOVERY/transaction" --apply "$TARGET"
+```
+
+Do not move, replace or delete retained source roots or the transaction; rollback
+checks paths and filesystem identities as well as bytes. The existing
+[recovery refusal rules](#recovery-and-refusal) apply: later affected edits or
+unknown partial bytes refuse; unrelated later edits are preserved. Keep recovery
+inputs private and out of public reports. This is operation-scoped recovery,
+without whole-repository reset, power-loss atomicity or concurrent-writer safety.
+Both revisions need the fixed supported layout and engine. Native Windows is
+unmeasured even when PowerShell-host synthetic tests pass.
+
+The focused regression command is:
+
+```sh
+python3 -I -m unittest discover -s tests/conformance -p 'test_installer_update.py'
+```
+
+The mandatory product/installer guards bind updater provenance and include this
+module in the existing full conformance discovery; the CI workflow is unchanged.
+
 ## Optional local installer failure report
 
 Use the standalone, explicitly invoked companion **outside the 47-file
