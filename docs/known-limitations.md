@@ -48,9 +48,15 @@ automatic discovery, authenticated supervision, crash recovery, budget circuit
 breaker or immutable identity/control plane. Use explicit installed-file
 instructions and available tools; report unsupported or uncheckable states.
 
-Governance/worktree/connector/failure-report companions run only when explicitly
-invoked from a reviewed kit checkout. They are not installed or wired into an
-adopter's CI. Governance requires actual repository/check/posture inputs and
+Governance/worktree/connector companions run only when explicitly invoked from
+a reviewed kit checkout or the [fixed-revision commands](distribution/companion-checks.md).
+The latter require trusted Bash/curl/hash tools, validate the complete download
+before execution and clean only their owned scratch. This adds no sandbox,
+automatic update, crash-cleanup or hostile-concurrent-writer guarantee. Checks
+preserve their original exit semantics and require actual inputs; a download
+failure is not a sensor verdict. The failure reporter still uses a reviewed
+checkout. None are installed or wired into an adopter's CI.
+Governance requires actual repository/check/posture inputs and
 can return `UNKNOWN` for incomplete API data or unsupported workflow syntax.
 CODEOWNERS coverage, bypass approval, independent incident evidence and
 retirement authority still need human inspection. Worktree preflight makes no

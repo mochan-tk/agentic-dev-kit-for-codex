@@ -195,6 +195,19 @@ directory at its original location, including after a failed apply. See
 before changing or deleting retained recovery inputs. Native Windows remains
 unmeasured; updates are explicit and do not detect installed versions.
 
+### 6. Check the project without cloning the kit
+
+Use the [fixed-revision companion commands](docs/distribution/companion-checks.md)
+to observe GitHub governance, check a planned worktree action, or validate
+connector definitions. Choose the check and supply your actual inputs; each
+Bash command downloads the complete unchanged helper, verifies its recorded
+SHA-256, and runs it without installing extra files into your project.
+
+Governance uses your existing authenticated `gh` for GET-only observations;
+the other checks are local after downloading. No command repairs settings,
+claims ownership, activates connectors or grants permission to push. Missing
+evidence remains non-success. A successful check is not runtime qualification.
+
 ## How it works
 
 GitHub is the durable work record. Codex sessions carry out the work; they do
@@ -272,9 +285,10 @@ autonomous service or a guarantee that generated code is correct.
 | Codex compatibility | Evidence is specific to the observed client and invocation path; cross-client parity and universal automatic Skill discovery are not promised |
 | Product and release | A source-first workflow kit with bounded product tests; native Windows and cross-client runtime parity remain unmeasured |
 
-The explicit governance and worktree companions run from a reviewed kit
-checkout. They are not additional files installed into your project by the
-one-command entry. See the
+The explicit governance, worktree and connector companions can run from a
+reviewed kit checkout or the [verified no-clone commands](docs/distribution/companion-checks.md).
+They are not additional files installed by the one-command entry. The
+consent-gated failure reporter still uses a reviewed checkout. See the
 [helper and procedure guide](docs/distribution/source-first-installer.md#governance-worktree-and-retro-procedures).
 
 This repository has a clean product Git history and preserves the accepted
@@ -288,6 +302,7 @@ unfinished runtime/release work remain in the [predecessor records](docs/provena
 | You want to… | Read |
 |---|---|
 | Install, select a revision, update, or recover an operation | [Installation guide](docs/distribution/source-first-installer.md) |
+| Check governance, worktrees or connector definitions without a kit clone | [Read-only companion commands](docs/distribution/companion-checks.md) |
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |
 | Understand Issue-graph authority | [Installed instructions](.github/distribution/payload/AGENTS.md) |
 | Check evidence boundaries and compatibility limits | [Known limitations](docs/known-limitations.md) |
