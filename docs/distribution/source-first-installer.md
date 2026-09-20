@@ -418,6 +418,10 @@ not a separate read-back or authenticated report provenance.
 
 Use the source-derived standalone companion from a reviewed local kit checkout:
 
+Alternatively, use the [complete-download-and-verify command](companion-checks.md#connectors-validate-local-definition-structure)
+without a kit clone. That route runs the same fixed helper; only its retrieval
+uses the network. The helper's structural validation remains local.
+
 ```sh
 bash /path/to/reviewed-kit/.github/scripts/check-connectors.sh --target /path/to/adopter
 ```
@@ -466,6 +470,8 @@ these checks are not an atomic snapshot or hostile same-user race isolation.
 
 Two standalone companions run from the reviewed kit checkout. They are not
 copied into the adopter's 47-file payload and are not automatically CI gates.
+The [fixed-revision no-clone commands](companion-checks.md) provide the same
+unchanged helpers without a checkout; they add no setup or repair operation.
 Use the target's actual contexts; no Copilot or donor CI names are defaults:
 
 ```bash

@@ -18,10 +18,15 @@ It preserves customized tuned/instance/seed files, retains validated sources
 and any operation record outside the adopter, and supports the unchanged
 engine's offline rollback. It never stages or detects the installed version.
 
-Four companions run explicitly from a reviewed kit checkout:
+Four companions can run explicitly from a reviewed kit checkout:
 `governance-status.sh`, `worktree-preflight.sh`, `check-connectors.sh` and
 `report-installer-failure.sh`. They are outside the installed payload. The
-feedback companion also uses `feedback-lib.sh`. Installation does not create
+feedback companion also uses `feedback-lib.sh`. The three read-only checks
+also have [no-clone Bash commands](distribution/companion-checks.md): complete
+fixed-revision download, reviewed SHA-256 verification, then explicit execution.
+This is a delivery route to the unchanged helpers, not an installer mode or
+automatic CI integration. The failure reporter is excluded from that route.
+Installation does not create
 CI, configure GitHub, commit, push, run onboarding or invoke a model.
 
 The installed workflow covers onboarding, context collection and builtin

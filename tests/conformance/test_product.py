@@ -77,6 +77,50 @@ class ProductTests(unittest.TestCase):
         checker.write_text(checker.read_text().replace("def validate_explicit_update(root):", "def removed_update_guard(root):"))
         self.assertIn("mandatory installer validation unavailable", self.checker.validate(root))
 
+    def test_companion_guide_and_test_are_mandatory(self):
+        self.assertEqual([], self.checker.validate_companion_access(ROOT))
+        for missing in (self.checker.COMPANION_GUIDE, "tests/conformance/test_companion_access.py"):
+            with self.subTest(missing=missing):
+                root = self.fixture()
+                (root / missing).unlink()
+                self.assertTrue(self.checker.validate_companion_access(root))
+                self.assertTrue(self.checker.validate(root))
+
+    def test_companion_fixed_source_and_safety_drift_refuse(self):
+        root = self.fixture()
+        path = root / self.checker.COMPANION_GUIDE
+        original = path.read_text()
+        for before, after in (
+            (self.checker.COMPANION_REVISION, "main"),
+            ("expected=ebd7d548", "expected=00000000"),
+            ("curl --disable --fail", "curl --disable"),
+            ('[ "${actual%% *}" = "$expected" ]', "true"),
+            ("  trap cleanup EXIT\n", ""),
+            ('rm -f -- "$scratch/helper.sh"', 'rm -rf -- "$CHECK_TARGET"'),
+            ('--target "$CHECK_TARGET"', '--target $CHECK_TARGET'),
+            ('--claims "$CHECK_CLAIMS"', '--claims /dev/null'),
+            ("  bash \"$scratch/helper.sh\"", "  bash \"$scratch/helper.sh\"; true #"),
+            ("<!-- BEGIN companion-governance -->", "<!-- BEGIN companion-unknown -->"),
+        ):
+            with self.subTest(change=before):
+                self.assertIn(before, original)
+                path.write_text(original.replace(before, after))
+                self.assertTrue(self.checker.validate_companion_access(root))
+        path.write_text(original + original)
+        self.assertTrue(self.checker.validate_companion_access(root))
+
+    def test_companion_helper_binding_and_readme_route_cannot_disappear(self):
+        root = self.fixture()
+        for helper, _ in self.checker.COMPANION_BLOCKS.values():
+            path = root / ".github/scripts" / helper
+            original = path.read_bytes()
+            path.write_bytes(original + b"\n# drift\n")
+            self.assertTrue(self.checker.validate_companion_access(root))
+            path.write_bytes(original)
+        readme = root / "README.md"
+        readme.write_text(readme.read_text().replace(self.checker.COMPANION_GUIDE, "docs/product-scope.md"))
+        self.assertIn("README companion command navigation missing", self.checker.validate_companion_access(root))
+
     def test_clean_git_checkouts_with_ordinary_umasks_are_structurally_valid(self):
         source = self.fixture()
         self.git(source, "init", "--quiet", "--template=", "-b", "main")

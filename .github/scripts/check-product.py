@@ -42,7 +42,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "scope": "copy-required-update-paths-and-assert-complete-updater-fixture",
 }
 TEST_MODULES = (
-    "test_ci_toolchain.py", "test_connector_validation.py", "test_installer.py",
+    "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py",
     "test_source_first_governance.py", "test_source_first_procedures.py",
 )
@@ -50,7 +50,17 @@ PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md",
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
+    "docs/distribution/companion-checks.md",
 )
+COMPANION_GUIDE = "docs/distribution/companion-checks.md"
+COMPANION_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
+# Bind only the three executable guide blocks. Prose may evolve without
+# changing execution; intentional command changes need review and regressions.
+COMPANION_BLOCKS = {
+    "companion-governance": ("governance-status.sh", "395081eb2a83e51c55f1ff6d292c21599b10f1ed17e349707517ba01f4456886"),
+    "companion-worktree": ("worktree-preflight.sh", "9556150d60de556b4c32bcaa734a3a6e1c16995c2f5572fda2d1495903b067e7"),
+    "companion-connectors": ("check-connectors.sh", "e6d770142bd142b0dd324d84271e10e91b28c6aaf567742a3bcde8cf2ddd32b5"),
+}
 
 
 def digest(data):
@@ -267,9 +277,42 @@ def validate_policy(root):
     return errors
 
 
+def validate_companion_access(root):
+    """Bind published commands to the unchanged immutable helper export."""
+    errors = []
+    try:
+        guide = read_bytes(root, COMPANION_GUIDE).decode()
+        matches = re.findall(r"<!-- BEGIN (companion-[a-z]+) -->\n```bash\n(.*?)\n```\n<!-- END \1 -->", guide, re.S)
+        if (len(matches) != 3 or {name for name, _ in matches} != set(COMPANION_BLOCKS)
+                or guide.count("<!-- BEGIN companion-") != 3
+                or guide.count("<!-- END companion-") != 3):
+            raise ValueError("missing or duplicated command")
+        export = bound_json(root, EXPORT, EXPORT_SHA256)
+        for name, block in matches:
+            helper, command_digest = COMPANION_BLOCKS[name]
+            path = ".github/scripts/" + helper
+            rows = [row for row in export["frozen_files"] if row["path"] == path]
+            if len(rows) != 1 or rows[0]["mode"] != "100644":
+                raise ValueError("unbound helper")
+            data = read_bytes(root, path)
+            if (digest(data) != rows[0]["sha256"]
+                    or digest(block.encode()) != command_digest
+                    or "  revision=" + COMPANION_REVISION + "\n" not in block
+                    or "  expected=" + rows[0]["sha256"] + "\n" not in block
+                    or 'https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/$revision/' + path + '"' not in block):
+                errors.append("fixed companion command or helper binding changed: " + name)
+        if "docs/distribution/companion-checks.md" not in read_bytes(root, "README.md").decode():
+            errors.append("README companion command navigation missing")
+        read_bytes(root, "tests/conformance/test_companion_access.py")
+    except (OSError, ValueError, UnicodeError, KeyError, TypeError):
+        errors.append("mandatory companion commands are missing, unsafe or unbound")
+    return errors
+
+
 def validate(root):
     root = Path(root)
-    errors = validate_export(root) + validate_navigation(root) + validate_policy(root)
+    errors = (validate_export(root) + validate_navigation(root) + validate_policy(root)
+              + validate_companion_access(root))
     try:
         spec = importlib.util.spec_from_file_location("installer_product_check", root / ".github/scripts/check-installer.py")
         checker = importlib.util.module_from_spec(spec)
