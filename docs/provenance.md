@@ -60,3 +60,21 @@ Install URLs, the CI badge, future Issues and the consent-gated report
 destination use this new repository. Historical Issues/PRs use `-pre` links;
 the logo and original attribution use the fixed Copilot source above.
 The [MIT license](../LICENSE) is retained; an adopter's license is not replaced.
+
+The separate [adopter CI record](../.github/distribution/adopter-ci.v1.json)
+selectively adapts metadata/code event isolation, retarget evidence and control
+drift from Copilot commit `446071c76f14f5fbda37a0eef1b6eafa0a3ab897`. It binds
+eight exact source blobs and current addon/document/test digests. The retarget
+observer retains source original-run/current-attempt attribution and final
+readbacks, with explicit configuration, tighter resource bounds, base/head
+control inspection and trusted-base execution. Drift replaces line-presence
+and waiver semantics with a fixed control inventory and supported-form checks.
+The accepted installed Codex ritual remains unchanged, including its stronger
+reference grammar, complete ledger reads and final readbacks.
+
+This is an explicit three-file opt-in addon, not a payload expansion. All 47
+payload bytes, classes and modes, installer/update/rollback engines, original
+export/history records and product CI remain unchanged. The mandatory product
+checker validates the addon separately; the installer checker's closed fixture
+contract is unchanged. Evidence uses actual local tools with synthetic GitHub,
+not a live adopter rollout, new runtime evidence or release acceptance.

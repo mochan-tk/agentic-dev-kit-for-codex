@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 RECORD = ".github/distribution/export-provenance.v1.json"
@@ -48,6 +49,68 @@ class ProductTests(unittest.TestCase):
             altered = self.fixture()
             (altered / path).unlink()
             self.assertTrue(self.checker.validate(altered))
+
+    def test_adopter_addon_is_mandatory_product_scope_not_installer_fixture_scope(self):
+        self.assertEqual([], self.checker.validate_adopter_ci(ROOT))
+        for missing in (self.checker.ADOPTER_RECORD, *self.checker.ADOPTER_TARGETS):
+            with self.subTest(missing=missing):
+                root = self.fixture()
+                (root / missing).unlink()
+                self.assertTrue(self.checker.validate_adopter_ci(root))
+        root = self.fixture()
+        (root / self.checker.ADOPTER_RECORD).unlink()
+        result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts/check-installer.py")],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertTrue(self.checker.validate(root))
+
+    def test_adopter_provenance_reseal_or_guard_drift_cannot_waive_the_addon(self):
+        root = self.fixture()
+        path = root / self.checker.ADOPTER_RECORD
+        original = path.read_bytes()
+        for mutation in ("source", "source-blob", "scope", "mode", "digest", "omit", "extra"):
+            with self.subTest(mutation=mutation):
+                record = json.loads(original)
+                if mutation == "source": record["source_commit"] = "0"*40
+                elif mutation == "source-blob": record["source_files"][".github/workflows/ci.yml"] = "0"*40
+                elif mutation == "scope": record["scope"] = "waived"
+                elif mutation == "mode": record["target_files"][0]["mode"] = "100755"
+                elif mutation == "digest": record["target_files"][0]["sha256"] = "0"*64
+                elif mutation == "omit": record["target_files"].pop()
+                else: record["waivers"] = []
+                path.write_text(json.dumps(record))
+                self.assertTrue(self.checker.validate_adopter_ci(root))
+        path.write_bytes(original)
+        sensor = root / ".github/distribution/adopter-ci/check-adopter-ci.py"
+        sensor.write_bytes(sensor.read_bytes() + b"\n# changed\n")
+        record = json.loads(original)
+        for row in record["target_files"]:
+            if row["path"] == str(sensor.relative_to(root)):
+                row["sha256"] = hashlib.sha256(sensor.read_bytes()).hexdigest()
+        path.write_text(json.dumps(record))
+        self.assertTrue(self.checker.validate_adopter_ci(root))
+
+    def test_adopter_mandatory_guard_rejects_resealed_review_regressions(self):
+        # Permit an exact temporary fixture reseal so this tests the mandatory
+        # behavior edge, independently of the production provenance digest.
+        for bypass in ('run: " true "', "# disabled verification", "name: {}",
+                       "working-directory: {}", "with: {}", "shell: bash"):
+            with self.subTest(bypass=bypass):
+                root = self.fixture()
+                sensor_path = ".github/distribution/adopter-ci/check-adopter-ci.py"
+                sensor = root / sensor_path
+                sensor.write_text(sensor.read_text() + "\n_original_contract = code_contract\n"
+                    "def code_contract(data, checks):\n"
+                    "    if " + repr(bypass.encode()) + " in data:\n        return None\n"
+                    "    return _original_contract(data, checks)\n")
+                path = root / self.checker.ADOPTER_RECORD
+                record = json.loads(path.read_bytes())
+                for row in record["target_files"]:
+                    if row["path"] == sensor_path:
+                        row["sha256"] = hashlib.sha256(sensor.read_bytes()).hexdigest()
+                path.write_text(json.dumps(record))
+                with patch.object(self.checker, "ADOPTER_RECORD_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()):
+                    self.assertTrue(self.checker.validate_adopter_ci(root))
 
     def test_explicit_update_contract_and_required_guard_fail_closed(self):
         root = self.fixture()

@@ -75,6 +75,24 @@ automatic policy retirement, runtime learning or upstream publication.
 
 ## Evidence scope
 
+The [opt-in adopter CI addon](distribution/adopter-ci.md) supports one static
+application workflow in a deliberately narrow YAML subset. Unsupported
+workflows, incomplete API identity, pagination/resource bounds or changing
+observations refuse. It requires a separate reviewed installation and later
+owner check activation. Its three files are outside legacy update/rollback;
+guarded-file changes need an owner-reviewed transition and cannot be forced
+through setup. Initial installation cannot run missing trusted-base code.
+Metadata may require manual reevaluation after code CI completes; Task/comment
+edits alone are not continuously watched. Read-only permissions, pinned Actions,
+trusted-base execution and consistent digests do not make mutable workflow
+definitions an immutable security boundary or make finite API reads atomic.
+NO_RETARGET is not application-code success. A normal base-SHA advance without
+retarget is outside historical run freshness, but metadata retains an exact
+event/current-base SHA binding for trusted control checkout. An old metadata
+event can therefore require a new PR event after base advancement; rerunning
+that old event does not refresh its payload. Live adopter Actions deployment
+and native Windows addon setup are unmeasured.
+
 Product conformance uses real Bash, Git and jq with disposable local fixtures
 and synthetic external transport. It is not live Codex E2E, live governance,
 native Windows qualification, original scenario passes or release acceptance.

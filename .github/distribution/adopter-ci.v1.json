@@ -1,0 +1,69 @@
+{
+  "schema": "adopter-ci-provenance/v1",
+  "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+  "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+  "source_files": {
+    ".github/workflows/task-ritual.yml": "76b2db3c69385e7ab20eee9f8847268b7a732389",
+    ".github/workflows/ci.yml": "2147dd280f8f24f748487dfb83e2084c6167b899",
+    ".github/scripts/check-retarget-freshness.sh": "91347e1f82f386273d27b75a4ff23d59952b2fb5",
+    ".github/scripts/governance-drift.sh": "230e08e1ad7df5f66970866eef8dc262131b0555",
+    ".github/scripts/governance-controls.tsv": "ea008c9f2b497dc656051761bca25b734b80b6e3",
+    ".github/scripts/tests/test-ci-event-isolation.sh": "c896594532d98b57888901e038610fc75c5993da",
+    ".github/scripts/tests/test-retarget-freshness.sh": "1f2aa1430055f6cabfae07343a99025bfbbe49c5",
+    ".github/scripts/tests/test-governance-drift.sh": "08e2c281d8d2458cc4200bbf558f53bdd50e3ca5"
+  },
+  "scope": "separate-opt-in-addon-preserving-all-47-payload-files",
+  "evidence": "actual-local-tools-synthetic-GitHub-not-live-adopter-rollout",
+  "target_files": [
+    {
+      "path": ".github/distribution/adopter-ci/check-adopter-ci.py",
+      "mode": "100644",
+      "sha256": "978e020aa7f290a54319bb0173bcbf5d4919a2534c61e26c0a13c602861a72c4"
+    },
+    {
+      "path": ".github/distribution/adopter-ci/task-ritual.yml",
+      "mode": "100644",
+      "sha256": "af89c249a185a57c453c6de0d2822d2899c8389035d457ddeb85c5abce773cd0"
+    },
+    {
+      "path": ".github/scripts/setup-adopter-ci.py",
+      "mode": "100644",
+      "sha256": "408322c787957d7f848602b9cf3265070a7ba639b38a8b2923a0238e97ea0e99"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "sha256": "69acf15e252de1ecf2bf28b7a277f0c93356ee23057382865bae1b2f6d2593c6"
+    },
+    {
+      "path": "docs/distribution/adopter-ci.md",
+      "mode": "100644",
+      "sha256": "fd144e158915181a929be0659de7c6478cf326015f561c1f652a30c36f276db4"
+    },
+    {
+      "path": "docs/known-limitations.md",
+      "mode": "100644",
+      "sha256": "ace2682eeb3e6ba66cd8d1c68dfd1af7ffe1b8aec47a953fc0d202ccd5aaae8d"
+    },
+    {
+      "path": "docs/product-scope.md",
+      "mode": "100644",
+      "sha256": "5423c0d4b984158f77e7eccd06fb08ad51ea0ae079f698c09bbefe8730e3cecb"
+    },
+    {
+      "path": "docs/provenance.md",
+      "mode": "100644",
+      "sha256": "55f2fea5addfee4081462f79188c0b191d79c7e1396f9c7fc13355180b88d359"
+    },
+    {
+      "path": "tests/conformance/test_adopter_ci.py",
+      "mode": "100644",
+      "sha256": "51c97d5342bf8f39898c79cbe058997b4912f01bf197c20e742f3b9b1b53e19e"
+    },
+    {
+      "path": "tests/conformance/test_product.py",
+      "mode": "100644",
+      "sha256": "54de89e08203c2fde5a1431158dfc73e0916437b734bb7343a0613a9f82d0bc9"
+    }
+  ]
+}
