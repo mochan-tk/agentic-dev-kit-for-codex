@@ -325,7 +325,7 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "a938b1467e7878d8f5c3743697cdb6b69d68f9baa9d4eb2463dab59b14dfdcba",
+      "target_sha256": "c0a9fd05b1219ea0f8c008fc337c9123484a00dbc2d4ffc60778a0ce7ac0e3d7",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
@@ -703,7 +703,7 @@
       {
         "path": ".github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "a938b1467e7878d8f5c3743697cdb6b69d68f9baa9d4eb2463dab59b14dfdcba"
+        "sha256": "c0a9fd05b1219ea0f8c008fc337c9123484a00dbc2d4ffc60778a0ce7ac0e3d7"
       },
       {
         "path": ".agents/skills/verification/SKILL.md",
@@ -896,7 +896,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "d279b7c99815b876a99eecacd6534ddbc9a11be84ba76e1d1cafe1a7f9ec6a7e"
+        "sha256": "7e05fe7cc1b6ba282b43d7aa8ff7fec60ba02de8e2ecaf93aaeaa8d5d9287574"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -921,7 +921,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "a938b1467e7878d8f5c3743697cdb6b69d68f9baa9d4eb2463dab59b14dfdcba"
+        "sha256": "c0a9fd05b1219ea0f8c008fc337c9123484a00dbc2d4ffc60778a0ce7ac0e3d7"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -959,8 +959,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "d279b7c99815b876a99eecacd6534ddbc9a11be84ba76e1d1cafe1a7f9ec6a7e",
-        "target_blob": "8fbe15f19cefe7aebe37d05165fc9b8a90b35e97"
+        "target_sha256": "7e05fe7cc1b6ba282b43d7aa8ff7fec60ba02de8e2ecaf93aaeaa8d5d9287574",
+        "target_blob": "af58dbe28f2725a8e1201c4ef950f930ec631ee4"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1019,8 +1019,8 @@
           "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
         },
         "target_mode": "100644",
-        "target_sha256": "a938b1467e7878d8f5c3743697cdb6b69d68f9baa9d4eb2463dab59b14dfdcba",
-        "target_blob": "5d6c3431f064c3dd815f6e704d1a548c116b5922"
+        "target_sha256": "c0a9fd05b1219ea0f8c008fc337c9123484a00dbc2d4ffc60778a0ce7ac0e3d7",
+        "target_blob": "8fc8cab53c1ce2734b7474f71c287fbb15b10b51"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",

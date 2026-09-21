@@ -172,7 +172,7 @@ HELP
     printf '%s' "$value"
   }
   record_branch() { valid_record_branch "$1"; }
-  local raw json schema session_id draft first_line draft_branch name expected now
+  local raw json session_id draft first_line draft_branch name expected now
   if [[ "$operation" == render ]]; then
     [[ -n "$input" ]] || record_fail 2 input
     raw=$(record_input "$input") || record_fail 2 input-read-or-limit
@@ -182,7 +182,7 @@ HELP
       [ inputs | select(length==2 and (.[0]|length)==1) | .[0][0] ] |
       length == (unique|length)' | grep -Fx true >/dev/null || record_fail 2 duplicate-input
     json=$(printf '%s' "$raw" | jq -rj . | jq -cs 'if length==1 then .[0] else error("one object required") end') || record_fail 2 json
-    schema='def text: type=="string" and test("\\S");
+    printf '%s' "$json" | jq -e --arg kind "$kind" 'def text: type=="string" and test("\\S");
       def identity: text and length<=256 and
         (test("[\\x00-\\x20\\x7f,()\\\\]|Starting in session|Resuming in session|Dispatching worker|Releasing worker|## Plan|Plan:")|not);
       def name: text and length<=128 and (test("[\\x00-\\x1f\\x7f,()\\\\]|^\\s|\\s$|Starting in session|Resuming in session|Dispatching worker|Releasing worker|## Plan|Plan:")|not)
@@ -190,8 +190,7 @@ HELP
       type=="object" and (.task|type=="number" and .>0 and floor==. and .<=9007199254740991) and
       if $kind=="plan" then keys==["content","task"] and (.content|text and (test("[\\x00-\\x08\\x0b-\\x1f\\x7f]")|not))
       elif $kind=="dispatch" then keys==["branch","session","session_id","task"] and (.session|name) and (.branch|identity) and (.session_id|identity)
-      else keys==["branch","session","task"] and (.session|name) and (.branch|identity) end'
-    printf '%s' "$json" | jq -e --arg kind "$kind" "$schema" >/dev/null 2>&1 || record_fail 2 schema
+      else keys==["branch","session","task"] and (.session|name) and (.branch|identity) end' >/dev/null 2>&1 || record_fail 2 schema
     if [[ "$kind" != plan ]]; then
       branch=$(printf '%s' "$json" | jq -r .branch); record_branch "$branch" || record_fail 2 branch
     fi
@@ -346,7 +345,9 @@ HELP
     pattern='^Dispatching worker:[^()]+ \(session ([^()]*)\), branch ([^ ,()]+)$'
     [[ "$first_line" =~ $pattern && "$first_line" != *\\* ]] || record_fail 1 historical-dispatch-syntax
     session_id="${BASH_REMATCH[1]}"; draft_branch="${BASH_REMATCH[2]}"
-    valid_session_reference "$session_id" && record_branch "$draft_branch" || record_fail 1 historical-dispatch-identity
+    if ! valid_session_reference "$session_id" || ! record_branch "$draft_branch"; then
+      record_fail 1 historical-dispatch-identity
+    fi
     if [[ "$superseded" == 0 && -n "$branch" ]]; then
       [[ "$branch" == "$draft_branch" || "$branch" == *"$draft_branch" ]] || record_fail 1 current-dispatch-branch
     fi
