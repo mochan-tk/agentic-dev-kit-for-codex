@@ -36,10 +36,10 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "export_source_blob": CONNECTOR_FIXTURE_EXPORT["source_blob"],
     "export_sha256": CONNECTOR_FIXTURE_EXPORT["sha256"],
     "export_mode": "100644",
-    "target_blob": "595acf87f02fc79d0785af924859e2154629c641",
-    "target_sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884",
+    "target_blob": "ec57d143f873ffc57c30a452bd461524c11a70a2",
+    "target_sha256": "a00b4bd8322acd863d6cb59407c4c20ede6fc1a073a49604220d40dd3bc5d6be",
     "target_mode": "100644",
-    "scope": "copy-required-update-paths-and-assert-complete-updater-fixture",
+    "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture",
 }
 TEST_MODULES = (
     "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
