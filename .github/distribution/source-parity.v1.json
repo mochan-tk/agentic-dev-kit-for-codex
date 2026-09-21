@@ -376,7 +376,7 @@
       "destination": ".github/scripts/setup-ruleset.sh",
       "source_path": ".github/scripts/setup-ruleset.sh",
       "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
-      "target_sha256": "be760aa77546534f6d024ea0474d148e6083f0386e01e7e3d1824860c0135c2a",
+      "target_sha256": "e5af1c96b2f5c9688debf02358c775e3dd6da51e531b63cab1cc3cad0a252bef",
       "adaptations": [
         "Make every help example carry reviewed adopter checks; preview without a pipeline that could mask helper failure. Mandatory check guards are unchanged.",
         "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer.",
@@ -779,7 +779,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
         "mode": "100644",
-        "sha256": "be760aa77546534f6d024ea0474d148e6083f0386e01e7e3d1824860c0135c2a"
+        "sha256": "e5af1c96b2f5c9688debf02358c775e3dd6da51e531b63cab1cc3cad0a252bef"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
@@ -896,7 +896,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "fc90ef262618706ff392abc7e837f0d247614962c7dcb7a77adaf38ec4e057f6"
+        "sha256": "13249c215ccf75f590a20272c45e37e19b7439ab62a29826bc80da5022efdecd"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -926,7 +926,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
         "mode": "100644",
-        "sha256": "be760aa77546534f6d024ea0474d148e6083f0386e01e7e3d1824860c0135c2a"
+        "sha256": "e5af1c96b2f5c9688debf02358c775e3dd6da51e531b63cab1cc3cad0a252bef"
       },
       {
         "path": ".github/scripts/governance-status.sh",
@@ -959,8 +959,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "fc90ef262618706ff392abc7e837f0d247614962c7dcb7a77adaf38ec4e057f6",
-        "target_blob": "95b9adaa35823794c4d9c7d810f90c3c65ad9606"
+        "target_sha256": "13249c215ccf75f590a20272c45e37e19b7439ab62a29826bc80da5022efdecd",
+        "target_blob": "ef6a9bbf2b2d1a3e492e9387501a1fb8734b0a47"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1031,8 +1031,8 @@
           "sha256": "8afc08904d9c9f1b564709d25e2130500546d441ebb586c6a3e28af95d054c02"
         },
         "target_mode": "100644",
-        "target_sha256": "be760aa77546534f6d024ea0474d148e6083f0386e01e7e3d1824860c0135c2a",
-        "target_blob": "84fd40b8807b4229504ea417df9ccb50e6b9d8bf"
+        "target_sha256": "e5af1c96b2f5c9688debf02358c775e3dd6da51e531b63cab1cc3cad0a252bef",
+        "target_blob": "9f409f5de54c1969b46be79055c0aba4a74d2c00"
       },
       {
         "path": ".github/scripts/governance-status.sh",

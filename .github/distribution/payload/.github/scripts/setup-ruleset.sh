@@ -27,13 +27,15 @@ Usage: bash .github/scripts/setup-ruleset.sh [options]
 
 Create a branch ruleset targeting the repository's default branch that
 requires:
-  - a pull request with at least 1 approving review
+  - a pull request (approval policy follows the explicit profile below)
   - the explicitly supplied, actually existing adopter status checks
 
-Repository admins may bypass, for pull requests only: direct pushes stay
-blocked for everyone, but an admin can merge a PR through the explicit,
-audited "bypass" button. Without this, a solo adopter could never merge
-their own PRs (you cannot approve your own), including the onboarding PR.
+Profiles:
+  solo: at least 1 approving review, with RepositoryRole admin PR-only bypass.
+        This explicit bypass permits a solo owner to merge their own PR.
+  team: at least 1 approving review plus ownership/review controls; no bypass.
+  single-maintainer: zero approving reviews, still requires PR/checks; no bypass.
+No profile grants direct-push permission or silently changes another profile.
 
 Writes require an explicitly reviewed --profile. An existing same-name
 ruleset also requires --reconcile; customized or unknown content refuses.
@@ -53,8 +55,9 @@ Options:
                            Never inferred. Existing rulesets need --reconcile.
   --reconcile              Require --profile and reconcile one canonical same-name ruleset.
   --dry-run                Print candidate JSON; never write. No profile or
-                           new solo: no API calls. Team: read repo/checks/owners.
-                           --reconcile: read canonical list/detail for either
+                           new solo/single-maintainer: no API calls.
+                           Team: read repo/checks/owners.
+                           --reconcile: read canonical list/detail for every
                            profile (team also reads issuer/ownership evidence).
                            New previews do not prove same-name absence.
   -h, --help               Show this help and exit.
