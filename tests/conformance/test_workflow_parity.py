@@ -114,6 +114,21 @@ for page in pages:
         return self.run_helper("preflight", kind, "--repo", "fixture/adopter", "--task", "2", "--body-file", str(self.body),
                                "--branch", self.branch, *(["--pr", "1"] if pr else []))
 
+    def guard_external_argument_size(self):
+        # Deterministic cross-platform seam for Linux's per-string boundary.
+        # Real tools still consume stdin; this is not a Linux kernel measurement.
+        for name in ("jq", "grep", "awk"):
+            executable = shutil.which(name)
+            self.assertIsNotNone(executable)
+            wrapper = self.bin / name
+            wrapper.write_text("#!" + sys.executable + "\n" +
+                "import os,sys\n"
+                "if any(len(os.fsencode(arg)) >= 131072 for arg in sys.argv[1:]):\n"
+                " print('fixture: oversized external argument refused',file=sys.stderr);sys.exit(126)\n"
+                "os.execv(" + repr(executable) + ", [" + repr(executable) + ", *sys.argv[1:]])\n")
+            wrapper.chmod(0o755)
+        self.env["RECORD_JQ"] = str(self.bin / "jq")
+
     def test_render_all_kinds_and_read_only_preflight_use_actual_bytes(self):
         for kind in ("claim", "resume", "plan", "dispatch"):
             with self.subTest(kind=kind):
@@ -151,6 +166,72 @@ for page in pages:
             body = self.render("dispatch", session="Worker", session_id=reference, branch=self.branch)
             self.assertEqual(0, body.returncode, body.stderr)
             self.assertEqual(0, self.preflight("dispatch", body.stdout).returncode)
+
+    def test_nested_duplicate_fields_refuse_before_json_collapse(self):
+        for kind in ("claim", "resume", "plan", "dispatch"):
+            valid = dict(task=2, content="Actual bounded plan.") if kind == "plan" else dict(
+                task=2, session="Worker", branch=self.branch)
+            if kind == "dispatch": valid["session_id"] = "/root/supervisor/worker"
+            self.assertEqual(0, self.run_helper("render", kind, "--input", "-",
+                                              data=json.dumps(valid).encode()).returncode)
+            for field in valid:
+                for nested in ('{"shadow":1}', '[1]', '{"shadow":[{"deep":1}]}'):
+                    with self.subTest(kind=kind, field=field, nested=nested):
+                        # Even escaped root key spellings denote the same key.
+                        key = json.dumps(field[:-1])[0:-1] + '\\u%04x"' % ord(field[-1])
+                        raw = ('{' + key + ':' + nested + ',' + json.dumps(valid)[1:]).encode()
+                        result = self.run_helper("render", kind, "--input", "-", data=raw)
+                        self.assertEqual(2, result.returncode, result.stderr)
+                        self.assertEqual(b"", result.stdout)
+                        self.assertEqual([], self.log)
+
+    def test_long_utf8_plan_draft_streams_below_unchanged_input_limit(self):
+        self.guard_external_argument_size()
+        for content in ("あ"*10000, "日本語🙂\n"*11000, "x"*262100):
+            raw = json.dumps(dict(task=2, content=content), ensure_ascii=False).encode()
+            self.assertLessEqual(len(raw), 262144)
+            rendered = self.run_helper("render", "plan", "--input", "-", data=raw)
+            self.assertEqual(0, rendered.returncode, rendered.stderr)
+            self.assertEqual([], self.log)
+            self.assertEqual(("## Plan\n\nTask: #2\n\n"+content+"\n").encode(), rendered.stdout)
+            result = self.preflight("plan", rendered.stdout)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertNotIn(rendered.stdout, result.stdout)
+
+    def test_long_linked_plan_streams_in_preflight_and_inherited_numeric_mode(self):
+        self.guard_external_argument_size()
+        for content in ("あ"*10000, "日本語🙂\n"*11000):
+            self.rows[1]["body"] = "## Plan\n\nTask: #2\n\n" + content + "\n\n"
+            self.rows = self.rows[:2] + [self.dispatch()]
+            self.rows += [dict(self.comment("Status " + "x"*1000, 4), id=100+i) for i in range(120)]
+            self.ledger(pr=True)
+            body = self.render("resume", session="Supervisor", branch=self.branch).stdout
+            result = self.preflight("resume", body, pr=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            result = self.run_helper("1")
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.api[self.prefix+"/issues/comments/3"]["body"] = self.rows[1]["body"][:-1]
+            for mode in ("preflight", "numeric"):
+                result = self.preflight("resume", body, pr=True) if mode == "preflight" else self.run_helper("1")
+                self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+                self.assertNotIn(b"PASS:", result.stdout)
+
+    def test_long_linked_plan_final_readbacks_refuse_drift_in_both_modes(self):
+        self.guard_external_argument_size()
+        self.rows[1]["body"] += "日本語🙂\n"*11000 + "\n\n"
+        self.rows.append(self.dispatch())
+        body = self.render("resume", session="Supervisor", branch=self.branch).stdout
+        for suffix, change in (("/issues/2/comments", lambda x:x["pages"][0][1].update(body=x["pages"][0][1]["body"]+"\n")),
+                               ("/issues/comments/3", lambda x:x.update(body=x["body"]+"\n"))):
+            for mode in ("preflight", "numeric"):
+                self.ledger(pr=True)
+                key = self.prefix + suffix
+                old = copy.deepcopy(self.api[key]); changed = copy.deepcopy(old); change(changed)
+                self.api[key] = {"responses": [old, changed]}
+                result = self.preflight("resume", body, pr=True) if mode == "preflight" else self.run_helper("1")
+                self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+                self.assertIn(b"drift" if mode == "numeric" else b"readback", result.stdout + result.stderr)
+                self.assertNotIn(b"PASS:", result.stdout)
 
     def test_preflight_requires_claim_and_plan_without_fabricating_them(self):
         body = self.render("dispatch", session="Worker", session_id="deadbeef", branch=self.branch).stdout

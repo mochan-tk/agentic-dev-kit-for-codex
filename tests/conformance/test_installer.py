@@ -1849,8 +1849,8 @@ sys.exit(result.returncode)
         source, checker = self.complete_checker_source()
         for name, before, after in (
             (RITUAL_PATH, 'commit_count <= 250', 'commit_count <= 999'),
-            (RITUAL_PATH, "grep -Fx -- \"${plan_snapshot%$'\\t'*}\" >/dev/null",
-             "grep -Fxq -- \"${plan_snapshot%$'\\t'*}\""),
+            (RITUAL_PATH, 'END { exit !found }', 'END { exit 0 }'),
+            (RITUAL_PATH, '} | exact_line_membership; then', '} | true; then'),
             (RITUAL_PATH, 'valid_timestamp "$timestamp" || observation_fail commit-date', ': # omitted date check'),
             (RITUAL_PATH, '"$unique_commits" == "$commit_count"', 'true'),
             (RITUAL_PATH, '"$final_comments" == "$comment_snapshot"', 'true'),

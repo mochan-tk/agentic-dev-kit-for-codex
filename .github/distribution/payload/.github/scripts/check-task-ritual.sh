@@ -105,6 +105,12 @@ valid_record_branch() {
   [[ "$1" != -* ]] && git check-ref-format --branch "$1" >/dev/null 2>&1
 }
 
+# First stdin line is the expected complete encoded tuple; remaining lines
+# are observed tuples. Consume every line, with no large pattern in argv.
+exact_line_membership() {
+  LC_ALL=C awk 'NR == 1 { wanted = $0; next } $0 == wanted { found = 1 } END { exit !found }'
+}
+
 ritual_dispatch_rows() {
   LC_ALL=C sort -s -t $'\t' -k2,2 | awk -F '\t' '
     $1 == "DISPATCH" { rows[++n]=$0; times[n]=$2 }
@@ -176,11 +182,13 @@ HELP
   if [[ "$operation" == render ]]; then
     [[ -n "$input" ]] || record_fail 2 input
     raw=$(record_input "$input") || record_fail 2 input-read-or-limit
-    # --stream preserves duplicate top-level keys; jq's ordinary object parser
-    # would otherwise silently select the last one.
+    # The schema permits scalar fields only. Reject nested paths before the
+    # ordinary parser can erase a nonempty container hidden by a duplicate key.
+    # Empty containers still emit root value events and enter duplicate counting.
     printf '%s' "$raw" | jq -rj . | jq --stream -cn '
-      [ inputs | select(length==2 and (.[0]|length)==1) | .[0][0] ] |
-      length == (unique|length)' | grep -Fx true >/dev/null || record_fail 2 duplicate-input
+      [inputs] | all(.[]; (.[0]|length)<=1) and
+      ([.[] | select(length==2 and (.[0]|length)==1) | .[0][0]] |
+       length == (unique|length))' | grep -Fx true >/dev/null || record_fail 2 duplicate-input
     json=$(printf '%s' "$raw" | jq -rj . | jq -cs 'if length==1 then .[0] else error("one object required") end') || record_fail 2 json
     printf '%s' "$json" | jq -e --arg kind "$kind" 'def text: type=="string" and test("\\S");
       def identity: text and length<=256 and
@@ -287,7 +295,7 @@ HELP
   [[ -z "$dispatch_time" || ! "$plan_time" > "$dispatch_time" ]] || record_fail 1 plan-dispatch-order
   # The provisional draft only checks a proposed append; it is never a posted
   # record and cannot repair an edited/late historical event.
-  markers="$markers"$'\n'"$(jq -n --argjson body "$raw" --arg now "$now" '[{body:$body,created_at:$now,updated_at:$now}]' | jq -r "$marker_query")"
+  markers="$markers"$'\n'"$(printf '%s' "$raw" | jq -c --arg now "$now" '[{body:.,created_at:$now,updated_at:$now}]' | jq -r "$marker_query")"
   prior=""
   while IFS= read -r time; do
     [[ -n "$time" ]] || continue
@@ -320,10 +328,11 @@ HELP
     [[ "$link_repo" == "$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]')" && "$link_task" == "$task" ]] || record_fail 1 plan-link
     comment_id="${plan_link##*#issuecomment-}"
     resolved=$(record_get "repos/$repo/issues/comments/$comment_id") || exit 1
-    printf '%s' "$comments" | jq -e --argjson row "$resolved" --arg id "$comment_id" '
-      ($row.id|tostring)==$id and ($row.body|test("(^|\n)## Plan\\b") or startswith("Plan:")) and
-      any(.[]; .id==$row.id and .body==$row.body and .issue_url==$row.issue_url and
-        .created_at==$row.created_at and .updated_at==$row.updated_at)' >/dev/null || record_fail 1 exact-plan-membership
+    printf '%s\n%s\n' "$resolved" "$comments" | jq -se --arg id "$comment_id" '
+      length==2 and (.[0] as $row | .[1] |
+        ($row.id|tostring)==$id and ($row.body|test("(^|\n)## Plan\\b") or startswith("Plan:")) and
+        any(.[]; .id==$row.id and .body==$row.body and .issue_url==$row.issue_url and
+          .created_at==$row.created_at and .updated_at==$row.updated_at))' >/dev/null || record_fail 1 exact-plan-membership
     commits=$(record_get "repos/$repo/pulls/$pr/commits?per_page=100" --paginate --slurp) || exit 1
     printf '%s' "$commits" | jq -e --argjson count "$(printf '%s' "$pull" | jq .commits)" --arg head "$(printf '%s' "$pull" | jq -r .head.sha)" --arg now "$now" '
       def stamp:type=="string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") and .<=$now
@@ -886,7 +895,10 @@ else
     ok=false
   elif plan_snapshot=$(observe_plan); then
     IFS=$'\t' read -r _kind plan_id _created _updated _encoded _url comment_kind <<< "$plan_snapshot"
-    if [[ "$plan_id" != "$comment_id" ]] || ! printf '%s\n' "$comment_rows" | grep -Fx -- "${plan_snapshot%$'\t'*}" >/dev/null; then
+    if [[ "$plan_id" != "$comment_id" ]] || ! {
+      printf '%s\n' "${plan_snapshot%$'\t'*}"
+      printf '%s\n' "$comment_rows"
+    } | exact_line_membership; then
       echo "FAIL: PR #${PR}'s plan link does not match the observed Task comment."
       ok=false
     elif [[ "$comment_kind" != "plan" ]]; then

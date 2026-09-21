@@ -621,7 +621,10 @@ def validate_ritual_verification(payload_data, parity):
                 '.commit.committer.date == null', 'if ! has_marker CLAIM;',
                 'if has_marker DISPATCH;', 'elif has_marker EXEMPT;',
                 '"$actual_comments" == "$comment_count"', '"$unique_comments" == "$comment_count"',
-                "grep -Fx -- \"${plan_snapshot%$'\\t'*}\" >/dev/null",
+                "exact_line_membership()",
+                "awk 'NR == 1 { wanted = $0; next } $0 == wanted { found = 1 } END { exit !found }'",
+                "printf '%s\\n' \"${plan_snapshot%$'\\t'*}\"",
+                '} | exact_line_membership; then',
                 '"$final_pr" == "$pr_snapshot"', '"$final_task" == "$task_snapshot"',
                 '"$final_comments" == "$comment_snapshot"', '"$final_plan" == "$plan_snapshot"')
     if any(token not in helper for token in required):
