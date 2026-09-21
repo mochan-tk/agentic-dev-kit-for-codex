@@ -1,0 +1,40 @@
+# Inert review template. No activation or label creation is performed by the kit.
+name: Adopter feedback triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+concurrency:
+  group: feedback-triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  classify:
+    if: ${{ vars.FEEDBACK_TRIAGE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Validate explicit trusted kit revision
+        env:
+          KIT_REVISION: ${{ vars.ONGOING_IMPROVEMENT_KIT_REVISION }}
+        run: |
+          if [[ ! "$KIT_REVISION" =~ ^[0-9a-f]{40}$ ]]; then exit 2; fi
+      - name: Check out reviewed kit controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mochan-tk/agentic-dev-kit-for-codex
+          ref: ${{ vars.ONGOING_IMPROVEMENT_KIT_REVISION }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Classify exact Issue from current API observations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          bash .github/scripts/feedback-triage.sh --repo "$TARGET_REPO" --issue "$ISSUE_NUMBER" --apply-label

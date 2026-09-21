@@ -78,3 +78,18 @@ export/history records and product CI remain unchanged. The mandatory product
 checker validates the addon separately; the installer checker's closed fixture
 contract is unchanged. Evidence uses actual local tools with synthetic GitHub,
 not a live adopter rollout, new runtime evidence or release acceptance.
+
+The separate [ongoing improvement record](../.github/distribution/ongoing-improvement.v1.json)
+selectively adapts reports, optional official checkpoints and receiving-side
+feedback routing from Copilot commit
+`446071c76f14f5fbda37a0eef1b6eafa0a3ab897`. It binds eight source paths/blobs and
+the current companion/template/baseline/document/test inventory. The adaptation
+uses explicit target inputs, complete bounded pages, reference deduplication,
+fixed output fields, final readbacks and separate actuator flags. Codex content
+checking uses a reviewed exact HTML baseline, not source-specific version
+heuristics, model claims or historical incidents. Existing sender bytes stay
+unchanged. All 47 payload bytes/classes/modes, delivery/update/rollback engines,
+adopter CI execution, product CI and original export/history seals are preserved.
+Manual source-checkout use and later owner-reviewed template activation are
+distinct. Local synthetic evidence does not establish full source parity,
+live operation, runtime measurement or release acceptance.

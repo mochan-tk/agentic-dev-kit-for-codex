@@ -1,0 +1,79 @@
+{
+  "schema": "ongoing-improvement-provenance/v1",
+  "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+  "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+  "source_files": {
+    ".github/scripts/retro-hygiene.sh": "49df279b865f6a6f7484621158fc7c48a2b1b3cd",
+    ".github/workflows/retro-hygiene.yml": "8e2db7437c1950e435c04a9210a6461651197a01",
+    ".github/scripts/platform-capability-baseline.tsv": "28699a56040dc9776fe3afb22a65a2cb38f3b10d",
+    ".github/scripts/tests/test-retro-hygiene.sh": "7d1a773fbd9eb689b9d7d7bf20e3900896348b33",
+    ".github/workflows/adopter-feedback.yml": "66767cfbff5773e553a5753334458cbd2302e6be",
+    ".github/scripts/tests/test-feedback-receiver.sh": "9b6970a397461fa1249719fab4087e8f7249ca23",
+    ".github/ISSUE_TEMPLATE/feedback.yml": "7b2ff47f4ec7e99cd42c48dd083e2721fde35d79",
+    ".github/docs/adopter-feedback.md": "deb4d4bf9ba4f11afd264d31f1a81449a8b80aae"
+  },
+  "scope": "explicit-source-checkout-companions-and-inert-templates-preserving-all-47-payload-files",
+  "evidence": "actual-local-tools-synthetic-GitHub-HTTP-not-live-activation",
+  "target_files": [
+    {
+      "path": ".github/distribution/ongoing-improvement/adopter-feedback.yml",
+      "mode": "100644",
+      "sha256": "fa0417d37cb663f5162d8e4c62d7f59e73c95d30ae23443dadbcaacc0bfab664"
+    },
+    {
+      "path": ".github/distribution/ongoing-improvement/platform-baseline.v1.json",
+      "mode": "100644",
+      "sha256": "273a95c0929a0185af16e3438e034eb1efbf922cae1b81673175877c955b262e"
+    },
+    {
+      "path": ".github/distribution/ongoing-improvement/retro-hygiene.yml",
+      "mode": "100644",
+      "sha256": "9cbb0bf101e05d2a2a4e0ac99356b71542362ee6d78be3704c52696f923e4b2d"
+    },
+    {
+      "path": ".github/scripts/feedback-triage.sh",
+      "mode": "100644",
+      "sha256": "2fb0f92c27f50e8210048686880f23600a39b7dae0d5e8ba2f6d50c18a8e1a84"
+    },
+    {
+      "path": ".github/scripts/ongoing-improvement.py",
+      "mode": "100644",
+      "sha256": "9edddc865e53e88747908d1a61b4263a36276670a0630a9805d6bbcbe2f22d52"
+    },
+    {
+      "path": ".github/scripts/retro-hygiene.sh",
+      "mode": "100644",
+      "sha256": "6f2be41dfc29641ab1b7b40c6419683eee5389935a7f46bfeddfd0632ae57e67"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "sha256": "86a19965ab2fde1cf415f12a572707b3c3d99989dd07aa1f4f5ae98b0d4daac6"
+    },
+    {
+      "path": "docs/distribution/ongoing-improvement.md",
+      "mode": "100644",
+      "sha256": "a17cb420579afea09c5cb789a7c83dbe84eb9308c6fc50ac7f6090c86c512333"
+    },
+    {
+      "path": "docs/known-limitations.md",
+      "mode": "100644",
+      "sha256": "efbb8c71e167643b8f95cec55cd0f30cf85c985906595d373bc5c5b8ca069582"
+    },
+    {
+      "path": "docs/product-scope.md",
+      "mode": "100644",
+      "sha256": "8c1797729bca16178d9df862fc5cdd0095dfae8e6fbb72966e090953ff471310"
+    },
+    {
+      "path": "docs/provenance.md",
+      "mode": "100644",
+      "sha256": "f405cf5e66bae0635fd571318451bb558c6810c88d843982057a274ba6469cdb"
+    },
+    {
+      "path": "tests/conformance/test_ongoing_improvement.py",
+      "mode": "100644",
+      "sha256": "f42586c3656c19890eb4c56775479bcc796b27bfa983c76ebf9c8864380e92f5"
+    }
+  ]
+}
