@@ -87,8 +87,11 @@ edits alone are not continuously watched. Read-only permissions, pinned Actions,
 trusted-base execution and consistent digests do not make mutable workflow
 definitions an immutable security boundary or make finite API reads atomic.
 NO_RETARGET is not application-code success. A normal base-SHA advance without
-retarget is outside this freshness policy. Live adopter Actions deployment and
-native Windows addon setup are unmeasured.
+retarget is outside historical run freshness, but metadata retains an exact
+event/current-base SHA binding for trusted control checkout. An old metadata
+event can therefore require a new PR event after base advancement; rerunning
+that old event does not refresh its payload. Live adopter Actions deployment
+and native Windows addon setup are unmeasured.
 
 Product conformance uses real Bash, Git and jq with disposable local fixtures
 and synthetic external transport. It is not live Codex E2E, live governance,

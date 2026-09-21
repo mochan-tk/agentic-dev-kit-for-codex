@@ -18,7 +18,7 @@
     {
       "path": ".github/distribution/adopter-ci/check-adopter-ci.py",
       "mode": "100644",
-      "sha256": "afe8537d4740919d42a16e746e459fec02590fe17d4c49e4759548719a3e2579"
+      "sha256": "978e020aa7f290a54319bb0173bcbf5d4919a2534c61e26c0a13c602861a72c4"
     },
     {
       "path": ".github/distribution/adopter-ci/task-ritual.yml",
@@ -38,12 +38,12 @@
     {
       "path": "docs/distribution/adopter-ci.md",
       "mode": "100644",
-      "sha256": "ce5f01a25bd4802f12147524523b6dd2be307eee5f4e042f52739d03dbb869bb"
+      "sha256": "fd144e158915181a929be0659de7c6478cf326015f561c1f652a30c36f276db4"
     },
     {
       "path": "docs/known-limitations.md",
       "mode": "100644",
-      "sha256": "98d4a8ab01208f2e03e5e13479db7107589162bc6cf5b72e2e5c3c39fce82f02"
+      "sha256": "ace2682eeb3e6ba66cd8d1c68dfd1af7ffe1b8aec47a953fc0d202ccd5aaae8d"
     },
     {
       "path": "docs/product-scope.md",
@@ -58,12 +58,12 @@
     {
       "path": "tests/conformance/test_adopter_ci.py",
       "mode": "100644",
-      "sha256": "3c80f3de319f1f38b33c8ebc22df97e8f7e41afa1618f0b73152c7647a741566"
+      "sha256": "51c97d5342bf8f39898c79cbe058997b4912f01bf197c20e742f3b9b1b53e19e"
     },
     {
       "path": "tests/conformance/test_product.py",
       "mode": "100644",
-      "sha256": "7c2b64e21087364c6f39cb9bd2b89164866c575ede325dd3a2b818e58d58ddce"
+      "sha256": "54de89e08203c2fde5a1431158dfc73e0916437b734bb7343a0613a9f82d0bc9"
     }
   ]
 }

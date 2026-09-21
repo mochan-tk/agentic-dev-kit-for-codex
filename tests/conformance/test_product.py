@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 RECORD = ".github/distribution/export-provenance.v1.json"
@@ -88,6 +89,28 @@ class ProductTests(unittest.TestCase):
                 row["sha256"] = hashlib.sha256(sensor.read_bytes()).hexdigest()
         path.write_text(json.dumps(record))
         self.assertTrue(self.checker.validate_adopter_ci(root))
+
+    def test_adopter_mandatory_guard_rejects_resealed_review_regressions(self):
+        # Permit an exact temporary fixture reseal so this tests the mandatory
+        # behavior edge, independently of the production provenance digest.
+        for bypass in ('run: " true "', "# disabled verification", "name: {}",
+                       "working-directory: {}", "with: {}", "shell: bash"):
+            with self.subTest(bypass=bypass):
+                root = self.fixture()
+                sensor_path = ".github/distribution/adopter-ci/check-adopter-ci.py"
+                sensor = root / sensor_path
+                sensor.write_text(sensor.read_text() + "\n_original_contract = code_contract\n"
+                    "def code_contract(data, checks):\n"
+                    "    if " + repr(bypass.encode()) + " in data:\n        return None\n"
+                    "    return _original_contract(data, checks)\n")
+                path = root / self.checker.ADOPTER_RECORD
+                record = json.loads(path.read_bytes())
+                for row in record["target_files"]:
+                    if row["path"] == sensor_path:
+                        row["sha256"] = hashlib.sha256(sensor.read_bytes()).hexdigest()
+                path.write_text(json.dumps(record))
+                with patch.object(self.checker, "ADOPTER_RECORD_SHA256", hashlib.sha256(path.read_bytes()).hexdigest()):
+                    self.assertTrue(self.checker.validate_adopter_ci(root))
 
     def test_explicit_update_contract_and_required_guard_fail_closed(self):
         root = self.fixture()

@@ -562,7 +562,7 @@ def scalar(value):
     if value.startswith("'"):
         need(value.endswith("'") and "'" not in value[1:-1], "unsupported workflow quote")
         return value[1:-1]
-    need(value and value[0] not in "{}[]&*!>|%@" and ": " not in value
+    need(value and value[0] not in "{}[]&*!>|%@#" and ": " not in value
          and not value.endswith(":") and " #" not in value,
          "unsupported workflow scalar or inline comment")
     return value
@@ -678,6 +678,12 @@ def code_contract(data, checks):
             need(set(step) <= {"name", "uses", "with", "run", "env", "shell", "working-directory"}
                  and ("run" in step) != ("uses" in step),
                  "unsupported, conditional or softened application step")
+            need(("run" not in step or "with" not in step)
+                 and ("uses" not in step or not {"shell", "working-directory"} & set(step)),
+                 "unsupported run/action step association")
+            for key in ("name", "working-directory"):
+                if key in step:
+                    text(step[key], "application step " + key)
             for key in ("env", "with"):
                 if key in step:
                     need(isinstance(step[key], dict) and all(isinstance(value, str)
@@ -689,7 +695,10 @@ def code_contract(data, checks):
                 need(isinstance(command, str) and command.strip()
                      and not any(ord(c) < 32 and c != "\n" for c in command),
                      "invalid application run")
-                need(not re.fullmatch(r"(?:true|:|echo(?:\s.*)?)", command),
+                meaningful = [line.strip() for line in command.splitlines()
+                              if line.strip() and not line.lstrip().startswith("#")]
+                need(meaningful and any(not re.fullmatch(
+                     r"(?:true(?:\s+#.*)?|:(?:\s.*)?|echo(?:\s.*)?)", line) for line in meaningful),
                      "application check needs an actual verification command")
                 actual_run = True
             else:

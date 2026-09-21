@@ -66,7 +66,7 @@ PUBLIC_DOCS = (
     "docs/distribution/adopter-ci.md",
 )
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "6718773bd1395792ac16fe0e6fde627f024631a5c01f6a3318bb3ee6ef48b8f2"
+ADOPTER_RECORD_SHA256 = "de7f7180d9848e40fc794ec1d3eda0558162e9c5c8854db10940d87a42b15dc3"
 ADOPTER_SOURCE_FILES = {
     ".github/workflows/task-ritual.yml": "76b2db3c69385e7ab20eee9f8847268b7a732389",
     ".github/workflows/ci.yml": "2147dd280f8f24f748487dfb83e2084c6167b899",
@@ -393,6 +393,15 @@ def validate_adopter_ci(root):
                               ("      - run:", "      - continue-on-error: true\n        run:"),
                               ("python3 -m unittest discover", "true"),
                               ("python3 -m unittest discover", "echo check"),
+                              ("python3 -m unittest discover", '" true "'),
+                              ("python3 -m unittest discover", "|\n          # disabled verification"),
+                              ("python3 -m unittest discover", "|\n          true\n"),
+                              ("python3 -m unittest discover", "|\n          echo first\n          echo second"),
+                              ("python3 -m unittest discover", "# disabled verification"),
+                              ("      - run:", "      - name: {}\n        run:"),
+                              ("      - run:", "      - working-directory: {}\n        run:"),
+                              ("      - run:", "      - with: {}\n        run:"),
+                              ("    steps:\n", "    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n        shell: bash\n"),
                               ("reopened]", "reopened, edited]"),
                               ("application-${{", "adopter-metadata-${{")):
             try:

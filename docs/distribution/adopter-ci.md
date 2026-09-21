@@ -81,9 +81,14 @@ These examples show structure, not a complete application checkout/test recipe.
 Action steps use a full 40-character commit pin. Supported runner labels are
 `ubuntu-latest`, `macos-latest` and `windows-latest`. Steps may contain `name`,
 `uses`, `with`, `run`, `env`, `shell` and `working-directory`; each has either
-`uses` or `run`. Every job must contain a run command. Standalone `true`, `:`
-and `echo` check placeholders refuse. The owner still reviews command meaning:
-the sensor is not a shell interpreter or proof that a command tests software.
+`uses` or `run`. `with` belongs only to action steps; `shell` and
+`working-directory` belong only to run steps. `name` and `working-directory`
+must be nonempty single-line strings, and `env`/`with` must map keys to string
+values. Every job must contain a run command. After surrounding whitespace,
+blank lines and full-line comments are ignored, a body with no meaningful
+lines or only standalone `true`, `:` and `echo` placeholders refuses. The owner
+still reviews command meaning: the sensor is not a shell interpreter or proof
+that a command tests software.
 Explicit shells are limited to `bash`, `sh`, `pwsh` and `python`.
 
 The parser supports two-space mapping indentation, mapping items in step
@@ -146,6 +151,12 @@ Optional-job failure may make a completed overall run fail without invalidating
 successful required jobs. The selected run must reference the same base
 repository/ref; a later normal advance of that base SHA does not by itself
 invalidate the historical run. This is not strict current-base code freshness.
+The metadata event itself must nevertheless name the current base SHA, because
+its checkout selects the trusted control code. If that base advances after the
+event, rerunning the old metadata event refuses even with unchanged base ref
+and otherwise fresh code checks. A new supported PR event with the current base
+SHA is required; merely rerunning the old metadata execution cannot refresh its
+event payload. The sensor never generates that event or changes the binding.
 
 The sensor rereads relevant PR, timeline, workflow, run, attempt, check and
 control observations before reporting success. Missing/empty PR association,

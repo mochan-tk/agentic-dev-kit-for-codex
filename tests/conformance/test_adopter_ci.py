@@ -33,6 +33,34 @@ jobs:
 """
 
 
+def rejected_step_workflows():
+    """Review findings exercised through setup, local drift and head observation."""
+    run = "        run: python3 -m unittest discover"
+    variants = {
+        "quoted_true": '        run: " true "',
+        "quoted_empty": '        run: " "',
+        "quoted_comment": '        run: "# disabled test"',
+        "literal_true_blank": "        run: |\n          true\n",
+        "comment_only": "        run: |\n          # disabled test",
+        "comment_then_true": "        run: |\n          # disabled test\n          true",
+        "two_echo_lines": "        run: |\n          echo first\n          echo second",
+        "placeholder_comments": "        run: |\n          true # disabled\n          : disabled\n          echo disabled",
+        "inline_yaml_comment": "        run: # disabled test",
+        "run_with_action_inputs": "        with: {}\n" + run,
+        "run_with_env_list": "        env: [invalid]\n" + run,
+        "directory_mapping": "        working-directory: {}\n" + run,
+        "directory_list": "        working-directory: [invalid]\n" + run,
+        "directory_empty": '        working-directory: ""\n' + run,
+    }
+    workflows = {name: CODE.replace(run, value) for name, value in variants.items()}
+    workflows["name_mapping"] = CODE.replace("name: Actual application test", "name: {}")
+    workflows["name_list"] = CODE.replace("name: Actual application test", "name: [invalid]")
+    action = "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n"
+    for key, value in (("shell", "bash"), ("working-directory", "."), ("with", "[invalid]")):
+        workflows["action_" + key] = CODE.replace("    steps:\n", "    steps:\n" + action + "        " + key + ": " + value + "\n")
+    return workflows
+
+
 def load(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
     result = importlib.util.module_from_spec(spec)
@@ -572,6 +600,60 @@ for page in pages:
                 http_headers=dict(link='<https://api.github.com/' + next_path + '>; rel="next", '
                                        '<https://api.github.com/' + self.timeline + '&page=21>; rel="last"'))
         self.assertNotEqual(0, self.run_sensor().returncode)
+
+    def test_reviewed_invalid_step_forms_refuse_setup_before_writing(self):
+        for name, workflow in rejected_step_workflows().items():
+            with self.subTest(name=name):
+                self.code.write_text(workflow)
+                before = self.snapshot()
+                result = self.setup("--apply")
+                self.assertEqual(2, result.returncode, name + result.stdout + result.stderr)
+                self.assertEqual(before, self.snapshot())
+
+    def test_reviewed_invalid_step_forms_refuse_local_and_remote_head_drift(self):
+        self.activate()
+        for name, workflow in rejected_step_workflows().items():
+            with self.subTest(name=name):
+                self.code.write_text(workflow)
+                result = self.run_sensor("drift")
+                self.assertEqual(2, result.returncode, name + result.stdout + result.stderr)
+                self.assertEqual([], self.log)
+                self.code.write_text(CODE)
+                self.remote_head({".github/workflows/application.yml": workflow.encode()})
+                result = self.run_sensor()
+                self.assertEqual(2, result.returncode, name + result.stdout + result.stderr)
+                self.assertNotIn("CONTROLS_ACTIVE", result.stdout)
+
+    def test_supported_action_inputs_and_meaningful_literal_still_pass(self):
+        sensor = load(SENSOR, "supported_step_shapes")
+        workflow = CODE.replace("    steps:\n", "    steps:\n"
+            "      - name: Checkout application\n"
+            "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n"
+            "        with:\n          persist-credentials: false\n")
+        workflow = workflow.replace("        run: python3 -m unittest discover",
+            "        env:\n          TEST_MODE: thorough\n"
+            "        working-directory: .\n        shell: bash\n"
+            "        run: |\n          # Actual application verification follows.\n"
+            "          echo starting tests\n          python3 -m unittest discover\n")
+        sensor.code_contract(workflow.encode(), ["quality"])
+        self.code.write_text(workflow)
+        self.activate()
+        result = self.run_sensor()
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_current_base_advancement_needs_new_event_not_historical_run_base_equality(self):
+        self.activate()
+        self.pr["base"]["sha"] = "c"*40
+        result = self.run_sensor()
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        self.assertIn("event and current PR disagree", result.stderr)
+        self.assertFalse(any("/actions/" in row["key"] for row in self.log))
+        # A new supported PR event binds current trusted base controls. The
+        # historical run's associated base SHA intentionally remains different.
+        self.event["pull_request"] = copy.deepcopy(self.pr)
+        result = self.run_sensor()
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("FRESH:", result.stdout)
 
 
 if __name__ == "__main__":
