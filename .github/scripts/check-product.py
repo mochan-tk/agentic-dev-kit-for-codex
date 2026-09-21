@@ -36,16 +36,28 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "export_source_blob": CONNECTOR_FIXTURE_EXPORT["source_blob"],
     "export_sha256": CONNECTOR_FIXTURE_EXPORT["sha256"],
     "export_mode": "100644",
-    "target_blob": "595acf87f02fc79d0785af924859e2154629c641",
-    "target_sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884",
+    "target_blob": "ec57d143f873ffc57c30a452bd461524c11a70a2",
+    "target_sha256": "a00b4bd8322acd863d6cb59407c4c20ede6fc1a073a49604220d40dd3bc5d6be",
     "target_mode": "100644",
-    "scope": "copy-required-update-paths-and-assert-complete-updater-fixture",
+    "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture",
 }
 TEST_MODULES = (
     "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py",
-    "test_source_first_governance.py", "test_source_first_procedures.py",
+    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py",
 )
+# Exact current adaptations; the original export seal is never rewritten.
+WORKFLOW_EXPORT_DIGESTS = {
+    ".github/distribution/payload.v1.tsv": "b6d3f58d34272fade2c3bb4919e0b2c3ca4447921780b93a0df549ef3912b0fb",
+    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
+    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
+    ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
+    ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "8c4fe064337534106f9636de5bdf4379a05a6ed0a9a5a08eb84dcffced6076f2",
+    ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
+    ".github/scripts/governance-status.sh": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e",
+    "tests/conformance/test_source_first_governance.py": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece",
+}
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md",
@@ -54,10 +66,11 @@ PUBLIC_DOCS = (
 )
 COMPANION_GUIDE = "docs/distribution/companion-checks.md"
 COMPANION_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
+GOVERNANCE_COMPANION_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
 # Bind only the three executable guide blocks. Prose may evolve without
 # changing execution; intentional command changes need review and regressions.
 COMPANION_BLOCKS = {
-    "companion-governance": ("governance-status.sh", "395081eb2a83e51c55f1ff6d292c21599b10f1ed17e349707517ba01f4456886"),
+    "companion-governance": ("governance-status.sh", "52e63878f162a58046ed03b76cc036e4fee51daf2dc005de7c00d620ac66f06a"),
     "companion-worktree": ("worktree-preflight.sh", "9556150d60de556b4c32bcaa734a3a6e1c16995c2f5572fda2d1495903b067e7"),
     "companion-connectors": ("check-connectors.sh", "e6d770142bd142b0dd324d84271e10e91b28c6aaf567742a3bcde8cf2ddd32b5"),
 }
@@ -163,12 +176,23 @@ def validate_export(root):
         if (record["source_repository"] != SOURCE or record["source_commit"] != SOURCE_COMMIT
                 or record["source_tree"] != SOURCE_TREE or record["payload_count"] != 47):
             raise ValueError("source identity")
+        parity = json.loads(read_bytes(root, ".github/distribution/source-parity.v1.json"), object_pairs_hook=unique_keys)
+        adaptations = parity["workflow_parity"]["export_adaptations"]
+        if [row["path"] for row in adaptations] != sorted(WORKFLOW_EXPORT_DIGESTS):
+            raise ValueError("workflow adaptation inventory")
         for row in record["frozen_files"]:
             if row["path"] == CONNECTOR_FIXTURE_PATH:
                 errors.extend(validate_connector_fixture_adaptation(root, row))
                 continue
             data = read_bytes(root, row["path"])
             git_blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+            if row["path"] in WORKFLOW_EXPORT_DIGESTS:
+                adaptation = next(item for item in adaptations if item["path"] == row["path"])
+                expected = {"path": row["path"], "export": row, "target_mode": "100644",
+                            "target_sha256": digest(data), "target_blob": git_blob}
+                if adaptation != expected or digest(data) != WORKFLOW_EXPORT_DIGESTS[row["path"]]:
+                    errors.append("workflow exact approved export adaptation changed: " + row["path"])
+                continue
             if digest(data) != row["sha256"] or git_blob != row["source_blob"] or row["mode"] != "100644":
                 errors.append("approved export file changed: " + row["path"])
         actual = {str(p.relative_to(Path(root) / PAYLOAD)) for p in (Path(root) / PAYLOAD).rglob("*") if not p.is_dir() or p.is_symlink()}
@@ -278,7 +302,7 @@ def validate_policy(root):
 
 
 def validate_companion_access(root):
-    """Bind published commands to the unchanged immutable helper export."""
+    """Bind published commands to separately reviewed immutable revisions."""
     errors = []
     try:
         guide = read_bytes(root, COMPANION_GUIDE).decode()
@@ -295,10 +319,13 @@ def validate_companion_access(root):
             if len(rows) != 1 or rows[0]["mode"] != "100644":
                 raise ValueError("unbound helper")
             data = read_bytes(root, path)
-            if (digest(data) != rows[0]["sha256"]
+            expected = WORKFLOW_EXPORT_DIGESTS[path] if name == "companion-governance" else rows[0]["sha256"]
+            revision = GOVERNANCE_COMPANION_REVISION if name == "companion-governance" else COMPANION_REVISION
+            if (digest(data) != expected
                     or digest(block.encode()) != command_digest
-                    or "  revision=" + COMPANION_REVISION + "\n" not in block
-                    or "  expected=" + rows[0]["sha256"] + "\n" not in block
+                    or not re.fullmatch(r"[0-9a-f]{40}", revision)
+                    or "  revision=" + revision + "\n" not in block
+                    or "  expected=" + expected + "\n" not in block
                     or 'https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/$revision/' + path + '"' not in block):
                 errors.append("fixed companion command or helper binding changed: " + name)
         if "docs/distribution/companion-checks.md" not in read_bytes(root, "README.md").decode():
@@ -319,7 +346,7 @@ def validate(root):
         spec.loader.exec_module(checker)
         errors += (checker.validate(root) + checker.validate_connector_companion(root)
                    + checker.validate_governance_procedures(root) + checker.validate_bootstrap(root)
-                   + checker.validate_explicit_update(root))
+                   + checker.validate_explicit_update(root) + checker.validate_workflow_parity(root))
     except (OSError, ValueError, ImportError, AttributeError, TypeError):
         errors.append("mandatory installer validation unavailable")
     return errors
@@ -334,7 +361,7 @@ def main():
         print("ERROR: " + error)
     if errors:
         return 1
-    print("Product integrity: 47 unchanged payload files; 20 immutable regression entries; complete product checks and navigation. Offline evidence only.")
+    print("Product integrity: 47 payload paths with bounded current adaptations; 20 immutable historical entries plus accepted workflow baseline; complete product checks and navigation. Offline evidence only.")
     return 0
 
 

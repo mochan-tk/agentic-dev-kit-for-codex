@@ -266,7 +266,8 @@ class ConnectorCompanionTests(unittest.TestCase):
         shutil.copytree(ROOT / '.github/distribution', self.root / '.github/distribution')
         for path in (self.checker.FEEDBACK_PATHS + self.checker.CONNECTOR_PATHS
                      + self.checker.GOVERNANCE_PROCEDURE_PATHS + self.checker.BOOTSTRAP_PATHS
-                     + self.checker.UPDATE_PATHS):
+                     + self.checker.UPDATE_PATHS + self.checker.WORKFLOW_TARGETS
+                     + (self.checker.WORKFLOW_BASELINE,)):
             destination = self.root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, destination); destination.chmod(0o644)
@@ -281,6 +282,7 @@ class ConnectorCompanionTests(unittest.TestCase):
         self.assertEqual([], self.checker.validate_connector_companion(self.root))
         self.assertEqual([], self.checker.validate_bootstrap(self.root))
         self.assertEqual([], self.checker.validate_explicit_update(self.root))
+        self.assertEqual([], self.checker.validate_workflow_parity(self.root))
         result = self.cli(); self.assertEqual(0, result.returncode, result.stdout)
         parity = json.loads(self.parity.read_bytes())
         self.assertEqual(47, len(parity['files']))

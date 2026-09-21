@@ -29,6 +29,15 @@ Three invariants govern everything below:
 
 ## Procedure
 
+### Entry decision
+
+Loading this Skill is not onboarding consent. Apply the
+[startup decision table](../session-orchestration/SKILL.md#startup-decision)
+before inventory/tuning. A readable, scoped, unrevoked owner decline permits
+only its already-authorized work; return to that Task without entering P0–P6.
+A new explicit onboarding request enters this procedure. Missing or conflicting
+authority and failed startup checks are not permission to proceed.
+
 ### P0 — Status
 
 **Preflight: is the scaffold on the remote default branch?** The install
@@ -52,8 +61,8 @@ three ways:
 If any holds, ask one consent question — *"The scaffold isn't on the
 default branch yet; land it there now? (recommended — onboarding builds on
 it)"* — and on yes land the adoption commit
-(explicitly review and stage only the adoption files; this local installer
-never stages or commits) on the default branch yourself: on the default branch a
+(explicitly review and stage only the adoption files; the public bootstrap may
+already stage new files, but neither entry commits) on the default branch yourself: on the default branch a
 plain `git push`; on any other branch put the scaffold commit on a branch
 cut from `origin/<default>` and push or PR-merge it to the default branch
 immediately — never sweep unrelated commits along, and never defer it to
@@ -72,9 +81,11 @@ do not insert an invented scaffold-version marker. The installed reviewed
 `frontier.sh` engine is the source-first payload anchor used by the optional
 ritual sensor, not an authenticated installer or runtime attestation.
 
-Then run `bash .github/scripts/tuning-status.sh`. Exit 0 → already tuned; run in re-tune mode
-(see Re-tuning) only if something changed. Otherwise the report is your
-worklist.
+Then run `bash .github/scripts/tuning-status.sh` in report mode. Exit 0 means
+already tuned; use Re-tuning only if something changed. Exit 1 means markers
+remain and the report is the worklist, subject to onboarding consent. Any other
+outcome (including a missing script/interpreter) is an error: report and stop,
+not a worklist or proof of tuning. Warning-only CI success is not this check.
 
 ### P1 — Inventory (read-only)
 
@@ -150,15 +161,16 @@ give the adopter something to review during it:
 1. Run `bash .github/scripts/setup-labels.sh` (idempotent; the installer never
    writes to GitHub — this is where the canonical label set is
    bootstrapped). Record its output in the evidence log.
-2. Reuse the adopter's explicitly reviewed `solo` or `team` profile, or ask
+2. Reuse the adopter's explicitly reviewed `solo`, `team` or `single-maintainer` profile, or ask
    them to select one if none was recorded; never infer it from repository
    ownership or observed controls. Then ask the branch-protection consent
    question — one question, three choices — and use the P2 commands below.
-   The question text must state both caveats: repository admins keep an
-   explicit, audited *pull-request-only* bypass button (that is how a
-   solo adopter merges their own PRs — self-approval is impossible —
-   while direct pushes stay blocked), and private repositories on a
-   Free plan are refused by the rulesets API.
+   Explain the selected policy: `solo` retains one approval and an explicit
+   admin *pull-request-only* bypass; `team` also requires verified issuer and
+   ownership evidence; `single-maintainer` requires PR/checks, zero approving
+   reviews and no bypass actors. It does not authenticate a human vs an agent
+   or approve any merge. Private Free-plan repositories may be refused by the
+   rulesets API. Never silently choose a profile or change policy to pass.
    - **Enable now** (recommended) — request `active` enforcement.
    - **Create disabled, review later** — request `disabled` enforcement.
      Later activation needs new consent and explicit canonical reconciliation
@@ -193,7 +205,8 @@ for later.
 
 From the installed adopter root, set `ONBOARD_REPO` to the reviewed
 `owner/repository`, `ONBOARD_CHECKS` to its actual comma-separated CI contexts,
-and `ONBOARD_PROFILE` to the explicitly selected `solo` or `team` value.
+and `ONBOARD_PROFILE` to the explicitly selected `solo`, `team` or
+`single-maintainer` value.
 Set `ONBOARD_CHOICE` from the consent answer: `active`, `disabled`, or `skip`.
 For a requested write, set `ONBOARD_RULESET` to `new` only for new creation,
 or `canonical` for an explicitly reviewed existing same-name ruleset. The
@@ -214,17 +227,18 @@ case "${ONBOARD_CHOICE:?record the consent choice}" in
     esac
     bash .github/scripts/setup-ruleset.sh -R "${ONBOARD_REPO:?review target}" \
       --checks "${ONBOARD_CHECKS:?review existing checks}" \
-      --profile "${ONBOARD_PROFILE:?obtain explicit solo or team choice}" \
+      --profile "${ONBOARD_PROFILE:?obtain explicit solo, team or single-maintainer choice}" \
       --enforcement "$ONBOARD_CHOICE" "$@" ;;
   *) printf '%s\n' 'Unknown consent choice; no setup attempted.' >&2; exit 2 ;;
 esac
 ```
 
 Before write consent, this candidate preview is safe to run with the reviewed
-inputs. A new solo preview makes no API calls. A team preview reads repository,
+inputs. A new solo or single-maintainer preview makes no API calls. A team preview reads repository,
 check-run and CODEOWNERS evidence, but does not prove absence of an existing
 same-name ruleset. Add `--reconcile` only to preview a reviewed canonical
-existing ruleset; either profile then reads its list/detail. All preview modes
+existing ruleset; all profiles then read its list/detail. A contradictory team
+preimage cannot be downgraded to single-maintainer by this helper. All preview modes
 make zero writes and grant no later write consent. Missing-profile legacy
 `--checks ... --dry-run` is only an offline body preview, not a selected profile.
 
@@ -232,7 +246,7 @@ make zero writes and grant no later write consent. Missing-profile legacy
 ```bash
 bash .github/scripts/setup-ruleset.sh -R "${ONBOARD_REPO:?review target}" \
   --checks "${ONBOARD_CHECKS:?review existing checks}" \
-  --profile "${ONBOARD_PROFILE:?obtain explicit solo or team choice}" --dry-run
+  --profile "${ONBOARD_PROFILE:?obtain explicit solo, team or single-maintainer choice}" --dry-run
 ```
 
 ### P3 — Verify by running

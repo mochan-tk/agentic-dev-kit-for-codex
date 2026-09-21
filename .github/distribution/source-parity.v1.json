@@ -25,7 +25,7 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484",
+      "target_sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
@@ -74,7 +74,7 @@
       "destination": ".agents/skills/project-onboarding/SKILL.md",
       "source_path": ".github/skills/project-onboarding/SKILL.md",
       "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
-      "target_sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b",
+      "target_sha256": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
       "adaptations": [
         "Carry approved P2 choice into explicit noninteractive P4 --source commands; require write consent and distinguish pending preparation from reviewed activation.",
         "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff.",
@@ -95,7 +95,7 @@
       "destination": ".agents/skills/session-orchestration/SKILL.md",
       "source_path": ".github/skills/session-orchestration/SKILL.md",
       "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
-      "target_sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b",
+      "target_sha256": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
       "adaptations": [
         "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI.",
         "Explain bounded whole legacy/tool-scoped identifiers, separate actual reference from navigation/display names, and avoid a future PR-number requirement or identity/authentication claims."
@@ -197,7 +197,7 @@
       "destination": ".github/codex-instructions.md",
       "source_path": ".github/copilot-instructions.md",
       "source_blob": "c2ec9fb4c156b5139b7d88624593216c69a800f0",
-      "target_sha256": "5712479a016a1daf344db6026614c98d6f3db9460e0488519c88a7608b6694db",
+      "target_sha256": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
       "adaptations": [
         "Align the compact Task checklist with existing supervisor claim/plan/dispatch/outcome, worker evidence, trivial exemption and Refs/post-merge/non-final PR rules.",
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
@@ -325,7 +325,7 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e",
+      "target_sha256": "8c4fe064337534106f9636de5bdf4379a05a6ed0a9a5a08eb84dcffced6076f2",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
@@ -376,7 +376,7 @@
       "destination": ".github/scripts/setup-ruleset.sh",
       "source_path": ".github/scripts/setup-ruleset.sh",
       "source_blob": "c36e2cf098cab29851d5da2eb0f340b0dd5f1940",
-      "target_sha256": "8afc08904d9c9f1b564709d25e2130500546d441ebb586c6a3e28af95d054c02",
+      "target_sha256": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
       "adaptations": [
         "Make every help example carry reviewed adopter checks; preview without a pipeline that could mask helper failure. Mandatory check guards are unchanged.",
         "Retain optional explicit helper; require actual adopter check names rather than source CI defaults; feedback transport excluded; never invoked by installer.",
@@ -526,7 +526,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+        "sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1"
       },
       {
         "path": ".agents/skills/plan-management/scripts/new-task.sh",
@@ -624,7 +624,7 @@
       {
         "path": "tests/conformance/test_connector_validation.py",
         "mode": "100644",
-        "sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884"
+        "sha256": "a00b4bd8322acd863d6cb59407c4c20ede6fc1a073a49604220d40dd3bc5d6be"
       }
     ]
   },
@@ -661,7 +661,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+        "sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1"
       },
       {
         "path": ".agents/skills/plan-management/scripts/frontier.sh",
@@ -703,7 +703,7 @@
       {
         "path": ".github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
+        "sha256": "8c4fe064337534106f9636de5bdf4379a05a6ed0a9a5a08eb84dcffced6076f2"
       },
       {
         "path": ".agents/skills/verification/SKILL.md",
@@ -759,7 +759,7 @@
       {
         "path": ".github/scripts/governance-status.sh",
         "mode": "100644",
-        "sha256": "ebd7d548506797edc5ee04c7203b468d7ec69417b0bcb06d7fde88fb53593624"
+        "sha256": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e"
       },
       {
         "path": ".github/scripts/worktree-preflight.sh",
@@ -769,7 +769,7 @@
       {
         "path": "tests/conformance/test_source_first_governance.py",
         "mode": "100644",
-        "sha256": "f496f8e29f0bdc60ca3d4572c9fc64822e800a52d4465f71783d29c4e39c89bb"
+        "sha256": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece"
       },
       {
         "path": "tests/conformance/test_source_first_procedures.py",
@@ -779,12 +779,12 @@
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
         "mode": "100644",
-        "sha256": "8afc08904d9c9f1b564709d25e2130500546d441ebb586c6a3e28af95d054c02"
+        "sha256": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b"
+        "sha256": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
@@ -794,7 +794,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
         "mode": "100644",
-        "sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b"
+        "sha256": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e"
       }
     ]
   },
@@ -849,10 +849,10 @@
       "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
       "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
       "export_mode": "100644",
-      "target_blob": "595acf87f02fc79d0785af924859e2154629c641",
-      "target_sha256": "050c4b41e62b6670d71746a72f6dae181d69666a94ae36c6ac97b07fe5338884",
+      "target_blob": "ec57d143f873ffc57c30a452bd461524c11a70a2",
+      "target_sha256": "a00b4bd8322acd863d6cb59407c4c20ede6fc1a073a49604220d40dd3bc5d6be",
       "target_mode": "100644",
-      "scope": "copy-required-update-paths-and-assert-complete-updater-fixture"
+      "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
     },
     "target_files": [
       {
@@ -869,6 +869,194 @@
         "path": "tests/conformance/test_installer_update.py",
         "mode": "100644",
         "sha256": "1bc5b4985152b4e586c881a500f26248a48a9596cc4c761ac10edd38bf8a017a"
+      }
+    ]
+  },
+  "workflow_parity": {
+    "schema": "source-first-workflow-parity/v1",
+    "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+    "source_files": {
+      ".github/copilot-instructions.md": "4089b5c5e6ba81a31562b85b88c643c27967bc24",
+      ".github/scripts/governance-status.sh": "05514a395f41a9bc0528c749df4ad72c91d110fa",
+      ".github/scripts/setup-ruleset.sh": "8115b16cc2aa58a9fc8afe7ba94bddba1c0a9957",
+      ".github/scripts/task-ritual-lib.sh": "02a72d70a980db0666f6e7c74f927737a07dcba2",
+      ".github/scripts/task-ritual.sh": "9f6ce7b6cd11d55e8f0c9e3f10b913e872c4778b",
+      ".github/skills/plan-management/SKILL.md": "e397470e9c069e6c0f54cacdc02a350bee97076e",
+      ".github/skills/project-onboarding/SKILL.md": "d0ed839f95a90308e5f97aa3dca17b35f37b8685",
+      ".github/skills/session-orchestration/SKILL.md": "e0c1ce5f0ccc6a8e4016f2a6d2bf9f8cc9b4b363"
+    },
+    "product_base": "abd7a4fba7ef5ff484efff625e2474cc32d6ef7b",
+    "product_base_tree": "417aefd9caca78c76fac8040b069b70525750c7a",
+    "delivery": "47-paths-six-explicit-payload-adaptations-installed-ritual-subcommands",
+    "evidence": "real-bash-jq-disposable-git-synthetic-github;startup-and-disposition-document-contracts",
+    "limits": "no-live-governance-worker-runtime-identity-lock-or-release-claim;separate-publication-authority",
+    "baseline_sha256": "77a8ce370b7fbaec16e66bd69d9d4c391c6a0b8222276230f81dd95ed3607ad3",
+    "target_files": [
+      {
+        "path": ".github/distribution/payload.v1.tsv",
+        "mode": "100644",
+        "sha256": "b6d3f58d34272fade2c3bb4919e0b2c3ca4447921780b93a0df549ef3912b0fb"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+        "mode": "100644",
+        "sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+        "mode": "100644",
+        "sha256": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+        "mode": "100644",
+        "sha256": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b"
+      },
+      {
+        "path": ".github/distribution/payload/.github/codex-instructions.md",
+        "mode": "100644",
+        "sha256": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+        "mode": "100644",
+        "sha256": "8c4fe064337534106f9636de5bdf4379a05a6ed0a9a5a08eb84dcffced6076f2"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+        "mode": "100644",
+        "sha256": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba"
+      },
+      {
+        "path": ".github/scripts/governance-status.sh",
+        "mode": "100644",
+        "sha256": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e"
+      },
+      {
+        "path": "tests/conformance/test_source_first_governance.py",
+        "mode": "100644",
+        "sha256": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece"
+      },
+      {
+        "path": "tests/conformance/test_installer.py",
+        "mode": "100644",
+        "sha256": "ec8ce43232ad5ad61ba8904ecc34bf8c6c8bdad5a0b0cf12d7a418ed856a1f4e"
+      },
+      {
+        "path": "tests/conformance/test_workflow_parity.py",
+        "mode": "100644",
+        "sha256": "0b82d8cd89d8d45836c5efc74a220aaf8b216fd29b7bb45e7f8021efce1329e4"
+      }
+    ],
+    "export_adaptations": [
+      {
+        "path": ".github/distribution/payload.v1.tsv",
+        "export": {
+          "path": ".github/distribution/payload.v1.tsv",
+          "mode": "100644",
+          "source_blob": "e664fca372099eb27bc0068487a8f214297e1d6f",
+          "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
+        },
+        "target_mode": "100644",
+        "target_sha256": "b6d3f58d34272fade2c3bb4919e0b2c3ca4447921780b93a0df549ef3912b0fb",
+        "target_blob": "16022c8ac2cc7b1f09033d37c2a5d39cf41605d7"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+        "export": {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
+          "mode": "100644",
+          "source_blob": "bcd875cf089ec449c09fe59c50fcf36e4197febc",
+          "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
+        },
+        "target_mode": "100644",
+        "target_sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
+        "target_blob": "505ba62a88a5e744cf7fb88e22c4d79f721306df"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+        "export": {
+          "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
+          "mode": "100644",
+          "source_blob": "50a395c21bf45a737f4be9dc8c67b2244251ba20",
+          "sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b"
+        },
+        "target_mode": "100644",
+        "target_sha256": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
+        "target_blob": "fc66fa021488becba716b4911ac9809dccf57923"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+        "export": {
+          "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+          "mode": "100644",
+          "source_blob": "cc1eb44a4251ea5cb25a955ba0fc1ded2c511a00",
+          "sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b"
+        },
+        "target_mode": "100644",
+        "target_sha256": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
+        "target_blob": "e787d8aacfb89060935b84c34a3d386e18b7cfb4"
+      },
+      {
+        "path": ".github/distribution/payload/.github/codex-instructions.md",
+        "export": {
+          "path": ".github/distribution/payload/.github/codex-instructions.md",
+          "mode": "100644",
+          "source_blob": "a897a36c27e9cc04eb91f12b51403fceac00d743",
+          "sha256": "5712479a016a1daf344db6026614c98d6f3db9460e0488519c88a7608b6694db"
+        },
+        "target_mode": "100644",
+        "target_sha256": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
+        "target_blob": "ece1840e65bab57816d727a021d8aa6473a58905"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+        "export": {
+          "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
+          "mode": "100644",
+          "source_blob": "122458ccb90718077b7f4c3ceb49139858f68d70",
+          "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
+        },
+        "target_mode": "100644",
+        "target_sha256": "8c4fe064337534106f9636de5bdf4379a05a6ed0a9a5a08eb84dcffced6076f2",
+        "target_blob": "efb63108fc589c3ecf2241f6d13afdc3f5481dbb"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+        "export": {
+          "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
+          "mode": "100644",
+          "source_blob": "8d3ad4d9057d5f4d33d7369b4b26d238f61782af",
+          "sha256": "8afc08904d9c9f1b564709d25e2130500546d441ebb586c6a3e28af95d054c02"
+        },
+        "target_mode": "100644",
+        "target_sha256": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
+        "target_blob": "557481046895b04e0860aa562862645e4e3c48a3"
+      },
+      {
+        "path": ".github/scripts/governance-status.sh",
+        "export": {
+          "path": ".github/scripts/governance-status.sh",
+          "mode": "100644",
+          "source_blob": "7568760103e30faf1572235e5f19bf1946d24a22",
+          "sha256": "ebd7d548506797edc5ee04c7203b468d7ec69417b0bcb06d7fde88fb53593624"
+        },
+        "target_mode": "100644",
+        "target_sha256": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e",
+        "target_blob": "387cbda9ff1cd6d21bc226c8759076b3ebdab4e3"
+      },
+      {
+        "path": "tests/conformance/test_source_first_governance.py",
+        "export": {
+          "path": "tests/conformance/test_source_first_governance.py",
+          "mode": "100644",
+          "source_blob": "d995d8f3b955877b14a559266873d96be585c00d",
+          "sha256": "f496f8e29f0bdc60ca3d4572c9fc64822e800a52d4465f71783d29c4e39c89bb"
+        },
+        "target_mode": "100644",
+        "target_sha256": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece",
+        "target_blob": "ed2b9816ed1c894ea26ed22a93375676ef94b0cc"
       }
     ]
   }

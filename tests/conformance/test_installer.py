@@ -1637,7 +1637,9 @@ sys.exit(result.returncode)
         source = self.clone_source()
         checker = self.kickoff_checker()
         for name in (*checker.FEEDBACK_PATHS, *checker.CONNECTOR_PATHS,
-                     *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS):
+                     *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS,
+                     *checker.WORKFLOW_TARGETS, checker.WORKFLOW_BASELINE,
+                     ".github/distribution/export-provenance.v1.json"):
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, destination)
@@ -1847,8 +1849,8 @@ sys.exit(result.returncode)
         source, checker = self.complete_checker_source()
         for name, before, after in (
             (RITUAL_PATH, 'commit_count <= 250', 'commit_count <= 999'),
-            (RITUAL_PATH, "grep -Fx -- \"${plan_snapshot%$'\\t'*}\" >/dev/null",
-             "grep -Fxq -- \"${plan_snapshot%$'\\t'*}\""),
+            (RITUAL_PATH, 'END { exit !found }', 'END { exit 0 }'),
+            (RITUAL_PATH, '} | exact_line_membership; then', '} | true; then'),
             (RITUAL_PATH, 'valid_timestamp "$timestamp" || observation_fail commit-date', ': # omitted date check'),
             (RITUAL_PATH, '"$unique_commits" == "$commit_count"', 'true'),
             (RITUAL_PATH, '"$final_comments" == "$comment_snapshot"', 'true'),

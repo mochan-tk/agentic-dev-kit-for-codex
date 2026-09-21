@@ -80,6 +80,298 @@
 
 set -euo pipefail
 
+# Shared, bounded Codex/legacy identifier grammar. A syntactic reference is
+# not authentication or proof that a worker was created.
+valid_session_reference() {
+  local value="$1" segment count=0 rest
+  local LC_ALL=C
+  if [[ "$value" =~ ^[0-9a-fA-F][0-9a-fA-F-]{7,127}$ && "$value" != *--* && "$value" != *- ]]; then return 0; fi
+  [[ ${#value} -le 256 && "$value" == /root/* ]] || return 1
+  rest="${value#/root/}"
+  while :; do
+    segment="${rest%%/*}"
+    [[ "$segment" =~ ^[a-z0-9_]{1,63}$ ]] || return 1
+    case "$segment" in unknown|none|null|tbd|todo|placeholder) return 1 ;; esac
+    count=$((count + 1)); [[ $count -le 16 ]] || return 1
+    [[ "$rest" == */* ]] || break
+    rest="${rest#*/}"
+  done
+}
+
+# Only a release between a dispatch and a successor exempts a historical
+# branch. All dispatch syntax, immutability and chronology still get checked.
+valid_record_branch() {
+  case "$1" in unknown|none|null|tbd|todo|placeholder|*'<'*|*'>'*) return 1 ;; esac
+  [[ "$1" != -* ]] && git check-ref-format --branch "$1" >/dev/null 2>&1
+}
+
+# First stdin line is the expected complete encoded tuple; remaining lines
+# are observed tuples. Consume every line, with no large pattern in argv.
+exact_line_membership() {
+  LC_ALL=C awk 'NR == 1 { wanted = $0; next } $0 == wanted { found = 1 } END { exit !found }'
+}
+
+ritual_dispatch_rows() {
+  LC_ALL=C sort -s -t $'\t' -k2,2 | awk -F '\t' '
+    $1 == "DISPATCH" { rows[++n]=$0; times[n]=$2 }
+    $1 == "RELEASE" { releases[++nr]=$2 }
+    END { for (i=1;i<=n;i++) {
+      superseded=0
+      for (j=i+1;j<=n && !superseded;j++) for (r=1;r<=nr;r++)
+        if (releases[r]>=times[i] && releases[r]<=times[j]) { superseded=1; break }
+      print rows[i] "\t" superseded
+    }}'
+}
+
+record_mode() {
+  local operation="$1" kind="${2:-}" input="" repo="" task="" body_file="" branch="" pr="" seen=" "
+  record_fail() { printf 'FAIL: Task record %s.\n' "$2" >&2; exit "$1"; }
+  if [[ "$kind" == --help || "$kind" == -h ]]; then
+    cat <<'HELP'
+Usage: bash .github/scripts/check-task-ritual.sh render <claim|resume|plan|dispatch> --input <json-file|->
+       bash .github/scripts/check-task-ritual.sh preflight <claim|resume|plan|dispatch>
+         --repo owner/repo --task N --body-file <file|-> [--branch known-branch] [--pr N]
+Render accepts exactly one JSON object: positive integer task, plus
+  claim/resume: session (display name), branch (valid Git branch)
+  dispatch: session, session_id (actual bounded Codex /root/... or legacy ID), branch
+  plan: content (actual nonempty plan prose)
+JSON schema unknown/duplicate fields and invalid identity placeholders/control bytes refuse.
+Plan content remains human prose; this tool does not judge its adequacy.
+Input is bounded to 262144 bytes. Render is offline and prints only the body.
+Preflight performs GET-only reads, requires type:task and complete unedited
+chronological ritual records, then repeats Task/comment/plan/PR observations.
+It never posts, edits, deletes, backdates, grants approval or proves identity.
+0 = scoped success; 1 = rejected/unavailable observation; 2 = usage/input/dependency.
+Inspect -> preflight -> separately authorized append-only publication -> read back.
+Stop on failure. A successful observation is not an atomic publication guarantee.
+HELP
+    exit 0
+  fi
+  [[ $# -ge 2 ]] || record_fail 2 usage
+  shift 2
+  case "$kind" in claim|resume|plan|dispatch) ;; *) record_fail 2 record-kind ;; esac
+  while [[ $# -gt 0 ]]; do
+    [[ $# -ge 2 && -n "$2" && "$2" != --* && "$seen" != *" $1 "* ]] || record_fail 2 options
+    seen="$seen$1 "
+    case "$operation:$1" in
+      render:--input) input="$2" ;;
+      preflight:--repo) repo="$2" ;;
+      preflight:--task) task="$2" ;;
+      preflight:--body-file) body_file="$2" ;;
+      preflight:--branch) branch="$2" ;;
+      preflight:--pr) pr="$2" ;;
+      *) record_fail 2 options ;;
+    esac
+    shift 2
+  done
+  local tool
+  for tool in jq git head wc date sort awk grep; do command -v "$tool" >/dev/null 2>&1 || record_fail 2 dependency; done
+  record_input() {
+    local bytes value
+    if [[ "$1" == - ]]; then value=$(head -c 262145 | jq -Rs .) || return 1
+    else
+      [[ -f "$1" && ! -L "$1" ]] || return 1
+      value=$(head -c 262145 -- "$1" | jq -Rs .) || return 1
+    fi
+    bytes=$(printf '%s' "$value" | jq -rj . | wc -c) || return 1
+    [[ "$bytes" -le 262144 ]] || return 1
+    printf '%s' "$value"
+  }
+  record_branch() { valid_record_branch "$1"; }
+  local raw json session_id draft first_line draft_branch name expected now
+  if [[ "$operation" == render ]]; then
+    [[ -n "$input" ]] || record_fail 2 input
+    raw=$(record_input "$input") || record_fail 2 input-read-or-limit
+    # The schema permits scalar fields only. Reject nested paths before the
+    # ordinary parser can erase a nonempty container hidden by a duplicate key.
+    # Empty containers still emit root value events and enter duplicate counting.
+    printf '%s' "$raw" | jq -rj . | jq --stream -cn '
+      [inputs] | all(.[]; (.[0]|length)<=1) and
+      ([.[] | select(length==2 and (.[0]|length)==1) | .[0][0]] |
+       length == (unique|length))' | grep -Fx true >/dev/null || record_fail 2 duplicate-input
+    json=$(printf '%s' "$raw" | jq -rj . | jq -cs 'if length==1 then .[0] else error("one object required") end') || record_fail 2 json
+    printf '%s' "$json" | jq -e --arg kind "$kind" 'def text: type=="string" and test("\\S");
+      def identity: text and length<=256 and
+        (test("[\\x00-\\x20\\x7f,()\\\\]|Starting in session|Resuming in session|Dispatching worker|Releasing worker|## Plan|Plan:")|not);
+      def name: text and length<=128 and (test("[\\x00-\\x1f\\x7f,()\\\\]|^\\s|\\s$|Starting in session|Resuming in session|Dispatching worker|Releasing worker|## Plan|Plan:")|not)
+        and (ascii_downcase|test("^(unknown|none|null|tbd|todo|placeholder|<.*>)$")|not);
+      type=="object" and (.task|type=="number" and .>0 and floor==. and .<=9007199254740991) and
+      if $kind=="plan" then keys==["content","task"] and (.content|text and (test("[\\x00-\\x08\\x0b-\\x1f\\x7f]")|not))
+      elif $kind=="dispatch" then keys==["branch","session","session_id","task"] and (.session|name) and (.branch|identity) and (.session_id|identity)
+      else keys==["branch","session","task"] and (.session|name) and (.branch|identity) end' >/dev/null 2>&1 || record_fail 2 schema
+    if [[ "$kind" != plan ]]; then
+      branch=$(printf '%s' "$json" | jq -r .branch); record_branch "$branch" || record_fail 2 branch
+    fi
+    if [[ "$kind" == dispatch ]]; then
+      session_id=$(printf '%s' "$json" | jq -r .session_id)
+      valid_session_reference "$session_id" || record_fail 2 session-reference
+    fi
+    printf '%s' "$json" | jq -r --arg kind "$kind" '
+      if $kind=="plan" then "## Plan\n\nTask: #\(.task)\n\n\(.content)"
+      elif $kind=="dispatch" then "Dispatching worker: \(.session) (session \(.session_id)), branch \(.branch)\n\nTask: #\(.task)"
+      else (if $kind=="claim" then "Starting" else "Resuming" end)+" in session \(.session), branch \(.branch)\n\nTask: #\(.task)" end'
+    exit 0
+  fi
+  command -v gh >/dev/null 2>&1 || record_fail 2 dependency
+  [[ "$repo" =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$ && "${repo#*/}" != . && "${repo#*/}" != .. ]] || record_fail 2 repository
+  [[ "$task" =~ ^[1-9][0-9]{0,14}$ && ( -z "$pr" || "$pr" =~ ^[1-9][0-9]{0,14}$ ) ]] || record_fail 2 numbers
+  [[ -n "$body_file" ]] || record_fail 2 body-file
+  [[ -z "$branch" ]] || record_branch "$branch" || record_fail 2 branch
+  raw=$(record_input "$body_file") || record_fail 2 body-read-or-limit
+  printf '%s' "$raw" | jq -e 'test("[\\x00-\\x08\\x0b-\\x1f\\x7f]")|not' >/dev/null || record_fail 1 control-bytes
+  # Keep raw as a JSON string for exact byte comparison, including terminal LF.
+  draft=$(printf '%s' "$raw" | jq -r .)
+  first_line="${draft%%$'\n'*}"
+  local pattern
+  case "$kind" in
+    claim|resume)
+      expected=Starting; [[ "$kind" != resume ]] || expected=Resuming
+      pattern="^$expected in session ([^,()]+), branch ([^ ,()]+)$"
+      [[ "$first_line" =~ $pattern && "$first_line" != *\\* ]] || record_fail 1 claim-syntax
+      name="${BASH_REMATCH[1]}"; draft_branch="${BASH_REMATCH[2]}"
+      [[ "$name" != ' '* && "$name" != *' ' ]] || record_fail 1 identity ;;
+    dispatch)
+      pattern='^Dispatching worker:[ ]([^()]+) \(session ([^()]*)\), branch ([^ ,()]+)$'
+      [[ "$first_line" =~ $pattern && "$first_line" != *\\* ]] || record_fail 1 dispatch-syntax
+      name="${BASH_REMATCH[1]}"; session_id="${BASH_REMATCH[2]}"; draft_branch="${BASH_REMATCH[3]}"
+      valid_session_reference "$session_id" || record_fail 1 session-reference ;;
+    plan)
+      printf '%s' "$raw" | jq -e '(test("(^|\n)## Plan\\b") or startswith("Plan:")) and
+        (gsub("(?m)^## Plan[ \\t]*$|^Plan:[ \\t]*|^Task: #[0-9]+$";"")|test("\\S"))' >/dev/null || record_fail 1 plan-content ;;
+  esac
+  if [[ "$kind" != plan ]]; then
+    printf '%s' "$name" | jq -Rse '(test("[\\x00-\\x1f\\x7f]|^\\s|\\s$")|not) and
+      (ascii_downcase|test("^(unknown|none|null|tbd|todo|placeholder|<.*>)$")|not)' >/dev/null || record_fail 1 identity
+    record_branch "$draft_branch" || record_fail 1 branch
+    [[ -z "$branch" || "$branch" == "$draft_branch" || "$branch" == *"$draft_branch" ]] || record_fail 1 branch-mismatch
+    [[ -n "$branch" ]] || branch="$draft_branch"
+  fi
+  printf '%s' "$raw" | jq -e --arg task "$task" '([split("\n")[]|select(startswith("Task: #"))] as $t |
+    ($t|length)==1 and $t[0]==("Task: #"+$task))' >/dev/null || record_fail 1 task-binding
+  record_get() {
+    local response
+    # Explicit method and fixed endpoints/options; no caller-controlled writes.
+    response=$(gh api "$@" --method GET) || record_fail 1 unavailable-read
+    [[ $(printf '%s' "$response" | wc -c) -le 4194304 ]] || record_fail 1 response-limit
+    printf '%s' "$response" | jq -cse 'if length==1 then .[0] else error("one response required") end' || record_fail 1 malformed-response
+  }
+  local repository issue_url issue_json pages comments markers plan_time claim_time dispatch_time prior released release time
+  repository=$(record_get "repos/$repo") || exit 1
+  printf '%s' "$repository" | jq -e --arg repo "$repo" 'type=="object" and (.full_name|type)=="string" and
+    (.full_name|ascii_downcase)==($repo|ascii_downcase)' >/dev/null || record_fail 1 repository-binding
+  repo=$(printf '%s' "$repository" | jq -r .full_name)
+  issue_url="https://api.github.com/repos/$repo/issues/$task"
+  issue_json=$(record_get "repos/$repo/issues/$task") || exit 1
+  printf '%s' "$issue_json" | jq -e --arg url "$issue_url" --arg task "$task" '
+    type=="object" and .url==$url and (.number|type)=="number" and (.number|tostring)==$task and
+    (has("pull_request")|not) and (.body==null or (.body|type)=="string") and
+    (.comments|type=="number" and .>=0 and floor==. and .<=2000) and
+    (.labels|type=="array" and all(.[];type=="object" and (.name|type)=="string") and any(.[];.name=="type:task"))' >/dev/null || record_fail 1 task-metadata
+  pages=$(record_get "repos/$repo/issues/$task/comments?per_page=100" --paginate --slurp) || exit 1
+  printf '%s' "$pages" | jq -e 'type=="array" and length>0 and length<=21 and all(.[];type=="array" and length<=100)
+    and all(.[0:-1][];length==100)' >/dev/null || record_fail 1 incomplete-pages
+  comments=$(printf '%s' "$pages" | jq -c add)
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  printf '%s' "$comments" | jq -e --arg url "$issue_url" --arg now "$now" --argjson count "$(printf '%s' "$issue_json" | jq .comments)" '
+    def stamp: type=="string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") and .<=$now
+      and (. as $s|try ((fromdateiso8601|todateiso8601)==$s) catch false);
+    length==$count and ([.[].id]|length==(unique|length)) and all(.[];
+      type=="object" and (.id|type=="number" and .>0 and floor==. and .<=9007199254740991) and
+      (.body|type=="string" and (test("[\\x00-\\x08\\x0b-\\x1f\\x7f]")|not)) and .issue_url==$url and
+      (.created_at|stamp) and (.updated_at|stamp) and .updated_at>=.created_at)' >/dev/null || record_fail 1 ledger-shape
+  local marker_query='def plan: test("(^|\n)## Plan\\b") or startswith("Plan:"); .[] |
+    (if (.body|test("^(Starting|Resuming) in session")) then ["CLAIM",.created_at,.updated_at]|@tsv else empty end),
+    (if (.body|plan) then ["PLAN",.created_at,.updated_at]|@tsv else empty end),
+    (if (.body|startswith("Dispatching worker")) then ["DISPATCH",.created_at,.updated_at,(.body|split("\n")[0])]|@tsv else empty end),
+    (if (.body|startswith("Releasing worker")) then ["RELEASE",.created_at,.updated_at]|@tsv else empty end),
+    (if (.body|plan) and (.body|ascii_downcase|contains("no worker will be spawned")) then ["EXEMPT",.created_at,.updated_at]|@tsv else empty end)'
+  markers=$(printf '%s' "$comments" | jq -r "$marker_query")
+  [[ -z "$(printf '%s\n' "$markers" | awk -F '\t' '$2!=$3')" ]] || record_fail 1 edited-record
+  record_earliest() { printf '%s\n' "$markers" | awk -F '\t' -v kind="$1" '$1==kind {print $2}' | sort | head -n1; }
+  claim_time=$(record_earliest CLAIM); plan_time=$(record_earliest PLAN); dispatch_time=$(record_earliest DISPATCH)
+  if [[ "$kind" == plan || "$kind" == dispatch || -n "$plan_time$dispatch_time" ]]; then [[ -n "$claim_time" ]] || record_fail 1 missing-claim; fi
+  if [[ "$kind" == dispatch || -n "$dispatch_time" ]]; then [[ -n "$plan_time" ]] || record_fail 1 missing-plan; fi
+  [[ -z "$plan_time" || ! "$claim_time" > "$plan_time" ]] || record_fail 1 claim-plan-order
+  [[ -z "$dispatch_time" || ! "$plan_time" > "$dispatch_time" ]] || record_fail 1 plan-dispatch-order
+  # The provisional draft only checks a proposed append; it is never a posted
+  # record and cannot repair an edited/late historical event.
+  markers="$markers"$'\n'"$(printf '%s' "$raw" | jq -c --arg now "$now" '[{body:.,created_at:$now,updated_at:$now}]' | jq -r "$marker_query")"
+  prior=""
+  while IFS= read -r time; do
+    [[ -n "$time" ]] || continue
+    if [[ -n "$prior" ]]; then
+      released=false
+      while IFS= read -r release; do
+        [[ -n "$release" ]] || continue
+        if [[ ! "$release" < "$prior" && ! "$release" > "$time" ]]; then released=true; break; fi
+      done <<< "$(printf '%s\n' "$markers" | awk -F '\t' '$1=="RELEASE" {print $2}')"
+      $released || record_fail 1 missing-release
+    fi
+    prior="$time"
+  done <<< "$(printf '%s\n' "$markers" | awk -F '\t' '$1=="DISPATCH" {print $2}' | sort)"
+  local pull="" resolved="" commits="" link plan_link link_repo link_task comment_id first_commit head_ref superseded _row_created _row_updated _row_kind
+  if [[ -n "$pr" ]]; then
+    pull=$(record_get "repos/$repo/pulls/$pr") || exit 1
+    printf '%s' "$pull" | jq -e --arg repo "$repo" --arg pr "$pr" '
+      def sha:type=="string" and test("^[0-9a-f]{40}$");
+      type=="object" and (.number|type)=="number" and (.number|tostring)==$pr and .base.repo.full_name==$repo and
+      (.body|type)=="string" and (.head.ref|type=="string" and length>0) and (.head.sha|sha) and (.base.sha|sha) and
+      (.commits|type=="number" and .>=1 and .<=250 and floor==.)' >/dev/null || record_fail 1 pr-metadata
+    head_ref=$(printf '%s' "$pull" | jq -r .head.ref); record_branch "$head_ref" || record_fail 1 pr-branch
+    [[ -z "$branch" || "$branch" == "$head_ref" || "$head_ref" == *"$branch" ]] || record_fail 1 pr-branch-mismatch
+    branch="$head_ref"
+    link=$(printf '%s' "$pull" | jq -r '.body|[scan("(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\\s+(?:[A-Za-z]+\\s+)?#[0-9]+")][0]//""')
+    [[ "${link##*#}" == "$task" ]] || record_fail 1 pr-task-link
+    plan_link=$(printf '%s' "$pull" | jq -r '.body|[scan("(?i)plan:\\s*https://github\\.com/[^/\\s]+/[^/\\s]+/issues/[0-9]+#issuecomment-[0-9]+")][0]//""|ascii_downcase')
+    link_repo=$(printf '%s' "$plan_link" | sed -E 's|.*github\.com/([^/]+/[^/]+)/issues/.*|\1|')
+    link_task=$(printf '%s' "$plan_link" | sed -E 's|.*/issues/([0-9]+)#issuecomment-.*|\1|')
+    [[ "$link_repo" == "$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]')" && "$link_task" == "$task" ]] || record_fail 1 plan-link
+    comment_id="${plan_link##*#issuecomment-}"
+    resolved=$(record_get "repos/$repo/issues/comments/$comment_id") || exit 1
+    printf '%s\n%s\n' "$resolved" "$comments" | jq -se --arg id "$comment_id" '
+      length==2 and (.[0] as $row | .[1] |
+        ($row.id|tostring)==$id and ($row.body|test("(^|\n)## Plan\\b") or startswith("Plan:")) and
+        any(.[]; .id==$row.id and .body==$row.body and .issue_url==$row.issue_url and
+          .created_at==$row.created_at and .updated_at==$row.updated_at))' >/dev/null || record_fail 1 exact-plan-membership
+    commits=$(record_get "repos/$repo/pulls/$pr/commits?per_page=100" --paginate --slurp) || exit 1
+    printf '%s' "$commits" | jq -e --argjson count "$(printf '%s' "$pull" | jq .commits)" --arg head "$(printf '%s' "$pull" | jq -r .head.sha)" --arg now "$now" '
+      def stamp:type=="string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") and .<=$now
+        and (. as $s|try ((fromdateiso8601|todateiso8601)==$s) catch false);
+      type=="array" and length>0 and length<=3 and all(.[];type=="array" and length<=100) and all(.[0:-1][];length==100) and
+      (add|length==$count and ([.[].sha]|length==(unique|length)) and any(.[];.sha==$head) and
+       all(.[];(.sha|type=="string" and test("^[0-9a-f]{40}$")) and
+         ((if .commit.committer.date==null then .commit.author.date else .commit.committer.date end)|stamp)))' >/dev/null || record_fail 1 commit-evidence
+    first_commit=$(printf '%s' "$commits" | jq -r 'add|[.[]|.commit.committer.date//.commit.author.date]|min')
+    [[ -n "$plan_time" && ! "$plan_time" > "$first_commit" ]] || record_fail 1 plan-before-commit
+    if [[ "$kind" == dispatch && -z "$dispatch_time" && "$now" > "$first_commit" ]]; then
+      record_fail 1 first-dispatch-after-commit
+    fi
+    if [[ -n "$dispatch_time" ]]; then [[ ! "$dispatch_time" > "$first_commit" ]] || record_fail 1 dispatch-before-commit
+    else expected=$(record_earliest EXEMPT); [[ -n "$expected" && ! "$expected" > "$first_commit" ]] || record_fail 1 execution-mode; fi
+  fi
+  while IFS=$'\t' read -r _row_kind _row_created _row_updated first_line superseded; do
+    [[ -n "$first_line" ]] || continue
+    pattern='^Dispatching worker:[^()]+ \(session ([^()]*)\), branch ([^ ,()]+)$'
+    [[ "$first_line" =~ $pattern && "$first_line" != *\\* ]] || record_fail 1 historical-dispatch-syntax
+    session_id="${BASH_REMATCH[1]}"; draft_branch="${BASH_REMATCH[2]}"
+    if ! valid_session_reference "$session_id" || ! record_branch "$draft_branch"; then
+      record_fail 1 historical-dispatch-identity
+    fi
+    if [[ "$superseded" == 0 && -n "$branch" ]]; then
+      [[ "$branch" == "$draft_branch" || "$branch" == *"$draft_branch" ]] || record_fail 1 current-dispatch-branch
+    fi
+  done <<< "$(printf '%s\n' "$markers" | ritual_dispatch_rows)"
+  [[ "$(record_get "repos/$repo/issues/$task")" == "$issue_json" ]] || record_fail 1 task-readback
+  [[ "$(record_get "repos/$repo/issues/$task/comments?per_page=100" --paginate --slurp)" == "$pages" ]] || record_fail 1 comments-readback
+  if [[ -n "$pr" ]]; then
+    [[ "$(record_get "repos/$repo/issues/comments/$comment_id")" == "$resolved" ]] || record_fail 1 plan-readback
+    [[ "$(record_get "repos/$repo/pulls/$pr")" == "$pull" ]] || record_fail 1 pr-readback
+  fi
+  printf 'PASS: observed %s draft and stable Task ledger only; separate publication and authorization required.\n' "$kind"
+  exit 0
+}
+case "${1:-}" in render|preflight) record_mode "$@" ;; esac
+
 PR="${1:-${PR_NUMBER:-}}"
 if [[ -z "$PR" ]]; then
   echo "usage: bash .github/scripts/check-task-ritual.sh <pr-number>  (or set PR_NUMBER)" >&2
@@ -447,27 +739,6 @@ fi
 # actually happened. The exemption marker is the exact phrase quoted in
 # AGENTS.md §4, matched case-sensitively inside a plan comment.
 mode_desc=""
-valid_session_reference() {
-  local value="$1" segment count=0 rest
-  local LC_ALL=C
-  # Legacy IDs remain opaque. Require whole bounded tokens, not a hex prefix.
-  if [[ "$value" =~ ^[0-9a-fA-F][0-9a-fA-F-]{7,127}$ && "$value" != *--* && "$value" != *- ]]; then
-    return 0
-  fi
-  # Canonical collaboration references are tool identifiers, never paths or
-  # authenticated identities. Limit the full token and each of 1-16 segments.
-  [[ ${#value} -le 256 && "$value" == /root/* ]] || return 1
-  rest="${value#/root/}"
-  while :; do
-    segment="${rest%%/*}"
-    [[ "$segment" =~ ^[a-z0-9_]{1,63}$ ]] || return 1
-    case "$segment" in unknown|none|null|tbd|todo|placeholder) return 1 ;; esac
-    count=$((count + 1))
-    [[ $count -le 16 ]] || return 1
-    [[ "$rest" == */* ]] || break
-    rest="${rest#*/}"
-  done
-}
 if has_marker DISPATCH; then
   earliest_dispatch=$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH" { print $2 }' | sort | head -n1)
   mode_desc="two-tier (dispatch ${earliest_dispatch})"
@@ -479,7 +750,7 @@ if has_marker DISPATCH; then
   # no API here can enumerate them, so it is required as a durable record for
   # humans and audits, never treated as proof. What this wall can show is
   # that the supervisor claimed a specific session and a matching branch.
-  while IFS=$'\t' read -r _kind _created _updated first_line; do
+  while IFS=$'\t' read -r _kind _created _updated first_line superseded; do
     [[ -n "$first_line" ]] || continue
     # Match one complete field and branch, rejecting delimiters, escaped TSV
     # controls and prefix/tail contamination. Extra scope belongs on later lines.
@@ -499,12 +770,12 @@ if has_marker DISPATCH; then
       ok=false
       continue
     fi
-    if [[ -z "$dispatch_branch" ]]; then
+    if ! valid_record_branch "$dispatch_branch"; then
       echo "FAIL: issue #${issue} has a worker-dispatch comment that names no branch:"
       echo "        ${first_line}"
       echo "      Record the worker's branch so the dispatch can be tied to this PR (session-orchestration skill)."
       ok=false
-    elif [[ -n "$head_ref" && "$dispatch_branch" != "$head_ref" && "$head_ref" != *"$dispatch_branch" ]]; then
+    elif [[ "$superseded" == 0 && -n "$head_ref" && "$dispatch_branch" != "$head_ref" && "$head_ref" != *"$dispatch_branch" ]]; then
       # Managed surfaces prefix the branch they generate (AGENTS.md §4), so a
       # head ref ending in the dispatched name is the same branch.
       echo "FAIL: issue #${issue} dispatches branch '${dispatch_branch}', but PR #${PR} is from '${head_ref}'."
@@ -512,7 +783,7 @@ if has_marker DISPATCH; then
       ok=false
     fi
   done <<EOF
-$(printf '%s\n' "$markers" | awk -F '\t' '$1 == "DISPATCH"')
+$(printf '%s\n' "$markers" | ritual_dispatch_rows)
 EOF
 
   # Chronology 3 — the dispatch follows the plan of record: the supervisor
@@ -624,7 +895,10 @@ else
     ok=false
   elif plan_snapshot=$(observe_plan); then
     IFS=$'\t' read -r _kind plan_id _created _updated _encoded _url comment_kind <<< "$plan_snapshot"
-    if [[ "$plan_id" != "$comment_id" ]] || ! printf '%s\n' "$comment_rows" | grep -Fx -- "${plan_snapshot%$'\t'*}" >/dev/null; then
+    if [[ "$plan_id" != "$comment_id" ]] || ! {
+      printf '%s\n' "${plan_snapshot%$'\t'*}"
+      printf '%s\n' "$comment_rows"
+    } | exact_line_membership; then
       echo "FAIL: PR #${PR}'s plan link does not match the observed Task comment."
       ok=false
     elif [[ "$comment_kind" != "plan" ]]; then

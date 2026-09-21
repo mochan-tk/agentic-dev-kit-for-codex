@@ -15,6 +15,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 GUIDE = ROOT / "docs/distribution/companion-checks.md"
 REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
+GOVERNANCE_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
 HELPERS = {"governance": "governance-status.sh", "worktree": "worktree-preflight.sh",
            "connectors": "check-connectors.sh"}
 
@@ -53,7 +54,8 @@ class CompanionAccessTests(unittest.TestCase):
         self.env = dict(os.environ, LC_ALL="C", LANG="C", LC_CTYPE="C",
                         PATH=str(self.bin) + os.pathsep + os.environ["PATH"], TMPDIR=str(self.tmp),
                         COMPANION_ROOT=str(ROOT), COMPANION_CALLS=str(self.calls),
-                        COMPANION_LAUNCHES=str(self.launches), COMPANION_MODE="good")
+                        COMPANION_LAUNCHES=str(self.launches), COMPANION_MODE="good",
+                        COMPANION_GOVERNANCE_REVISION=GOVERNANCE_REVISION)
         self.executable("curl", r'''
 import json,os,shutil,stat,sys
 from pathlib import Path
@@ -61,8 +63,10 @@ a=sys.argv[1:]
 fixed=["--disable","--fail","--silent","--show-error","--location","--proto","=https","--proto-redir","=https","--max-time","60","--output"]
 if a[:len(fixed)]!=fixed or len(a)!=len(fixed)+2: sys.exit(90)
 out=Path(a[-2]); url=a[-1]
-prefix="https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/2213860cbb16bf80d80d1c388c31bc75ae12bb7e/.github/scripts/"
-if not url.startswith(prefix) or url[len(prefix):] not in ("governance-status.sh","worktree-preflight.sh","check-connectors.sh"): sys.exit(91)
+helper=url.rsplit("/",1)[-1]
+revision=os.environ["COMPANION_GOVERNANCE_REVISION"] if helper=="governance-status.sh" else "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
+prefix="https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/"+revision+"/.github/scripts/"
+if url!=prefix+helper or helper not in ("governance-status.sh","worktree-preflight.sh","check-connectors.sh"): sys.exit(91)
 with open(os.environ["COMPANION_CALLS"],"a") as f:
  f.write(json.dumps(dict(argv=a,scratch_mode=stat.S_IMODE(out.parent.stat().st_mode)))+"\n")
 mode=os.environ["COMPANION_MODE"]
@@ -167,6 +171,21 @@ if mode=="valid-but-failed": sys.exit(22)
         self.assertTrue(all(row["method"] == "GET" and row["body"] is None for row in calls))
         self.assertEqual(before, snapshot(self.target))
         self.transport()
+        self.assert_clean()
+
+    def test_governance_fixed_revision_delivers_single_maintainer_sensor(self):
+        fixture = self.governance_fixture()
+        fixture.baseline("single-maintainer")
+        fixture.records.write_text(json.dumps(fixture.api))
+        result = self.run_block("governance", CHECK_PROFILE="single-maintainer")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("no_bypass", result.stdout)
+        rows = self.transport()
+        self.assertEqual(1, len(rows))
+        self.assertIn("/" + GOVERNANCE_REVISION + "/", rows[0]["argv"][-1])
+        calls = [json.loads(line) for line in fixture.calls.read_text().splitlines()]
+        self.assertTrue(calls)
+        self.assertTrue(all(row["method"] == "GET" and row["body"] is None for row in calls))
         self.assert_clean()
 
     def test_worktree_command_preserves_git_index_files_and_claims(self):

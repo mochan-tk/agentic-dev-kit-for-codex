@@ -1,9 +1,12 @@
 # Run the read-only checks without a kit clone
 
 Choose one check below, set its explicit inputs, then run its Bash block. Each
-block downloads **one unchanged helper** from accepted revision
-`2213860cbb16bf80d80d1c388c31bc75ae12bb7e`, verifies its SHA-256, and only then
-executes the complete file. No installer, dispatcher, automatic repair or kit
+block downloads **one explicitly pinned helper**, verifies its SHA-256, and only
+then executes the complete file. Governance is bound to the implementation
+revision written in its block; worktree and connector checks remain at accepted
+revision `2213860cbb16bf80d80d1c388c31bc75ae12bb7e`. Moving the governance pin is
+a reviewed product change, not automatic tracking of main. No installer,
+dispatcher, automatic repair or kit
 clone is needed. These helpers remain outside the 47 installed files.
 
 Use Bash 3.2+ on macOS/Linux, trusted `curl`, `mktemp`, `rm`, `rmdir`, and either
@@ -25,7 +28,7 @@ Set actual repository, required check contexts, declared profile and posture:
 ```bash
 export CHECK_REPO='owner/repository'
 export CHECK_CONTEXTS='actual-check-one,actual-check-two'
-export CHECK_PROFILE='solo' # explicitly select solo or team
+export CHECK_PROFILE='single-maintainer' # explicitly select solo, team or single-maintainer
 export CHECK_POSTURE='adopter' # or source-template, only when applicable
 ```
 
@@ -34,12 +37,15 @@ Do not grant new access merely to obtain a successful result. Missing access or
 incomplete evidence stays `UNKNOWN`/`UNCHECKABLE`; observations do not approve
 bypass actors, change Rulesets or grant permission to write. Output can name
 observed actors/checks: review it locally before sharing; do not post raw output.
+Single-maintainer expects PR/check requirements, zero approving reviews and
+no bypass across all contributing Rulesets. Missing structured review data or
+conflicting residual gates are not treated as success.
 
 <!-- BEGIN companion-governance -->
 ```bash
 (
   set -eu
-  : "${CHECK_REPO:?set the actual repository}" "${CHECK_CONTEXTS:?set actual checks}" "${CHECK_PROFILE:?select solo or team}" "${CHECK_POSTURE:?select the actual posture}"
+  : "${CHECK_REPO:?set the actual repository}" "${CHECK_CONTEXTS:?set actual checks}" "${CHECK_PROFILE:?select solo, team or single-maintainer}" "${CHECK_POSTURE:?select the actual posture}"
   export LC_ALL=C
   umask 077
   scratch=$(mktemp -d "${TMPDIR:-/tmp}/codex-companion.XXXXXX") || exit $?
@@ -55,8 +61,8 @@ observed actors/checks: review it locally before sharing; do not post raw output
   trap cleanup EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
-  revision=2213860cbb16bf80d80d1c388c31bc75ae12bb7e
-  expected=ebd7d548506797edc5ee04c7203b468d7ec69417b0bcb06d7fde88fb53593624
+  revision=48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4
+  expected=8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e
   curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 60 --output "$scratch/helper.sh" "https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/$revision/.github/scripts/governance-status.sh" || exit $?
   [ -f "$scratch/helper.sh" ] && [ ! -L "$scratch/helper.sh" ] || exit 3
   if command -v sha256sum >/dev/null 2>&1; then

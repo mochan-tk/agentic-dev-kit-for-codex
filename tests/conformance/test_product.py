@@ -43,7 +43,8 @@ class ProductTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         for path in (RECORD, "tests/fixtures/history/manifest.json", "tests/conformance/test_source_first_procedures.py",
                      ".github/scripts/scaffold-install.sh", ".github/scripts/scaffold-update.sh",
-                     ".github/scripts/scaffold-update.ps1", "tests/conformance/test_installer_update.py"):
+                     ".github/scripts/scaffold-update.ps1", "tests/conformance/test_installer_update.py",
+                     "tests/fixtures/workflow-parity-baseline.json", "tests/conformance/test_workflow_parity.py"):
             altered = self.fixture()
             (altered / path).unlink()
             self.assertTrue(self.checker.validate(altered))
@@ -92,7 +93,7 @@ class ProductTests(unittest.TestCase):
         original = path.read_text()
         for before, after in (
             (self.checker.COMPANION_REVISION, "main"),
-            ("expected=ebd7d548", "expected=00000000"),
+            ("expected=" + self.checker.WORKFLOW_EXPORT_DIGESTS[".github/scripts/governance-status.sh"], "expected=" + "0"*64),
             ("curl --disable --fail", "curl --disable"),
             ('[ "${actual%% *}" = "$expected" ]', "true"),
             ("  trap cleanup EXIT\n", ""),
@@ -203,6 +204,46 @@ class ProductTests(unittest.TestCase):
         unrelated.write_bytes(unrelated.read_bytes() + b"\n# unrelated drift\n")
         self.assertIn("approved export file changed: tests/conformance/test_installer_feedback.py",
                       self.checker.validate_export(root))
+
+    def test_workflow_current_adaptations_are_exact_and_separate_from_export(self):
+        root = self.fixture()
+        parity = root / ".github/distribution/source-parity.v1.json"
+        original = parity.read_bytes()
+        self.assertEqual([], self.checker.validate_export(root))
+        for mutation in ("missing", "source", "scope", "extra", "baseline", "target", "export", "reorder"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original)
+                record = value["workflow_parity"]
+                if mutation == "missing": del value["workflow_parity"]
+                elif mutation == "source": record["source_commit"] = "0"*40
+                elif mutation == "scope": record["export_adaptations"].pop()
+                elif mutation == "extra": record["unreviewed"] = True
+                elif mutation == "baseline": record["baseline_sha256"] = "0"*64
+                elif mutation == "target": record["target_files"][0]["sha256"] = "0"*64
+                elif mutation == "export": record["export_adaptations"][0]["export"]["sha256"] = "0"*64
+                else: record["target_files"].reverse()
+                parity.write_text(json.dumps(value))
+                self.assertTrue(self.checker.validate(root))
+                result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts/check-installer.py")],
+                                        capture_output=True, text=True, timeout=30)
+                self.assertNotEqual(0, result.returncode)
+        parity.write_bytes(original)
+        helper = root / ".github/distribution/payload/.github/scripts/check-task-ritual.sh"
+        helper.write_bytes(helper.read_bytes() + b"\n# unapproved\n")
+        value = json.loads(original)
+        for row in value["workflow_parity"]["export_adaptations"]:
+            if row["path"] == str(helper.relative_to(root)):
+                data = helper.read_bytes()
+                row["target_sha256"] = hashlib.sha256(data).hexdigest()
+                row["target_blob"] = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        parity.write_text(json.dumps(value))
+        self.assertTrue(self.checker.validate_export(root))
+        baseline = root / "tests/fixtures/workflow-parity-baseline.json"
+        baseline.write_bytes(baseline.read_bytes() + b"\n")
+        self.assertTrue(self.checker.validate(root))
+        checker = root / ".github/scripts/check-installer.py"
+        checker.write_text(checker.read_text().replace("def validate_workflow_parity(root):", "def removed_workflow_guard(root):"))
+        self.assertIn("mandatory installer validation unavailable", self.checker.validate(root))
 
     def test_readable_nonexecutable_permissions_are_accepted(self):
         for mode in (0o600, 0o640, 0o644, 0o664, 0o444):

@@ -21,9 +21,10 @@ REPO = "repos/fixture/adopter"
 def canonical(profile="team", app=15368):
     team = profile == "team"
     return dict(id=42, name="scaffold-branch-protection", target="branch", enforcement="active",
-                bypass_actors=[dict(actor_id=5, actor_type="RepositoryRole", bypass_mode="pull_request")],
+                source_type="Repository", source="fixture/adopter",
+                bypass_actors=[] if profile=="single-maintainer" else [dict(actor_id=5, actor_type="RepositoryRole", bypass_mode="pull_request")],
                 conditions=dict(ref_name=dict(include=["~DEFAULT_BRANCH"], exclude=[])),
-                rules=[dict(type="pull_request", parameters=dict(required_approving_review_count=1,
+                rules=[dict(type="pull_request", parameters=dict(required_approving_review_count=0 if profile=="single-maintainer" else 1,
                     dismiss_stale_reviews_on_push=team, require_code_owner_review=team,
                     require_last_push_approval=team, required_review_thread_resolution=team)),
                     dict(type="required_status_checks", parameters=dict(strict_required_status_checks_policy=team,
@@ -367,7 +368,7 @@ print(raw)
         parent=copy.deepcopy(original[0]);parent.update(ruleset_id=900,ruleset_source_type="Organization",ruleset_source="parent")
         parent["parameters"]["required_approving_review_count"]=2
         self.put(endpoint,raw=json.dumps(original)+"\n"+json.dumps([parent]))
-        self.put("orgs/parent/rulesets/900",dict(id=900,bypass_actors=[dict(actor_id=77,actor_type="Integration",bypass_mode="always")]))
+        self.put("orgs/parent/rulesets/900",dict(id=900,source_type="Organization",source="parent",enforcement="active",bypass_actors=[dict(actor_id=77,actor_type="Integration",bypass_mode="always")]))
         result=self.sensor();self.assertEqual(0,result.returncode,result.stderr)
         self.assertIn("count=2",result.stdout);self.assertIn("Integration:77:always",result.stdout)
         self.assertTrue(any(x["endpoint"]=="orgs/parent/rulesets/900" for x in self.log))
@@ -386,6 +387,93 @@ print(raw)
     def test_large_codeowners_placeholder_does_not_become_pipefail_absence(self):
         self.put(REPO+"/contents/.github/CODEOWNERS?ref=main",raw="# CUSTOMIZE replace owner\n"+"# padding1234567890\n"*15000+"* @fixture-maintainer\n")
         self.assertNotEqual(0,self.setup().returncode);self.no_writes()
+
+    def test_single_maintainer_create_preview_and_persisted_sensor(self):
+        self.baseline("single-maintainer")
+        result=self.setup("--dry-run",profile="single-maintainer")
+        self.assertEqual(0,result.returncode,result.stderr);self.assertEqual([],self.log)
+        candidate=json.loads(result.stdout)
+        self.assertEqual([],candidate["bypass_actors"])
+        self.assertEqual(0,candidate["rules"][0]["parameters"]["required_approving_review_count"])
+        result=self.setup(profile="single-maintainer");self.assertEqual(0,result.returncode,result.stderr)
+        writes=[x for x in self.log if x["method"]!="GET"]
+        self.assertEqual(["PATCH","POST"],[x["method"] for x in writes])
+        self.assertEqual("single-maintainer",writes[0]["body"]["value"])
+        self.assertEqual(0,self.sensor(profile=None).returncode)
+        self.put(REPO+"/actions/variables/SCAFFOLD_GOVERNANCE_PROFILE",method="PATCH",rc=1)
+        self.assertNotEqual(0,self.setup(profile="single-maintainer").returncode)
+        self.assertFalse(any(x["method"]!="GET" and "/rulesets" in x["endpoint"] for x in self.log))
+
+    def test_single_maintainer_reconcile_preserves_preimage_and_is_idempotent(self):
+        self.baseline("solo")
+        detail=canonical("solo")
+        detail["rules"][0]["parameters"].update(allowed_merge_methods=["merge","squash","rebase"],required_reviewers=[],require_extra_approval_for_unattributed_changes=True)
+        detail["rules"][1]["parameters"]["do_not_enforce_on_create"]=False
+        self.put(REPO+"/rulesets?per_page=100",[dict(id=42,name=detail["name"],enforcement="active")])
+        self.put(REPO+"/rulesets/42",detail)
+        result=self.setup("--reconcile","--enforcement","active",profile="single-maintainer")
+        self.assertEqual(0,result.returncode,result.stderr)
+        body=next(x["body"] for x in self.log if x["method"]=="PUT")
+        want={k:copy.deepcopy(detail[k]) for k in ("name","target","enforcement","bypass_actors","conditions","rules")}
+        want["bypass_actors"]=[];want["rules"][0]["parameters"]["required_approving_review_count"]=0
+        self.assertEqual(want,body)
+        self.put(REPO+"/rulesets/42",dict(detail,**body))
+        self.assertEqual(0,self.setup("--reconcile","--enforcement","active",profile="single-maintainer").returncode)
+        self.assertEqual(["PATCH"],[x["method"] for x in self.log if x["method"]!="GET"])
+
+    def test_single_maintainer_refuses_foreign_unknown_team_and_missing_reconcile(self):
+        for change in (lambda d:d.update(source="other/repo"),lambda d:d.update(source_type="Organization"),
+                       lambda d:d.update(custom_policy={}),lambda d:d["rules"][0]["parameters"].update(required_reviewers=None),
+                       lambda d:d["rules"][0]["parameters"].update(require_extra_approval_for_unattributed_changes=False)):
+            detail=canonical("solo");change(detail)
+            self.put(REPO+"/rulesets?per_page=100",[dict(id=42,name=detail["name"],enforcement="active")])
+            self.put(REPO+"/rulesets/42",detail)
+            self.assertNotEqual(0,self.setup("--reconcile",profile="single-maintainer").returncode);self.no_writes()
+        self.put(REPO+"/rulesets/42",canonical("team"))
+        self.assertNotEqual(0,self.setup("--reconcile",profile="single-maintainer").returncode);self.no_writes()
+        self.put(REPO+"/rulesets/42",canonical("solo"))
+        self.assertNotEqual(0,self.setup(profile="single-maintainer").returncode);self.no_writes()
+
+    def test_single_maintainer_residual_review_and_all_source_bypass_refuse(self):
+        endpoint=REPO+"/rules/branches/main?per_page=100"
+        for key,value in (("required_approving_review_count",1),("require_code_owner_review",True),
+                          ("require_last_push_approval",True),("required_reviewers",[{"minimum_approvals":1,"file_patterns":["*"],"reviewer":{"type":"Team","id":7}}])):
+            self.baseline("single-maintainer")
+            self.api["GET "+endpoint]["body"][0]["parameters"][key]=value
+            self.assertEqual(1,self.sensor(profile="single-maintainer").returncode,key)
+        for malformed in (None,{},False,[{"minimum_approvals":"1"}]):
+            self.baseline("single-maintainer")
+            self.api["GET "+endpoint]["body"][0]["parameters"]["required_reviewers"]=malformed
+            self.assertEqual(3,self.sensor(profile="single-maintainer").returncode)
+        for index in (0,1):
+            self.baseline("single-maintainer")
+            row=self.api["GET "+endpoint]["body"][index]
+            row.update(ruleset_id=77,ruleset_source_type="Organization",ruleset_source="parent")
+            self.put("orgs/parent/rulesets/77",dict(id=77,source_type="Organization",source="parent",enforcement="active",
+                bypass_actors=[dict(actor_id=1,actor_type="Integration",bypass_mode="always")]))
+            self.assertEqual(1,self.sensor(profile="single-maintainer").returncode)
+
+    def test_sensor_detail_origin_active_state_and_conflicting_origins_are_unknown(self):
+        for change in (lambda d:d.update(source="other/repo"),lambda d:d.update(source_type="Organization"),lambda d:d.update(enforcement="disabled")):
+            self.baseline("single-maintainer")
+            change(self.api["GET "+REPO+"/rulesets/42"]["body"])
+            result=self.sensor(profile="single-maintainer")
+            self.assertEqual(3,result.returncode)
+            self.assertIn("no_bypass_actors\tUNKNOWN",result.stdout)
+        self.baseline("single-maintainer")
+        self.api["GET "+REPO+"/rules/branches/main?per_page=100"]["body"][1]["ruleset_source"]="other/repo"
+        self.assertEqual(3,self.sensor(profile="single-maintainer").returncode)
+
+    def test_installed_onboarding_single_maintainer_commands_and_skip(self):
+        adopter=self.installed_onboarding()
+        self.baseline("single-maintainer")
+        result=self.onboarding_command(adopter,"onboarding-ruleset-apply",ONBOARD_REPO="fixture/adopter",ONBOARD_CHECKS="lint,test",ONBOARD_PROFILE="single-maintainer",ONBOARD_CHOICE="active",ONBOARD_RULESET="new")
+        self.assertEqual(0,result.returncode,result.stderr)
+        body=next(x["body"] for x in self.log if x["method"]=="POST" and x["endpoint"].endswith("/rulesets"))
+        self.assertEqual([],body["bypass_actors"])
+        self.assertEqual(0,body["rules"][0]["parameters"]["required_approving_review_count"])
+        result=self.onboarding_command(adopter,"onboarding-ruleset-apply",ONBOARD_CHOICE="skip")
+        self.assertEqual(0,result.returncode,result.stderr);self.assertEqual([],self.log)
 
 
 if __name__ == "__main__":

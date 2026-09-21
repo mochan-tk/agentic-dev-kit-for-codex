@@ -12,13 +12,21 @@ because typing `bash` there reaches the WSL launcher rather than Git Bash even
 when Git for Windows is correctly installed.
 
 Read the exit code as three answers, not two. **0** means tuned. **1** means
-`CUSTOMIZE` markers remain: this scaffold is **not onboarded**, so your first
-reply must say so, offer to run `$project-onboarding` (the project-onboarding
-skill), and wait for an explicit yes or no before taking on any other task.
+`CUSTOMIZE` markers remain: this scaffold is **not onboarded**. Acknowledge it.
+Read any explicit owner decline linked from the current work order/kickoff
+and its relevant Issue timeline. Reuse it only when it covers this repository
+and work, remains unrevoked and has no contradictory later instruction.
+Cite that decision and continue only already-authorized work without repeating
+the question or starting inventory/tuning. Otherwise offer `$project-onboarding`
+and wait for explicit yes/no. A marker, fork, unknown source version, unrelated
+Epic or chat memory is not a decline. A new request to onboard supersedes the
+old deferral. See the session-orchestration startup decision table.
 **Anything else** — a usage error, a missing interpreter, a script that is not
 there — means the check did not run. Say that plainly and say what you will do
 next; never report it as either answer, and never carry on as though the
 scaffold were tuned.
+Use quiet/report mode here: warning-only CI exit 0 does not establish tuned.
+A decline never skips an error, grants new work or overrides Task approval.
 
 `AGENTS.md` at the repository root defines the operating protocol
 (persistence rule, record-before-report, verify-before-done, unit of work,
