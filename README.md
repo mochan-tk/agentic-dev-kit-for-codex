@@ -136,6 +136,12 @@ now, Create disabled, or Skip explicitly; the write choices require a reviewed
 profile and separate consent. Skip performs no Ruleset operation.
 The installer itself creates neither CI workflows nor branch protection. See the [onboarding Skill](.github/distribution/payload/.agents/skills/project-onboarding/SKILL.md).
 
+To connect Task records to PR checks, a separate [opt-in adopter CI companion](docs/distribution/adopter-ci.md)
+previews three addon files for explicitly named application checks. It requires
+a supported existing workflow, preserves application CI and the Git index,
+and adds no required-check settings. Accept its installation before separately
+considering check activation; it is outside the legacy 47-file update path.
+
 ### 4. Complete one small Task
 
 Start with a change you can easily review. For example:
@@ -303,6 +309,7 @@ unfinished runtime/release work remain in the [predecessor records](docs/provena
 |---|---|
 | Install, select a revision, update, or recover an operation | [Installation guide](docs/distribution/source-first-installer.md) |
 | Check governance, worktrees or connector definitions without a kit clone | [Read-only companion commands](docs/distribution/companion-checks.md) |
+| Opt in to separate Task metadata, retarget freshness and control drift checks | [Adopter CI companion](docs/distribution/adopter-ci.md) |
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |
 | Understand Issue-graph authority | [Installed instructions](.github/distribution/payload/AGENTS.md) |
 | Check evidence boundaries and compatibility limits | [Known limitations](docs/known-limitations.md) |

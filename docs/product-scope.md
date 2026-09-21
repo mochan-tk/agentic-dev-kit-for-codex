@@ -29,6 +29,17 @@ automatic CI integration. The failure reporter is excluded from that route.
 Installation does not create
 CI, configure GitHub, commit, push, run onboarding or invoke a model.
 
+A separate [adopter CI companion](distribution/adopter-ci.md), invoked from a
+reviewed source checkout, previews or explicitly creates three addon files.
+It preserves existing application CI and the Git index, supports a documented
+limited workflow form, and refuses collisions or unsupported wiring. A fixed
+read-only metadata workflow executes trusted-base controls, reuses the actual
+installed Task ritual, checks retarget freshness and observes control drift in
+base and PR-head data. Application checks remain independent. This addon is
+outside the unchanged 47-file installer/update/rollback inventory. Activation,
+required-check settings and later guarded-file transitions remain explicit
+owner decisions; no live adopter rollout is claimed.
+
 The installed workflow covers onboarding, context collection and builtin
 drafting, human-reviewed distillation, Epic/Task planning and readiness,
 ownership and routing, supervision and handoff, verification, and retrospective

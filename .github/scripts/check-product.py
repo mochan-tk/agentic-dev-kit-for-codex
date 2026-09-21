@@ -42,7 +42,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture",
 }
 TEST_MODULES = (
-    "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
+    "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py",
     "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py",
 )
@@ -63,7 +63,27 @@ PUBLIC_DOCS = (
     "docs/provenance.md", "docs/known-limitations.md",
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
+    "docs/distribution/adopter-ci.md",
 )
+ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
+ADOPTER_RECORD_SHA256 = "6718773bd1395792ac16fe0e6fde627f024631a5c01f6a3318bb3ee6ef48b8f2"
+ADOPTER_SOURCE_FILES = {
+    ".github/workflows/task-ritual.yml": "76b2db3c69385e7ab20eee9f8847268b7a732389",
+    ".github/workflows/ci.yml": "2147dd280f8f24f748487dfb83e2084c6167b899",
+    ".github/scripts/check-retarget-freshness.sh": "91347e1f82f386273d27b75a4ff23d59952b2fb5",
+    ".github/scripts/governance-drift.sh": "230e08e1ad7df5f66970866eef8dc262131b0555",
+    ".github/scripts/governance-controls.tsv": "ea008c9f2b497dc656051761bca25b734b80b6e3",
+    ".github/scripts/tests/test-ci-event-isolation.sh": "c896594532d98b57888901e038610fc75c5993da",
+    ".github/scripts/tests/test-retarget-freshness.sh": "1f2aa1430055f6cabfae07343a99025bfbbe49c5",
+    ".github/scripts/tests/test-governance-drift.sh": "08e2c281d8d2458cc4200bbf558f53bdd50e3ca5",
+}
+ADOPTER_TARGETS = tuple(sorted((
+    ".github/distribution/adopter-ci/task-ritual.yml",
+    ".github/distribution/adopter-ci/check-adopter-ci.py",
+    ".github/scripts/setup-adopter-ci.py", "tests/conformance/test_adopter_ci.py",
+    "tests/conformance/test_product.py", "docs/distribution/adopter-ci.md",
+    "README.md", "docs/product-scope.md", "docs/known-limitations.md", "docs/provenance.md",
+)))
 COMPANION_GUIDE = "docs/distribution/companion-checks.md"
 COMPANION_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
 GOVERNANCE_COMPANION_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
@@ -336,10 +356,61 @@ def validate_companion_access(root):
     return errors
 
 
+def validate_adopter_ci(root):
+    """Mandatory product-only addon gate; legacy installer fixtures stay closed."""
+    errors = []
+    try:
+        record = bound_json(root, ADOPTER_RECORD, ADOPTER_RECORD_SHA256)
+        if (set(record) != {"schema", "source_repository", "source_commit", "source_files",
+                            "scope", "evidence", "target_files"}
+                or record["schema"] != "adopter-ci-provenance/v1"
+                or record["source_repository"] != "mochan-tk/agentic-dev-kit-for-copilot"
+                or record["source_commit"] != "446071c76f14f5fbda37a0eef1b6eafa0a3ab897"
+                or record["source_files"] != ADOPTER_SOURCE_FILES
+                or record["scope"] != "separate-opt-in-addon-preserving-all-47-payload-files"
+                or record["evidence"] != "actual-local-tools-synthetic-GitHub-not-live-adopter-rollout"
+                or [row["path"] for row in record["target_files"]] != list(ADOPTER_TARGETS)):
+            raise ValueError("addon source/scope binding")
+        for row in record["target_files"]:
+            data = read_bytes(root, row["path"])
+            if row != {"path": row["path"], "mode": "100644", "sha256": digest(data)}:
+                raise ValueError("addon current digest")
+        sensor_path = ".github/distribution/adopter-ci/check-adopter-ci.py"
+        spec = importlib.util.spec_from_file_location("adopter_product_check", Path(root) / sensor_path)
+        sensor = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sensor)
+        if sensor.METADATA_SHA256 != digest(read_bytes(root, ".github/distribution/adopter-ci/task-ritual.yml")):
+            raise ValueError("addon template binding")
+        if sensor.RITUAL_SHA256 != WORKFLOW_EXPORT_DIGESTS[PAYLOAD + "/.github/scripts/check-task-ritual.sh"]:
+            raise ValueError("addon installed ritual binding")
+        supported = ("name: Application\non:\n  pull_request:\n"
+                     "    types: [opened, synchronize, reopened]\npermissions:\n  contents: read\n"
+                     "concurrency:\n  group: application-${{ github.event.pull_request.number }}\n"
+                     "  cancel-in-progress: true\njobs:\n  quality:\n    runs-on: ubuntu-latest\n"
+                     "    steps:\n      - run: python3 -m unittest discover\n")
+        sensor.code_contract(supported.encode(), ["quality"])
+        for before, after in (("  quality:\n", "  quality:\n    if: false\n"),
+                              ("      - run:", "      - continue-on-error: true\n        run:"),
+                              ("python3 -m unittest discover", "true"),
+                              ("python3 -m unittest discover", "echo check"),
+                              ("reopened]", "reopened, edited]"),
+                              ("application-${{", "adopter-metadata-${{")):
+            try:
+                sensor.code_contract(supported.replace(before, after).encode(), ["quality"])
+            except sensor.Fault:
+                continue
+            raise ValueError("addon mandatory negative guard missing")
+        if "docs/distribution/adopter-ci.md" not in read_bytes(root, "README.md").decode():
+            raise ValueError("addon navigation")
+    except (OSError, ValueError, UnicodeError, KeyError, TypeError, AttributeError, ImportError):
+        errors.append("mandatory adopter CI addon is missing, unsafe or unbound")
+    return errors
+
+
 def validate(root):
     root = Path(root)
     errors = (validate_export(root) + validate_navigation(root) + validate_policy(root)
-              + validate_companion_access(root))
+              + validate_companion_access(root) + validate_adopter_ci(root))
     try:
         spec = importlib.util.spec_from_file_location("installer_product_check", root / ".github/scripts/check-installer.py")
         checker = importlib.util.module_from_spec(spec)
