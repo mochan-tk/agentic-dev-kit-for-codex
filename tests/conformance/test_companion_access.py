@@ -15,7 +15,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 GUIDE = ROOT / "docs/distribution/companion-checks.md"
 REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
-GOVERNANCE_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
+GOVERNANCE_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
 HELPERS = {"governance": "governance-status.sh", "worktree": "worktree-preflight.sh",
            "connectors": "check-connectors.sh"}
 
@@ -171,6 +171,21 @@ if mode=="valid-but-failed": sys.exit(22)
         self.assertTrue(all(row["method"] == "GET" and row["body"] is None for row in calls))
         self.assertEqual(before, snapshot(self.target))
         self.transport()
+        self.assert_clean()
+
+    def test_governance_fixed_revision_delivers_single_maintainer_sensor(self):
+        fixture = self.governance_fixture()
+        fixture.baseline("single-maintainer")
+        fixture.records.write_text(json.dumps(fixture.api))
+        result = self.run_block("governance", CHECK_PROFILE="single-maintainer")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("no_bypass", result.stdout)
+        rows = self.transport()
+        self.assertEqual(1, len(rows))
+        self.assertIn("/" + GOVERNANCE_REVISION + "/", rows[0]["argv"][-1])
+        calls = [json.loads(line) for line in fixture.calls.read_text().splitlines()]
+        self.assertTrue(calls)
+        self.assertTrue(all(row["method"] == "GET" and row["body"] is None for row in calls))
         self.assert_clean()
 
     def test_worktree_command_preserves_git_index_files_and_claims(self):

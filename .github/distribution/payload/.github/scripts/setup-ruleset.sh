@@ -33,7 +33,8 @@ requires:
 Profiles:
   solo: at least 1 approving review, with RepositoryRole admin PR-only bypass.
         This explicit bypass permits a solo owner to merge their own PR.
-  team: at least 1 approving review plus ownership/review controls; no bypass.
+  team: at least 1 approving review plus ownership/review controls;
+        retains RepositoryRole admin PR-only bypass for explicit owner review.
   single-maintainer: zero approving reviews, still requires PR/checks; no bypass.
 No profile grants direct-push permission or silently changes another profile.
 

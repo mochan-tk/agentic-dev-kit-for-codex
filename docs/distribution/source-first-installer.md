@@ -534,13 +534,13 @@ human review. Setup retains dry-run previews, refuses legacy writes without
 Ruleset write. Tests exercise these writes only against synthetic GitHub.
 
 The installed onboarding Skill preserves Enable now / Create disabled / Skip,
-requires an explicitly selected or reviewed existing `solo`/`team` profile,
+requires an explicitly selected or reviewed existing `solo`/`team`/`single-maintainer` profile,
 and distinguishes new creation from `--reconcile` of a canonical same-name
 ruleset. Its named command blocks run the installed setup helper; unrecognized
 choices and malformed evidence do not grant write consent. No-profile and new
-solo dry-runs are offline body previews. New team dry-runs read repository,
+solo/single-maintainer dry-runs are offline body previews. New team dry-runs read repository,
 issuer and CODEOWNERS evidence without proving same-name absence. Reconcile
-previews read list/detail for either profile, and team evidence as needed;
+previews read list/detail for every profile, and team evidence as needed;
 all previews make zero writes.
 
 Bypass observations use actor-specific ID types: DeployKey accepts null only,

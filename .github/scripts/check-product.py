@@ -48,13 +48,13 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "13249c215ccf75f590a20272c45e37e19b7439ab62a29826bc80da5022efdecd",
+    ".github/distribution/payload.v1.tsv": "d279b7c99815b876a99eecacd6534ddbc9a11be84ba76e1d1cafe1a7f9ec6a7e",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "a938b1467e7878d8f5c3743697cdb6b69d68f9baa9d4eb2463dab59b14dfdcba",
-    ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "e5af1c96b2f5c9688debf02358c775e3dd6da51e531b63cab1cc3cad0a252bef",
+    ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
     ".github/scripts/governance-status.sh": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e",
     "tests/conformance/test_source_first_governance.py": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece",
 }
@@ -66,11 +66,11 @@ PUBLIC_DOCS = (
 )
 COMPANION_GUIDE = "docs/distribution/companion-checks.md"
 COMPANION_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
-GOVERNANCE_COMPANION_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
+GOVERNANCE_COMPANION_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
 # Bind only the three executable guide blocks. Prose may evolve without
 # changing execution; intentional command changes need review and regressions.
 COMPANION_BLOCKS = {
-    "companion-governance": ("governance-status.sh", "395081eb2a83e51c55f1ff6d292c21599b10f1ed17e349707517ba01f4456886"),
+    "companion-governance": ("governance-status.sh", "52e63878f162a58046ed03b76cc036e4fee51daf2dc005de7c00d620ac66f06a"),
     "companion-worktree": ("worktree-preflight.sh", "9556150d60de556b4c32bcaa734a3a6e1c16995c2f5572fda2d1495903b067e7"),
     "companion-connectors": ("check-connectors.sh", "e6d770142bd142b0dd324d84271e10e91b28c6aaf567742a3bcde8cf2ddd32b5"),
 }
