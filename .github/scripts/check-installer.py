@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
@@ -13,6 +14,37 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+WORKFLOW_PAYLOAD_PATHS = (
+    ".agents/skills/plan-management/SKILL.md", ".agents/skills/project-onboarding/SKILL.md",
+    ".agents/skills/session-orchestration/SKILL.md", ".github/codex-instructions.md",
+    ".github/scripts/check-task-ritual.sh", ".github/scripts/setup-ruleset.sh",
+)
+WORKFLOW_EXPORT_PATHS = tuple(sorted([PAYLOAD + "/" + name for name in WORKFLOW_PAYLOAD_PATHS] + [
+    INVENTORY, ".github/scripts/governance-status.sh", "tests/conformance/test_source_first_governance.py",
+]))
+WORKFLOW_TARGETS = (*WORKFLOW_EXPORT_PATHS, "tests/conformance/test_installer.py", "tests/conformance/test_workflow_parity.py")
+WORKFLOW_BASELINE = "tests/fixtures/workflow-parity-baseline.json"
+WORKFLOW_BASELINE_SHA256 = "77a8ce370b7fbaec16e66bd69d9d4c391c6a0b8222276230f81dd95ed3607ad3"
+WORKFLOW_CONTRACT = {
+    "schema": "source-first-workflow-parity/v1",
+    "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+    "source_files": {
+        ".github/copilot-instructions.md": "4089b5c5e6ba81a31562b85b88c643c27967bc24",
+        ".github/scripts/governance-status.sh": "05514a395f41a9bc0528c749df4ad72c91d110fa",
+        ".github/scripts/setup-ruleset.sh": "8115b16cc2aa58a9fc8afe7ba94bddba1c0a9957",
+        ".github/scripts/task-ritual-lib.sh": "02a72d70a980db0666f6e7c74f927737a07dcba2",
+        ".github/scripts/task-ritual.sh": "9f6ce7b6cd11d55e8f0c9e3f10b913e872c4778b",
+        ".github/skills/plan-management/SKILL.md": "e397470e9c069e6c0f54cacdc02a350bee97076e",
+        ".github/skills/project-onboarding/SKILL.md": "d0ed839f95a90308e5f97aa3dca17b35f37b8685",
+        ".github/skills/session-orchestration/SKILL.md": "e0c1ce5f0ccc6a8e4016f2a6d2bf9f8cc9b4b363",
+    },
+    "product_base": "abd7a4fba7ef5ff484efff625e2474cc32d6ef7b",
+    "product_base_tree": "417aefd9caca78c76fac8040b069b70525750c7a",
+    "delivery": "47-paths-six-explicit-payload-adaptations-installed-ritual-subcommands",
+    "evidence": "real-bash-jq-disposable-git-synthetic-github;startup-and-disposition-document-contracts",
+    "limits": "no-live-governance-worker-runtime-identity-lock-or-release-claim;separate-publication-authority",
+}
 GOVERNANCE_PROCEDURE_PATHS = (
     ".github/scripts/governance-status.sh", ".github/scripts/worktree-preflight.sh",
     "tests/conformance/test_source_first_governance.py", "tests/conformance/test_source_first_procedures.py",
@@ -634,7 +666,7 @@ def validate(root):
             if (root / PAYLOAD / name).stat().st_mode & 0o7111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
@@ -884,13 +916,62 @@ def validate_explicit_update(root):
     return errors
 
 
+def validate_workflow_parity(root):
+    """Current bounded adaptation; original export and history are immutable."""
+    errors = []
+    root = Path(root)
+    try:
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
+        record = parity["workflow_parity"]
+        if set(record) != set(WORKFLOW_CONTRACT) | {"target_files", "export_adaptations", "baseline_sha256"} or any(
+                record.get(k) != v for k, v in WORKFLOW_CONTRACT.items()):
+            return ["workflow parity source, scope or evidence contract drifted"]
+        baseline_data = regular_bytes(root, WORKFLOW_BASELINE)
+        if hashlib.sha256(baseline_data).hexdigest() != WORKFLOW_BASELINE_SHA256 or record["baseline_sha256"] != WORKFLOW_BASELINE_SHA256:
+            errors.append("workflow parity immutable baseline changed")
+        baseline = json.loads(baseline_data, object_pairs_hook=reject_duplicate_json_keys)
+        if (set(baseline) != {"schema", "repository", "commit", "tree", "entries"}
+                or baseline["schema"] != "workflow-parity-baseline/v1"
+                or baseline["repository"] != "mochan-tk/agentic-dev-kit-for-codex"
+                or baseline["commit"] != WORKFLOW_CONTRACT["product_base"]
+                or baseline["tree"] != WORKFLOW_CONTRACT["product_base_tree"]
+                or [row["path"] for row in baseline["entries"]] != list(WORKFLOW_PAYLOAD_PATHS)):
+            errors.append("workflow parity baseline identity or inventory changed")
+        for row in baseline["entries"]:
+            data = base64.b64decode(row["base64"], validate=True)
+            blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+            if set(row) != {"path", "mode", "sha256", "blob", "base64"} or row["mode"] != "100644" or row["sha256"] != hashlib.sha256(data).hexdigest() or row["blob"] != blob:
+                errors.append("workflow parity baseline bytes changed")
+        expected = [{"path": p, "mode": "100644", "sha256": hashlib.sha256(regular_bytes(root, p)).hexdigest()} for p in WORKFLOW_TARGETS]
+        if record["target_files"] != expected:
+            errors.append("workflow parity target digest, mode or inventory changed")
+        export = json.loads(regular_bytes(root, ".github/distribution/export-provenance.v1.json"), object_pairs_hook=reject_duplicate_json_keys)
+        original = {row["path"]: row for row in export["frozen_files"]}
+        adaptations = []
+        for path in WORKFLOW_EXPORT_PATHS:
+            data = regular_bytes(root, path)
+            adaptations.append({"path": path, "export": original[path], "target_mode": "100644",
+                "target_sha256": hashlib.sha256(data).hexdigest(),
+                "target_blob": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()})
+        if record["export_adaptations"] != adaptations:
+            errors.append("workflow parity export adaptation boundary changed")
+        helper = regular_bytes(root, PAYLOAD + "/.github/scripts/check-task-ritual.sh").decode()
+        for token in ("record_mode()", 'case "${1:-}" in render|preflight)', "--method GET", "first-dispatch-after-commit",
+                      "exact-plan-membership", "task-readback", "comments-readback", "plan-readback", "pr-readback", "ritual_dispatch_rows"):
+            if token not in helper:
+                errors.append("workflow parity installed record guard missing")
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError):
+        errors.append("workflow parity missing, unsafe or malformed")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
     errors = (validate(args.root) + validate_connector_companion(args.root)
               + validate_governance_procedures(args.root) + validate_bootstrap(args.root)
-              + validate_explicit_update(args.root))
+              + validate_explicit_update(args.root) + validate_workflow_parity(args.root))
     for error in errors:
         print("ERROR: " + error)
     if errors:

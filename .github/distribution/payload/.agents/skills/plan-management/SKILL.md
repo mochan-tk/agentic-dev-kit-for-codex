@@ -5,6 +5,13 @@ description: Build and maintain the executable plan as a GitHub issue graph — 
 
 # Plan Management
 
+For Task execution records, use the installed
+`bash .github/scripts/check-task-ritual.sh render` and GET-only `preflight`
+route described in [session orchestration](../session-orchestration/SKILL.md#installed-record-preparation).
+The supervisor owns claim/resume/plan/dispatch publication; a worker proposes
+material replans to it, then acknowledges the newly recorded Task and plan.
+Rendering and preflight neither create a Task nor authorize work or merge.
+
 The plan is not a document; it is the issue graph itself. Epics hold the
 outline, Task issues hold executable work orders, `blocked-by` edges hold the
 ordering, and the graph's edit history is the plan's change log. A schedule
@@ -235,7 +242,7 @@ pre-approval (lazy consensus); intervention is the exception, and it takes
 exactly one of three doors:
 
 1. **Steer the approach** (order unchanged): comment on the Task issue; the
-   executor posts a *revised-plan comment* — conclusions only, never editing
+   supervisor posts a *revised-plan comment* after receiving any worker proposal — conclusions only, never editing
    the old one. The comment sequence is the plan's history
    (`session-orchestration` skill).
 2. **Change the order** (scope/criteria changed): edit the issue body — it is
@@ -248,6 +255,9 @@ exactly one of three doors:
 Exception gate: a task labeled `risk:high` pauses after its plan comment
 until an approval comment lands (`session-orchestration`, Risk gate). All
 other tasks pass through.
+An existing scoped approval covers routine implementation, tests and repairs.
+Return to the owner only for material changes to authority, ownership,
+acceptance criteria or production impact; it never grants merge permission.
 
 ## Replanning procedure
 

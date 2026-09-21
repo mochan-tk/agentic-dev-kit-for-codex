@@ -26,11 +26,30 @@ Historical accepted/baseline commit IDs in that record refer to the predecessor;
 source file blob IDs refer to the frozen Copilot source. They are provenance
 identifiers, never instructions to fetch old Git objects during installation.
 
-[Export provenance](../.github/distribution/export-provenance.v1.json) binds
-the unchanged payload, inventory, engine and companions to the accepted
-predecessor. The payload's inherited ADR Issue-number tokens retain their
-original source context; they are not Tasks or acceptance claims in this new
-repository. Payload bytes remain unchanged, including that historical text.
+[Export provenance](../.github/distribution/export-provenance.v1.json) remains
+the immutable creation-time seal of the predecessor export. Later product
+adaptations are separate records; they do not rewrite that seal or its history.
+The payload's inherited ADR Issue-number tokens retain their original source
+context; they are not Tasks or acceptance claims in this new repository.
+
+The bounded `workflow_parity` record in source parity selectively reuses
+Copilot source `446071c76f14f5fbda37a0eef1b6eafa0a3ab897`: startup/onboarding,
+supervisor/worker responsibilities, single-maintainer governance, and Task
+record preparation. It binds exact source blobs and current target digests.
+Six existing payload files change; all 47 paths/classes/modes and the other
+41 payload files are preserved. The installed ritual keeps Codex references,
+complete pagination, exact plan membership and final readbacks instead of
+replacing them with weaker source behavior. Original source bindings remain
+historical attribution, not a claim that adapted bytes equal the source.
+
+The [workflow baseline](../tests/fixtures/workflow-parity-baseline.json) adds
+only those six public accepted-old files at product base
+`abd7a4fba7ef5ff484efff625e2474cc32d6ef7b`, with exact commit/tree/blob/mode/hash
+bindings. It supports actual Bash upgrade/rollback tests without fetching
+history. Original export and the 20 predecessor regression entries stay
+unchanged. Current adaptation validation is mandatory in both product and
+installer checker entrypoints; component-only fixture checks are not the
+complete product gate.
 
 [Regression fixtures](../tests/fixtures/history/manifest.json) contain only 20
 reviewed historical file entries for old/new behavior tests. Each binds a full

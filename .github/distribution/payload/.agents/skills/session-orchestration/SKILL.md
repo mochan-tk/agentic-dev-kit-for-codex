@@ -70,6 +70,19 @@ and implements directly, or escalates — it does not write the comment
 anyway. A replacement
 worker is preceded by a comment releasing the old worker and naming its
 successor.
+
+### Worker disposition
+
+Before irreversible teardown, branch/worktree reuse or replacement, the
+supervisor records the actual worker stop/release state, uncommitted/untracked
+work and exact worker HEAD SHA, PR and verification links, and where recovery evidence is
+preserved (or an explicit authorized discard decision with reason). Name the
+single authority responsible for that disposition. Unknown ownership or an
+unconfirmed stop blocks destructive action. A release comment is a declaration,
+not process-absence proof or cleanup permission; preserve evidence on failure.
+Reusing retained artifacts requires current authorization and reverification
+against the new Task/plan; preservation or old approval alone is insufficient.
+
 **Sensor-compatible format:** the worker-dispatch comment's *first line* must
 match the regex `^Dispatching worker`, and the release comment's *first
 line* must match `^Releasing worker` — no leading blank line, greeting, or
@@ -104,6 +117,43 @@ plan comment carrying the small-task exemption phrase
 task showing neither fails the wall.
 
 ## Child session protocol
+
+### Startup decision
+
+Quiet/report `tuning-status.sh` has three states; warning-only CI mode is not
+a startup probe. Read a decline from the current work order/kickoff and
+relevant Issue timeline; check repository, work scope, revocation and later
+instructions. Never reconstruct consent from transport history.
+
+| Observed situation | Required action |
+|---|---|
+| Exit 0, no new onboarding request | Continue authorized Task work; re-tune only for an actual change. |
+| Exit 1, no applicable decline | Acknowledge untuned, offer onboarding and wait for explicit yes/no. |
+| Exit 1, readable scoped unrevoked owner decline | Cite it; keep CUSTOMIZE and continue only covered, already-authorized work without inventory/tuning. |
+| Child, replacement or resume covered by the same decline | Read and carry its link/scope; no repeat onboarding question or new readiness gate. |
+| Missing, unreadable, unrelated, revoked or contradictory decline | No reusable opt-out; ask for exit 1, escalate conflicting authority. Marker/fork/unknown version/chat memory is insufficient. |
+| Any other exit or failure to execute | Report error and diagnose; do not classify tuned/untuned or continue using a decline. |
+| New explicit request to onboard | Enter project-onboarding; an old decline is not permanent. |
+
+### Installed record preparation
+
+The installed mode-0644 helper runs through Bash. It renders only supplied
+facts and performs GET-only draft/ledger checks; it never posts a comment:
+
+```bash
+bash .github/scripts/check-task-ritual.sh render claim --input claim.json > claim.txt
+bash .github/scripts/check-task-ritual.sh preflight claim --repo owner/repo \
+  --task 12 --body-file claim.txt --branch codex/task-12-fix
+```
+
+Use `render --help` for the input schema; the same route supports `resume`,
+`plan` and `dispatch`. Inspect the exact rendered body, run preflight, then
+publish it separately only under the Task's authorization. Read the posted
+body back before using its URL. Failure stops publication; recheck changed
+inputs instead of editing history or inventing a timestamp. Preflight is not
+publication, approval, authenticated identity, atomic locking or future CI.
+With an existing PR pass `--pr`; unreadable PR evidence must not fall back to
+pre-PR mode. The ordinary numeric-PR sensor remains the final ritual check.
 
 This ritual is executed by the **supervisor** session for its Task issue
 (steps 1–5); the implementation itself runs in a worker session dispatched
@@ -161,14 +211,18 @@ before the first commit. The default is pass-through — a posted plan on an
 unlabeled task is actionable immediately (lazy consensus); the gate exists
 only for tasks whose blast radius warrants a pre-flight human eye
 (`plan-management`, Intervening).
+One scoped approval covers routine implementation, red/green tests and repairs;
+only material authority, ownership, criteria or production-impact changes
+return for a new decision. Existing merge and irreversible-action gates remain.
 
 **Work loop** (the implementing session — the worker, or the supervisor
 under a declared exemption): stay inside the ownership paths; commit early
 and often;
-update `plan.md` freely — and when the plan changes *materially*, post a
-fresh plan comment on the issue (never edit the old one; the sequence of
-plan comments is the plan's history). If scope drifts, stop and follow the
-Ambiguity rule rather than quietly expanding.
+update `plan.md` freely. A material change is escalated to the supervisor;
+the worker does not post or approve a supervisory plan. The supervisor records
+a fresh plan comment (never edits history), obtains any required owner approval,
+then releases the affected work. The worker reads and acknowledges the current
+Task and plan before continuing. A cache edit is not authorization.
 
 **Verify** (before any completion claim): run every command in the issue's
 Verification section; then confirm external state with commands, e.g.
@@ -176,7 +230,7 @@ Verification section; then confirm external state with commands, e.g.
 `git status --short` (must be clean), and, when the task tracked Project
 items, `gh project item-list`. Evidence = command + observed result.
 
-**Record before report** — post this comment on the Task issue, then (and
+**Record before report** — the supervisor posts this comment on the Task issue, then (and
 only then) message the parent:
 
 ```markdown
@@ -234,6 +288,7 @@ load-bearing, ADR-0003):
 
 ```markdown
 You are the WORKER session for Task issue #<n> in <owner>/<repo>.
+- Startup context: <current owner onboarding-decline decision link and covered scope, or none; read it, never infer from chat>.
 - Issue: <issue URL> — read it in full (`gh issue view <n> --comments`).
 - Plan of record (execute it; no plan gate of your own): <plan comment URL>
 - File ownership (verbatim from the issue — touch EXACTLY these):
@@ -388,16 +443,26 @@ are the same code path).
   truth: the issue timeline (start / plan / latest comments), the branch
   (`git log`, `git status`), and the PR (`gh pr view/checks`). What is not on
   GitHub did not happen — do not reconstruct intent from memory or chat.
+- **Role-specific resume**: a successor supervisor records the new resume
+  claim and any revised plan. A successor worker reads the current Task/plan,
+  confirms its actual branch/worktree/ownership and acknowledges to the
+  supervisor; it never duplicates the supervisor claim or posts a new plan.
+  Apply the startup decision table, including a covered decline. Verify the
+  previous worker's disposition before reuse; dispatch the actually created
+  successor only after the release and any required revised plan.
 - **Claim before touching**: post a *resume comment* on the Task issue
   (`Resuming in session <name/link>, branch codex/task-<n>-<slug>`) before any
-  commit. The claim prevents two sessions from silently owning one task; if
+  commit (supervisor only, not the worker). The claim records responsibility;
+  it is not an exclusion lock. If
   the timeline shows another live claim, stop and escalate instead.
 - **Orphan detection is the parent's duty**: a task with a start comment, no
   Outcome comment, and a dead session is an orphan. The parent (or any
-  orchestrator sweeping the frontier) either dispatches a successor — which
-  claims as above — or comments the task back to the frontier.
+  orchestrator sweeping the frontier) either dispatches a successor supervisor,
+  which claims as above, or comments the task back to the frontier. A replacement
+  worker follows its supervisor's recorded plan/dispatch and never claims anew.
 - **Repeat failure**: if the resumed attempt dies the same way the first one
-  did, apply `needs:human` and stop. Two identical session deaths signal
+  did, the supervisor applies `needs:human` and stops; a worker reports to the
+  supervisor, not past it. Two identical session deaths signal
   infrastructure, not approach — crash-resume is exempt from the three-strike
   ladder (Escalation below).
 

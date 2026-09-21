@@ -119,6 +119,45 @@ Initial adoption requires confirmed file absence, never a failed API read.
 An unrelated or unsupported PR uses the ordinary Task ritual. These are
 structural Git fixture checks, not proof of live GitHub or native Codex runtime.
 
+## Installed startup and Task records
+
+Read the installed session-orchestration Skill's startup decision table before
+starting onboarding. A scoped, unrevoked owner decline must have a durable
+reference; it is not inferred and does not authorize unrelated work. Preserve
+the distinction between tuning-status exit 0, exit 1, and observation errors.
+Upgrades keep tuned `.github/codex-instructions.md` and `AGENTS.md` unchanged:
+new Skills must surface a conflicting adopter agreement, not overrule it.
+
+The supervisor can prepare a bounded comment without posting it:
+
+```sh
+bash .github/scripts/check-task-ritual.sh render claim --input claim.json > claim.md
+bash .github/scripts/check-task-ritual.sh preflight claim --repo owner/repository --task 123 --body-file claim.md --branch feature/task
+```
+
+`claim.json` contains `task` (positive integer), `session` (actual supervisor
+label), and `branch` (actual branch). `render --help` documents all four kinds:
+claim, resume, plan and dispatch. Dispatch uses the real worker reference,
+including supported `/root/...` references; never convert it to an invented
+UUID. Plan prose still requires human review; syntactic validation does not
+judge its adequacy. Check the render exit status before using the resulting
+file: redirection can leave an empty file even when render fails. Preflight
+reads actual body bytes and makes GETs
+only. Add `--pr NUMBER` when there is already a PR; failed PR observation must
+not be retried without that argument to obtain a pass.
+
+Posting is a separate authorized operation. After posting, read back the exact
+body before continuing; a passing preflight cannot predate a later dispatch or
+prevent remote drift. Historical branch mismatch is ignored only for a valid
+released-and-replaced worker, never for malformed or edited records. The
+existing numeric PR checker remains the final PR ritual sensor.
+
+Onboarding requires an explicit choice of `solo`, `team`, or
+`single-maintainer`, and distinguishes new creation from canonical reconcile.
+Single-maintainer retains PR/check requirements with zero approvals and no
+bypass; it is not an implicit default. Preview before the explicit setup write.
+The installed onboarding Skill contains the complete consent/reconcile paths.
+
 ## Exact payload and preservation
 
 `payload.v1.tsv` records the closed 47-file payload, preservation class, and
@@ -186,7 +225,9 @@ Local upgrade uses engine/tuned/instance class dispatch and
 two-version preservation tests. It does **not** reuse blind engine overwrite,
 automatic staging, changelog replacement or broad path discovery. Known-old
 checks, prewrite backups and explicit operation rollback are target additions.
-The 47 shipped payload paths/classes/bytes/modes and source blob IDs are unchanged.
+The 47 shipped payload paths/classes/modes and original source blob IDs remain
+fixed. Six current workflow adaptations are recorded separately in provenance;
+they do not change the upgrade engine or rewrite the original export seal.
 
 Select inspected local old/new roots containing `.github/distribution/`, an
 exclusively owned adopter Git root, and a new private transaction directory whose
@@ -430,7 +471,7 @@ An explicit existing target is mandatory; there is no current-directory or
 kit-root fallback. This Bash 3.2+ command uses standard find/head/tr/grep/sed/awk
 only. It never calls Git, GitHub, authentication, a model or a network service,
 changes files, applies fixes, writes an activation registry or modifies CI.
-No existing adopter is updated. The 47 installed payload files remain unchanged;
+Running this checker never changes the 47 installed payload files;
 their README truthfully says this validator is not installed automatically.
 The separate source-only companion provides the optional explicit invocation.
 
@@ -470,8 +511,8 @@ these checks are not an atomic snapshot or hostile same-user race isolation.
 
 Two standalone companions run from the reviewed kit checkout. They are not
 copied into the adopter's 47-file payload and are not automatically CI gates.
-The [fixed-revision no-clone commands](companion-checks.md) provide the same
-unchanged helpers without a checkout; they add no setup or repair operation.
+The [fixed-revision no-clone commands](companion-checks.md) provide explicitly
+pinned helper versions without a checkout; they add no setup or repair operation.
 Use the target's actual contexts; no Copilot or donor CI names are defaults:
 
 ```bash

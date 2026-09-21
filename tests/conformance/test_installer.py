@@ -1637,7 +1637,9 @@ sys.exit(result.returncode)
         source = self.clone_source()
         checker = self.kickoff_checker()
         for name in (*checker.FEEDBACK_PATHS, *checker.CONNECTOR_PATHS,
-                     *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS):
+                     *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS,
+                     *checker.WORKFLOW_TARGETS, checker.WORKFLOW_BASELINE,
+                     ".github/distribution/export-provenance.v1.json"):
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, destination)
