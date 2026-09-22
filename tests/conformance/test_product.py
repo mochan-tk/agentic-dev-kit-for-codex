@@ -64,6 +64,78 @@ class ProductTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertTrue(self.checker.validate(root))
 
+    def test_frontier_cache_is_required_in_both_production_entrypoints(self):
+        for missing in ("tests/fixtures/frontier-cache-baseline.json", "tests/conformance/test_frontier_cache.py",
+                        "docs/parity-status.md"):
+            with self.subTest(missing=missing):
+                root = self.fixture()
+                (root / missing).unlink()
+                for checker in ("check-installer.py", "check-product.py"):
+                    result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts" / checker)],
+                                            cwd=root, capture_output=True, text=True, timeout=30)
+                    self.assertNotEqual(0, result.returncode, checker)
+        root = self.fixture()
+        path = root / ".github/scripts/check-installer.py"
+        path.write_text(path.read_text().replace("def validate_frontier_cache(root):", "def removed_cache_guard(root):"))
+        self.assertTrue(self.checker.validate(root))
+
+    def test_frontier_cache_contract_and_exact_baseline_refuse_resealing(self):
+        root = self.fixture()
+        spec = importlib.util.spec_from_file_location("frontier_guard", ROOT / ".github/scripts/check-installer.py")
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        path = root / guard.PARITY
+        original = path.read_bytes()
+        self.assertEqual([], guard.validate_frontier_cache(root))
+        for mutation in ("missing", "source", "cache", "extra", "target", "scope", "export", "baseline"):
+            with self.subTest(mutation=mutation):
+                value = json.loads(original)
+                record = value["frontier_cache"]
+                if mutation == "missing": del value["frontier_cache"]
+                elif mutation == "source": record["source_files"][".github/skills/plan-management/scripts/frontier.sh"] = "0" * 40
+                elif mutation == "cache": record["cache"] = "disk-or-cross-invocation"
+                elif mutation == "extra": record["waiver"] = True
+                elif mutation == "target": record["target_files"][0]["sha256"] = "0" * 64
+                elif mutation == "scope": record["target_files"].pop()
+                elif mutation == "export": record["export_adaptation"]["export"]["sha256"] = "0" * 64
+                else: record["baseline_sha256"] = "0" * 64
+                path.write_text(json.dumps(value))
+                self.assertTrue(guard.validate_frontier_cache(root))
+        path.write_bytes(original)
+        baseline = root / guard.FRONTIER_BASELINE
+        baseline.write_bytes(baseline.read_bytes() + b"\n")
+        value = json.loads(original)
+        value["frontier_cache"]["baseline_sha256"] = hashlib.sha256(baseline.read_bytes()).hexdigest()
+        path.write_text(json.dumps(value))
+        self.assertTrue(guard.validate_frontier_cache(root))
+
+    def test_frontier_or_anchor_resealed_regression_still_refuses(self):
+        spec = importlib.util.spec_from_file_location("frontier_exact_guard", ROOT / ".github/scripts/check-installer.py")
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        mutations = ((guard.FRONTIER_TARGETS[0], 'blocker_state "$ref" "$blocker_repo"',
+                      'STATE=CLOSED # removed observed blocker'),
+                     (guard.FRONTIER_TARGETS[1], '[[ "$base_anchor" == "$head_anchor" ]] || return 1',
+                      ': # removed exact base/head anchor'))
+        for helper, before, after in mutations:
+            with self.subTest(helper=helper):
+                root = self.fixture()
+                target = root / helper
+                self.assertIn(before, target.read_text())
+                target.write_text(target.read_text().replace(before, after))
+                path = root / guard.PARITY
+                value = json.loads(path.read_bytes())
+                record = value["frontier_cache"]
+                for row in record["target_files"]:
+                    if row["path"] == helper: row["sha256"] = hashlib.sha256(target.read_bytes()).hexdigest()
+                if helper == guard.FRONTIER_TARGETS[0]:
+                    data = target.read_bytes()
+                    record["export_adaptation"]["target_sha256"] = hashlib.sha256(data).hexdigest()
+                    record["export_adaptation"]["target_blob"] = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+                path.write_text(json.dumps(value))
+                self.assertTrue(guard.validate_frontier_cache(root))
+                self.assertTrue(self.checker.validate_export(root))
+
     def test_adopter_provenance_reseal_or_guard_drift_cannot_waive_the_addon(self):
         root = self.fixture()
         path = root / self.checker.ADOPTER_RECORD

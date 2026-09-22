@@ -1639,6 +1639,7 @@ sys.exit(result.returncode)
         for name in (*checker.FEEDBACK_PATHS, *checker.CONNECTOR_PATHS,
                      *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS,
                      *checker.WORKFLOW_TARGETS, checker.WORKFLOW_BASELINE,
+                     *checker.FRONTIER_TARGETS, checker.FRONTIER_BASELINE,
                      ".github/distribution/export-provenance.v1.json"):
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)

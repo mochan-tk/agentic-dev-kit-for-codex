@@ -93,3 +93,31 @@ adopter CI execution, product CI and original export/history seals are preserved
 Manual source-checkout use and later owner-reviewed template activation are
 distinct. Local synthetic evidence does not establish full source parity,
 live operation, runtime measurement or release acceptance.
+
+## Current frontier-cache adaptation
+
+The earlier package descriptions above retain their own change boundaries.
+The separate `frontier_cache` section now reuses invocation-local indexed-array
+caching from frozen Copilot `446071c76f14f5fbda37a0eef1b6eafa0a3ab897` and binds
+both its frontier/test blobs. Canonical host/repository/Issue identities, Bash
+3.2 empty-array handling and the target's stronger complete-observation refusal
+remain explicit adaptations, not copied source fallback behavior.
+
+The [two-file public baseline](../tests/fixtures/frontier-cache-baseline.json)
+binds accepted product merge `00b27d7b4ec5310d9a8890a885536b0a437a454d`, tree
+`4ec7f4c168463abf1991d9b44b747ef2755f4718`, to exact frontier and ritual bytes,
+blobs and modes. The old six-file workflow baseline and original export/history
+seals are not rewritten. A distinct current export adaptation allows only the
+new frontier bytes; current workflow/inventory bindings also account for the
+ritual's appended exact adoption anchor. All three historical anchors remain,
+and base/head anchor equality is still required. The old task-selection ritual
+digest remains a historical binding, not a falsely rewritten current value.
+
+This package changes two installed engine contents only (45 remain identical),
+and the separate addon sensor's exact supported ritual digest. It does not
+change the addon's execution semantics or perform an installed migration.
+Shared companion records synchronize affected current target hashes (the sensor,
+tests and shared documents), preserving their historical source/evidence fields.
+Both mandatory checker entrypoints require the new provenance, baseline and
+exact reviewed engine bytes. The [parity disposition](parity-status.md) states
+the deliberate differences and pending client/Windows measurements separately.

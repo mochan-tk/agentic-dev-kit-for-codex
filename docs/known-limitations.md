@@ -66,6 +66,10 @@ Registry preparation and structural connector checks prove neither activation,
 source reachability, context sufficiency nor pin authenticity. Builtin drafts
 remain candidates until human-reviewed distillation. Readiness describes a
 complete Task brief; it does not imply closed dependencies or dispatch authority.
+Within one frontier invocation, a shared blocker is observed once and that valid
+state is reused; a later GitHub change is not re-observed until another invocation.
+All dependency lists and later errors are still checked. This optimization is
+not an atomic snapshot, TTL cache, lock or network-performance measurement.
 
 Failure reports require explicit `--send`, a terminal and literal consent.
 An uncertain create response may have created an Issue; inspect before another
@@ -110,6 +114,10 @@ and synthetic external transport. It is not live Codex E2E, live governance,
 native Windows qualification, original scenario passes or release acceptance.
 The predecessor's unfinished runtime and release work remains historical in
 [provenance](provenance.md). This migration does not declare it completed.
+The [source-parity disposition](parity-status.md) explicitly retains manual
+installed-revision recording, source-checkout feedback and inert scheduling as
+intentional differences. Current-version live adopter/worker/CI integration is
+pending; accepted old use and new synthetic checks are different evidence.
 
 The [installation guide](distribution/source-first-installer.md) explains
 operations and trust boundaries; [product scope](product-scope.md) lists what

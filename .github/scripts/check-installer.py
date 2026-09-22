@@ -14,6 +14,28 @@ SOURCE_COMMIT = "fd265ddef150fab86cd54d0e383c2c25fe297ffb"
 PAYLOAD = ".github/distribution/payload"
 INVENTORY = ".github/distribution/payload.v1.tsv"
 PARITY = ".github/distribution/source-parity.v1.json"
+FRONTIER_PATHS = (".agents/skills/plan-management/scripts/frontier.sh", ".github/scripts/check-task-ritual.sh")
+FRONTIER_TARGETS = tuple(PAYLOAD + "/" + path for path in FRONTIER_PATHS) + (
+    "tests/conformance/test_frontier_cache.py", "docs/parity-status.md")
+FRONTIER_BASELINE = "tests/fixtures/frontier-cache-baseline.json"
+FRONTIER_BASELINE_SHA256 = "f3cf28b75db5b960bbed78697515690800ffb301cb13c1e1445ccada964587d6"
+FRONTIER_DIGESTS = ("0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6",
+                    "f55b24d4b2cfe14c83e02d723bc2021f7321b1196b78c7436491b73d67b0b4eb")
+FRONTIER_CONTRACT = {
+    "schema": "source-first-frontier-cache/v1",
+    "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+    "source_files": {
+        ".github/skills/plan-management/scripts/frontier.sh": "d3386d123e1b7ebff6d5df1822dcf8c012532369",
+        ".github/scripts/tests/test-frontier.sh": "0ace3374ecd28c0db79105cbcfbeec6fae5cc337",
+    },
+    "product_base": "00b27d7b4ec5310d9a8890a885536b0a437a454d",
+    "product_base_tree": "4ec7f4c168463abf1991d9b44b747ef2755f4718",
+    "delivery": "47-fixed-paths-two-engine-adaptations-other-45-unchanged",
+    "cache": "parent-shell-indexed-arrays-canonical-host-repository-issue-valid-OPEN-CLOSED-invocation-only",
+    "evidence": "real-bash-jq-synthetic-github-disposable-install-upgrade-rollback",
+    "limits": "no-atomic-snapshot-lock-live-request-performance-or-runtime-claim",
+}
 WORKFLOW_PAYLOAD_PATHS = (
     ".agents/skills/plan-management/SKILL.md", ".agents/skills/project-onboarding/SKILL.md",
     ".agents/skills/session-orchestration/SKILL.md", ".github/codex-instructions.md",
@@ -587,7 +609,8 @@ def validate_task_selection(payload_data, parity):
     ritual = payload_data[TASK_SELECTION_PATHS[3]].decode()
     anchor = ritual.split("reviewed_adoption_anchor() {", 1)[-1].split("\n}", 1)[0]
     matches = re.findall(r"100644\\tblob\\t([0-9a-f]{40})", anchor)
-    if (matches != ["f66d3aa5e73abf24052c70f557cd6df9177ca012", "cc888c829bc5957871376004cb59a93b4980b50f", blob]
+    if (matches != ["f66d3aa5e73abf24052c70f557cd6df9177ca012", "cc888c829bc5957871376004cb59a93b4980b50f",
+                    "5017ee6979eec83c867a2da02118e6b03205040c", blob]
             or '*) return 1 ;;' not in anchor
             or '[[ "$base_anchor" == "$head_anchor" ]] || return 1' not in ritual):
         errors.append("task selection exact ritual anchor compatibility drifted")
@@ -669,7 +692,7 @@ def validate(root):
             if (root / PAYLOAD / name).stat().st_mode & 0o7111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity", "frontier_cache"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
@@ -884,8 +907,8 @@ UPDATE_CONTRACT = {
         "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
         "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
         "export_mode": "100644",
-        "target_blob": "ec57d143f873ffc57c30a452bd461524c11a70a2",
-        "target_sha256": "a00b4bd8322acd863d6cb59407c4c20ede6fc1a073a49604220d40dd3bc5d6be",
+        "target_blob": "b112b9f9b0ac3d646278c7161d719a5f4f6155f4",
+        "target_sha256": "b839adecceb153be9e0a3a80f9eb86cb49c23d30e5c32c7684165c91db6d1d32",
         "target_mode": "100644",
         "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture",
     },
@@ -968,13 +991,62 @@ def validate_workflow_parity(root):
     return errors
 
 
+def validate_frontier_cache(root):
+    """Exact current cache/anchor adaptation, separate from immutable old seals."""
+    errors = []
+    try:
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
+        record = parity["frontier_cache"]
+        if (set(record) != set(FRONTIER_CONTRACT) | {"target_files", "baseline_sha256", "export_adaptation"}
+                or any(record.get(key) != value for key, value in FRONTIER_CONTRACT.items())):
+            return ["frontier cache source/scope/evidence contract drifted"]
+        baseline_data = regular_bytes(root, FRONTIER_BASELINE)
+        if (hashlib.sha256(baseline_data).hexdigest() != FRONTIER_BASELINE_SHA256
+                or record["baseline_sha256"] != FRONTIER_BASELINE_SHA256):
+            errors.append("frontier cache immutable baseline changed")
+        baseline = json.loads(baseline_data, object_pairs_hook=reject_duplicate_json_keys)
+        if (set(baseline) != {"schema", "repository", "commit", "tree", "entries"}
+                or baseline["schema"] != "frontier-cache-baseline/v1"
+                or baseline["repository"] != "mochan-tk/agentic-dev-kit-for-codex"
+                or baseline["commit"] != FRONTIER_CONTRACT["product_base"]
+                or baseline["tree"] != FRONTIER_CONTRACT["product_base_tree"]
+                or [row["path"] for row in baseline["entries"]] != list(FRONTIER_PATHS)):
+            errors.append("frontier cache baseline identity/inventory changed")
+        for row in baseline["entries"]:
+            data = base64.b64decode(row["base64"], validate=True)
+            if (set(row) != {"path", "mode", "sha256", "blob", "base64"} or row["mode"] != "100644"
+                    or row["sha256"] != hashlib.sha256(data).hexdigest()
+                    or row["blob"] != hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()):
+                errors.append("frontier cache baseline bytes changed")
+        expected = [{"path": path, "mode": "100644", "sha256": hashlib.sha256(regular_bytes(root, path)).hexdigest()}
+                    for path in FRONTIER_TARGETS]
+        if record["target_files"] != expected:
+            errors.append("frontier cache target digest/mode/inventory changed")
+        for path, digest in zip(FRONTIER_TARGETS, FRONTIER_DIGESTS):
+            if hashlib.sha256(regular_bytes(root, path)).hexdigest() != digest:
+                errors.append("frontier cache exact reviewed engine changed")
+        export = json.loads(regular_bytes(root, ".github/distribution/export-provenance.v1.json"), object_pairs_hook=reject_duplicate_json_keys)
+        path = FRONTIER_TARGETS[0]
+        original = next(row for row in export["frozen_files"] if row["path"] == path)
+        data = regular_bytes(root, path)
+        adaptation = {"path": path, "export": original, "target_mode": "100644",
+                      "target_sha256": hashlib.sha256(data).hexdigest(),
+                      "target_blob": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()}
+        if record["export_adaptation"] != adaptation:
+            errors.append("frontier cache exact export adaptation changed")
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError, StopIteration):
+        errors.append("frontier cache missing, unsafe or malformed")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
     errors = (validate(args.root) + validate_connector_companion(args.root)
               + validate_governance_procedures(args.root) + validate_bootstrap(args.root)
-              + validate_explicit_update(args.root) + validate_workflow_parity(args.root))
+              + validate_explicit_update(args.root) + validate_workflow_parity(args.root)
+              + validate_frontier_cache(args.root))
     for error in errors:
         print("ERROR: " + error)
     if errors:
