@@ -294,7 +294,10 @@ autonomous service or a guarantee that generated code is correct.
 The explicit governance, worktree and connector companions can run from a
 reviewed kit checkout or the [verified no-clone commands](docs/distribution/companion-checks.md).
 They are not additional files installed by the one-command entry. The
-consent-gated failure reporter still uses a reviewed checkout. See the
+consent-gated failure reporter also has a [verified no-clone draft/send guide](docs/distribution/feedback.md).
+For manual text, use the [public feedback form](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/new?template=feedback.yml)
+and review its privacy warning before submitting. Installation failures print
+fixed links to these routes; reporting remains an explicit separate action. See the
 [helper and procedure guide](docs/distribution/source-first-installer.md#governance-worktree-and-retro-procedures).
 
 This repository has a clean product Git history and preserves the accepted
@@ -309,6 +312,7 @@ unfinished runtime/release work remain in the [predecessor records](docs/provena
 |---|---|
 | Install, select a revision, update, or recover an operation | [Installation guide](docs/distribution/source-first-installer.md) |
 | Check governance, worktrees or connector definitions without a kit clone | [Read-only companion commands](docs/distribution/companion-checks.md) |
+| Draft installer feedback without a clone or share public-safe manual feedback | [Feedback guide and public form](docs/distribution/feedback.md) |
 | Opt in to separate Task metadata, retarget freshness and control drift checks | [Adopter CI companion](docs/distribution/adopter-ci.md) |
 | Review retrospective signals, official content checkpoints and feedback | [Ongoing improvement companions](docs/distribution/ongoing-improvement.md) |
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |

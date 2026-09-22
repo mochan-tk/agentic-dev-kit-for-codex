@@ -3,6 +3,23 @@
 # Git object projection replaces tar/checkout; only the reviewed current engine runs.
 set -euo pipefail
 export LC_ALL=C GIT_OPTIONAL_LOCKS=0
+SELECTED=0; OWNED_WORK=""; GUIDANCE_SHOWN=0
+failure_guidance() {
+  if [ "$BASH_SUBSHELL" -eq 0 ] && [ "$GUIDANCE_SHOWN" -eq 0 ] && [ "$SELECTED" -eq 0 ] && [ "${SCAFFOLD_FAILURE_GUIDANCE_OWNER:-}" != powershell ]; then
+    GUIDANCE_SHOWN=1
+    printf '%s\n' 'Optional public feedback (review privacy before sharing):' \
+      'https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/new?template=feedback.yml' \
+      'https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/distribution/feedback.md' >&2 || :
+  fi
+}
+finish() {
+  status=$?
+  trap - EXIT
+  if [ -n "$OWNED_WORK" ]; then rm -rf -- "$OWNED_WORK" || :; fi
+  if [ "$status" -ne 0 ]; then failure_guidance; fi
+  builtin exit "$status"
+}
+trap finish EXIT
 fail() { printf 'error: %s\n' "$1" >&2; exit 1; }
 usage() {
   printf '%s\n' 'Usage: scaffold-init.sh [--dry-run | --apply] [target-directory]' \
@@ -14,7 +31,7 @@ usage() {
     'Local rollback: --rollback --transaction DIR [--dry-run | --apply] TARGET' \
     'No force, Git init, commit or push. Review adoption before onboarding.'
 }
-ENTRY="${BASH_SOURCE[0]:-}"; SELECTED=0
+ENTRY="${BASH_SOURCE[0]:-}"
 if [ "${1:-}" = --_selected ]; then
   [ "$#" -ge 3 ] || fail 'invalid selected dispatch'
   PIN="$2"; WORK="$3"; shift 3
@@ -51,7 +68,18 @@ if [ "$SELECTED" -eq 0 ]; then
       case "$ancestor" in */*) ancestor="${ancestor%/*}"; [ -n "$ancestor" ] || ancestor=/ ;; *) break ;; esac
     done
     [ "$(digest < "$ENGINE")" = 3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284 ] || fail 'unreviewed local engine bytes'
-    exec bash "$ENGINE" "$@"
+    # Keep the engine in this PID so terminating the entry cannot leave a
+    # child installing. The verified engine's BASH_SOURCE and stdin stay intact.
+    # Its operation_finish EXIT trap retains cleanup and calls this exit last.
+    # shellcheck disable=SC2329 # Invoked by the verified sourced engine and its EXIT cleanup.
+    exit() {
+      local code="${1:-$?}"
+      if [ "$code" -ne 0 ]; then failure_guidance; fi
+      builtin exit "$code"
+    }
+    # shellcheck disable=SC1090 # Exact hash verified above; covered by engine regression tests.
+    source "$ENGINE" "$@"
+    exit "$?"
   fi
 fi
 MODE=apply; MODE_SET=0; TARGET=.; TARGET_SET=0
@@ -77,11 +105,12 @@ if [ "$SELECTED" -eq 0 ]; then
   [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || fail 'invalid public source repository'
   git check-ref-format "refs/heads/$REF" >/dev/null 2>&1 || fail 'invalid source ref'
   WORK="$(mktemp -d "${TMPDIR:-/tmp}/scaffold-bootstrap.XXXXXX")"
-  trap 'rm -rf -- "$WORK"' EXIT
+  OWNED_WORK="$WORK"
   # Resolve OS temporary-directory aliases only for this newly owned scratch.
   # Explicit local sources and adopter targets retain their no-symlink checks.
   PHYSICAL_WORK="$(cd "$WORK" && pwd -P)" || fail 'fresh scratch physical path is uncheckable'
   WORK="$PHYSICAL_WORK"
+  OWNED_WORK="$WORK"
   # Acquisition excludes user credential helpers, rewrites, templates and hooks.
   public_git() {
     GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/usr/bin/false \

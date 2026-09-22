@@ -200,5 +200,5 @@ automatically advanced when main changes. See the
 [detailed helper semantics](source-first-installer.md#governance-worktree-and-retro-procedures),
 [connector scope](source-first-installer.md#optional-offline-connector-definition-validation)
 and [known limitations](../known-limitations.md). The separate consent-gated
-failure reporter still requires a reviewed checkout; it is not part of these
-read-only commands.
+failure reporter has a separate [two-file no-clone draft/send route](feedback.md);
+it is not part of these read-only commands.

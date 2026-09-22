@@ -1,0 +1,31 @@
+name: Adopter feedback
+description: Share a concise, public-safe installation or workflow improvement.
+title: "[adopter-feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This creates a PUBLIC issue in https://github.com/mochan-tk/agentic-dev-kit-for-codex under your GitHub account.
+        Review everything you enter before submitting. Do not include logs, attachments, credentials, local paths, private repository identifiers, recovery records, or adopter markers.
+        This manual form accepts your own text; it does not redact or prevent disclosure. The separate failure reporter collects only eight fixed fields. Classification of this form is not consent or identity verification; no receiver or schedule is activated by submission.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or improvement
+      description: Briefly describe the behavior using generic, public-safe terms. No logs or attachments.
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: Expected behavior
+      description: Briefly describe what you expected, without private project details.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Public disclosure confirmation
+      options:
+        - label: I reviewed all entered text, removed private data and attachments, and intend to publish it publicly under my GitHub account.
+          required: true
