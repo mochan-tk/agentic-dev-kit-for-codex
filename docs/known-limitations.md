@@ -69,9 +69,21 @@ complete Task brief; it does not imply closed dependencies or dispatch authority
 
 Failure reports require explicit `--send`, a terminal and literal consent.
 An uncertain create response may have created an Issue; inspect before another
-invocation. No automatic retry or receiving-triage service is supplied.
+invocation. No automatic retry or active receiving-triage service is supplied.
 Retrospective blocks produce proposals or bounded diffs, not owner approval,
 automatic policy retirement, runtime learning or upstream publication.
+
+The [ongoing improvement companions](distribution/ongoing-improvement.md) offer
+explicit reports and receiving-side routing with synthetic transport evidence.
+Exact HTML checkpoint changes can include layout or unrelated ChatGPT changes;
+they do not establish semantic capability or runtime availability. Distinct
+evidence links do not prove independent incidents. Finite final readbacks cannot
+make GitHub observations atomic, and bounded pages/time/output may refuse large
+repositories. Unknown is non-success. Monthly report no-ops require exact
+content, so a later changed observation needs human review rather than overwrite.
+Templates are inert and have no active schedule; deployment into a guarded
+adopter requires a separate reviewed workflow-inventory transition. Classification
+does not authenticate the sender or prove consent, execution or Task authority.
 
 ## Evidence scope
 

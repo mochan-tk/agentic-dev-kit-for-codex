@@ -1,0 +1,95 @@
+# Inert review template. Configure trusted kit revision and explicitly activate.
+name: Ongoing improvement review
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Explicitly create the monthly report Issue
+        type: boolean
+        default: false
+      platform:
+        description: Read the allowlisted official documentation checkpoint
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: ongoing-improvement-monthly
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: ${{ vars.ONGOING_IMPROVEMENT_ENABLED == 'true' && !inputs.publish }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: Validate explicit trusted kit revision
+        env:
+          KIT_REVISION: ${{ vars.ONGOING_IMPROVEMENT_KIT_REVISION }}
+        run: |
+          if [[ ! "$KIT_REVISION" =~ ^[0-9a-f]{40}$ ]]; then exit 2; fi
+      - name: Check out reviewed kit controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mochan-tk/agentic-dev-kit-for-codex
+          ref: ${{ vars.ONGOING_IMPROVEMENT_KIT_REVISION }}
+          path: kit
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Check out explicit target data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: target
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Observe without publication authority
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ github.repository }}
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          args=(--repo "$TARGET_REPO" --target "$GITHUB_WORKSPACE/target")
+          if [ "$PLATFORM" = true ]; then args+=(--platform); fi
+          bash kit/.github/scripts/retro-hygiene.sh "${args[@]}"
+
+  publish:
+    if: ${{ vars.ONGOING_IMPROVEMENT_ENABLED == 'true' && inputs.publish }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Validate explicit trusted kit revision
+        env:
+          KIT_REVISION: ${{ vars.ONGOING_IMPROVEMENT_KIT_REVISION }}
+        run: |
+          if [[ ! "$KIT_REVISION" =~ ^[0-9a-f]{40}$ ]]; then exit 2; fi
+      - name: Check out reviewed kit controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mochan-tk/agentic-dev-kit-for-codex
+          ref: ${{ vars.ONGOING_IMPROVEMENT_KIT_REVISION }}
+          path: kit
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Check out explicit target data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: target
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Explicitly publish the validated observation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ github.repository }}
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          args=(--repo "$TARGET_REPO" --target "$GITHUB_WORKSPACE/target" --publish)
+          if [ "$PLATFORM" = true ]; then args+=(--platform); fi
+          bash kit/.github/scripts/retro-hygiene.sh "${args[@]}"

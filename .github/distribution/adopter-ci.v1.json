@@ -33,7 +33,7 @@
     {
       "path": "README.md",
       "mode": "100644",
-      "sha256": "69acf15e252de1ecf2bf28b7a277f0c93356ee23057382865bae1b2f6d2593c6"
+      "sha256": "86a19965ab2fde1cf415f12a572707b3c3d99989dd07aa1f4f5ae98b0d4daac6"
     },
     {
       "path": "docs/distribution/adopter-ci.md",
@@ -43,17 +43,17 @@
     {
       "path": "docs/known-limitations.md",
       "mode": "100644",
-      "sha256": "ace2682eeb3e6ba66cd8d1c68dfd1af7ffe1b8aec47a953fc0d202ccd5aaae8d"
+      "sha256": "efbb8c71e167643b8f95cec55cd0f30cf85c985906595d373bc5c5b8ca069582"
     },
     {
       "path": "docs/product-scope.md",
       "mode": "100644",
-      "sha256": "5423c0d4b984158f77e7eccd06fb08ad51ea0ae079f698c09bbefe8730e3cecb"
+      "sha256": "8c1797729bca16178d9df862fc5cdd0095dfae8e6fbb72966e090953ff471310"
     },
     {
       "path": "docs/provenance.md",
       "mode": "100644",
-      "sha256": "55f2fea5addfee4081462f79188c0b191d79c7e1396f9c7fc13355180b88d359"
+      "sha256": "f405cf5e66bae0635fd571318451bb558c6810c88d843982057a274ba6469cdb"
     },
     {
       "path": "tests/conformance/test_adopter_ci.py",

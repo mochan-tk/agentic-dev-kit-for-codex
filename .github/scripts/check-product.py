@@ -43,7 +43,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
 }
 TEST_MODULES = (
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
-    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py",
+    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
     "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
@@ -64,9 +64,36 @@ PUBLIC_DOCS = (
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
     "docs/distribution/adopter-ci.md",
+    "docs/distribution/ongoing-improvement.md",
 )
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "de7f7180d9848e40fc794ec1d3eda0558162e9c5c8854db10940d87a42b15dc3"
+ADOPTER_RECORD_SHA256 = "a27c307da28ab819e948d5ec834a85d24971dadad4bccbcc0493b6550e7e5b17"
+IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
+IMPROVEMENT_RECORD_SHA256 = "0c386efe11019c0598cdef34b785d7f5f9b9d862e775562eebfba1dc6c67d255"
+IMPROVEMENT_SOURCE_FILES = {
+    ".github/scripts/retro-hygiene.sh": "49df279b865f6a6f7484621158fc7c48a2b1b3cd",
+    ".github/workflows/retro-hygiene.yml": "8e2db7437c1950e435c04a9210a6461651197a01",
+    ".github/scripts/platform-capability-baseline.tsv": "28699a56040dc9776fe3afb22a65a2cb38f3b10d",
+    ".github/scripts/tests/test-retro-hygiene.sh": "7d1a773fbd9eb689b9d7d7bf20e3900896348b33",
+    ".github/workflows/adopter-feedback.yml": "66767cfbff5773e553a5753334458cbd2302e6be",
+    ".github/scripts/tests/test-feedback-receiver.sh": "9b6970a397461fa1249719fab4087e8f7249ca23",
+    ".github/ISSUE_TEMPLATE/feedback.yml": "7b2ff47f4ec7e99cd42c48dd083e2721fde35d79",
+    ".github/docs/adopter-feedback.md": "deb4d4bf9ba4f11afd264d31f1a81449a8b80aae",
+}
+IMPROVEMENT_TARGETS = tuple(sorted((
+    ".github/scripts/ongoing-improvement.py", ".github/scripts/retro-hygiene.sh", ".github/scripts/feedback-triage.sh",
+    ".github/distribution/ongoing-improvement/platform-baseline.v1.json",
+    ".github/distribution/ongoing-improvement/retro-hygiene.yml",
+    ".github/distribution/ongoing-improvement/adopter-feedback.yml",
+    "docs/distribution/ongoing-improvement.md", "tests/conformance/test_ongoing_improvement.py",
+    "README.md", "docs/product-scope.md", "docs/known-limitations.md", "docs/provenance.md",
+)))
+# Independent exact workflow bindings prevent a provenance-only reseal from
+# changing authority, triggers, checkout trust, permissions or command routing.
+IMPROVEMENT_TEMPLATE_DIGESTS = {
+    "retro-hygiene.yml": "9cbb0bf101e05d2a2a4e0ac99356b71542362ee6d78be3704c52696f923e4b2d",
+    "adopter-feedback.yml": "fa0417d37cb663f5162d8e4c62d7f59e73c95d30ae23443dadbcaacc0bfab664",
+}
 ADOPTER_SOURCE_FILES = {
     ".github/workflows/task-ritual.yml": "76b2db3c69385e7ab20eee9f8847268b7a732389",
     ".github/workflows/ci.yml": "2147dd280f8f24f748487dfb83e2084c6167b899",
@@ -416,10 +443,133 @@ def validate_adopter_ci(root):
     return errors
 
 
+def validate_ongoing_improvement(root):
+    """Product-only integrity plus mandatory behavior; no installer expansion."""
+    try:
+        record = bound_json(root, IMPROVEMENT_RECORD, IMPROVEMENT_RECORD_SHA256)
+        if (set(record) != {"schema", "source_repository", "source_commit", "source_files", "scope", "evidence", "target_files"}
+                or record["schema"] != "ongoing-improvement-provenance/v1"
+                or record["source_repository"] != "mochan-tk/agentic-dev-kit-for-copilot"
+                or record["source_commit"] != "446071c76f14f5fbda37a0eef1b6eafa0a3ab897"
+                or record["source_files"] != IMPROVEMENT_SOURCE_FILES
+                or record["scope"] != "explicit-source-checkout-companions-and-inert-templates-preserving-all-47-payload-files"
+                or record["evidence"] != "actual-local-tools-synthetic-GitHub-HTTP-not-live-activation"
+                or [row["path"] for row in record["target_files"]] != list(IMPROVEMENT_TARGETS)):
+            raise ValueError("improvement source/scope/inventory")
+        for row in record["target_files"]:
+            if row != {"path": row["path"], "mode": "100644", "sha256": digest(read_bytes(root, row["path"]))}:
+                raise ValueError("improvement file binding")
+        for name, expected in IMPROVEMENT_TEMPLATE_DIGESTS.items():
+            if digest(read_bytes(root, ".github/distribution/ongoing-improvement/" + name)) != expected:
+                raise ValueError("improvement workflow authority")
+            if (Path(root) / ".github/workflows" / name).exists():
+                raise ValueError("improvement template unexpectedly active")
+        for name, mode in (("retro-hygiene.sh", "retro"), ("feedback-triage.sh", "feedback")):
+            data = read_bytes(root, ".github/scripts/" + name).decode()
+            expected_lines = ["set -euo pipefail", "export LC_ALL=C",
+                              'script_dir="$(CDPATH=\'\' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"',
+                              'exec python3 -I "$script_dir/ongoing-improvement.py" ' + mode + ' "$@"']
+            if [line for line in data.splitlines() if line and not line.startswith("#")] != expected_lines:
+                raise ValueError("improvement wrapper authority")
+        spec = importlib.util.spec_from_file_location("improvement_product_check", Path(root) / ".github/scripts/ongoing-improvement.py")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        if (helper.OFFICIAL_URL != "https://learn.chatgpt.com/docs/changelog"
+                or (helper.PAGE_SIZE, helper.MAX_PAGES, helper.MAX_ISSUES, helper.MAX_COMMENTS,
+                    helper.MAX_BYTES, helper.MAX_TOTAL_BYTES, helper.MAX_CALLS, helper.FILE_LIMIT)
+                != (50, 11, 500, 200, 2097152, 16777216, 512, 262144)):
+            raise ValueError("improvement resource or network boundary")
+
+        def refuses(function, *args):
+            try:
+                function(*args)
+            except helper.Fault:
+                return
+            raise ValueError("improvement mandatory negative guard")
+
+        baseline = read_bytes(root, helper.BASELINE)
+        baseline_value = helper.baseline_record(baseline)
+        for mutation in ({"url": "https://evil.invalid/"}, {"url": "https://user:secret@learn.chatgpt.com/docs/changelog"},
+                         {"kind": "version"}, {"sha256": "unknown"}, {"extra": True}):
+            refuses(helper.baseline_record, json.dumps(dict(baseline_value, **mutation)).encode())
+        for invalid in (b'{"x":1,"x":2}', b"NaN", b"Infinity", b"-Infinity"):
+            refuses(helper.parse_json, invalid)
+        html = b"<html>synthetic checkpoint</html>"
+        response = b"HTTP/2 200\r\ncontent-type: text/html\r\n\r\n" + html
+        if helper.checkpoint_response(response, digest(html))["status"] != "unchanged":
+            raise ValueError("improvement checkpoint positive guard")
+        if helper.checkpoint_response(response, "0" * 64)["status"] != "changed":
+            raise ValueError("improvement changed checkpoint guard")
+        for bad in (response.replace(b"200", b"302"), response.replace(b"text/html", b"text/plain"),
+                    response.replace(b"<html>", b"PRIVATE"), response.replace(b"\r\n\r\n", b"\r\nlocation: https://evil.invalid/\r\n\r\n")):
+            refuses(helper.checkpoint_response, bad, digest(html))
+        if helper.classification("ordinary", helper.MARKER + "\nreport") != "matched" or helper.classification("[adopter-feedback] form", "ordinary") != "matched":
+            raise ValueError("improvement routing positive guard")
+        for title, body in (("ordinary", "> " + helper.MARKER), ("ordinary", "context\n" + helper.MARKER),
+                            ("[adopter-feedback] form", "<!-- adopter-feedback:v2 -->"),
+                            ("[adopter-feedback] form", "> " + helper.MARKER), ("[adopter-feedback]suffix", "ordinary")):
+            if helper.classification(title, body) != "not-matched":
+                raise ValueError("improvement routing negative guard")
+        reference = "https://github.com/fixture/example/pull/22#discussion_r123"
+        if helper.evidence("[review](" + reference + ")\ncontext") != {reference}:
+            raise ValueError("improvement existing filing format")
+        if helper.evidence("Occurrence:\n" + reference, occurrence=True) != {reference}:
+            raise ValueError("improvement existing occurrence format")
+        for body in ("no evidence", "> " + reference, "```text\n~~~\n" + reference + "\n~~~\n```",
+                     "````text\n```\n" + reference + "\n```\n````"):
+            refuses(helper.evidence, body)
+        if helper.evidence("discussion\nOccurrence: " + reference, occurrence=True):
+            raise ValueError("improvement discussion evidence guard")
+        report = {"schema": "ongoing-improvement/v1", "repository": "https://github.com/fixture/example", "period": "2026-09",
+                  "ledger": "observed-empty", "candidates": [], "budget": [], "platform": {}, "publication": "read-only"}
+        if helper.report_period(helper.REPORT_MARKER + "\n" + json.dumps(report, separators=(",", ":"))) != "2026-09":
+            raise ValueError("improvement same-period identity guard")
+        refuses(helper.report_period, "<!-- ongoing-improvement:v2 -->\n{}")
+        refuses(helper.report_period, helper.REPORT_MARKER + "\n{bad}")
+        class PageFixture:
+            def __init__(self, pages):
+                self.pages = iter(pages)
+
+            def api(self, endpoint):
+                return next(self.pages)
+
+        ledger = helper.Ledger(PageFixture([[{"id": 1}]]), "fixture/example", None)
+        if ledger.pages("repos/fixture/example/issues", lambda row: row, 500) != [{"id": 1}]:
+            raise ValueError("improvement pagination positive guard")
+        for pages in ([[{"id": 1}, {"id": 1}]], [None], [[{"id": n} for n in range(51)]]):
+            ledger.transport = PageFixture(pages)
+            refuses(ledger.pages, "repos/fixture/example/issues", lambda row: row, 500)
+        class FeedbackFixture:
+            def __init__(self, changed=False):
+                self.reads = 0
+                self.changed = changed
+
+            def one(self, number):
+                self.reads += 1
+                return {"pull_request": False, "title": "ordinary", "body": helper.MARKER,
+                        "url": "https://github.com/fixture/example/issues/1", "labels": ["from:adopter"],
+                        "snapshot": self.reads if self.changed else 1}
+
+            def label(self, name):
+                if name != "from:adopter":
+                    raise ValueError("unexpected label")
+
+        if helper.feedback(FeedbackFixture(), 1, False)["publication"] != "read-only":
+            raise ValueError("improvement default observation guard")
+        if helper.feedback(FeedbackFixture(), 1, True)["publication"] != "verified-noop":
+            raise ValueError("improvement label no-op guard")
+        refuses(helper.feedback, FeedbackFixture(changed=True), 1, True)
+        if "docs/distribution/ongoing-improvement.md" not in read_bytes(root, "README.md").decode():
+            raise ValueError("improvement navigation")
+    except (OSError, ValueError, UnicodeError, KeyError, TypeError, AttributeError, ImportError):
+        return ["mandatory ongoing improvement companion is missing, unsafe or unbound"]
+    return []
+
+
 def validate(root):
     root = Path(root)
     errors = (validate_export(root) + validate_navigation(root) + validate_policy(root)
-              + validate_companion_access(root) + validate_adopter_ci(root))
+              + validate_companion_access(root) + validate_adopter_ci(root) + validate_ongoing_improvement(root))
     try:
         spec = importlib.util.spec_from_file_location("installer_product_check", root / ".github/scripts/check-installer.py")
         checker = importlib.util.module_from_spec(spec)

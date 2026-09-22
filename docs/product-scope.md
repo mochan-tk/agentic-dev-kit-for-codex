@@ -40,6 +40,14 @@ outside the unchanged 47-file installer/update/rollback inventory. Activation,
 required-check settings and later guarded-file transitions remain explicit
 owner decisions; no live adopter rollout is claimed.
 
+Two more [ongoing improvement companions](distribution/ongoing-improvement.md)
+observe retrospective candidates, per-file instruction budgets and optional
+official Codex documentation content checkpoints, and classify existing reporter
+feedback. Defaults are read-only; separate flags permit a bounded monthly Issue
+publication or exact feedback label. Two templates remain inert outside active
+workflows. They require their own owner-reviewed activation and do not expand
+the adopter CI addon's accepted workflow inventory or any installed payload.
+
 The installed workflow covers onboarding, context collection and builtin
 drafting, human-reviewed distillation, Epic/Task planning and readiness,
 ownership and routing, supervision and handoff, verification, and retrospective
