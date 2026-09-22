@@ -5,6 +5,7 @@ import argparse
 import base64
 import hashlib
 import selectors
+import signal
 import shutil
 import stat
 import time
@@ -443,7 +444,7 @@ CONFIG = ".github/adopter-ci.json"
 META = ".github/workflows/task-ritual.yml"
 SELF = ".github/scripts/check-adopter-ci.py"
 RITUAL = ".github/scripts/check-task-ritual.sh"
-RITUAL_SHA256 = "f55b24d4b2cfe14c83e02d723bc2021f7321b1196b78c7436491b73d67b0b4eb"
+RITUAL_SHA256 = "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7"
 CONTROLS = ["metadata-workflow", "sensor", "installed-ritual", "code-events",
             "code-producers", "cancellation-isolation", "retarget-freshness"]
 MAX_BYTES = 1024 * 1024
@@ -454,16 +455,17 @@ def digest(data):
 
 
 def bounded_command(args, *, cwd=None, env=None):
-    """Bound both pipe streams and wall time without writing logs to disk."""
+    """Bound output/time and clean the launched command's POSIX process group."""
     process = subprocess.Popen(args, cwd=cwd, env=env, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    streams = selectors.DefaultSelector()
-    outputs = {process.stdout: bytearray(), process.stderr: bytearray()}
-    for stream in outputs:
-        streams.register(stream, selectors.EVENT_READ)
-    deadline = time.monotonic() + 30
-    size = 0
+                               stderr=subprocess.PIPE, start_new_session=True)
+    streams = None
     try:
+        streams = selectors.DefaultSelector()
+        outputs = {process.stdout: bytearray(), process.stderr: bytearray()}
+        for stream in outputs:
+            streams.register(stream, selectors.EVENT_READ)
+        deadline = time.monotonic() + 30
+        size = 0
         while streams.get_map():
             need(time.monotonic() < deadline, "command timed out")
             for selected, _ in streams.select(timeout=0.2):
@@ -478,12 +480,19 @@ def bounded_command(args, *, cwd=None, env=None):
         return subprocess.CompletedProcess(args, process.returncode,
             outputs[process.stdout].decode("utf-8"), outputs[process.stderr].decode("utf-8"))
     finally:
-        if process.poll() is None:
-            process.kill()
+        try:
+            # Descendants can retain pipes after the direct child exits. Only
+            # this new session's group is owned; escaped groups are outside it.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             process.wait()
-        streams.close()
-        for stream in outputs:
-            stream.close()
+        finally:
+            if streams is not None:
+                streams.close()
+            for stream in (process.stdout, process.stderr):
+                stream.close()
 
 
 def relative(value):

@@ -1,6 +1,8 @@
 """Real Git/disposable-adopter bootstrap evidence with synthetic URL transport."""
 import hashlib
+import base64
 import importlib.util
+import json
 import os
 from pathlib import Path
 import shlex
@@ -198,6 +200,22 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
         for local in ("", str(self.base / "missing")):
             self.assert_refusal_unchanged(env={"SCAFFOLD_SOURCE_DIR": local})
 
+    def test_current_bootstrap_refuses_exact_previous_selected_and_local_engine(self):
+        baseline = json.loads((ROOT / "tests/fixtures/boundary-repair-baseline.json").read_bytes())
+        previous = base64.b64decode(next(row["base64"] for row in baseline["files"] if row["path"] == ENGINE), validate=True)
+        (self.source / ENGINE).write_bytes(previous)
+        revision = self.commit(self.source)
+        before = self.snapshot()
+        result = self.run_entry(ref=revision, saved=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("unreviewed local engine bytes", result.stderr)
+        self.assertEqual(before, self.snapshot())
+        result = subprocess.run([BASH, str(self.source / ENTRY), "--apply", str(self.target)],
+            env=dict(self.env, SCAFFOLD_SOURCE_DIR=str(self.source)), capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("unreviewed local engine bytes", result.stderr)
+        self.assertEqual(before, self.snapshot())
+
     def test_branch_tags_full_sha_and_saved_relative_target(self):
         self.command(self.source, "branch", "feature/one")
         self.command(self.source, "tag", "light")
@@ -342,6 +360,9 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
         old = product_checker().history_bytes(ROOT,
             commit="ab7789274aae99cb4fd8f781672bcb89c71d80ec", path=ENTRY)
         current = (ROOT / ENTRY).read_bytes()
+        baseline = json.loads((ROOT / "tests/fixtures/boundary-repair-baseline.json").read_bytes())
+        old_engine = base64.b64decode(next(row["base64"] for row in baseline["files"] if row["path"] == ENGINE), validate=True)
+        current_engine = (ROOT / ENGINE).read_bytes()
         old_entry = self.base / "previous bootstrap.sh"
         old_entry.write_bytes(old)
         for nested in (False, True):
@@ -366,8 +387,9 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
                 self.command(self.target, "init", "-q", "-b", "main")
                 env = dict(self.env, TMPDIR=str(scratch))
                 before = self.snapshot()
-                if (self.source / ENTRY).read_bytes() != old:
+                if (self.source / ENTRY).read_bytes() != old or (self.source / ENGINE).read_bytes() != old_engine:
                     (self.source / ENTRY).write_bytes(old)
+                    (self.source / ENGINE).write_bytes(old_engine)
                     old_pin = self.commit(self.source)
                 else:
                     old_pin = self.command(self.source, "rev-parse", "HEAD").strip()
@@ -378,8 +400,9 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
                 self.assertIn("source root or ancestor is a symlink", failed.stderr)
                 self.assertEqual(before, self.snapshot())
                 self.assertEqual([], list(scratch_physical.iterdir()))
-                if (self.source / ENTRY).read_bytes() != current:
+                if (self.source / ENTRY).read_bytes() != current or (self.source / ENGINE).read_bytes() != current_engine:
                     (self.source / ENTRY).write_bytes(current)
+                    (self.source / ENGINE).write_bytes(current_engine)
                     pin = self.commit(self.source)
                 else:
                     pin = old_pin

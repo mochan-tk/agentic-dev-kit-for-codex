@@ -28,13 +28,22 @@ SCAFFOLD_REF selects a branch, lightweight/annotated tag or full commit.
 Branch lookup precedes peeled and lightweight tags. Resolution happens once,
 then the exact commit is fetched into a private bare repository. FETCH_HEAD,
 Git object integrity, regular-blob modes, exact path/class layout, all 47
-payload digests and the unchanged local engine digest must validate before
+payload digests and the exact current local engine digest must validate before
 executing selected code or touching the adopter. No archive extraction,
 checkout, filters, hooks, credential helper, GitHub authentication or new
 package is required. Only the selected revision's wrapper then dispatches its
 engine and stages; an older initial wrapper never applies its stage policy to
 a different selected revision. The private dispatch mode is a process routing
 boundary, not an authenticated identity or a general recursive bootstrap API.
+
+The current bootstrap refuses selected revisions with the previous engine,
+including the accepted pre-repair revision. To install that historical revision,
+separately review and pin its own historical entry and selected revision together.
+A new entry is available through `main` only after its PR is merged; an unmerged
+repair does not change the public `main` download. Local entry and direct engine
+calls reject inherited repository/configuration context overrides before Git
+observations, including empty values. Genuine linked worktrees with `.git` files
+remain supported; call from a shell without those overrides.
 
 The initial downloaded script remains trusted executable code. A floating main
 URL can change; use reviewed immutable URLs when needed. Commit/blob/hash checks
@@ -54,7 +63,7 @@ the interactive session. A saved local shim dispatches its adjacent entry.
 WSL is never substituted. PowerShell-host synthetic tests are separate from
 native Windows execution, which remains unmeasured.
 
-Before apply, the unchanged local planner validates every source and target
+Before apply, the reviewed local planner validates every source and target
 path. Missing tracked paths, staged deletions, other conflicting index state,
 ignored new paths and unsafe/locked index refuse before file writes. Staging
 uses exact raw blobs through hash-object --no-filters and one update-index
@@ -142,7 +151,10 @@ including supported `/root/...` references; never convert it to an invented
 UUID. Plan prose still requires human review; syntactic validation does not
 judge its adequacy. Check the render exit status before using the resulting
 file: redirection can leave an empty file even when render fails. Preflight
-reads actual body bytes and makes GETs
+rejects malformed UTF-8 and NUL before any API read, while preserving valid
+Japanese, emoji, literal U+FFFD and terminal newlines. Both input routes retain
+the 262144-byte limit with no additional dependency. Preflight reads actual body
+bytes and makes GETs
 only. Add `--pr NUMBER` when there is already a PR; failed PR observation must
 not be retried without that argument to obtain a pass.
 
@@ -226,8 +238,10 @@ two-version preservation tests. It does **not** reuse blind engine overwrite,
 automatic staging, changelog replacement or broad path discovery. Known-old
 checks, prewrite backups and explicit operation rollback are target additions.
 The 47 shipped payload paths/classes/modes and original source blob IDs remain
-fixed. Six current workflow adaptations are recorded separately in provenance;
-they do not change the upgrade engine or rewrite the original export seal.
+fixed. Earlier workflow adaptations and the current boundary repair are recorded
+separately in provenance. The repair adds a local Git-context refusal and strict
+ritual UTF-8 handling while retaining the upgrade/rollback operation format and
+the original export seal.
 
 Select inspected local old/new roots containing `.github/distribution/`, an
 exclusively owned adopter Git root, and a new private transaction directory whose
@@ -336,10 +350,20 @@ anonymous HTTPS, an empty transport home, and disabled user configuration,
 credential helpers, templates and hooks. Unsupported Git context and client
 certificate/TLS override variables refuse. Strict object checks precede bounded
 projection: exact regular-blob modes, the fixed 47-path/class layout, complete
-payload enumeration, Git blob hashes, payload SHA-256 values and the fixed engine
-hash must pass for both revisions. Only that unchanged engine executes; selected
+payload enumeration, Git blob hashes and payload SHA-256 values must pass for
+both revisions. FROM accepts exactly the previous reviewed engine or current
+reviewed engine as retained data. TO requires the current reviewed engine, and
+only that new engine executes; selected
 updater or bootstrap code is not projected or executed. Integrity checks do not
 authenticate a publisher. Normal trusted Git, Bash and Unix tools are required.
+
+The current updater deliberately refuses a legacy-engine TO revision. A separate
+reviewed, pinned historical updater remains the route for the old engine family;
+do not assume the current entry accepts every historical source. Accepted-old to
+current updates change one installed file, the ritual helper, while preserving
+the other 46 payload contents. Current to current already-new updates are a
+separate no-op case. The `local-upgrade/v1` format is unchanged; current local
+code can read retained old-engine operations using their original source roots.
 
 Preview acquires sources in owned temporary scratch and removes that scratch
 on exit. It changes no target bytes, index entries or requested recovery path.
@@ -373,7 +397,7 @@ checks paths and filesystem identities as well as bytes. The existing
 unknown partial bytes refuse; unrelated later edits are preserved. Keep recovery
 inputs private and out of public reports. This is operation-scoped recovery,
 without whole-repository reset, power-loss atomicity or concurrent-writer safety.
-Both revisions need the fixed supported layout and engine. Native Windows is
+Both revisions need the fixed supported layout and role-appropriate engine. Native Windows is
 unmeasured even when PowerShell-host synthetic tests pass.
 
 The focused regression command is:

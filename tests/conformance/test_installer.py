@@ -1640,6 +1640,7 @@ sys.exit(result.returncode)
                      *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS,
                      *checker.WORKFLOW_TARGETS, checker.WORKFLOW_BASELINE,
                      *checker.FRONTIER_TARGETS, checker.FRONTIER_BASELINE,
+                     *checker.BOUNDARY_TARGETS, checker.BOUNDARY_BASELINE,
                      ".github/distribution/export-provenance.v1.json"):
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -1647,6 +1648,7 @@ sys.exit(result.returncode)
         self.assertEqual([], checker.validate(source))
         self.assertEqual([], checker.validate_connector_companion(source))
         self.assertEqual([], checker.validate_explicit_update(source))
+        self.assertEqual([], checker.validate_boundary_repair(source))
         return source, checker
 
     def reseal_payload(self, source):
@@ -2271,6 +2273,56 @@ sys.exit(result.returncode)
         self.assertIn("install", result.stdout)
         self.assertEqual(before, self.snapshot(self.target))
         self.assertEqual(source_before, self.snapshot(ROOT / ".github/distribution"))
+
+    def test_local_entries_refuse_inherited_git_context_before_mutation(self):
+        source_before = self.snapshot(ROOT / ".github/distribution")
+        donor_before = self.snapshot(self.target)
+        for entry in (INSTALLER, ROOT / ".github/scripts/scaffold-install.sh"):
+            for nested in (False, True):
+                for worktree in (False, True):
+                    with self.subTest(entry=entry.name, nested=nested, worktree=worktree):
+                        target = self.base / ("nested" if nested else "plain")
+                        target.mkdir(exist_ok=True)
+                        if nested:
+                            subprocess.run(["git", "init", "-q", str(target)], check=True)
+                            target = target / "child"
+                            target.mkdir(exist_ok=True)
+                        before = self.snapshot(target)
+                        env = dict(os.environ, SCAFFOLD_SOURCE_DIR=str(ROOT), GIT_DIR=str(self.target / ".git"))
+                        if worktree: env["GIT_WORK_TREE"] = str(target)
+                        result = subprocess.run(["bash", str(entry), "--apply", str(target)],
+                                                env=env, capture_output=True, text=True, timeout=30)
+                        self.assertNotEqual(0, result.returncode)
+                        self.assertEqual(before, self.snapshot(target))
+                        self.assertEqual(donor_before, self.snapshot(self.target))
+                        self.assertEqual(source_before, self.snapshot(ROOT / ".github/distribution"))
+
+    def test_local_install_supports_linked_worktree_git_file(self):
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                 "commit", "--allow-empty", "-qm", "worktree fixture")
+        linked = self.base / "linked adopter"
+        self.git("worktree", "add", "-q", "-b", "linked", str(linked))
+        self.assertTrue((linked / ".git").is_file())
+        before = self.snapshot(self.target / ".git")
+        preview = self.run_install("--dry-run", target=linked)
+        self.assertEqual(0, preview.returncode, preview.stderr)
+        result = self.run_install("--apply", target=linked)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(before, self.snapshot(self.target / ".git"))
+        self.assertTrue((linked / RITUAL_PATH).is_file())
+
+    def test_local_preview_refuses_even_empty_repository_context_overrides(self):
+        before = self.snapshot(self.target)
+        for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY",
+                     "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS",
+                     "GIT_NAMESPACE", "GIT_SHALLOW_FILE", "GIT_REPLACE_REF_BASE"):
+            with self.subTest(variable=name):
+                env = dict(os.environ, SCAFFOLD_SOURCE_DIR=str(ROOT), **{name: ""})
+                result = subprocess.run(["/bin/bash", str(INSTALLER), "--dry-run", str(self.target)],
+                                        env=env, capture_output=True, text=True, timeout=15)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("Git context override", result.stderr)
+                self.assertEqual(before, self.snapshot(self.target))
 
     def test_default_is_dry_run(self):
         before = self.snapshot(self.target)

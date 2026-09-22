@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Source-derived public bootstrap; frozen Copilot source fd265ddef150fab86cd54d0e383c2c25fe297ffb.
-# Git object projection replaces tar/checkout; the local engine stays unchanged.
+# Git object projection replaces tar/checkout; only the reviewed current engine runs.
 set -euo pipefail
 export LC_ALL=C GIT_OPTIONAL_LOCKS=0
 fail() { printf 'error: %s\n' "$1" >&2; exit 1; }
@@ -50,7 +50,7 @@ if [ "$SELECTED" -eq 0 ]; then
       [ ! -L "$ancestor" ] || fail 'local engine ancestor is a symlink'
       case "$ancestor" in */*) ancestor="${ancestor%/*}"; [ -n "$ancestor" ] || ancestor=/ ;; *) break ;; esac
     done
-    [ "$(digest < "$ENGINE")" = 3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2 ] || fail 'unreviewed local engine bytes'
+    [ "$(digest < "$ENGINE")" = 3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284 ] || fail 'unreviewed local engine bytes'
     exec bash "$ENGINE" "$@"
   fi
 fi
@@ -137,7 +137,7 @@ if [ "$SELECTED" -eq 0 ]; then
     [ "$(digest < "$WORK/src/.github/distribution/payload/$name")" = "$hash" ] || fail 'payload digest mismatch'
   done < "$MANIFEST"
   for path in .github/scripts/scaffold-init.sh .github/scripts/scaffold-init.ps1 .github/scripts/scaffold-install.sh; do project "$path"; done
-  [ "$(digest < "$WORK/src/.github/scripts/scaffold-install.sh")" = 3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2 ] || fail 'unreviewed local engine bytes'
+  [ "$(digest < "$WORK/src/.github/scripts/scaffold-install.sh")" = 3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284 ] || fail 'unreviewed local engine bytes'
   # All selected objects, layout and hashes passed before selected code runs.
   bash "$WORK/src/.github/scripts/scaffold-init.sh" --_selected "$PIN" "$WORK" "$@"
   exit "$?"

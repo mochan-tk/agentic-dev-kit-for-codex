@@ -46,6 +46,12 @@ case "$OP" in
   rollback) [ -z "$OLD_INPUT" ] && [ -n "$TX_INPUT" ] && [ -n "$DEST_ARG" ] || { usage >&2; exit 2; } ;;
 esac
 
+# Git's -C does not cancel inherited repository or configuration selection.
+# Refuse before any source/target observation, including preview and rollback.
+for var in GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_CONFIG GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS GIT_NAMESPACE GIT_SHALLOW_FILE GIT_REPLACE_REF_BASE; do
+  [ -z "${!var+x}" ] || fail 'Git context override is not supported by local installation'
+done
+
 # Check lexical ancestors before canonicalizing: cd -P alone hides root links.
 no_links() {
   local p="$1"

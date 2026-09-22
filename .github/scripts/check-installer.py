@@ -19,8 +19,7 @@ FRONTIER_TARGETS = tuple(PAYLOAD + "/" + path for path in FRONTIER_PATHS) + (
     "tests/conformance/test_frontier_cache.py", "docs/parity-status.md")
 FRONTIER_BASELINE = "tests/fixtures/frontier-cache-baseline.json"
 FRONTIER_BASELINE_SHA256 = "f3cf28b75db5b960bbed78697515690800ffb301cb13c1e1445ccada964587d6"
-FRONTIER_DIGESTS = ("0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6",
-                    "f55b24d4b2cfe14c83e02d723bc2021f7321b1196b78c7436491b73d67b0b4eb")
+FRONTIER_DIGESTS = ('0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6', '319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7')
 FRONTIER_CONTRACT = {
     "schema": "source-first-frontier-cache/v1",
     "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
@@ -692,7 +691,7 @@ def validate(root):
             if (root / PAYLOAD / name).stat().st_mode & 0o7111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity", "frontier_cache"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity", "frontier_cache", "boundary_repair"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
@@ -849,11 +848,11 @@ BOOTSTRAP_CONTRACT = {
     },
     "transport": "public-https-pinned-bare-git-object-projection-no-checkout",
     "external": "default-apply-stage-only-created-raw-blobs",
-    "local": "unchanged-engine-default-dry-run-no-stage",
+    "local": "reviewed-current-engine-default-dry-run-no-stage",
     "trust": "initial-bootstrap-trusted-code-hashes-are-integrity-not-authentication",
     "limits": "exclusive-target-partial-failure-manual-recovery-native-windows-unmeasured",
 }
-LOCAL_ENGINE_SHA256 = "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2"
+LOCAL_ENGINE_SHA256 = "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284"
 
 
 def validate_bootstrap(root):
@@ -876,7 +875,7 @@ def validate_bootstrap(root):
         if record.get("target_files") != expected:
             errors.append("bootstrap target digest, inventory or mode drifted")
         if expected[-1]["sha256"] != LOCAL_ENGINE_SHA256:
-            errors.append("relocated local engine must remain byte-identical")
+            errors.append("local engine differs from exact reviewed current bytes")
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError):
         errors.append("bootstrap missing, unsafe or malformed")
     return errors
@@ -891,10 +890,10 @@ UPDATE_CONTRACT = {
     "source_files": {
         ".github/scripts/scaffold-init.sh": "d02e068f100dc03a401a9b1608f13d39c88e5861",
         ".github/scripts/scaffold-init.ps1": "ce1804cfed061133f8b82a22edfd163d91fb6028",
-        ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd",
+        ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd"
     },
     "transport": "anonymous-https-exact-old-new-commits-bare-git-object-projection",
-    "engine_sha256": LOCAL_ENGINE_SHA256,
+    "engine_sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
     "preservation": "fixed-47-path-class-layout-known-old-engine-only-no-stage-commit-push",
     "preview": "default-owned-scratch-only-target-index-requested-recovery-unchanged",
     "recovery": "fresh-private-root-retained-old-new-transaction-siblings-offline-bound-rollback",
@@ -907,11 +906,11 @@ UPDATE_CONTRACT = {
         "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
         "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
         "export_mode": "100644",
-        "target_blob": "b112b9f9b0ac3d646278c7161d719a5f4f6155f4",
-        "target_sha256": "b839adecceb153be9e0a3a80f9eb86cb49c23d30e5c32c7684165c91db6d1d32",
+        "target_blob": "97269ed19fb5a387452bc50bcf50ea73442ca545",
+        "target_sha256": "0b231321cce78040848a563e5936f64d3f4bbc9c78f5cf1d962a8ea458949255",
         "target_mode": "100644",
-        "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture",
-    },
+        "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
+    }
 }
 
 
@@ -936,7 +935,7 @@ def validate_explicit_update(root):
             errors.append("explicit update target digest, inventory or mode drifted")
         engine = regular_bytes(root, ".github/scripts/scaffold-install.sh")
         if hashlib.sha256(engine).hexdigest() != LOCAL_ENGINE_SHA256:
-            errors.append("explicit update engine must remain byte-identical")
+            errors.append("explicit update engine differs from exact reviewed current bytes")
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError):
         errors.append("explicit update missing, unsafe or malformed")
     return errors
@@ -1039,6 +1038,103 @@ def validate_frontier_cache(root):
     return errors
 
 
+BOUNDARY_BASELINE = "tests/fixtures/boundary-repair-baseline.json"
+BOUNDARY_BASELINE_SHA256 = "19443f641f0f4973b69ed976cad1bf5889c28759d42590823fcc4296000d587b"
+BOUNDARY_BASE_PATHS = tuple(sorted((
+    ".github/scripts/scaffold-install.sh", ".github/scripts/scaffold-init.sh", ".github/scripts/scaffold-update.sh",
+    PAYLOAD + "/.github/scripts/check-task-ritual.sh", ".github/distribution/adopter-ci/check-adopter-ci.py",
+)))
+BOUNDARY_EXPORT_PATHS = (".github/scripts/scaffold-init.sh", ".github/scripts/scaffold-install.sh")
+BOUNDARY_TARGETS = tuple(sorted((*BOUNDARY_BASE_PATHS, INVENTORY,
+    "tests/conformance/test_installer.py", "tests/conformance/test_installer_bootstrap.py", "tests/conformance/test_installer_update.py",
+    "tests/conformance/test_workflow_parity.py", "tests/conformance/test_adopter_ci.py", "tests/conformance/test_product.py",
+    "docs/distribution/source-first-installer.md", "docs/distribution/adopter-ci.md", "docs/known-limitations.md",
+    "docs/provenance.md", "docs/product-scope.md",
+)))
+BOUNDARY_DIGESTS = {
+    ".github/distribution/adopter-ci/check-adopter-ci.py": "0bed9fa2501864eb68330bd6d6aecf228695320faaa146be5c47a5bda082a4fd",
+    ".github/distribution/payload.v1.tsv": "b0a18e6e04d76d411dd3fcd725933db8bd3fe9cb226144a1438804193f7f745e",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
+    ".github/scripts/scaffold-init.sh": "6cf321e259d57fd0f8f84322e54096933be4909834cfab27800dc3f58c0761b0",
+    ".github/scripts/scaffold-install.sh": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
+    ".github/scripts/scaffold-update.sh": "aeba5b903b9688c3741dc99135a886083e60aaa65fc2e094a43a334262f0ff18",
+    "docs/distribution/adopter-ci.md": "70208c82a1d2447cb9ddf8338540981bfba4ac8ac51ca36e2b945607e5df03d9",
+    "docs/distribution/source-first-installer.md": "9013219967f19667a4467e8c2d4f3b96613cff87f239724e78790a273f0eda68",
+    "docs/known-limitations.md": "dfd34e7173bd4d1fbcc838d3c123f547bfcd720885d9d78d01a7d67da3447508",
+    "docs/product-scope.md": "4e980dc49043b706517e59f223a5ec169567290f8c20b463a9f8c85350ce90e1",
+    "docs/provenance.md": "1503369b5ed6b34c8157323ea58394bacca0e41a1d27b3b68791ed109f0292a1",
+    "tests/conformance/test_adopter_ci.py": "5c31532a3540f45c4b75f51fdc7a8c829584b73fc817be5d241fc0740e64c2e3",
+    "tests/conformance/test_installer.py": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633",
+    "tests/conformance/test_installer_bootstrap.py": "772aeac3a4c32ff63c709b54f37614c851a6521d49dd27fb04d7e25b333c0d96",
+    "tests/conformance/test_installer_update.py": "34f4c2030e54e936c5836a8a54a9863e7e02ce843020a2834410b2ef1be2f3b6",
+    "tests/conformance/test_product.py": "462396d32154cc633811514fa82e352264cf56b2722ab3f459dd87f24be161df",
+    "tests/conformance/test_workflow_parity.py": "9795c1e6ce3e2e9c7a113bead9e2f7d44849ce2db5038b1d2db19d195f122636"
+}
+BOUNDARY_CONTRACT = {
+    "schema": "source-first-boundary-repair/v1",
+    "product_base": "c86064de19d6ddbeb61f5cf3633bb9fb52cac882",
+    "product_base_tree": "81940d779a12ccb82587859cdf6cc07227db7721",
+    "delivery": "47-fixed-paths-ritual-only-payload-change-other-46-unchanged",
+    "git_context": "reject-inherited-repository-overrides-before-local-observation",
+    "update": "from-exact-previous-or-current-engine-data;to-exact-current-engine-only;execute-new-only",
+    "previous_engine_sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2",
+    "operation": "unchanged-local-upgrade/v1-retained-source-identity-offline-rollback",
+    "command": "owned-posix-session-group-cleanup-on-every-return;30-seconds-combined-2-MiB",
+    "input": "strict-UTF8-NUL-refusal-byte-roundtrip-262144-byte-limit-no-new-dependency",
+    "evidence": "real-local-tools-disposable-fixtures-synthetic-transport",
+    "limits": "no-escaped-group-control-native-Windows-live-adopter-runtime-or-release-claim",
+}
+
+
+def validate_boundary_repair(root):
+    """Closed current adaptation with exact old fixture and independently pinned bytes."""
+    errors = []
+    try:
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
+        record = parity["boundary_repair"]
+        if (set(record) != set(BOUNDARY_CONTRACT) | {"target_files", "baseline_sha256", "export_adaptations"}
+                or any(record.get(key) != value for key, value in BOUNDARY_CONTRACT.items())):
+            return ["boundary repair scope or contract drifted"]
+        baseline_data = regular_bytes(root, BOUNDARY_BASELINE)
+        if (hashlib.sha256(baseline_data).hexdigest() != BOUNDARY_BASELINE_SHA256
+                or record["baseline_sha256"] != BOUNDARY_BASELINE_SHA256):
+            errors.append("boundary repair immutable baseline changed")
+        baseline = json.loads(baseline_data, object_pairs_hook=reject_duplicate_json_keys)
+        if (set(baseline) != {"schema", "repository", "commit", "tree", "files"}
+                or baseline["schema"] != "boundary-repair-baseline/v1"
+                or baseline["repository"] != "mochan-tk/agentic-dev-kit-for-codex"
+                or baseline["commit"] != BOUNDARY_CONTRACT["product_base"]
+                or baseline["tree"] != BOUNDARY_CONTRACT["product_base_tree"]
+                or [row["path"] for row in baseline["files"]] != list(BOUNDARY_BASE_PATHS)):
+            errors.append("boundary repair baseline identity or inventory changed")
+        for row in baseline["files"]:
+            data = base64.b64decode(row["base64"], validate=True)
+            if (set(row) != {"path", "mode", "sha256", "blob", "base64"} or row["mode"] != "100644"
+                    or row["sha256"] != hashlib.sha256(data).hexdigest()
+                    or row["blob"] != hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()):
+                errors.append("boundary repair baseline bytes changed")
+        expected = [{"path": path, "mode": "100644", "sha256": hashlib.sha256(regular_bytes(root, path)).hexdigest()}
+                    for path in BOUNDARY_TARGETS]
+        if record["target_files"] != expected or set(BOUNDARY_DIGESTS) != set(BOUNDARY_TARGETS):
+            errors.append("boundary repair target inventory or binding changed")
+        for row in expected:
+            if row["sha256"] != BOUNDARY_DIGESTS.get(row["path"]):
+                errors.append("boundary repair exact reviewed bytes changed: " + row["path"])
+        export = json.loads(regular_bytes(root, ".github/distribution/export-provenance.v1.json"), object_pairs_hook=reject_duplicate_json_keys)
+        original = {row["path"]: row for row in export["frozen_files"]}
+        adaptations = []
+        for path in BOUNDARY_EXPORT_PATHS:
+            data = regular_bytes(root, path)
+            adaptations.append({"path": path, "export": original[path], "target_mode": "100644",
+                "target_sha256": hashlib.sha256(data).hexdigest(),
+                "target_blob": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()})
+        if record["export_adaptations"] != adaptations:
+            errors.append("boundary repair exact export adaptation changed")
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError):
+        errors.append("boundary repair missing, unsafe or malformed")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -1046,7 +1142,7 @@ def main():
     errors = (validate(args.root) + validate_connector_companion(args.root)
               + validate_governance_procedures(args.root) + validate_bootstrap(args.root)
               + validate_explicit_update(args.root) + validate_workflow_parity(args.root)
-              + validate_frontier_cache(args.root))
+              + validate_frontier_cache(args.root) + validate_boundary_repair(args.root))
     for error in errors:
         print("ERROR: " + error)
     if errors:

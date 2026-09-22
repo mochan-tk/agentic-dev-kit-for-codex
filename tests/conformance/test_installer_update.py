@@ -1,5 +1,7 @@
 """Explicit updater regressions with real Git/Bash and synthetic transport."""
 import hashlib
+import base64
+import json
 import os
 from pathlib import Path
 import shlex
@@ -149,7 +151,7 @@ set -eu
         return result
 
     def rollback(self, *args):
-        # Network is unavailable; only retained inputs and the unchanged engine run.
+        # Network is unavailable; only retained inputs and the recorded new engine run.
         log = self.base / "transport.log"
         fetches = [line for line in log.read_text().splitlines() if " fetch " in line]
         result = subprocess.run([BASH, str(self.recovery / "new" / ENGINE), "--rollback",
@@ -165,6 +167,95 @@ set -eu
         self.assertEqual(0, result.returncode, result.stderr)
         for option in ("--from", "--to", "--recovery", "--dry-run", "--apply"):
             self.assertIn(option, result.stdout)
+
+    def boundary_bytes(self, path):
+        record = json.loads((ROOT / "tests/fixtures/boundary-repair-baseline.json").read_bytes())
+        return base64.b64decode(next(row["base64"] for row in record["files"] if row["path"] == path), validate=True)
+
+    def prepare_boundary_transition(self):
+        ritual = ".github/scripts/check-task-ritual.sh"
+        shutil.copytree(ROOT / PAYLOAD, self.source / PAYLOAD, dirs_exist_ok=True)
+        (self.source / ENGINE).write_bytes(self.boundary_bytes(ENGINE))
+        (self.source / PAYLOAD / ritual).write_bytes(self.boundary_bytes(PAYLOAD + "/" + ritual))
+        self.reseal(self.source)
+        self.old = self.commit(self.source)
+        (self.target / ritual).write_bytes((self.source / PAYLOAD / ritual).read_bytes())
+        shutil.copyfile(ROOT / ENGINE, self.source / ENGINE)
+        shutil.copyfile(ROOT / PAYLOAD / ritual, self.source / PAYLOAD / ritual)
+        self.reseal(self.source)
+        self.new = self.commit(self.source)
+        self.changed = [ritual]
+        return ritual
+
+    def test_accepted_old_to_current_one_payload_change_and_offline_rollback(self):
+        ritual = self.prepare_boundary_transition()
+        for name, kind, _ in self.rows:
+            if kind != "engine":
+                (self.target / name).write_text("adopter-owned\n")
+                (self.target / name).chmod(0o600)
+        (self.target / "notes").write_text("staged\n")
+        self.git(self.target, "add", "notes")
+        (self.target / "notes").write_text("unstaged\n")
+        before = self.snapshot()
+        self.success(self.run_entry())
+        self.assertEqual(before, self.snapshot())
+        self.assertFalse(self.recovery.exists())
+        self.success(self.run_entry("--apply"))
+        after = self.snapshot()
+        self.assertEqual([ritual], sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name)))
+        self.assertEqual(self.boundary_bytes(ENGINE), (self.recovery / "old" / ENGINE).read_bytes())
+        self.assertEqual((ROOT / ENGINE).read_bytes(), (self.recovery / "new" / ENGINE).read_bytes())
+        self.assertIn("local-upgrade/v1", (self.recovery / "transaction/meta.tsv").read_text())
+        no_op_recovery = self.base / "current-current recovery"
+        self.success(self.run_entry("--apply", old=self.new, new=self.new, recovery=no_op_recovery))
+        self.assertEqual(after, self.snapshot())
+        self.assertFalse((no_op_recovery / "transaction").exists())
+        (self.target / ritual).write_text("post-update edit\n")
+        edited = self.snapshot()
+        self.assertNotEqual(0, self.rollback("--apply").returncode)
+        self.assertEqual(edited, self.snapshot())
+        (self.target / ritual).write_bytes((ROOT / PAYLOAD / ritual).read_bytes())
+        self.success(self.rollback("--apply"))
+        self.assertEqual(before, self.snapshot())
+
+    def test_update_engine_roles_refuse_legacy_to_and_unknown_from(self):
+        self.prepare_boundary_transition()
+        result = self.refuse(new=self.old)
+        self.assertIn("selected source role", result.stderr)
+        (self.source / ENGINE).write_bytes((self.source / ENGINE).read_bytes() + b"\n# unreviewed\n")
+        unknown = self.commit(self.source)
+        result = self.refuse(old=unknown)
+        self.assertIn("selected source role", result.stderr)
+        result = self.refuse(new=unknown)
+        self.assertIn("selected source role", result.stderr)
+
+    def test_current_binary_reads_retained_historical_operation_without_migration(self):
+        ritual = ".github/scripts/check-task-ritual.sh"
+        accepted = self.base / "historical source"
+        shutil.copytree(ROOT / PAYLOAD, accepted / PAYLOAD)
+        (accepted / ENGINE).parent.mkdir(parents=True)
+        (accepted / ENGINE).write_bytes(self.boundary_bytes(ENGINE))
+        (accepted / PAYLOAD / ritual).write_bytes(self.boundary_bytes(PAYLOAD + "/" + ritual))
+        shutil.copyfile(ROOT / INVENTORY, accepted / INVENTORY)
+        self.reseal(accepted)
+        prior = self.base / "prior source"
+        shutil.copytree(accepted, prior)
+        (prior / PAYLOAD / ritual).write_bytes((prior / PAYLOAD / ritual).read_bytes() + b"\n# earlier fixture\n")
+        self.reseal(prior)
+        (self.target / ritual).write_bytes((prior / PAYLOAD / ritual).read_bytes())
+        before = self.snapshot()
+        transaction = self.base / "historical operation"
+        environment = dict(self.env, SCAFFOLD_SOURCE_DIR=str(accepted))
+        result = subprocess.run([BASH, str(accepted / ENGINE), "--upgrade", "--old-source", str(prior),
+            "--transaction", str(transaction), "--apply", str(self.target)], env=environment,
+            capture_output=True, text=True, timeout=60)
+        self.success(result)
+        record = (transaction / "meta.tsv").read_bytes()
+        result = subprocess.run([BASH, str(ROOT / ENGINE), "--rollback", "--transaction", str(transaction),
+            "--apply", str(self.target)], env=environment, capture_output=True, text=True, timeout=60)
+        self.success(result)
+        self.assertEqual(before, self.snapshot())
+        self.assertEqual(record, (transaction / "meta.tsv").read_bytes())
 
     def test_default_preview_and_apply_preserve_classes_git_and_offline_rollback(self):
         preserved = [name for name, kind, _ in self.rows if kind != "engine"]

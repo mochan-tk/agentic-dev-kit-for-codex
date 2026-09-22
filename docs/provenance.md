@@ -121,3 +121,34 @@ tests and shared documents), preserving their historical source/evidence fields.
 Both mandatory checker entrypoints require the new provenance, baseline and
 exact reviewed engine bytes. The [parity disposition](parity-status.md) states
 the deliberate differences and pending client/Windows measurements separately.
+
+## Current boundary repair
+
+The separate `boundary_repair` section binds three audited repairs against
+accepted product commit `c86064de19d6ddbeb61f5cf3633bb9fb52cac882`, tree
+`81940d779a12ccb82587859cdf6cc07227db7721`. The
+[five-file baseline](../tests/fixtures/boundary-repair-baseline.json) retains exact
+public engine, bootstrap, updater, ritual and sensor bytes with Git blob, mode
+and SHA-256 bindings. It leaves the original export/history seals and prior
+workflow/frontier baselines unchanged.
+
+The engine now rejects inherited Git context before local observations. Current
+bootstrap execution and updater TO require its exact reviewed bytes; the previous
+engine is accepted only as updater FROM data. The `local-upgrade/v1` format and
+retained-source identity checks are unchanged. Actual old-to-new regression
+fixtures exercise the one-file ritual payload change, preservation and offline
+rollback, separately from synthetic engine deltas and already-new no-ops.
+
+The ritual rejects malformed UTF-8/NUL before normalization while preserving
+valid Unicode, terminal newlines and the existing input bound. The addon sensor
+binds those current ritual bytes and cleans only its own launched POSIX process
+group, even after its direct child exits. The addon is still a separate manual
+transition; no installed controls migrate automatically.
+
+All 47 payload paths/classes/modes remain fixed and the other 46 contents are
+unchanged. Both mandatory checkers require the closed repair contract, immutable
+baseline and exact current bindings; bootstrap and engine export adaptations are
+separate from the immutable original seal. Shared companion record updates bind
+only affected current files. This local/synthetic evidence does not qualify
+escaped processes, native Windows, live adopters, model-worker termination,
+runtime parity or release.

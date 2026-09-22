@@ -198,6 +198,52 @@ for page in pages:
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertNotIn(rendered.stdout, result.stdout)
 
+    def test_malformed_utf8_and_nul_refuse_without_body_or_api(self):
+        malformed = (b"\xff", b"\xc0\xaf", b"\xed\xa0\x80", b"\xe2\x82", b"\xf4\x90\x80\x80", b"\x00")
+        for value in malformed:
+            for source in ("-", str(self.input)):
+                with self.subTest(value=value, source=source == "-"):
+                    raw = b'{"task":2,"content":"actual ' + value + b' plan"}'
+                    self.input.write_bytes(raw)
+                    result = self.run_helper("render", "plan", "--input", source,
+                                             data=raw if source == "-" else None)
+                    self.assertEqual(2, result.returncode, result.stderr)
+                    self.assertEqual(b"", result.stdout)
+                    self.assertEqual([], self.log)
+                    body = b"## Plan\n\nTask: #2\n\nactual " + value + b" plan\n"
+                    result = self.run_helper("preflight", "plan", "--repo", "fixture/adopter", "--task", "2",
+                                             "--body-file", "-", "--branch", self.branch, data=body)
+                    self.assertEqual(2, result.returncode, result.stderr)
+                    self.assertEqual(b"", result.stdout)
+                    self.assertEqual([], self.log)
+                    result = self.preflight("plan", body)
+                    self.assertEqual(2, result.returncode, result.stderr)
+                    self.assertEqual(b"", result.stdout)
+                    self.assertEqual([], self.log)
+
+    def test_valid_unicode_trailing_lf_and_exact_byte_boundaries(self):
+        self.guard_external_argument_size()
+        content = "日本語🙂�\n\n"
+        raw = json.dumps(dict(task=2, content=content), ensure_ascii=False).encode()
+        for suffix in (b"", b"\n", b"\n\n"):
+            result = self.run_helper("render", "plan", "--input", "-", data=raw + suffix)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual(("## Plan\n\nTask: #2\n\n" + content + "\n").encode(), result.stdout)
+        prefix = b'{"task":2,"content":"'
+        raw = prefix + b"x" * (262144 - len(prefix) - 2) + b'"}'
+        self.assertEqual(262144, len(raw))
+        self.assertEqual(0, self.run_helper("render", "plan", "--input", "-", data=raw).returncode)
+        over = self.run_helper("render", "plan", "--input", "-", data=raw + b" ")
+        self.assertEqual(2, over.returncode)
+        self.assertEqual(b"", over.stdout)
+        prefix = b"## Plan\n\nTask: #2\n\n"
+        body = prefix + b"x" * (262144 - len(prefix) - 2) + b"\n\n"
+        self.assertEqual(262144, len(body))
+        self.assertEqual(0, self.preflight("plan", body).returncode)
+        over = self.preflight("plan", body + b"\n")
+        self.assertEqual(2, over.returncode)
+        self.assertEqual(b"", over.stdout)
+
     def test_long_linked_plan_streams_in_preflight_and_inherited_numeric_mode(self):
         self.guard_external_argument_size()
         for content in ("あ"*10000, "日本語🙂\n"*11000):

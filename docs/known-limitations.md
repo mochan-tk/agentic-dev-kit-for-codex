@@ -24,8 +24,11 @@ Git for Windows, Windows filesystem behavior or every shell environment.
 
 The network updater requires exact old/new commit IDs supplied by the caller;
 there is no version registry, automatic detection, scheduled update or force.
-Both revisions must use the fixed 47-file layout and the supported unchanged
-engine. Arbitrary historical or upstream versions are not supported. The entry
+Both revisions must use the fixed 47-file layout. FROM permits the exact previous
+or current reviewed engine as data; TO and executed code require the current
+engine. The current bootstrap also refuses a previous-engine selected revision.
+Historical TO/install requests require separately reviewed pinned historical
+entries. Arbitrary historical or upstream versions are not supported. The entry
 code revision is a separate trust choice from those payload revisions.
 Anonymous Git acquisition uses an empty private transport home, disables user
 configuration and credential helpers, and refuses authentication/TLS overrides;
@@ -39,6 +42,14 @@ already-new update retains sources but creates no transaction. Recovery records
 are private local data, not bug-report attachments. Preview uses owned temporary
 scratch and does not create the requested recovery directory. Exclusive access
 is required; neither updates nor rollback promise power-loss atomicity.
+
+Local installer operations refuse inherited Git repository/configuration context
+overrides, even empty values, before source or target Git reads. Linked worktrees
+remain supported. Ritual render/preflight refuses malformed UTF-8 and NUL without
+changing the 262144-byte bound or valid Unicode semantics. Adopter-CI command
+cleanup covers only its launched POSIX process group, including after direct
+parent exit; escaped groups, native Windows and model-worker termination are
+not qualified. Existing addon updates still require an owner-reviewed transition.
 
 ## Workflow and helpers
 
