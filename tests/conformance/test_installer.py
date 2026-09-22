@@ -1640,6 +1640,7 @@ sys.exit(result.returncode)
                      *checker.GOVERNANCE_PROCEDURE_PATHS, *checker.UPDATE_PATHS,
                      *checker.WORKFLOW_TARGETS, checker.WORKFLOW_BASELINE,
                      *checker.FRONTIER_TARGETS, checker.FRONTIER_BASELINE,
+                     *checker.BOUNDARY_TARGETS, checker.BOUNDARY_BASELINE,
                      ".github/distribution/export-provenance.v1.json"):
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -1647,6 +1648,7 @@ sys.exit(result.returncode)
         self.assertEqual([], checker.validate(source))
         self.assertEqual([], checker.validate_connector_companion(source))
         self.assertEqual([], checker.validate_explicit_update(source))
+        self.assertEqual([], checker.validate_boundary_repair(source))
         return source, checker
 
     def reseal_payload(self, source):

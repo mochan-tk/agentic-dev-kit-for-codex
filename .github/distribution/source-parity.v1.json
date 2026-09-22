@@ -941,7 +941,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "f6fa0fd6d3f7f1b43294882133eff498bae0321607cdaa6be55851ad2a8178f1"
+        "sha256": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633"
       },
       {
         "path": "tests/conformance/test_workflow_parity.py",
@@ -1188,7 +1188,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "f6fa0fd6d3f7f1b43294882133eff498bae0321607cdaa6be55851ad2a8178f1"
+        "sha256": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633"
       },
       {
         "path": "tests/conformance/test_installer_bootstrap.py",
