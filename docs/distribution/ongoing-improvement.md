@@ -110,6 +110,12 @@ Issues are verified no-ops. Tests use the unchanged failure reporter's actual
 draft. Routing does not authenticate the sender, prove consent or a historical
 execution, accept an agreement, or create Task/incident authority.
 
+The [public form and pinned no-clone sender](feedback.md) are separate delivery
+routes. The form accepts user-entered text with public-data warnings and an
+explicit confirmation, while the reporter retains its closed eight fields.
+Neither route activates this classifier, applies labels, or starts a workflow
+or schedule. A recognized title is not consent or identity proof.
+
 Finite readbacks are observations, not atomic snapshots or locks. Use a single
 operator. Each request has a 20-second process bound (curl has 15 seconds);
 each invocation has 120 seconds, 512 commands and 16 MiB aggregate output.

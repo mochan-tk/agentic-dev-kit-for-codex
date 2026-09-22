@@ -64,6 +64,60 @@ class ProductTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertTrue(self.checker.validate(root))
 
+    def test_feedback_delivery_is_mandatory_product_only_scope(self):
+        self.assertEqual([], self.checker.validate_feedback_delivery(ROOT))
+        for missing in (self.checker.FEEDBACK_RECORD, *self.checker.FEEDBACK_TARGET_DIGESTS):
+            with self.subTest(missing=missing):
+                root = self.fixture()
+                (root / missing).unlink()
+                self.assertTrue(self.checker.validate_feedback_delivery(root))
+        root = self.fixture()
+        (root / self.checker.FEEDBACK_RECORD).unlink()
+        result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts/check-product.py")],
+                                capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("mandatory feedback delivery", result.stdout)
+        result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts/check-installer.py")],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_feedback_resealing_cannot_remove_controls_or_alter_original_export(self):
+        for path, old, new in (
+            ("docs/distribution/feedback.md", ' || exit $?', ''),
+            ("docs/distribution/feedback.md", '--draft\n)', '--send\n)'),
+            ("docs/distribution/feedback.md", '5ce4585fd9d52842423942fc64713fcd8748b47c', 'main'),
+            (".github/ISSUE_TEMPLATE/feedback.yml", 'required: true', 'required: false'),
+            (".github/ISSUE_TEMPLATE/feedback.yml", 'title:', 'labels: [from:adopter]\ntitle:'),
+            (".github/scripts/scaffold-init.ps1", 'Write-FailureGuidance\n', '# omitted\n'),
+            (".github/scripts/scaffold-init.sh", 'trap finish EXIT', 'trap : EXIT'),
+        ):
+            with self.subTest(path=path, old=old):
+                root = self.fixture()
+                target = root / path
+                original = target.read_text()
+                self.assertIn(old, original)
+                target.write_text(original.replace(old, new))
+                record_path = root / self.checker.FEEDBACK_RECORD
+                record = json.loads(record_path.read_bytes())
+                for row in record["target_files"]:
+                    if row["path"] == path: row["sha256"] = hashlib.sha256(target.read_bytes()).hexdigest()
+                for row in record["export_adaptations"]:
+                    if row["path"] == path:
+                        data = target.read_bytes()
+                        row["target_sha256"] = hashlib.sha256(data).hexdigest()
+                        row["target_blob"] = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+                record_path.write_text(json.dumps(record))
+                with patch.object(self.checker, "FEEDBACK_RECORD_SHA256", hashlib.sha256(record_path.read_bytes()).hexdigest()):
+                    self.assertTrue(self.checker.validate_feedback_delivery(root))
+        root = self.fixture()
+        record_path = root / self.checker.FEEDBACK_RECORD
+        record = json.loads(record_path.read_bytes())
+        record["export_adaptations"][0]["export"]["sha256"] = "0" * 64
+        record_path.write_text(json.dumps(record))
+        with patch.object(self.checker, "FEEDBACK_RECORD_SHA256", hashlib.sha256(record_path.read_bytes()).hexdigest()):
+            self.assertTrue(self.checker.validate_feedback_delivery(root))
+            self.assertTrue(self.checker.validate_export(root))
+
     def test_frontier_cache_is_required_in_both_production_entrypoints(self):
         for missing in ("tests/fixtures/frontier-cache-baseline.json", "tests/conformance/test_frontier_cache.py",
                         "docs/parity-status.md"):

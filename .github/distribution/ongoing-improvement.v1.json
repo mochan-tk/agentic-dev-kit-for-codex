@@ -48,27 +48,27 @@
     {
       "path": "README.md",
       "mode": "100644",
-      "sha256": "86a19965ab2fde1cf415f12a572707b3c3d99989dd07aa1f4f5ae98b0d4daac6"
+      "sha256": "5400f617a05e6a5800082e64a2b67ad600f440e107a0d46fa70b713b90fcf92a"
     },
     {
       "path": "docs/distribution/ongoing-improvement.md",
       "mode": "100644",
-      "sha256": "a17cb420579afea09c5cb789a7c83dbe84eb9308c6fc50ac7f6090c86c512333"
+      "sha256": "c509a2f4b7f25e81b48f25aa12f009ee8ac7d70fc81d935daa14071ad9b0eab7"
     },
     {
       "path": "docs/known-limitations.md",
       "mode": "100644",
-      "sha256": "dfd34e7173bd4d1fbcc838d3c123f547bfcd720885d9d78d01a7d67da3447508"
+      "sha256": "1cbc489888894e9d9f9656653528702dbdf1e0b33345217c3ad48652b66f0f2e"
     },
     {
       "path": "docs/product-scope.md",
       "mode": "100644",
-      "sha256": "4e980dc49043b706517e59f223a5ec169567290f8c20b463a9f8c85350ce90e1"
+      "sha256": "d8583d54a87a9577f397a2b38625b1609ca0b0b09a476e0d3f857d786a55c416"
     },
     {
       "path": "docs/provenance.md",
       "mode": "100644",
-      "sha256": "1503369b5ed6b34c8157323ea58394bacca0e41a1d27b3b68791ed109f0292a1"
+      "sha256": "57697a1a2bb73dc5906fcddc56779b54fb637dbcb1188b6d0b2d034ad118927d"
     },
     {
       "path": "tests/conformance/test_ongoing_improvement.py",

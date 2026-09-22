@@ -43,7 +43,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
 }
 TEST_MODULES = (
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
-    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
+    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
     "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
@@ -61,7 +61,7 @@ WORKFLOW_EXPORT_DIGESTS = {
 FRONTIER_EXPORT_PATH = PAYLOAD + "/.agents/skills/plan-management/scripts/frontier.sh"
 FRONTIER_EXPORT_SHA256 = "0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6"
 BOUNDARY_EXPORT_DIGESTS = {
-    ".github/scripts/scaffold-init.sh": "6cf321e259d57fd0f8f84322e54096933be4909834cfab27800dc3f58c0761b0",
+    ".github/scripts/scaffold-init.sh": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
     ".github/scripts/scaffold-install.sh": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284"
 }
 PUBLIC_DOCS = (
@@ -70,12 +70,46 @@ PUBLIC_DOCS = (
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
     "docs/distribution/adopter-ci.md",
-    "docs/distribution/ongoing-improvement.md", "docs/parity-status.md",
+    "docs/distribution/ongoing-improvement.md", "docs/distribution/feedback.md", "docs/parity-status.md",
 )
+FEEDBACK_RECORD = ".github/distribution/feedback-delivery.v1.json"
+FEEDBACK_RECORD_SHA256 = "35df85016abcbd2a088d388e16329017c3e1ad1c074120f68058762e35fa9d1d"
+FEEDBACK_GUIDE = "docs/distribution/feedback.md"
+FEEDBACK_BLOCK_SHA256 = "6851507e47ded37aa5258d20b9a6262d1e9117cb32782e70bc6fc3207acb82f3"
+FEEDBACK_EXPORT_DIGESTS = {
+    ".github/scripts/scaffold-init.ps1": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01"
+}
+FEEDBACK_TARGET_DIGESTS = {
+    ".github/ISSUE_TEMPLATE/feedback.yml": "01e535cb2f0e81f51c367b197cbd8f57b50df0bf464978bebdebb6de61a704d6",
+    ".github/scripts/feedback-lib.sh": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20",
+    ".github/scripts/report-installer-failure.sh": "9880d074c768c694816181af1f94e0288afa9a7cc15dc22537d701fcc9bd5e07",
+    ".github/scripts/scaffold-init.ps1": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01",
+    ".github/scripts/scaffold-init.sh": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
+    "docs/distribution/feedback.md": "8183519eb660e1caa47f3b50b67b7ec7c28f5cdb0ad7ecd92ff968d858eec8b1",
+    "tests/conformance/test_feedback_delivery.py": "c2f7f9997e6d3f01fe51167cf4e837392841f6290249ad1e408df9bf93d66d7f"
+}
+FEEDBACK_CONTRACT = {
+    "schema": "feedback-delivery-provenance/v1",
+    "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+    "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+    "source_files": {
+        ".github/ISSUE_TEMPLATE/feedback.yml": "7b2ff47f4ec7e99cd42c48dd083e2721fde35d79",
+        ".github/scripts/feedback-lib.sh": "b09747ae0bc8ffa2183fec48b578b97cdb45c67b",
+        ".github/scripts/scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1",
+    },
+    "product_base": "5ce4585fd9d52842423942fc64713fcd8748b47c",
+    "product_base_tree": "f420886974d37cb20c6e2f749ea5bb67e62bec55",
+    "scope": "public-form-pinned-two-file-reporter-manual-failure-handoff-no-payload-change",
+    "sender": "accepted-unchanged-eight-fields-default-draft-explicit-send-original-stdin-stderr-TTY-exact-y-Y-once-no-retry",
+    "form": "manual-public-text-required-confirmation-no-logs-private-identifiers-markers-or-automatic-labels",
+    "handoff": "fixed-guide-form-links-only-no-reporting-network-collection-prompt-or-submission-original-status-cleanup",
+    "evidence": "actual-published-block-real-bash-PTY-disposable-files-synthetic-HTTP-GitHub-PowerShell-host-when-available",
+    "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
+}
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "48e717b8b2c0c8d08406083863e376cfe11407fc35bf04c7ac5c7088081a84e3"
+ADOPTER_RECORD_SHA256 = "26c4ffee4f088ed46437cfa77748a7ee37a1cffd69317d60cfab7f21cac941ec"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "0f100a9e1815180a33bf9a9177557772814aa3d01d852232c9136c513bdbe748"
+IMPROVEMENT_RECORD_SHA256 = "b493dce56e81b961748993bcb4bcabe5dcf9094fb673fc2ed2ec599f46b3c8fd"
 IMPROVEMENT_SOURCE_FILES = {
     ".github/scripts/retro-hygiene.sh": "49df279b865f6a6f7484621158fc7c48a2b1b3cd",
     ".github/workflows/retro-hygiene.yml": "8e2db7437c1950e435c04a9210a6461651197a01",
@@ -239,6 +273,14 @@ def validate_export(root):
                 continue
             data = read_bytes(root, row["path"])
             git_blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+            if row["path"] in FEEDBACK_EXPORT_DIGESTS:
+                delivery = bound_json(root, FEEDBACK_RECORD, FEEDBACK_RECORD_SHA256)
+                adaptation = next(item for item in delivery["export_adaptations"] if item["path"] == row["path"])
+                expected = {"path": row["path"], "export": row, "target_mode": "100644",
+                            "target_sha256": digest(data), "target_blob": git_blob}
+                if adaptation != expected or digest(data) != FEEDBACK_EXPORT_DIGESTS[row["path"]]:
+                    errors.append("feedback exact approved export adaptation changed: " + row["path"])
+                continue
             if row["path"] in BOUNDARY_EXPORT_DIGESTS:
                 adaptation = next(item for item in parity["boundary_repair"]["export_adaptations"] if item["path"] == row["path"])
                 expected = {"path": row["path"], "export": row, "target_mode": "100644",
@@ -463,6 +505,41 @@ def validate_adopter_ci(root):
     return errors
 
 
+def validate_feedback_delivery(root):
+    """Product-only delivery contract; installer partial fixtures stay closed."""
+    try:
+        record = bound_json(root, FEEDBACK_RECORD, FEEDBACK_RECORD_SHA256)
+        if (set(record) != set(FEEDBACK_CONTRACT) | {"target_files", "export_adaptations", "block_sha256"}
+                or any(record.get(key) != value for key, value in FEEDBACK_CONTRACT.items())):
+            raise ValueError("feedback source/scope contract")
+        expected = [{"path": path, "mode": "100644", "sha256": digest(read_bytes(root, path))}
+                    for path in sorted(FEEDBACK_TARGET_DIGESTS)]
+        if record["target_files"] != expected or any(row["sha256"] != FEEDBACK_TARGET_DIGESTS[row["path"]] for row in expected):
+            raise ValueError("feedback exact reviewed bytes")
+        export = bound_json(root, EXPORT, EXPORT_SHA256)
+        originals = {row["path"]: row for row in export["frozen_files"]}
+        adaptations = []
+        for path in sorted(FEEDBACK_EXPORT_DIGESTS):
+            data = read_bytes(root, path)
+            adaptations.append({"path": path, "export": originals[path], "target_mode": "100644",
+                "target_sha256": digest(data), "target_blob": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()})
+        if record["export_adaptations"] != adaptations:
+            raise ValueError("feedback original export boundary")
+        guide = read_bytes(root, FEEDBACK_GUIDE).decode()
+        matches = re.findall(r"<!-- BEGIN feedback-delivery -->\n```bash\n(.*?)\n```\n<!-- END feedback-delivery -->", guide, re.S)
+        if (len(matches) != 1 or guide.count("<!-- BEGIN feedback-delivery -->") != 1
+                or guide.count("<!-- END feedback-delivery -->") != 1
+                or digest(matches[0].encode()) != FEEDBACK_BLOCK_SHA256
+                or record["block_sha256"] != FEEDBACK_BLOCK_SHA256):
+            raise ValueError("feedback actual command")
+        readme = read_bytes(root, "README.md").decode()
+        if FEEDBACK_GUIDE not in readme or "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/new?template=feedback.yml" not in readme:
+            raise ValueError("feedback navigation")
+        return []
+    except (OSError, ValueError, UnicodeError, KeyError, TypeError, AttributeError):
+        return ["mandatory feedback delivery is missing, unsafe or unbound"]
+
+
 def validate_ongoing_improvement(root):
     """Product-only integrity plus mandatory behavior; no installer expansion."""
     try:
@@ -589,7 +666,8 @@ def validate_ongoing_improvement(root):
 def validate(root):
     root = Path(root)
     errors = (validate_export(root) + validate_navigation(root) + validate_policy(root)
-              + validate_companion_access(root) + validate_adopter_ci(root) + validate_ongoing_improvement(root))
+              + validate_companion_access(root) + validate_adopter_ci(root) + validate_ongoing_improvement(root)
+              + validate_feedback_delivery(root))
     try:
         spec = importlib.util.spec_from_file_location("installer_product_check", root / ".github/scripts/check-installer.py")
         checker = importlib.util.module_from_spec(spec)

@@ -19,14 +19,20 @@ function Find-GitBash {
     if ($onPath) { return $onPath.Source }
     return $null
 }
-$bash = Find-GitBash
-if (-not $bash) { throw 'Git for Windows Git Bash is required; WSL is not substituted.' }
+function Write-FailureGuidance {
+    [Console]::Error.WriteLine('Optional public feedback (review privacy before sharing):')
+    [Console]::Error.WriteLine('https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/new?template=feedback.yml')
+    [Console]::Error.WriteLine('https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/distribution/feedback.md')
+}
 $forward = @($args | ForEach-Object { "$_" })
 $savedPath = $MyInvocation.MyCommand.Path
 $installer = $null
 $temporary = $null
 $code = 1
+$previousGuidanceOwner = [Environment]::GetEnvironmentVariable('SCAFFOLD_FAILURE_GUIDANCE_OWNER')
 try {
+    $bash = Find-GitBash
+    if (-not $bash) { throw 'Git for Windows Git Bash is required; WSL is not substituted.' }
     if ($savedPath) {
         $adjacent = Join-Path (Split-Path -Parent $savedPath) 'scaffold-init.sh'
         if (Test-Path -LiteralPath $adjacent -PathType Leaf) { $installer = $adjacent }
@@ -48,11 +54,18 @@ try {
         $installer = $temporary
     }
     $global:LASTEXITCODE = $null
+    # This wrapper owns one fixed message; restore the caller's value below.
+    $env:SCAFFOLD_FAILURE_GUIDANCE_OWNER = 'powershell'
     & $bash ($installer -replace '\\', '/') @forward
     if ($null -eq $global:LASTEXITCODE) { throw 'Git Bash returned no exit status.' }
     $code = $global:LASTEXITCODE
+} catch {
+    Write-FailureGuidance
+    throw
 } finally {
+    [Environment]::SetEnvironmentVariable('SCAFFOLD_FAILURE_GUIDANCE_OWNER', $previousGuidanceOwner)
     if ($temporary) { Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue }
 }
+if ($code -ne 0) { Write-FailureGuidance }
 if ($savedPath) { exit $code }
 if ($code -ne 0) { throw "scaffold-init.sh exited with code $code." }

@@ -812,12 +812,12 @@
       {
         "path": ".github/scripts/scaffold-init.sh",
         "mode": "100644",
-        "sha256": "6cf321e259d57fd0f8f84322e54096933be4909834cfab27800dc3f58c0761b0"
+        "sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f"
       },
       {
         "path": ".github/scripts/scaffold-init.ps1",
         "mode": "100644",
-        "sha256": "90644be9a877b1614d5458ba558014e02a8664db1c9636b216ad0c7e086aa291"
+        "sha256": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01"
       },
       {
         "path": ".github/scripts/scaffold-install.sh",
@@ -1094,7 +1094,7 @@
       {
         "path": "docs/parity-status.md",
         "mode": "100644",
-        "sha256": "a8083480fc4622fe1cfa90c69d3d9a5df76c2e84b1acd6ddf25d0cd14fd3ee8f"
+        "sha256": "b19c3d991f9b4336078aac5cac91fcd2a15a66f1eeedd91a88123b0df4c07779"
       }
     ],
     "export_adaptation": {
@@ -1143,7 +1143,7 @@
       {
         "path": ".github/scripts/scaffold-init.sh",
         "mode": "100644",
-        "sha256": "6cf321e259d57fd0f8f84322e54096933be4909834cfab27800dc3f58c0761b0"
+        "sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f"
       },
       {
         "path": ".github/scripts/scaffold-install.sh",
@@ -1163,22 +1163,22 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "9013219967f19667a4467e8c2d4f3b96613cff87f239724e78790a273f0eda68"
+        "sha256": "5434f39667d889013e45a84697712cc721b54800cc67017010fb6df8cd65ad67"
       },
       {
         "path": "docs/known-limitations.md",
         "mode": "100644",
-        "sha256": "dfd34e7173bd4d1fbcc838d3c123f547bfcd720885d9d78d01a7d67da3447508"
+        "sha256": "1cbc489888894e9d9f9656653528702dbdf1e0b33345217c3ad48652b66f0f2e"
       },
       {
         "path": "docs/product-scope.md",
         "mode": "100644",
-        "sha256": "4e980dc49043b706517e59f223a5ec169567290f8c20b463a9f8c85350ce90e1"
+        "sha256": "d8583d54a87a9577f397a2b38625b1609ca0b0b09a476e0d3f857d786a55c416"
       },
       {
         "path": "docs/provenance.md",
         "mode": "100644",
-        "sha256": "1503369b5ed6b34c8157323ea58394bacca0e41a1d27b3b68791ed109f0292a1"
+        "sha256": "57697a1a2bb73dc5906fcddc56779b54fb637dbcb1188b6d0b2d034ad118927d"
       },
       {
         "path": "tests/conformance/test_adopter_ci.py",
@@ -1193,7 +1193,7 @@
       {
         "path": "tests/conformance/test_installer_bootstrap.py",
         "mode": "100644",
-        "sha256": "772aeac3a4c32ff63c709b54f37614c851a6521d49dd27fb04d7e25b333c0d96"
+        "sha256": "4a7ee53eb6dc2994df2d223ab37c09fbd7db4860ade1cbd5a96632959ab9628f"
       },
       {
         "path": "tests/conformance/test_installer_update.py",
@@ -1203,7 +1203,7 @@
       {
         "path": "tests/conformance/test_product.py",
         "mode": "100644",
-        "sha256": "462396d32154cc633811514fa82e352264cf56b2722ab3f459dd87f24be161df"
+        "sha256": "6efe7c59dea3140757ffc3c6520893342ae250fc82296627063ab9e02fa72a9e"
       },
       {
         "path": "tests/conformance/test_workflow_parity.py",
@@ -1221,8 +1221,8 @@
           "sha256": "928773b97262a56edbf4f67b7d0e09fa5fbcc1580707b1cd68a8ccf13e0895b0"
         },
         "target_mode": "100644",
-        "target_sha256": "6cf321e259d57fd0f8f84322e54096933be4909834cfab27800dc3f58c0761b0",
-        "target_blob": "9a1312983e0850c73f220990fdad8fe8f488bf7b"
+        "target_sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
+        "target_blob": "fb878ffe653f60eaa3e4fa17565d6b2baa1b0c63"
       },
       {
         "path": ".github/scripts/scaffold-install.sh",

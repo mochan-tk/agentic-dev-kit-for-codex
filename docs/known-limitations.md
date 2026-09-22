@@ -126,8 +126,12 @@ native Windows qualification, original scenario passes or release acceptance.
 The predecessor's unfinished runtime and release work remains historical in
 [provenance](provenance.md). This migration does not declare it completed.
 The [source-parity disposition](parity-status.md) explicitly retains manual
-installed-revision recording, source-checkout feedback and inert scheduling as
-intentional differences. Current-version live adopter/worker/CI integration is
+installed-revision recording, manual feedback handoff and inert scheduling as
+intentional differences. The [feedback guide](distribution/feedback.md) now
+offers a pinned no-clone draft/send route and public manual form. Installer
+failures print only fixed links; there is no automatic interactive source hook.
+The form cannot prevent private-text or attachment disclosure; the user must
+review all content. Receivers and schedules remain inactive. Current-version live adopter/worker/CI integration is
 pending; accepted old use and new synthetic checks are different evidence.
 
 The [installation guide](distribution/source-first-installer.md) explains

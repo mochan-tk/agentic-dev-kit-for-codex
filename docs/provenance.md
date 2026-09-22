@@ -94,6 +94,31 @@ Manual source-checkout use and later owner-reviewed template activation are
 distinct. Local synthetic evidence does not establish full source parity,
 live operation, runtime measurement or release acceptance.
 
+## Current manual feedback delivery adaptation
+
+The [feedback delivery record](../.github/distribution/feedback-delivery.v1.json)
+binds the public form, actual published two-file command, fixed installer failure
+guidance and current regressions. It reuses form/title/privacy intent from
+Copilot `446071c76f14f5fbda37a0eef1b6eafa0a3ab897`, without requesting adopter
+markers or assigning labels. The reporter and library remain byte-for-byte at
+accepted product `5ce4585fd9d52842423942fc64713fcd8748b47c`; both are pinned and
+hash-verified before execution. Their eight-field draft and explicit real-TTY,
+default-no send behavior are unchanged.
+
+The Bash/PowerShell entrance adaptation prints only fixed links on failure.
+PowerShell temporarily owns that message while its Bash child runs and restores
+the caller's guidance-owner environment value in `finally`; the Bash selected
+child leaves the message to its parent. Local dispatch sources the exact verified
+engine in the entry's PID, preserving cancellation lifetime, stdin and engine
+source resolution. A local exit decorator preserves status and the engine's
+operation cleanup while adding one fixed message. This is deliberately manual
+handoff, not the automatic source hook.
+A distinct exact PowerShell export adaptation and current Bash/bootstrap bindings
+leave the immutable original export, fixtures and historical baseline seals
+unchanged. The 47-file payload, canonical engine, updater, active workflows and
+receiver templates remain unchanged. Evidence uses real local tools and synthetic
+HTTP/GitHub, with no live submission, activation or current-version E01 claim.
+
 ## Current frontier-cache adaptation
 
 The earlier package descriptions above retain their own change boundaries.

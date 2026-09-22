@@ -1,0 +1,70 @@
+{
+  "schema": "feedback-delivery-provenance/v1",
+  "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
+  "source_commit": "446071c76f14f5fbda37a0eef1b6eafa0a3ab897",
+  "source_files": {
+    ".github/ISSUE_TEMPLATE/feedback.yml": "7b2ff47f4ec7e99cd42c48dd083e2721fde35d79",
+    ".github/scripts/feedback-lib.sh": "b09747ae0bc8ffa2183fec48b578b97cdb45c67b",
+    ".github/scripts/scaffold-init.sh": "7236d06b901da97c2a1a37fd4a51f6fbd89a75d1"
+  },
+  "product_base": "5ce4585fd9d52842423942fc64713fcd8748b47c",
+  "product_base_tree": "f420886974d37cb20c6e2f749ea5bb67e62bec55",
+  "scope": "public-form-pinned-two-file-reporter-manual-failure-handoff-no-payload-change",
+  "sender": "accepted-unchanged-eight-fields-default-draft-explicit-send-original-stdin-stderr-TTY-exact-y-Y-once-no-retry",
+  "form": "manual-public-text-required-confirmation-no-logs-private-identifiers-markers-or-automatic-labels",
+  "handoff": "fixed-guide-form-links-only-no-reporting-network-collection-prompt-or-submission-original-status-cleanup",
+  "evidence": "actual-published-block-real-bash-PTY-disposable-files-synthetic-HTTP-GitHub-PowerShell-host-when-available",
+  "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
+  "target_files": [
+    {
+      "path": ".github/ISSUE_TEMPLATE/feedback.yml",
+      "mode": "100644",
+      "sha256": "01e535cb2f0e81f51c367b197cbd8f57b50df0bf464978bebdebb6de61a704d6"
+    },
+    {
+      "path": ".github/scripts/feedback-lib.sh",
+      "mode": "100644",
+      "sha256": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20"
+    },
+    {
+      "path": ".github/scripts/report-installer-failure.sh",
+      "mode": "100644",
+      "sha256": "9880d074c768c694816181af1f94e0288afa9a7cc15dc22537d701fcc9bd5e07"
+    },
+    {
+      "path": ".github/scripts/scaffold-init.ps1",
+      "mode": "100644",
+      "sha256": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01"
+    },
+    {
+      "path": ".github/scripts/scaffold-init.sh",
+      "mode": "100644",
+      "sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f"
+    },
+    {
+      "path": "docs/distribution/feedback.md",
+      "mode": "100644",
+      "sha256": "8183519eb660e1caa47f3b50b67b7ec7c28f5cdb0ad7ecd92ff968d858eec8b1"
+    },
+    {
+      "path": "tests/conformance/test_feedback_delivery.py",
+      "mode": "100644",
+      "sha256": "c2f7f9997e6d3f01fe51167cf4e837392841f6290249ad1e408df9bf93d66d7f"
+    }
+  ],
+  "export_adaptations": [
+    {
+      "path": ".github/scripts/scaffold-init.ps1",
+      "export": {
+        "path": ".github/scripts/scaffold-init.ps1",
+        "mode": "100644",
+        "source_blob": "ce1804cfed061133f8b82a22edfd163d91fb6028",
+        "sha256": "90644be9a877b1614d5458ba558014e02a8664db1c9636b216ad0c7e086aa291"
+      },
+      "target_mode": "100644",
+      "target_sha256": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01",
+      "target_blob": "f2fca49a9799d818b59168c18b07a9cfc0ddc1f8"
+    }
+  ],
+  "block_sha256": "6851507e47ded37aa5258d20b9a6262d1e9117cb32782e70bc6fc3207acb82f3"
+}

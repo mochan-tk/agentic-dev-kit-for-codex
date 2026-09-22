@@ -412,7 +412,13 @@ module in the existing full conformance discovery; the CI workflow is unchanged.
 ## Optional local installer failure report
 
 Use the standalone, explicitly invoked companion **outside the 47-file
-installed payload**. Use the reviewed kit checkout's mode-0644 Bash entrypoint:
+installed payload**. The [feedback guide](feedback.md) provides a pinned,
+two-file no-clone command and a public manual form. Installer failures only
+print fixed guide/form links: no automatic collection, reporting download,
+prompt or submission. This manual handoff preserves failure status and cleanup;
+review partial files and staging locally before sharing any public-safe report.
+The first HTTP failure before Bash starts still requires caller `pipefail`.
+Alternatively, use the reviewed kit checkout's mode-0644 Bash entrypoint:
 
 ```sh
 bash .github/scripts/report-installer-failure.sh --draft --line 42 --exit-code 1

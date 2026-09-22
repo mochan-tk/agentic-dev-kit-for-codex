@@ -166,11 +166,17 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
 
     def assert_success(self, result):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertNotIn("Optional public feedback", result.stderr)
 
     def assert_refusal_unchanged(self, *args, **kwargs):
         before = self.snapshot()
         result = self.run_entry(*args, **kwargs)
         self.assertNotEqual(0, result.returncode, result.stdout)
+        # Synthetic first HTTP reads source bytes through Git. An inherited
+        # Git override can fail that acquisition before Bash starts; fixed
+        # script guidance cannot cover that documented pipeline boundary.
+        if not any(key.startswith("GIT_") for key in kwargs.get("env", {})) or kwargs.get("saved"):
+            self.assertEqual(1, result.stderr.count("Optional public feedback"), result.stderr)
         self.assertEqual(before, self.snapshot())
         return result
 
@@ -505,6 +511,7 @@ function Invoke-WebRequest {
                                 env=env, capture_output=True, text=True, timeout=90)
         self.assertIn("CALLER-ALIVE", failed.stdout)
         self.assertIn("EXPECTED-ERROR", failed.stdout)
+        self.assertEqual(1, failed.stderr.count("Optional public feedback"), failed.stderr)
         self.assertEqual(before, self.snapshot())
         for fault in ("function Invoke-WebRequest { throw 'HTTP-FAILURE' }\n",
                       "function Invoke-WebRequest { param($Uri,$OutFile,[switch]$UseBasicParsing) throw 'HTTP-FAILURE' }\n"):
@@ -512,6 +519,7 @@ function Invoke-WebRequest {
             result = subprocess.run([pwsh, "-NoProfile", "-File", str(runner)], cwd=self.target,
                                     env=env, capture_output=True, text=True, timeout=20)
             self.assertNotEqual(0, result.returncode)
+            self.assertEqual(1, result.stderr.count("Optional public feedback"), result.stderr)
             self.assertEqual(before, self.snapshot())
         no_status = self.base / "no status.ps1"
         no_status.write_text("Write-Output 'NO-NATIVE-STATUS'\n")
@@ -521,6 +529,7 @@ function Invoke-WebRequest {
                                 text=True, timeout=20)
         self.assertNotEqual(0, result.returncode)
         self.assertIn("returned no exit status", result.stderr)
+        self.assertEqual(1, result.stderr.count("Optional public feedback"), result.stderr)
         self.assertEqual(before, self.snapshot())
 
 

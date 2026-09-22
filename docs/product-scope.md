@@ -28,7 +28,11 @@ feedback companion also uses `feedback-lib.sh`. The three read-only checks
 also have [no-clone Bash commands](distribution/companion-checks.md): complete
 fixed-revision download, reviewed SHA-256 verification, then explicit execution.
 This is a delivery route to explicitly pinned helpers, not an installer mode or
-automatic CI integration. The failure reporter is excluded from that route.
+automatic CI integration. The failure reporter has its own
+[two-file pinned no-clone route and public form](distribution/feedback.md).
+It defaults to a draft; sending requires explicit invocation and original
+terminal consent. Installer failures print fixed guide/form links as a manual
+handoff, with no reporting download, metadata collection, prompt or submission.
 Installation does not create
 CI, configure GitHub, commit, push, run onboarding or invoke a model.
 
