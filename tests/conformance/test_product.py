@@ -79,6 +79,59 @@ class ProductTests(unittest.TestCase):
         path.write_text(path.read_text().replace("def validate_frontier_cache(root):", "def removed_cache_guard(root):"))
         self.assertTrue(self.checker.validate(root))
 
+    def test_boundary_repair_baseline_and_contract_are_required_by_both_entrypoints(self):
+        for missing in ("tests/fixtures/boundary-repair-baseline.json", "boundary_repair"):
+            root = self.fixture()
+            if missing == "boundary_repair":
+                path = root / ".github/distribution/source-parity.v1.json"
+                record = json.loads(path.read_text())
+                del record[missing]
+                path.write_text(json.dumps(record))
+            else: (root / missing).unlink()
+            for checker in ("check-installer.py", "check-product.py"):
+                result = subprocess.run([sys.executable, "-I", str(root / ".github/scripts" / checker)],
+                                        cwd=root, capture_output=True, text=True, timeout=30)
+                self.assertNotEqual(0, result.returncode, checker)
+
+    def test_boundary_exact_bytes_and_original_seal_refuse_resealing(self):
+        spec = importlib.util.spec_from_file_location("boundary_guard", ROOT / ".github/scripts/check-installer.py")
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        self.assertEqual([], guard.validate_boundary_repair(ROOT))
+        for path in guard.BOUNDARY_BASE_PATHS:
+            with self.subTest(path=path):
+                root = self.fixture()
+                target = root / path
+                target.write_bytes(target.read_bytes() + b"\n# unreviewed regression\n")
+                parity = root / guard.PARITY
+                record = json.loads(parity.read_text())
+                row = next(row for row in record["boundary_repair"]["target_files"] if row["path"] == path)
+                row["sha256"] = hashlib.sha256(target.read_bytes()).hexdigest()
+                for row in record["boundary_repair"]["export_adaptations"]:
+                    if row["path"] == path:
+                        row["target_sha256"] = hashlib.sha256(target.read_bytes()).hexdigest()
+                        row["target_blob"] = self.git_blob(target.read_bytes())
+                parity.write_text(json.dumps(record))
+                self.assertTrue(guard.validate_boundary_repair(root))
+        root = self.fixture()
+        baseline = root / guard.BOUNDARY_BASELINE
+        baseline.write_bytes(baseline.read_bytes() + b"\n")
+        path = root / guard.PARITY
+        record = json.loads(path.read_text())
+        record["boundary_repair"]["baseline_sha256"] = hashlib.sha256(baseline.read_bytes()).hexdigest()
+        path.write_text(json.dumps(record))
+        self.assertTrue(guard.validate_boundary_repair(root))
+        root = self.fixture()
+        path = root / guard.PARITY
+        record = json.loads(path.read_text())
+        record["boundary_repair"]["export_adaptations"][0]["export"]["sha256"] = "0" * 64
+        path.write_text(json.dumps(record))
+        self.assertTrue(guard.validate_boundary_repair(root))
+
+    @staticmethod
+    def git_blob(data):
+        return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+
     def test_frontier_cache_contract_and_exact_baseline_refuse_resealing(self):
         root = self.fixture()
         spec = importlib.util.spec_from_file_location("frontier_guard", ROOT / ".github/scripts/check-installer.py")

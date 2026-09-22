@@ -168,7 +168,11 @@ Local `drift --root /path/to/adopter` reads files only and does not check GitHub
 
 Only GitHub.com and its Actions App issuer are supported. API reads explicitly
 use GET and version `2022-11-28`. Each command has a 30-second bound and combined
-2 MiB output bound. Guarded files are at most 1 MiB, pages at most 100 items,
+2 MiB output bound. The command launches in its own POSIX session; on return,
+including refusal or decode failure, the sensor kills that owned process group
+even when the direct child has exited. Deliberately detached groups are outside
+this cleanup boundary. This does not establish native Windows support or model
+worker termination. Guarded files are at most 1 MiB, pages at most 100 items,
 listings at most 20 pages/2,000 records, Actions run results below 1,000, each
 Git tree at most 2,000 entries, and workflows at most 16 static jobs. Hitting a
 bound refuses; no truncated observation becomes success. Hosted API limitations,
@@ -186,6 +190,9 @@ base checkout and hashes do not make them an immutable security boundary.
 
 This addon is outside the legacy 47-file installer, updater and rollback
 inventory. Those operations neither install nor recover its three files.
+The boundary repair updates the sensor's supported ritual digest and command
+cleanup. Existing installed addon controls require their own owner-reviewed
+transition; a payload upgrade does not migrate the addon automatically.
 Changing its guarded config, helper or template is intentionally unsupported
 by this version's setup and will fail the existing metadata gate. There is no
 automatic migration or instruction to bypass that gate. A future change or

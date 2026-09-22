@@ -114,7 +114,7 @@ project() {
   chmod 644 "$SOURCE/$path"
 }
 acquire() {
-  local PIN="$1" SOURCE="$2" manifest name class hash extra layout expected actual count
+  local PIN="$1" SOURCE="$2" role="$3" manifest name class hash extra layout expected actual count engine_hash
   printf 'Acquiring %s source-commit=%s\n' "$REPO" "$PIN"
   object_git fetch --no-tags --depth=1 "https://github.com/$REPO" "$PIN" || fail 'pinned source fetch failed'
   [ "$(object_git rev-parse --verify 'FETCH_HEAD^{commit}')" = "$PIN" ] || fail 'fetched commit differs from requested commit'
@@ -139,10 +139,15 @@ acquire() {
     [ "$(digest < "$SOURCE/.github/distribution/payload/$name")" = "$hash" ] || fail 'payload digest mismatch'
   done < "$manifest"
   project .github/scripts/scaffold-install.sh
-  [ "$(digest < "$SOURCE/.github/scripts/scaffold-install.sh")" = 3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2 ] || fail 'unreviewed local engine bytes'
+  engine_hash="$(digest < "$SOURCE/.github/scripts/scaffold-install.sh")"
+  case "$role:$engine_hash" in
+    from:3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2) ;; # Historical data only; never executed.
+    from:3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284|to:3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284) ;;
+    *) fail 'unreviewed engine bytes for selected source role' ;;
+  esac
 }
-acquire "$FROM" "$WORK/old"
-acquire "$TO" "$WORK/new"
+acquire "$FROM" "$WORK/old" from
+acquire "$TO" "$WORK/new" to
 printf 'Selected update from=%s to=%s mode=%s\n' "$FROM" "$TO" "$MODE"
 SCAFFOLD_SOURCE_DIR="$WORK/new" bash "$WORK/new/.github/scripts/scaffold-install.sh" \
   --upgrade --old-source "$WORK/old" --transaction "$WORK/transaction" "--$MODE" "$TARGET"

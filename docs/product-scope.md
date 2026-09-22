@@ -15,8 +15,11 @@ A separate public Bash and thin PowerShell/Git Bash updater needs no advance
 clone. It requires exact old/new commit IDs and a fresh recovery directory,
 defaults to preview, and updates only known-old engine files on explicit apply.
 It preserves customized tuned/instance/seed files, retains validated sources
-and any operation record outside the adopter, and supports the unchanged
+and any operation record outside the adopter, and supports the retained
 engine's offline rollback. It never stages or detects the installed version.
+The current entry accepts the exact previous engine only as FROM data, requires
+the current engine for TO, and executes only the latter. Local calls reject
+inherited Git context; linked worktrees remain supported.
 
 Four companions can run explicitly from a reviewed kit checkout:
 `governance-status.sh`, `worktree-preflight.sh`, `check-connectors.sh` and
@@ -64,7 +67,9 @@ model compliance, worker termination, locks, or automatic recovery.
 
 The installed `check-task-ritual.sh` provides offline `render` and GET-only
 `preflight` for claim/resume/plan/dispatch, alongside its existing PR checker.
-It never posts a comment. Preflight validates the actual body and complete
+It never posts a comment. Malformed UTF-8 and NUL refuse before body validation;
+valid Unicode, terminal newlines and the 262144-byte bound remain supported.
+Preflight validates the actual body and complete
 current ledger, with optional PR-bound chronology and final readbacks; it is
 an observation, not authority or a guarantee that a later write is unchanged.
 
@@ -83,7 +88,7 @@ non-success. Setup is an explicit consent-gated actuator; the sensor stays
 read-only and considers all contributing Rulesets.
 
 This clean product root preserves the accepted 47-path payload layout and
-installer engine; bounded current adaptations are recorded separately from
+operation-scoped upgrade/rollback format; bounded current adaptations are recorded separately from
 the original export seal. It does not import the predecessor's research ledger,
 runtime adapter, historical Tasks or repository release criteria as adopter
 authority. Historical acceptance and original unfinished work remain in the

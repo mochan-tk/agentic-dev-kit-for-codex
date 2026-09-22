@@ -1,6 +1,8 @@
 """Real Git/disposable-adopter bootstrap evidence with synthetic URL transport."""
 import hashlib
+import base64
 import importlib.util
+import json
 import os
 from pathlib import Path
 import shlex
@@ -197,6 +199,22 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
             self.assert_refusal_unchanged(option)
         for local in ("", str(self.base / "missing")):
             self.assert_refusal_unchanged(env={"SCAFFOLD_SOURCE_DIR": local})
+
+    def test_current_bootstrap_refuses_exact_previous_selected_and_local_engine(self):
+        baseline = json.loads((ROOT / "tests/fixtures/boundary-repair-baseline.json").read_bytes())
+        previous = base64.b64decode(next(row["base64"] for row in baseline["files"] if row["path"] == ENGINE), validate=True)
+        (self.source / ENGINE).write_bytes(previous)
+        revision = self.commit(self.source)
+        before = self.snapshot()
+        result = self.run_entry(ref=revision, saved=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("unreviewed local engine bytes", result.stderr)
+        self.assertEqual(before, self.snapshot())
+        result = subprocess.run([BASH, str(self.source / ENTRY), "--apply", str(self.target)],
+            env=dict(self.env, SCAFFOLD_SOURCE_DIR=str(self.source)), capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("unreviewed local engine bytes", result.stderr)
+        self.assertEqual(before, self.snapshot())
 
     def test_branch_tags_full_sha_and_saved_relative_target(self):
         self.command(self.source, "branch", "feature/one")

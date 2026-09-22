@@ -166,16 +166,23 @@ HELP
   done
   local tool
   for tool in jq git head wc date sort awk grep; do command -v "$tool" >/dev/null 2>&1 || record_fail 2 dependency; done
+  record_encode() {
+    local LC_ALL=C raw value rebound
+    # read preserves terminal LF and treats a NUL delimiter as invalid input.
+    # jq replaces malformed UTF-8: require an exact byte round trip first.
+    if IFS= read -r -d '' raw; then return 1; fi
+    [[ "${#raw}" -le 262144 ]] || return 1
+    value=$(printf '%s' "$raw" | jq -Rs .) || return 1
+    rebound=$(printf '%s' "$value" | jq -rj . && printf '.') || return 1
+    [[ "${rebound%.}" == "$raw" ]] || return 1
+    printf '%s' "$value"
+  }
   record_input() {
-    local bytes value
-    if [[ "$1" == - ]]; then value=$(head -c 262145 | jq -Rs .) || return 1
+    if [[ "$1" == - ]]; then head -c 262145 | record_encode
     else
       [[ -f "$1" && ! -L "$1" ]] || return 1
-      value=$(head -c 262145 -- "$1" | jq -Rs .) || return 1
+      head -c 262145 -- "$1" | record_encode
     fi
-    bytes=$(printf '%s' "$value" | jq -rj . | wc -c) || return 1
-    [[ "$bytes" -le 262144 ]] || return 1
-    printf '%s' "$value"
   }
   record_branch() { valid_record_branch "$1"; }
   local raw json session_id draft first_line draft_branch name expected now

@@ -9,7 +9,11 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import signal
+import tempfile
+import time
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 SETUP = ROOT / ".github/scripts/setup-adopter-ci.py"
@@ -654,6 +658,96 @@ for page in pages:
         result = self.run_sensor()
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn("FRESH:", result.stdout)
+
+
+class BoundedCommandTests(unittest.TestCase):
+    def setUp(self):
+        self.sensor = load(SENSOR, "bounded_sensor")
+        temporary = tempfile.TemporaryDirectory(prefix="bounded-command-")
+        self.addCleanup(temporary.cleanup)
+        self.work = Path(temporary.name)
+
+    def test_normal_output_and_nonzero_exit_are_preserved(self):
+        result = self.sensor.bounded_command([sys.executable, "-c",
+            "import sys;print('日本語🙂');print('diagnostic',file=sys.stderr);sys.exit(7)"])
+        self.assertEqual((7, "日本語🙂\n", "diagnostic\n"),
+                         (result.returncode, result.stdout, result.stderr))
+
+    def test_cleanup_error_is_not_reported_as_success(self):
+        with patch.object(self.sensor.os, "killpg", side_effect=PermissionError("fixture cleanup refused")):
+            with self.assertRaises(PermissionError):
+                self.sensor.bounded_command([sys.executable, "-c", "print('finished')"])
+
+    def test_selector_allocation_and_registration_exceptions_clean_owned_group(self):
+        for stage in ("allocation", "registration"):
+            with self.subTest(stage=stage):
+                pidfile, marker = self.work / (stage + ".pid"), self.work / (stage + ".marker")
+                child = ("import time;from pathlib import Path;time.sleep(1);"
+                         "Path(" + repr(str(marker)) + ").write_text('late');time.sleep(5)")
+                parent = ("import subprocess,sys,time;from pathlib import Path;"
+                          "p=subprocess.Popen([sys.executable,'-c'," + repr(child) + "]);"
+                          "Path(" + repr(str(pidfile)) + ").write_text(str(p.pid));time.sleep(5)")
+                selector = self.sensor.selectors.DefaultSelector()
+                def fail_when_started(*_args):
+                    deadline = time.monotonic() + 2
+                    while not pidfile.exists() and time.monotonic() < deadline:
+                        time.sleep(0.01)
+                    raise OSError("fixture selector failure")
+                try:
+                    if stage == "allocation":
+                        with patch.object(self.sensor.selectors, "DefaultSelector", side_effect=fail_when_started):
+                            with self.assertRaises(OSError):
+                                self.sensor.bounded_command([sys.executable, "-c", parent])
+                    else:
+                        with patch.object(self.sensor.selectors, "DefaultSelector", return_value=selector), \
+                                patch.object(selector, "register", side_effect=fail_when_started):
+                            with self.assertRaises(OSError):
+                                self.sensor.bounded_command([sys.executable, "-c", parent])
+                    self.assertTrue(pidfile.exists())
+                    time.sleep(1.1)
+                    self.assertFalse(marker.exists(), "descendant survived selector exception")
+                finally:
+                    selector.close()
+                    if pidfile.exists():
+                        try: os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                        except ProcessLookupError: pass
+
+    def test_refusal_stops_owned_descendants_after_parent_exit_and_preserves_caller(self):
+        for mode in ("stdout", "stderr", "timeout", "decode"):
+            with self.subTest(mode=mode):
+                pidfile, marker = self.work / (mode + ".pid"), self.work / (mode + ".marker")
+                child = ("import time;from pathlib import Path;time.sleep(1);"
+                         "Path(" + repr(str(marker)) + ").write_text('late side effect');time.sleep(5)")
+                parent = ("import os,subprocess,sys,time;from pathlib import Path;"
+                          "p=subprocess.Popen([sys.executable,'-c'," + repr(child) + "],"
+                          "stdout=" + ("subprocess.DEVNULL" if mode == "decode" else "None") + ",stderr=subprocess.DEVNULL);"
+                          "Path(" + repr(str(pidfile)) + ").write_text(str(p.pid));")
+                if mode in ("stdout", "stderr"):
+                    parent += "os.write(" + ("1" if mode == "stdout" else "2") + ",b'x'*(2*1024*1024+1));time.sleep(5)"
+                elif mode == "decode": parent += "os.write(1,b'\\xff');os._exit(0)"
+                else: parent += "os._exit(0)"
+                unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(5)"])
+                original_clock = time.monotonic
+                origin = original_clock()
+                try:
+                    # Advance only the helper's wall clock: real subprocesses,
+                    # pipes and group termination still run unchanged.
+                    with patch.object(self.sensor.time, "monotonic", side_effect=lambda: origin + (original_clock() - origin) * 100):
+                        with self.assertRaises((self.sensor.Fault, UnicodeError)):
+                            self.sensor.bounded_command([sys.executable, "-c", parent])
+                    self.assertIsNone(unrelated.poll())
+                    self.assertTrue(pidfile.is_file())
+                    time.sleep(1.1)
+                    self.assertFalse(marker.exists(), "descendant wrote after bounded refusal")
+                    state = subprocess.run(["ps", "-p", pidfile.read_text(), "-o", "stat="],
+                                           capture_output=True, text=True).stdout.strip()
+                    self.assertTrue(not state or state.startswith("Z"), state)
+                finally:
+                    if pidfile.is_file():
+                        try: os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                        except ProcessLookupError: pass
+                    unrelated.kill()
+                    unrelated.wait()
 
 
 if __name__ == "__main__":
