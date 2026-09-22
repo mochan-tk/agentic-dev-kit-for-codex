@@ -360,6 +360,9 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
         old = product_checker().history_bytes(ROOT,
             commit="ab7789274aae99cb4fd8f781672bcb89c71d80ec", path=ENTRY)
         current = (ROOT / ENTRY).read_bytes()
+        baseline = json.loads((ROOT / "tests/fixtures/boundary-repair-baseline.json").read_bytes())
+        old_engine = base64.b64decode(next(row["base64"] for row in baseline["files"] if row["path"] == ENGINE), validate=True)
+        current_engine = (ROOT / ENGINE).read_bytes()
         old_entry = self.base / "previous bootstrap.sh"
         old_entry.write_bytes(old)
         for nested in (False, True):
@@ -384,8 +387,9 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
                 self.command(self.target, "init", "-q", "-b", "main")
                 env = dict(self.env, TMPDIR=str(scratch))
                 before = self.snapshot()
-                if (self.source / ENTRY).read_bytes() != old:
+                if (self.source / ENTRY).read_bytes() != old or (self.source / ENGINE).read_bytes() != old_engine:
                     (self.source / ENTRY).write_bytes(old)
+                    (self.source / ENGINE).write_bytes(old_engine)
                     old_pin = self.commit(self.source)
                 else:
                     old_pin = self.command(self.source, "rev-parse", "HEAD").strip()
@@ -396,8 +400,9 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
                 self.assertIn("source root or ancestor is a symlink", failed.stderr)
                 self.assertEqual(before, self.snapshot())
                 self.assertEqual([], list(scratch_physical.iterdir()))
-                if (self.source / ENTRY).read_bytes() != current:
+                if (self.source / ENTRY).read_bytes() != current or (self.source / ENGINE).read_bytes() != current_engine:
                     (self.source / ENTRY).write_bytes(current)
+                    (self.source / ENGINE).write_bytes(current_engine)
                     pin = self.commit(self.source)
                 else:
                     pin = old_pin

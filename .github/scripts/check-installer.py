@@ -1065,7 +1065,7 @@ BOUNDARY_DIGESTS = {
     "docs/provenance.md": "1503369b5ed6b34c8157323ea58394bacca0e41a1d27b3b68791ed109f0292a1",
     "tests/conformance/test_adopter_ci.py": "5c31532a3540f45c4b75f51fdc7a8c829584b73fc817be5d241fc0740e64c2e3",
     "tests/conformance/test_installer.py": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633",
-    "tests/conformance/test_installer_bootstrap.py": "d04626dfea8b0f0b3b8da87ae207356da5935b28770f04f2531a334d05afc01e",
+    "tests/conformance/test_installer_bootstrap.py": "772aeac3a4c32ff63c709b54f37614c851a6521d49dd27fb04d7e25b333c0d96",
     "tests/conformance/test_installer_update.py": "34f4c2030e54e936c5836a8a54a9863e7e02ce843020a2834410b2ef1be2f3b6",
     "tests/conformance/test_product.py": "462396d32154cc633811514fa82e352264cf56b2722ab3f459dd87f24be161df",
     "tests/conformance/test_workflow_parity.py": "9795c1e6ce3e2e9c7a113bead9e2f7d44849ce2db5038b1d2db19d195f122636"
