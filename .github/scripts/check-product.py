@@ -36,40 +36,42 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "export_source_blob": CONNECTOR_FIXTURE_EXPORT["source_blob"],
     "export_sha256": CONNECTOR_FIXTURE_EXPORT["sha256"],
     "export_mode": "100644",
-    "target_blob": "ec57d143f873ffc57c30a452bd461524c11a70a2",
-    "target_sha256": "a00b4bd8322acd863d6cb59407c4c20ede6fc1a073a49604220d40dd3bc5d6be",
+    "target_blob": "b112b9f9b0ac3d646278c7161d719a5f4f6155f4",
+    "target_sha256": "b839adecceb153be9e0a3a80f9eb86cb49c23d30e5c32c7684165c91db6d1d32",
     "target_mode": "100644",
     "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture",
 }
 TEST_MODULES = (
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
-    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py",
+    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "b6d3f58d34272fade2c3bb4919e0b2c3ca4447921780b93a0df549ef3912b0fb",
+    ".github/distribution/payload.v1.tsv": "9471692e8b9cb1b99bcab71b8546fa754284dbb7dcc2de385bd7e65990712d54",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
-    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "8c4fe064337534106f9636de5bdf4379a05a6ed0a9a5a08eb84dcffced6076f2",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "f55b24d4b2cfe14c83e02d723bc2021f7321b1196b78c7436491b73d67b0b4eb",
     ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
     ".github/scripts/governance-status.sh": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e",
     "tests/conformance/test_source_first_governance.py": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece",
 }
+FRONTIER_EXPORT_PATH = PAYLOAD + "/.agents/skills/plan-management/scripts/frontier.sh"
+FRONTIER_EXPORT_SHA256 = "0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6"
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md",
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
     "docs/distribution/adopter-ci.md",
-    "docs/distribution/ongoing-improvement.md",
+    "docs/distribution/ongoing-improvement.md", "docs/parity-status.md",
 )
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "a27c307da28ab819e948d5ec834a85d24971dadad4bccbcc0493b6550e7e5b17"
+ADOPTER_RECORD_SHA256 = "a1237975e88cb8b5f6d9218b46e754ab5b802d5d31a87aff40ff89885248b786"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "0c386efe11019c0598cdef34b785d7f5f9b9d862e775562eebfba1dc6c67d255"
+IMPROVEMENT_RECORD_SHA256 = "c41a57101455f7fd225fdb9b3de5034ff6852ed9a06cef80b4d268bc1c28c800"
 IMPROVEMENT_SOURCE_FILES = {
     ".github/scripts/retro-hygiene.sh": "49df279b865f6a6f7484621158fc7c48a2b1b3cd",
     ".github/workflows/retro-hygiene.yml": "8e2db7437c1950e435c04a9210a6461651197a01",
@@ -233,6 +235,13 @@ def validate_export(root):
                 continue
             data = read_bytes(root, row["path"])
             git_blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+            if row["path"] == FRONTIER_EXPORT_PATH:
+                expected = {"path": row["path"], "export": row, "target_mode": "100644",
+                            "target_sha256": digest(data), "target_blob": git_blob}
+                if (parity["frontier_cache"]["export_adaptation"] != expected
+                        or digest(data) != FRONTIER_EXPORT_SHA256):
+                    errors.append("frontier exact approved export adaptation changed")
+                continue
             if row["path"] in WORKFLOW_EXPORT_DIGESTS:
                 adaptation = next(item for item in adaptations if item["path"] == row["path"])
                 expected = {"path": row["path"], "export": row, "target_mode": "100644",
@@ -576,7 +585,8 @@ def validate(root):
         spec.loader.exec_module(checker)
         errors += (checker.validate(root) + checker.validate_connector_companion(root)
                    + checker.validate_governance_procedures(root) + checker.validate_bootstrap(root)
-                   + checker.validate_explicit_update(root) + checker.validate_workflow_parity(root))
+                   + checker.validate_explicit_update(root) + checker.validate_workflow_parity(root)
+                   + checker.validate_frontier_cache(root))
     except (OSError, ValueError, ImportError, AttributeError, TypeError):
         errors.append("mandatory installer validation unavailable")
     return errors

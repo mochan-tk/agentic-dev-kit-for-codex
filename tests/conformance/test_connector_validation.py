@@ -267,7 +267,8 @@ class ConnectorCompanionTests(unittest.TestCase):
         for path in (self.checker.FEEDBACK_PATHS + self.checker.CONNECTOR_PATHS
                      + self.checker.GOVERNANCE_PROCEDURE_PATHS + self.checker.BOOTSTRAP_PATHS
                      + self.checker.UPDATE_PATHS + self.checker.WORKFLOW_TARGETS
-                     + (self.checker.WORKFLOW_BASELINE,)):
+                     + self.checker.FRONTIER_TARGETS
+                     + (self.checker.WORKFLOW_BASELINE, self.checker.FRONTIER_BASELINE)):
             destination = self.root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, destination); destination.chmod(0o644)

@@ -451,7 +451,8 @@ reviewed_adoption_anchor() {
     # Accepted source-first/T18 payloads and reviewed T24 task-selection payload.
     $'100644\tblob\tf66d3aa5e73abf24052c70f557cd6df9177ca012'|\
     $'100644\tblob\tcc888c829bc5957871376004cb59a93b4980b50f'|\
-    $'100644\tblob\t5017ee6979eec83c867a2da02118e6b03205040c') return 0 ;;
+    $'100644\tblob\t5017ee6979eec83c867a2da02118e6b03205040c'|\
+    $'100644\tblob\t05704563911b73d33a1dd3f85a247cb2569fdf67') return 0 ;;
     *) return 1 ;;
   esac
 }

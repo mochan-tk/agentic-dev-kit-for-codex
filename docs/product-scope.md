@@ -68,6 +68,13 @@ It never posts a comment. Preflight validates the actual body and complete
 current ledger, with optional PR-bound chronology and final readbacks; it is
 an observation, not authority or a guarantee that a later write is unchanged.
 
+The frontier reuses validated blocker states only within one invocation, keyed
+by canonical host/repository/Issue identity. It still validates each Task's full
+dependency observation and refuses the complete result on any later failure.
+It persists no cache and provides neither an atomic snapshot nor a real-time
+lock. The [source-parity disposition](parity-status.md) separates shipped code,
+synthetic checks, historical use, deliberate differences and pending live proof.
+
 Governance offers three explicit profiles: `solo`, `team`, and
 `single-maintainer` (PR and checks, zero approving reviews, no bypass).
 Selection never silently downgrades another profile. Unknown preimages,

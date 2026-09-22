@@ -59,6 +59,31 @@ if [ -n "${REPO_ARGS[1]:-}" ]; then
   [ "$requested" = "$REPO" ] || [ "$requested" = "$HOST/$REPO" ] || fail 'selected repository differs from request'
 fi
 REPO_ARGS=(--repo "$HOST/$REPO")
+# Source-derived invocation-local cache. Indexed arrays and an explicit count
+# support Bash 3.2 under nounset, including the initially empty cache. Call this
+# function directly: a command-substitution subshell would discard cache writes.
+# Keys use the already validated canonical host/repository plus Issue number.
+# This is a bounded observation reused within this invocation, not an atomic
+# snapshot, a real-time lock or evidence that the state cannot change later.
+CACHE_KEYS=()
+CACHE_STATES=()
+CACHE_COUNT=0
+blocker_state() {
+  local number="$1" repository="$2" key i
+  key="$repository#$number"
+  for ((i=0; i<CACHE_COUNT; i++)); do
+    if [ "${CACHE_KEYS[$i]}" = "$key" ]; then
+      STATE="${CACHE_STATES[$i]}"
+      return 0
+    fi
+  done
+  STATE="$(gh issue view "$number" --repo "$repository" --json state --jq .state)" \
+    || fail 'blocker state retrieval failed'
+  case "$STATE" in OPEN|CLOSED) ;; *) fail 'unknown blocker state' ;; esac
+  CACHE_KEYS[CACHE_COUNT]="$key"
+  CACHE_STATES[CACHE_COUNT]="$STATE"
+  CACHE_COUNT=$((CACHE_COUNT + 1))
+}
 # Main-shell capture: a command failure cannot masquerade as an empty list.
 LIST="$(gh issue list ${REPO_ARGS[@]+"${REPO_ARGS[@]}"} --state open --label type:task --label ai:ready \
   --limit 200 --json number,title --template '{{range .}}{{.number}}{{"\t"}}{{.title}}{{"\n"}}{{end}}')" \
@@ -124,11 +149,8 @@ while IFS= read -r line; do
   if [ -n "$refs" ]; then
     while IFS=$'\t' read -r ref blocker_repo; do
       [[ "$ref" =~ ^[1-9][0-9]*$ ]] || fail 'malformed blocker reference'
-      BLOCKER_REPO_ARGS=("${REPO_ARGS[@]+"${REPO_ARGS[@]}"}")
-      if [ "$blocker_repo" != '-' ]; then BLOCKER_REPO_ARGS=(--repo "$blocker_repo"); fi
-      state="$(gh issue view "$ref" ${BLOCKER_REPO_ARGS[@]+"${BLOCKER_REPO_ARGS[@]}"} --json state --jq .state)" \
-        || fail 'blocker state retrieval failed'
-      case "$state" in CLOSED) ;; OPEN) blocked=true ;; *) fail 'unknown blocker state' ;; esac
+      blocker_state "$ref" "$blocker_repo"
+      case "$STATE" in CLOSED) ;; OPEN) blocked=true ;; *) fail 'unknown blocker state' ;; esac
     done <<< "$refs"
   fi
   if "$blocked"; then BLOCKED+="#$num"$'\t'"$title"$'\n'
