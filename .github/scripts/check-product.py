@@ -80,7 +80,7 @@ PUBLIC_DOCS = (
     "docs/distribution/ongoing-improvement.md", "docs/distribution/feedback.md", "docs/parity-status.md",
 )
 FEEDBACK_RECORD = ".github/distribution/feedback-delivery.v1.json"
-FEEDBACK_RECORD_SHA256 = "8b781f931c2e31c3b023db68a28dbf361c4dc487b7c96c2ab1bf58441d8e5a62"
+FEEDBACK_RECORD_SHA256 = "acaf0e7ae1cb8789ad479d0f7e1af1e3d0460b96e0b2f1085b53c4ad65184630"
 FEEDBACK_GUIDE = "docs/distribution/feedback.md"
 FEEDBACK_BLOCK_SHA256 = "6851507e47ded37aa5258d20b9a6262d1e9117cb32782e70bc6fc3207acb82f3"
 FEEDBACK_EXPORT_DIGESTS = {
@@ -93,7 +93,7 @@ FEEDBACK_TARGET_DIGESTS = {
     ".github/scripts/scaffold-init.ps1": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
     "docs/distribution/feedback.md": "8183519eb660e1caa47f3b50b67b7ec7c28f5cdb0ad7ecd92ff968d858eec8b1",
-    "tests/conformance/test_feedback_delivery.py": "c2f7f9997e6d3f01fe51167cf4e837392841f6290249ad1e408df9bf93d66d7f"
+    "tests/conformance/test_feedback_delivery.py": "c31029d4426e5a6615e7443e65f677ad9bc8eaf41bba94145cf21cc7fadbee01"
 }
 FEEDBACK_CONTRACT = {
     "schema": "feedback-delivery-provenance/v1",

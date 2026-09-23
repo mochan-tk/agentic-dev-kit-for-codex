@@ -280,7 +280,7 @@ if fault=="valid-but-failed": sys.exit(22)
 import os,sys,time
 from pathlib import Path
 a=sys.argv[1:]
-if len(a)==4 and a[0]=='-C' and a[2:]==['rev-parse','--git-dir']:
+if len(a)==4 and a[0]=='-C' and a[2:]==['rev-parse','--is-inside-work-tree']:
  Path(os.environ['DELIVERY_HOLD']).touch()
  deadline=time.monotonic()+10
  while not Path(os.environ['DELIVERY_RELEASE']).exists() and time.monotonic()<deadline: time.sleep(.02)
