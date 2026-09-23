@@ -177,3 +177,37 @@ separate from the immutable original seal. Shared companion record updates bind
 only affected current files. This local/synthetic evidence does not qualify
 escaped processes, native Windows, live adopters, model-worker termination,
 runtime parity or release.
+
+## Current final-boundary correction
+
+The separate `final_boundary` record binds F1-F4 against accepted public product
+commit `c2657da6f3fcda85d849df0f619287c5920c5265`, tree
+`3401e6255a7bbb37272cc7a6b083f71d1d89451f`. The
+[six-file baseline](../tests/fixtures/final-boundary-baseline.json) retains exact
+engine, bootstrap, updater, addon setup, tuning helper and governance sensor
+bytes, modes and Git blob/hash identities. All prior baselines and the original
+export/history seals remain immutable.
+
+Apply/update/recorded rollback and public no-op installation require a physical
+non-bare worktree root. Addon setup rejects inherited Git selection before any
+Git call. Startup gives required-target and enumeration/search errors priority
+over markers, while optional targets, advisory notes and warning-only CI keep
+their separate contracts. Governance distinguishes ordinary grep match/no-match
+and successful awk observations from unknown evidence; CODEOWNERS remains
+required only for team. The fixed governance delivery command is repinned only
+after its corrected implementation commit is reachable.
+
+Only tuning-status changes among the 47 installed files; the other 46 contents,
+all paths/classes/modes, active workflows, addon sensor/template and sender
+remain unchanged. Its current export adaptation is separate from the immutable
+six-file workflow baseline. Both mandatory checkers require the new closed
+record and independently bound current files, with synchronized shared records.
+The two previously accepted engines remain exact FROM data only; only the
+repaired engine executes or qualifies as TO. Actual old-to-new payload and
+offline rollback evidence retains the existing `local-upgrade/v1` contract.
+
+The [dated public acceptance section](parity-status.md) records existing G08,
+G09 and bounded E01 receipts without rewriting historical checkpoints or
+reproducing private evidence. Current correction tests use disposable targets
+and synthetic transport. No new live operation, runtime/Windows qualification,
+existing-addon migration, release or owner acceptance is implied.

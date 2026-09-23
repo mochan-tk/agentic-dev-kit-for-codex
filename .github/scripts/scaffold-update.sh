@@ -65,7 +65,12 @@ disjoint() {
 TARGET="$(absolute "$TARGET")"; no_links "$TARGET"
 [ -d "$TARGET" ] || fail 'target must be an existing Git repository root'
 TARGET="$(cd "$TARGET" && pwd -P)"
-git -c core.fsmonitor=false -c core.hooksPath=/dev/null -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1 || fail 'target is not a Git repository'
+target_git() { git -c core.fsmonitor=false -c core.hooksPath=/dev/null -C "$TARGET" "$@"; }
+[ "$(target_git rev-parse --is-inside-work-tree)" = true ] || fail 'target is not a Git worktree'
+[ "$(target_git rev-parse --is-bare-repository)" = false ] || fail 'target is a bare repository'
+top="$(target_git rev-parse --show-toplevel)" || fail 'target Git root is uncheckable'
+top="$(cd "$top" && pwd -P)" || fail 'target Git root is unavailable'
+[ "$top" = "$TARGET" ] || fail 'target must be the physical Git worktree root'
 prefix="$(git -c core.fsmonitor=false -C "$TARGET" rev-parse --show-prefix)" || fail 'target Git root is uncheckable'
 [ -z "$prefix" ] || fail 'target must be the Git repository root'
 RECOVERY="$(absolute "$RECOVERY")"; no_links "$RECOVERY"
@@ -142,7 +147,8 @@ acquire() {
   engine_hash="$(digest < "$SOURCE/.github/scripts/scaffold-install.sh")"
   case "$role:$engine_hash" in
     from:3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2) ;; # Historical data only; never executed.
-    from:3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284|to:3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284) ;;
+    from:3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284) ;; # Audit-base data only; never executed.
+    from:63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe|to:63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe) ;;
     *) fail 'unreviewed engine bytes for selected source role' ;;
   esac
 }

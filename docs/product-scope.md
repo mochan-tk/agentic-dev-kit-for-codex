@@ -17,9 +17,13 @@ defaults to preview, and updates only known-old engine files on explicit apply.
 It preserves customized tuned/instance/seed files, retains validated sources
 and any operation record outside the adopter, and supports the retained
 engine's offline rollback. It never stages or detects the installed version.
-The current entry accepts the exact previous engine only as FROM data, requires
-the current engine for TO, and executes only the latter. Local calls reject
-inherited Git context; linked worktrees remain supported.
+The current entry accepts both exact previous engines (including the audited
+product base) only as FROM data; TO and execution require the current engine.
+Local calls reject inherited Git context. Applying an install or upgrade,
+recorded rollback and the public updater require a physical non-bare Git
+worktree root; Git administration directories refuse.
+Normal roots, linked worktrees and submodules remain supported, and local
+non-repository previews remain available.
 
 Four companions can run explicitly from a reviewed kit checkout:
 `governance-status.sh`, `worktree-preflight.sh`, `check-connectors.sh` and
@@ -61,7 +65,12 @@ ownership and routing, supervision and handoff, verification, and retrospective
 proposals. Humans retain agreement, exceptions, acceptance and merge authority.
 
 Startup distinguishes tuned (exit 0), untuned (exit 1), and an observation
-error. A current scoped owner decline may be carried by an exact record link;
+error (exit 2). The required practical instruction must be readable; present
+targets and instruction enumeration/search failures override any markers.
+CI/CODEOWNERS absence and advisory agreements remain optional. Warning-only
+`--ci` still exits 0, with explicit warnings on failed observations, and cannot
+establish tuning success. A current scoped owner decline may be carried by an
+exact record link;
 missing or revoked consent cannot be inferred from chat history. Supervisors
 own claim/plan/dispatch and material replanning; workers acknowledge the
 current Task and plan and stay inside assigned ownership. Stop/disposition

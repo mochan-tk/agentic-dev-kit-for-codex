@@ -12,6 +12,13 @@ macOS or Linux. Install the kit's accepted 47-file payload first. The existing
 `.github/scripts/check-task-ritual.sh` must match the supported version; tuned
 or unknown helper bytes refuse. Work alone in the adopter checkout during
 setup. Use a physical directory path without symlink ancestors.
+Setup rejects the local installer's inherited Git repository-selection variables,
+`GIT_CONFIG_COUNT`, `GIT_CONFIG_PARAMETERS` and indexed `GIT_CONFIG_KEY_*` /
+`GIT_CONFIG_VALUE_*` entries (including empty values) before its first Git
+observation. Ordinary config-file isolation through `GIT_CONFIG_NOSYSTEM=1`
+and `GIT_CONFIG_GLOBAL=/dev/null` remains supported. A supplied `--target`
+never cancels repository-selection overrides.
+The target, any donor repository and their indexes remain unchanged on refusal.
 
 From the reviewed kit checkout, run the complete product gate and then name
 the actual adopter repository, its existing application workflow and the job

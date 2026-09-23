@@ -691,7 +691,7 @@ def validate(root):
             if (root / PAYLOAD / name).stat().st_mode & 0o7111:
                 errors.append("installer payload mode must be non-executable 100644: " + name)
         parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
-        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity", "frontier_cache", "boundary_repair"}:
+        if set(parity) != {"schema", "source_repository", "source_commit", "files", "installer_source", "limits", "feedback_companion", "connector_companion", "context_kickoff", "task_creation", "source_preparation", "task_selection", "ritual_verification", "governance_procedures", "bootstrap", "explicit_update", "workflow_parity", "frontier_cache", "boundary_repair", "final_boundary"}:
             errors.append("installer provenance fields drifted")
         errors.extend(validate_context_kickoff(payload_data, parity))
         errors.extend(validate_task_creation(payload_data, parity))
@@ -852,7 +852,7 @@ BOOTSTRAP_CONTRACT = {
     "trust": "initial-bootstrap-trusted-code-hashes-are-integrity-not-authentication",
     "limits": "exclusive-target-partial-failure-manual-recovery-native-windows-unmeasured",
 }
-LOCAL_ENGINE_SHA256 = "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284"
+LOCAL_ENGINE_SHA256 = "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
 
 
 def validate_bootstrap(root):
@@ -893,7 +893,7 @@ UPDATE_CONTRACT = {
         ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd"
     },
     "transport": "anonymous-https-exact-old-new-commits-bare-git-object-projection",
-    "engine_sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
+    "engine_sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
     "preservation": "fixed-47-path-class-layout-known-old-engine-only-no-stage-commit-push",
     "preview": "default-owned-scratch-only-target-index-requested-recovery-unchanged",
     "recovery": "fresh-private-root-retained-old-new-transaction-siblings-offline-bound-rollback",
@@ -906,8 +906,8 @@ UPDATE_CONTRACT = {
         "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
         "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
         "export_mode": "100644",
-        "target_blob": "97269ed19fb5a387452bc50bcf50ea73442ca545",
-        "target_sha256": "0b231321cce78040848a563e5936f64d3f4bbc9c78f5cf1d962a8ea458949255",
+        "target_blob": "ad47d692250fab9263090d837eaa7a577bf6f018",
+        "target_sha256": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780",
         "target_mode": "100644",
         "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
     }
@@ -1053,18 +1053,18 @@ BOUNDARY_TARGETS = tuple(sorted((*BOUNDARY_BASE_PATHS, INVENTORY,
 )))
 BOUNDARY_DIGESTS = {
     ".github/distribution/adopter-ci/check-adopter-ci.py": "0bed9fa2501864eb68330bd6d6aecf228695320faaa146be5c47a5bda082a4fd",
-    ".github/distribution/payload.v1.tsv": "b0a18e6e04d76d411dd3fcd725933db8bd3fe9cb226144a1438804193f7f745e",
+    ".github/distribution/payload.v1.tsv": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
-    ".github/scripts/scaffold-init.sh": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
-    ".github/scripts/scaffold-install.sh": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
-    ".github/scripts/scaffold-update.sh": "aeba5b903b9688c3741dc99135a886083e60aaa65fc2e094a43a334262f0ff18",
-    "docs/distribution/adopter-ci.md": "70208c82a1d2447cb9ddf8338540981bfba4ac8ac51ca36e2b945607e5df03d9",
-    "docs/distribution/source-first-installer.md": "5434f39667d889013e45a84697712cc721b54800cc67017010fb6df8cd65ad67",
-    "docs/known-limitations.md": "1cbc489888894e9d9f9656653528702dbdf1e0b33345217c3ad48652b66f0f2e",
-    "docs/product-scope.md": "d8583d54a87a9577f397a2b38625b1609ca0b0b09a476e0d3f857d786a55c416",
-    "docs/provenance.md": "57697a1a2bb73dc5906fcddc56779b54fb637dbcb1188b6d0b2d034ad118927d",
+    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
+    ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
+    ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
+    "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
+    "docs/distribution/source-first-installer.md": "3693cb404e5fce39f94a6888823294153520dd7a549a6d206ca1dc357e22b480",
+    "docs/known-limitations.md": "d82fb84350fc975b15b9eaadcb80942b17733cfe18d6ede272f9cf5690df63db",
+    "docs/product-scope.md": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9",
+    "docs/provenance.md": "002a7d8ae368cfff7c6b2967960eabdf5b4a9d379edbf52d3fcf2ea2043af4bc",
     "tests/conformance/test_adopter_ci.py": "5c31532a3540f45c4b75f51fdc7a8c829584b73fc817be5d241fc0740e64c2e3",
-    "tests/conformance/test_installer.py": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633",
+    "tests/conformance/test_installer.py": "296342022501dee099e39632c1c36ca681eff4210da7106d0c334f5319db191d",
     "tests/conformance/test_installer_bootstrap.py": "4a7ee53eb6dc2994df2d223ab37c09fbd7db4860ade1cbd5a96632959ab9628f",
     "tests/conformance/test_installer_update.py": "34f4c2030e54e936c5836a8a54a9863e7e02ce843020a2834410b2ef1be2f3b6",
     "tests/conformance/test_product.py": "6efe7c59dea3140757ffc3c6520893342ae250fc82296627063ab9e02fa72a9e",
@@ -1135,6 +1135,104 @@ def validate_boundary_repair(root):
     return errors
 
 
+FINAL_BASELINE = "tests/fixtures/final-boundary-baseline.json"
+FINAL_BASELINE_SHA256 = "30405147186a82014461a0c0f408d857c324c1ab16cf2a4b455b8b48e1caac37"
+FINAL_BASE_PATHS = tuple(sorted((
+    ".github/scripts/scaffold-install.sh", ".github/scripts/scaffold-init.sh", ".github/scripts/scaffold-update.sh",
+    ".github/scripts/setup-adopter-ci.py", ".github/scripts/governance-status.sh", PAYLOAD + "/.github/scripts/tuning-status.sh",
+)))
+FINAL_EXPORT_PATHS = (PAYLOAD + "/.github/scripts/tuning-status.sh",)
+FINAL_TARGETS = tuple(sorted((*FINAL_BASE_PATHS, INVENTORY,
+    "tests/conformance/test_final_boundary.py", "tests/conformance/test_installer.py",
+    "tests/conformance/test_connector_validation.py", "tests/conformance/test_companion_access.py",
+    "docs/distribution/source-first-installer.md", "docs/distribution/adopter-ci.md", "docs/distribution/companion-checks.md",
+    "docs/known-limitations.md", "docs/provenance.md", "docs/product-scope.md", "docs/parity-status.md",
+)))
+FINAL_DIGESTS = {
+    ".github/distribution/payload.v1.tsv": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821",
+    ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
+    ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
+    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
+    ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
+    ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
+    ".github/scripts/setup-adopter-ci.py": "bc71de2c2dbc35bd7d2a53749b710e54618d7286d24784720eda261c39b4993c",
+    "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
+    "docs/distribution/companion-checks.md": "ede46e2f9491ccaf69eb0e212cbe761569294c92875fc323b76d16eb422ab05c",
+    "docs/distribution/source-first-installer.md": "3693cb404e5fce39f94a6888823294153520dd7a549a6d206ca1dc357e22b480",
+    "docs/known-limitations.md": "d82fb84350fc975b15b9eaadcb80942b17733cfe18d6ede272f9cf5690df63db",
+    "docs/parity-status.md": "21c0bf6959fb25627558f474c45f01ed35442dd9bac05931adbb7447aa33284a",
+    "docs/product-scope.md": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9",
+    "docs/provenance.md": "002a7d8ae368cfff7c6b2967960eabdf5b4a9d379edbf52d3fcf2ea2043af4bc",
+    "tests/conformance/test_companion_access.py": "d5a25e24bd05390adf9792bf5331cdaa0681b1c4cb6238ae90cb411e35f7df2d",
+    "tests/conformance/test_connector_validation.py": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780",
+    "tests/conformance/test_final_boundary.py": "3d9331ca38dd6f1fc4a30ccac03aff4df807868dbe45d7d8e1b48d9c01230bed",
+    "tests/conformance/test_installer.py": "296342022501dee099e39632c1c36ca681eff4210da7106d0c334f5319db191d"
+}
+FINAL_CONTRACT = {
+    "schema": "source-first-final-boundary/v1",
+    "product_base": "c2657da6f3fcda85d849df0f619287c5920c5265",
+    "product_base_tree": "3401e6255a7bbb37272cc7a6b083f71d1d89451f",
+    "delivery": "47-fixed-paths-tuning-only-payload-change-other-46-unchanged",
+    "target": "apply-upgrade-rollback-and-public-entry-require-physical-nonbare-worktree-root;local-preview-preserved",
+    "setup": "reject-installer-context-and-indexed-GIT_CONFIG-overrides-before-Git;ordinary-config-isolation-preserved",
+    "startup": "required-instruction-observation-error-overrides-markers;optional-CI-CODEOWNERS-advisory-agreements;CI-warning-only",
+    "governance": "grep-0-1-only-and-awk-success-required;errors-UNKNOWN;CODEOWNERS-required-only-for-team",
+    "update": "previous-and-audit-base-engines-FROM-data-only;only-current-executes-or-TO;unchanged-local-upgrade/v1",
+    "previous_engine_sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2",
+    "audit_engine_sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
+    "evidence": "real-local-tools-disposable-fixtures-synthetic-transport;dated-public-acceptance-references-only",
+    "limits": "no-new-E01-live-adopter-settings-addon-migration-runtime-Windows-or-release-claim",
+}
+
+
+def validate_final_boundary(root):
+    """Closed current correction; old source identities and seals stay immutable."""
+    errors = []
+    try:
+        parity = json.loads(regular_bytes(root, PARITY), object_pairs_hook=reject_duplicate_json_keys)
+        record = parity["final_boundary"]
+        if (set(record) != set(FINAL_CONTRACT) | {"target_files", "baseline_sha256", "export_adaptations"}
+                or any(record.get(key) != value for key, value in FINAL_CONTRACT.items())):
+            return ["final boundary scope or contract drifted"]
+        data = regular_bytes(root, FINAL_BASELINE)
+        if hashlib.sha256(data).hexdigest() != FINAL_BASELINE_SHA256 or record["baseline_sha256"] != FINAL_BASELINE_SHA256:
+            errors.append("final boundary immutable baseline changed")
+        baseline = json.loads(data, object_pairs_hook=reject_duplicate_json_keys)
+        if (set(baseline) != {"schema", "repository", "commit", "tree", "files"}
+                or baseline["schema"] != "final-boundary-baseline/v1"
+                or baseline["repository"] != "mochan-tk/agentic-dev-kit-for-codex"
+                or baseline["commit"] != FINAL_CONTRACT["product_base"]
+                or baseline["tree"] != FINAL_CONTRACT["product_base_tree"]
+                or [row["path"] for row in baseline["files"]] != list(FINAL_BASE_PATHS)):
+            errors.append("final boundary baseline identity or inventory changed")
+        for row in baseline["files"]:
+            data = base64.b64decode(row["base64"], validate=True)
+            if (set(row) != {"path", "mode", "sha256", "blob", "base64"} or row["mode"] != "100644"
+                    or row["sha256"] != hashlib.sha256(data).hexdigest()
+                    or row["blob"] != hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()):
+                errors.append("final boundary baseline bytes changed")
+        expected = [{"path": path, "mode": "100644", "sha256": hashlib.sha256(regular_bytes(root, path)).hexdigest()}
+                    for path in FINAL_TARGETS]
+        if record["target_files"] != expected or set(FINAL_DIGESTS) != set(FINAL_TARGETS):
+            errors.append("final boundary target inventory or binding changed")
+        for row in expected:
+            if row["sha256"] != FINAL_DIGESTS.get(row["path"]) or (Path(root) / row["path"]).stat().st_mode & 0o7111:
+                errors.append("final boundary exact reviewed bytes or mode changed: " + row["path"])
+        export = json.loads(regular_bytes(root, ".github/distribution/export-provenance.v1.json"), object_pairs_hook=reject_duplicate_json_keys)
+        original = {row["path"]: row for row in export["frozen_files"]}
+        adaptations = []
+        for path in FINAL_EXPORT_PATHS:
+            data = regular_bytes(root, path)
+            adaptations.append({"path": path, "export": original[path], "target_mode": "100644",
+                "target_sha256": hashlib.sha256(data).hexdigest(),
+                "target_blob": hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()})
+        if record["export_adaptations"] != adaptations:
+            errors.append("final boundary exact export adaptation changed")
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError):
+        errors.append("final boundary missing, unsafe or malformed")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -1142,7 +1240,8 @@ def main():
     errors = (validate(args.root) + validate_connector_companion(args.root)
               + validate_governance_procedures(args.root) + validate_bootstrap(args.root)
               + validate_explicit_update(args.root) + validate_workflow_parity(args.root)
-              + validate_frontier_cache(args.root) + validate_boundary_repair(args.root))
+              + validate_frontier_cache(args.root) + validate_boundary_repair(args.root)
+              + validate_final_boundary(args.root))
     for error in errors:
         print("ERROR: " + error)
     if errors:

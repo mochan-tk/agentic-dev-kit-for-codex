@@ -398,11 +398,12 @@
       "destination": ".github/scripts/tuning-status.sh",
       "source_path": ".github/scripts/tuning-status.sh",
       "source_blob": "1b764f3bd67e897e64c11c98503e5750d73746dd",
-      "target_sha256": "9cdc77cd458064d3a7f3c81d42fcf0b6d391b56a41cf7a87af342a110bf9a0b7",
+      "target_sha256": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
       "adaptations": [
         "Emit the literal installed $project-onboarding Skill entry in the optional CI summary; retain sensor exit and write scope.",
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
-        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged.",
+        "Final boundary correction: required-target and complete enumeration/search errors override markers; optional targets/advisory notes remain optional; CI warnings preserve exit zero."
       ]
     },
     {
@@ -624,7 +625,7 @@
       {
         "path": "tests/conformance/test_connector_validation.py",
         "mode": "100644",
-        "sha256": "0b231321cce78040848a563e5936f64d3f4bbc9c78f5cf1d962a8ea458949255"
+        "sha256": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780"
       }
     ]
   },
@@ -759,7 +760,7 @@
       {
         "path": ".github/scripts/governance-status.sh",
         "mode": "100644",
-        "sha256": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e"
+        "sha256": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023"
       },
       {
         "path": ".github/scripts/worktree-preflight.sh",
@@ -812,7 +813,7 @@
       {
         "path": ".github/scripts/scaffold-init.sh",
         "mode": "100644",
-        "sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f"
+        "sha256": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7"
       },
       {
         "path": ".github/scripts/scaffold-init.ps1",
@@ -822,7 +823,7 @@
       {
         "path": ".github/scripts/scaffold-install.sh",
         "mode": "100644",
-        "sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284"
+        "sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
       }
     ]
   },
@@ -836,7 +837,7 @@
       ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd"
     },
     "transport": "anonymous-https-exact-old-new-commits-bare-git-object-projection",
-    "engine_sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
+    "engine_sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
     "preservation": "fixed-47-path-class-layout-known-old-engine-only-no-stage-commit-push",
     "preview": "default-owned-scratch-only-target-index-requested-recovery-unchanged",
     "recovery": "fresh-private-root-retained-old-new-transaction-siblings-offline-bound-rollback",
@@ -849,8 +850,8 @@
       "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
       "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
       "export_mode": "100644",
-      "target_blob": "97269ed19fb5a387452bc50bcf50ea73442ca545",
-      "target_sha256": "0b231321cce78040848a563e5936f64d3f4bbc9c78f5cf1d962a8ea458949255",
+      "target_blob": "ad47d692250fab9263090d837eaa7a577bf6f018",
+      "target_sha256": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780",
       "target_mode": "100644",
       "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
     },
@@ -858,7 +859,7 @@
       {
         "path": ".github/scripts/scaffold-update.sh",
         "mode": "100644",
-        "sha256": "aeba5b903b9688c3741dc99135a886083e60aaa65fc2e094a43a334262f0ff18"
+        "sha256": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed"
       },
       {
         "path": ".github/scripts/scaffold-update.ps1",
@@ -896,7 +897,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "b0a18e6e04d76d411dd3fcd725933db8bd3fe9cb226144a1438804193f7f745e"
+        "sha256": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -931,7 +932,7 @@
       {
         "path": ".github/scripts/governance-status.sh",
         "mode": "100644",
-        "sha256": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e"
+        "sha256": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023"
       },
       {
         "path": "tests/conformance/test_source_first_governance.py",
@@ -941,7 +942,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633"
+        "sha256": "296342022501dee099e39632c1c36ca681eff4210da7106d0c334f5319db191d"
       },
       {
         "path": "tests/conformance/test_workflow_parity.py",
@@ -959,8 +960,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "b0a18e6e04d76d411dd3fcd725933db8bd3fe9cb226144a1438804193f7f745e",
-        "target_blob": "929d44b9db6ee9c7c0134218ba2c86891e360736"
+        "target_sha256": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821",
+        "target_blob": "bb2f599462339b0622f14c89297e19429fefe772"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1043,8 +1044,8 @@
           "sha256": "ebd7d548506797edc5ee04c7203b468d7ec69417b0bcb06d7fde88fb53593624"
         },
         "target_mode": "100644",
-        "target_sha256": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e",
-        "target_blob": "387cbda9ff1cd6d21bc226c8759076b3ebdab4e3"
+        "target_sha256": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
+        "target_blob": "b10e3e10c5d967582cbbd693e99774ac21d5f4fc"
       },
       {
         "path": "tests/conformance/test_source_first_governance.py",
@@ -1094,7 +1095,7 @@
       {
         "path": "docs/parity-status.md",
         "mode": "100644",
-        "sha256": "b19c3d991f9b4336078aac5cac91fcd2a15a66f1eeedd91a88123b0df4c07779"
+        "sha256": "21c0bf6959fb25627558f474c45f01ed35442dd9bac05931adbb7447aa33284a"
       }
     ],
     "export_adaptation": {
@@ -1133,7 +1134,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "b0a18e6e04d76d411dd3fcd725933db8bd3fe9cb226144a1438804193f7f745e"
+        "sha256": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1143,42 +1144,42 @@
       {
         "path": ".github/scripts/scaffold-init.sh",
         "mode": "100644",
-        "sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f"
+        "sha256": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7"
       },
       {
         "path": ".github/scripts/scaffold-install.sh",
         "mode": "100644",
-        "sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284"
+        "sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
       },
       {
         "path": ".github/scripts/scaffold-update.sh",
         "mode": "100644",
-        "sha256": "aeba5b903b9688c3741dc99135a886083e60aaa65fc2e094a43a334262f0ff18"
+        "sha256": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed"
       },
       {
         "path": "docs/distribution/adopter-ci.md",
         "mode": "100644",
-        "sha256": "70208c82a1d2447cb9ddf8338540981bfba4ac8ac51ca36e2b945607e5df03d9"
+        "sha256": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb"
       },
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "5434f39667d889013e45a84697712cc721b54800cc67017010fb6df8cd65ad67"
+        "sha256": "3693cb404e5fce39f94a6888823294153520dd7a549a6d206ca1dc357e22b480"
       },
       {
         "path": "docs/known-limitations.md",
         "mode": "100644",
-        "sha256": "1cbc489888894e9d9f9656653528702dbdf1e0b33345217c3ad48652b66f0f2e"
+        "sha256": "d82fb84350fc975b15b9eaadcb80942b17733cfe18d6ede272f9cf5690df63db"
       },
       {
         "path": "docs/product-scope.md",
         "mode": "100644",
-        "sha256": "d8583d54a87a9577f397a2b38625b1609ca0b0b09a476e0d3f857d786a55c416"
+        "sha256": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9"
       },
       {
         "path": "docs/provenance.md",
         "mode": "100644",
-        "sha256": "57697a1a2bb73dc5906fcddc56779b54fb637dbcb1188b6d0b2d034ad118927d"
+        "sha256": "002a7d8ae368cfff7c6b2967960eabdf5b4a9d379edbf52d3fcf2ea2043af4bc"
       },
       {
         "path": "tests/conformance/test_adopter_ci.py",
@@ -1188,7 +1189,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "2d0c5f0d71562e2ec8ab0ea9da0a6d03c81422d0dda5349420095d62269c6633"
+        "sha256": "296342022501dee099e39632c1c36ca681eff4210da7106d0c334f5319db191d"
       },
       {
         "path": "tests/conformance/test_installer_bootstrap.py",
@@ -1221,8 +1222,8 @@
           "sha256": "928773b97262a56edbf4f67b7d0e09fa5fbcc1580707b1cd68a8ccf13e0895b0"
         },
         "target_mode": "100644",
-        "target_sha256": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
-        "target_blob": "fb878ffe653f60eaa3e4fa17565d6b2baa1b0c63"
+        "target_sha256": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
+        "target_blob": "a3e2f990ab32b2d40573c37be46864cfa3852b5e"
       },
       {
         "path": ".github/scripts/scaffold-install.sh",
@@ -1233,8 +1234,130 @@
           "sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2"
         },
         "target_mode": "100644",
-        "target_sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
-        "target_blob": "54bca4381ae2f5422784657c171a3a6dd01c9eb4"
+        "target_sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
+        "target_blob": "3dbe283b573994c4511cd990e570a66e2b435927"
+      }
+    ]
+  },
+  "final_boundary": {
+    "schema": "source-first-final-boundary/v1",
+    "product_base": "c2657da6f3fcda85d849df0f619287c5920c5265",
+    "product_base_tree": "3401e6255a7bbb37272cc7a6b083f71d1d89451f",
+    "delivery": "47-fixed-paths-tuning-only-payload-change-other-46-unchanged",
+    "target": "apply-upgrade-rollback-and-public-entry-require-physical-nonbare-worktree-root;local-preview-preserved",
+    "setup": "reject-installer-context-and-indexed-GIT_CONFIG-overrides-before-Git;ordinary-config-isolation-preserved",
+    "startup": "required-instruction-observation-error-overrides-markers;optional-CI-CODEOWNERS-advisory-agreements;CI-warning-only",
+    "governance": "grep-0-1-only-and-awk-success-required;errors-UNKNOWN;CODEOWNERS-required-only-for-team",
+    "update": "previous-and-audit-base-engines-FROM-data-only;only-current-executes-or-TO;unchanged-local-upgrade/v1",
+    "previous_engine_sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2",
+    "audit_engine_sha256": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284",
+    "evidence": "real-local-tools-disposable-fixtures-synthetic-transport;dated-public-acceptance-references-only",
+    "limits": "no-new-E01-live-adopter-settings-addon-migration-runtime-Windows-or-release-claim",
+    "baseline_sha256": "30405147186a82014461a0c0f408d857c324c1ab16cf2a4b455b8b48e1caac37",
+    "target_files": [
+      {
+        "path": ".github/distribution/payload.v1.tsv",
+        "mode": "100644",
+        "sha256": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
+        "mode": "100644",
+        "sha256": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1"
+      },
+      {
+        "path": ".github/scripts/governance-status.sh",
+        "mode": "100644",
+        "sha256": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023"
+      },
+      {
+        "path": ".github/scripts/scaffold-init.sh",
+        "mode": "100644",
+        "sha256": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7"
+      },
+      {
+        "path": ".github/scripts/scaffold-install.sh",
+        "mode": "100644",
+        "sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
+      },
+      {
+        "path": ".github/scripts/scaffold-update.sh",
+        "mode": "100644",
+        "sha256": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed"
+      },
+      {
+        "path": ".github/scripts/setup-adopter-ci.py",
+        "mode": "100644",
+        "sha256": "bc71de2c2dbc35bd7d2a53749b710e54618d7286d24784720eda261c39b4993c"
+      },
+      {
+        "path": "docs/distribution/adopter-ci.md",
+        "mode": "100644",
+        "sha256": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb"
+      },
+      {
+        "path": "docs/distribution/companion-checks.md",
+        "mode": "100644",
+        "sha256": "ede46e2f9491ccaf69eb0e212cbe761569294c92875fc323b76d16eb422ab05c"
+      },
+      {
+        "path": "docs/distribution/source-first-installer.md",
+        "mode": "100644",
+        "sha256": "3693cb404e5fce39f94a6888823294153520dd7a549a6d206ca1dc357e22b480"
+      },
+      {
+        "path": "docs/known-limitations.md",
+        "mode": "100644",
+        "sha256": "d82fb84350fc975b15b9eaadcb80942b17733cfe18d6ede272f9cf5690df63db"
+      },
+      {
+        "path": "docs/parity-status.md",
+        "mode": "100644",
+        "sha256": "21c0bf6959fb25627558f474c45f01ed35442dd9bac05931adbb7447aa33284a"
+      },
+      {
+        "path": "docs/product-scope.md",
+        "mode": "100644",
+        "sha256": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9"
+      },
+      {
+        "path": "docs/provenance.md",
+        "mode": "100644",
+        "sha256": "002a7d8ae368cfff7c6b2967960eabdf5b4a9d379edbf52d3fcf2ea2043af4bc"
+      },
+      {
+        "path": "tests/conformance/test_companion_access.py",
+        "mode": "100644",
+        "sha256": "d5a25e24bd05390adf9792bf5331cdaa0681b1c4cb6238ae90cb411e35f7df2d"
+      },
+      {
+        "path": "tests/conformance/test_connector_validation.py",
+        "mode": "100644",
+        "sha256": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780"
+      },
+      {
+        "path": "tests/conformance/test_final_boundary.py",
+        "mode": "100644",
+        "sha256": "3d9331ca38dd6f1fc4a30ccac03aff4df807868dbe45d7d8e1b48d9c01230bed"
+      },
+      {
+        "path": "tests/conformance/test_installer.py",
+        "mode": "100644",
+        "sha256": "296342022501dee099e39632c1c36ca681eff4210da7106d0c334f5319db191d"
+      }
+    ],
+    "export_adaptations": [
+      {
+        "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
+        "export": {
+          "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
+          "mode": "100644",
+          "source_blob": "e790230fc81025c6bd0b1c7f5cb01416fb6e56b8",
+          "sha256": "9cdc77cd458064d3a7f3c81d42fcf0b6d391b56a41cf7a87af342a110bf9a0b7"
+        },
+        "target_mode": "100644",
+        "target_sha256": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
+        "target_blob": "f15ac3fd250186781d4738f087a7362ee1f8e53e"
       }
     ]
   }

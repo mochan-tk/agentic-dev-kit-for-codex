@@ -36,33 +36,40 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "export_source_blob": "6b1cd8446b382c37157903fbdb0ffbd2556443db",
     "export_sha256": "3e03f1436d33fec448b23b3cc51b1a354c7f91cbdc3b5bf9f9a4f99c34ddd778",
     "export_mode": "100644",
-    "target_blob": "97269ed19fb5a387452bc50bcf50ea73442ca545",
-    "target_sha256": "0b231321cce78040848a563e5936f64d3f4bbc9c78f5cf1d962a8ea458949255",
+    "target_blob": "ad47d692250fab9263090d837eaa7a577bf6f018",
+    "target_sha256": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780",
     "target_mode": "100644",
     "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
 }
 TEST_MODULES = (
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
-    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py",
+    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py", "test_final_boundary.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "b0a18e6e04d76d411dd3fcd725933db8bd3fe9cb226144a1438804193f7f745e",
+    ".github/distribution/payload.v1.tsv": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
     ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
-    ".github/scripts/governance-status.sh": "8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e",
+    ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
     "tests/conformance/test_source_first_governance.py": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece"
 }
 FRONTIER_EXPORT_PATH = PAYLOAD + "/.agents/skills/plan-management/scripts/frontier.sh"
 FRONTIER_EXPORT_SHA256 = "0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6"
 BOUNDARY_EXPORT_DIGESTS = {
-    ".github/scripts/scaffold-init.sh": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
-    ".github/scripts/scaffold-install.sh": "3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284"
+    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
+    ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
+}
+FINAL_EXPORT_DIGESTS = {
+    ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1"
+}
+CURRENT_RECEIPTS = {
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5788166242",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/16#issuecomment-5781753917",
 }
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
@@ -73,7 +80,7 @@ PUBLIC_DOCS = (
     "docs/distribution/ongoing-improvement.md", "docs/distribution/feedback.md", "docs/parity-status.md",
 )
 FEEDBACK_RECORD = ".github/distribution/feedback-delivery.v1.json"
-FEEDBACK_RECORD_SHA256 = "35df85016abcbd2a088d388e16329017c3e1ad1c074120f68058762e35fa9d1d"
+FEEDBACK_RECORD_SHA256 = "8b781f931c2e31c3b023db68a28dbf361c4dc487b7c96c2ab1bf58441d8e5a62"
 FEEDBACK_GUIDE = "docs/distribution/feedback.md"
 FEEDBACK_BLOCK_SHA256 = "6851507e47ded37aa5258d20b9a6262d1e9117cb32782e70bc6fc3207acb82f3"
 FEEDBACK_EXPORT_DIGESTS = {
@@ -84,7 +91,7 @@ FEEDBACK_TARGET_DIGESTS = {
     ".github/scripts/feedback-lib.sh": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20",
     ".github/scripts/report-installer-failure.sh": "9880d074c768c694816181af1f94e0288afa9a7cc15dc22537d701fcc9bd5e07",
     ".github/scripts/scaffold-init.ps1": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01",
-    ".github/scripts/scaffold-init.sh": "49678d62e3c65737daad1b79cd92c9559bb4d409bb5b4685c7e76a2986d04d8f",
+    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
     "docs/distribution/feedback.md": "8183519eb660e1caa47f3b50b67b7ec7c28f5cdb0ad7ecd92ff968d858eec8b1",
     "tests/conformance/test_feedback_delivery.py": "c2f7f9997e6d3f01fe51167cf4e837392841f6290249ad1e408df9bf93d66d7f"
 }
@@ -107,9 +114,9 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "26c4ffee4f088ed46437cfa77748a7ee37a1cffd69317d60cfab7f21cac941ec"
+ADOPTER_RECORD_SHA256 = "d055e588c3b91bdd60d004edd3de99e0d0ce4879dfb362e7445d81a2ff2dacdf"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "b493dce56e81b961748993bcb4bcabe5dcf9094fb673fc2ed2ec599f46b3c8fd"
+IMPROVEMENT_RECORD_SHA256 = "7e3890272ee8ce39af4a9777eb333d0be230d4f3394d5b7a659c4c38fedc585f"
 IMPROVEMENT_SOURCE_FILES = {
     ".github/scripts/retro-hygiene.sh": "49df279b865f6a6f7484621158fc7c48a2b1b3cd",
     ".github/workflows/retro-hygiene.yml": "8e2db7437c1950e435c04a9210a6461651197a01",
@@ -273,6 +280,13 @@ def validate_export(root):
                 continue
             data = read_bytes(root, row["path"])
             git_blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+            if row["path"] in FINAL_EXPORT_DIGESTS:
+                adaptation = next(item for item in parity["final_boundary"]["export_adaptations"] if item["path"] == row["path"])
+                expected = {"path": row["path"], "export": row, "target_mode": "100644",
+                            "target_sha256": digest(data), "target_blob": git_blob}
+                if adaptation != expected or digest(data) != FINAL_EXPORT_DIGESTS[row["path"]]:
+                    errors.append("final boundary exact approved export adaptation changed: " + row["path"])
+                continue
             if row["path"] in FEEDBACK_EXPORT_DIGESTS:
                 delivery = bound_json(root, FEEDBACK_RECORD, FEEDBACK_RECORD_SHA256)
                 adaptation = next(item for item in delivery["export_adaptations"] if item["path"] == row["path"])
@@ -349,6 +363,15 @@ def validate_navigation(root):
             errors.append("README product limits missing")
         for name in PUBLIC_DOCS:
             text = read_bytes(root, name).decode()
+            if name == "docs/parity-status.md":
+                # Only complete links inside this dated current-state section
+                # may cite these two exact public receipts. Historical links
+                # elsewhere, neighboring Issues and altered fragments refuse.
+                prefix, heading, current = text.partition("## Current acceptance as of 2026-09-23\n")
+                section, following, rest = current.partition("\n## ")
+                section = re.sub(r'\[[^\]]+\]\(([^)]+)\)',
+                    lambda match: "[accepted public receipt]" if match.group(1) in CURRENT_RECEIPTS else match.group(0), section)
+                text = prefix + heading + section + following + rest
             if re.search(r"agentic-dev-kit-for-codex/(?:issues|pull)/[0-9]+", text):
                 errors.append("historical Issue/PR points to new repository: " + name)
         for name in (".github/ISSUE_TEMPLATE/ai-task.yml", ".github/ISSUE_TEMPLATE/epic.yml"):
@@ -675,7 +698,8 @@ def validate(root):
         errors += (checker.validate(root) + checker.validate_connector_companion(root)
                    + checker.validate_governance_procedures(root) + checker.validate_bootstrap(root)
                    + checker.validate_explicit_update(root) + checker.validate_workflow_parity(root)
-                   + checker.validate_frontier_cache(root) + checker.validate_boundary_repair(root))
+                   + checker.validate_frontier_cache(root) + checker.validate_boundary_repair(root)
+                   + checker.validate_final_boundary(root))
     except (OSError, ValueError, ImportError, AttributeError, TypeError):
         errors.append("mandatory installer validation unavailable")
     return errors

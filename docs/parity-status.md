@@ -4,7 +4,9 @@ This is a behavior-level comparison with Copilot source
 [`446071c76f14f5fbda37a0eef1b6eafa0a3ab897`](https://github.com/mochan-tk/agentic-dev-kit-for-copilot/tree/446071c76f14f5fbda37a0eef1b6eafa0a3ab897),
 not a percentage complete or a claim that every source filename, client or
 runtime feature must be copied. Accepted product outcomes remain historical;
-new candidate evidence and owner acceptance are distinct.
+new candidate evidence and owner acceptance are distinct. The following table
+is the retained implementation snapshot; the dated acceptance section below
+records later public decisions without rewriting those checkpoints.
 
 | Audit ID | Current implementation and disposition | Evidence and remaining boundary |
 | --- | --- | --- |
@@ -44,3 +46,32 @@ product-final or release acceptance follows from this table. T12 remains paused,
 `release_blocked=true` remains in force, and the original 136 scenarios stay
 `not-run` with `results: []`. No existing-adopter, service, schedule or runtime
 operation is authorized by this document.
+
+## Current acceptance as of 2026-09-23
+
+G08 manual feedback delivery is accepted at product merge
+`c2657da6f3fcda85d849df0f619287c5920c5265`, tree
+`3401e6255a7bbb37272cc7a6b083f71d1d89451f`, in the
+[public G08 acceptance receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/16#issuecomment-5781753917).
+It covers the public form, explicit pinned sender and fixed failure guidance.
+The source's automatic interactive hook remains a deliberate difference;
+receiver workflows and schedules remain inactive. Synthetic transport tests
+remain distinct from the recorded public page observations.
+
+G09 implementation and the separately authorized bounded E01 exercise are
+accepted in the later
+[public G09/E01 acceptance receipt](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5788166242).
+The exercise used the accepted kit and matching optional addon in one fresh
+disposable project on macOS Codex desktop, with explicitly loaded installed
+instructions and Skills, a test-first worker, a successor after a normal
+completed checkpoint, an ordinary PR, actual application and metadata Actions,
+and owner-reviewed acceptance and merge. Existing implementation evidence was
+retained; this document records no new run or kit-wide test result.
+
+This acceptance does not establish native Skill/custom-role discovery,
+authenticated identity, forced stop or crash recovery, retarget freshness,
+ordinary onboarding, required-check merge enforcement, native Windows,
+existing-addon migration or universal client/runtime parity. No private project
+identifiers or evidence are reproduced. Historical checkpoints above and all
+T12, original 136 `not-run`, `results: []`, and `release_blocked=true` boundaries
+remain unchanged; this is not whole-repository or release completion.
