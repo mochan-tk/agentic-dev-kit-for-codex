@@ -61,8 +61,8 @@ conflicting residual gates are not treated as success.
   trap cleanup EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
-  revision=48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4
-  expected=8bf40f09d11dd0e9552906f2cf2c50d847f8b53367114115b880ae1c592a2a0e
+  revision=d0d0061b6cae9c67f08e9c903e2e085ff787277c
+  expected=d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023
   curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 60 --output "$scratch/helper.sh" "https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/$revision/.github/scripts/governance-status.sh" || exit $?
   [ -f "$scratch/helper.sh" ] && [ ! -L "$scratch/helper.sh" ] || exit 3
   if command -v sha256sum >/dev/null 2>&1; then

@@ -1298,7 +1298,7 @@
       {
         "path": "docs/distribution/companion-checks.md",
         "mode": "100644",
-        "sha256": "ede46e2f9491ccaf69eb0e212cbe761569294c92875fc323b76d16eb422ab05c"
+        "sha256": "f020b57f6fdf9a2b9d2cf9fe1f79046594e2984cd36fe47d027497c058ceb762"
       },
       {
         "path": "docs/distribution/source-first-installer.md",
@@ -1328,7 +1328,7 @@
       {
         "path": "tests/conformance/test_companion_access.py",
         "mode": "100644",
-        "sha256": "d5a25e24bd05390adf9792bf5331cdaa0681b1c4cb6238ae90cb411e35f7df2d"
+        "sha256": "77c1cccb9e016390bd75c12214668e7d909ebd86a66394cb4c101b83aebb8f44"
       },
       {
         "path": "tests/conformance/test_connector_validation.py",

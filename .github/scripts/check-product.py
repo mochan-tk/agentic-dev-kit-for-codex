@@ -160,11 +160,11 @@ ADOPTER_TARGETS = tuple(sorted((
 )))
 COMPANION_GUIDE = "docs/distribution/companion-checks.md"
 COMPANION_REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
-GOVERNANCE_COMPANION_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
+GOVERNANCE_COMPANION_REVISION = "d0d0061b6cae9c67f08e9c903e2e085ff787277c"
 # Bind only the three executable guide blocks. Prose may evolve without
 # changing execution; intentional command changes need review and regressions.
 COMPANION_BLOCKS = {
-    "companion-governance": ("governance-status.sh", "52e63878f162a58046ed03b76cc036e4fee51daf2dc005de7c00d620ac66f06a"),
+    "companion-governance": ("governance-status.sh", "8650651e0ee10985619880d9395bb43b28ad4d70e3e05156024435263e5191f7"),
     "companion-worktree": ("worktree-preflight.sh", "9556150d60de556b4c32bcaa734a3a6e1c16995c2f5572fda2d1495903b067e7"),
     "companion-connectors": ("check-connectors.sh", "e6d770142bd142b0dd324d84271e10e91b28c6aaf567742a3bcde8cf2ddd32b5"),
 }
