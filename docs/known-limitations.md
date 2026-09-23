@@ -24,8 +24,8 @@ Git for Windows, Windows filesystem behavior or every shell environment.
 
 The network updater requires exact old/new commit IDs supplied by the caller;
 there is no version registry, automatic detection, scheduled update or force.
-Both revisions must use the fixed 47-file layout. FROM permits the exact previous
-or current reviewed engine as data; TO and executed code require the current
+Both revisions must use the fixed 47-file layout. FROM permits either exact
+previous engine or the current reviewed engine as data; TO and executed code require the current
 engine. The current bootstrap also refuses a previous-engine selected revision.
 Historical TO/install requests require separately reviewed pinned historical
 entries. Arbitrary historical or upstream versions are not supported. The entry
@@ -42,6 +42,12 @@ already-new update retains sources but creates no transaction. Recovery records
 are private local data, not bug-report attachments. Preview uses owned temporary
 scratch and does not create the requested recovery directory. Exclusive access
 is required; neither updates nor rollback promise power-loss atomicity.
+
+Applying an install or upgrade, recorded rollback and the public updater require
+the physical top level of a real non-bare worktree, including linked worktrees
+and submodules. A Git administration
+directory or bare repository is not an install target, including the public
+bootstrap's all-identical no-op. Local preview retains its non-repository use.
 
 Local installer operations refuse inherited Git repository/configuration context
 overrides, even empty values, before source or target Git reads. Linked worktrees
@@ -67,6 +73,14 @@ automatic update, crash-cleanup or hostile-concurrent-writer guarantee. Checks
 preserve their original exit semantics and require actual inputs; a download
 failure is not a sensor verdict. The failure reporter still uses a reviewed
 checkout. None are installed or wired into an adopter's CI.
+Startup quiet/report return observation error (2) when required instructions,
+present targets or enumeration/search cannot be inspected completely, even if
+markers were found elsewhere. Optional CI/CODEOWNERS and advisory agreement
+notes remain optional. Control characters in area instruction filenames refuse;
+spaces and ordinary file symlinks remain supported. Warning-only startup CI
+exits 0 with diagnostics and is not proof of tuning. Governance CODEOWNERS grep
+errors and unsuccessful awk observations are UNKNOWN, required only for team.
+
 Governance requires actual repository/check/posture inputs and
 can return `UNKNOWN` for incomplete API data or unsupported workflow syntax.
 CODEOWNERS coverage, bypass approval, independent incident evidence and

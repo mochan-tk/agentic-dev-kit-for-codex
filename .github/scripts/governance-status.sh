@@ -354,7 +354,14 @@ else
   fetch co "repos/$REPO/contents/.github/CODEOWNERS?ref=$BRANCH_URI" raw
   case "$(st co)" in
     ok)
-      if grep -Eq 'CUSTOMIZE|@owner([[:space:]]|$)|@your[-_]' "$WORK/co.json" || ! awk '!/^[[:space:]]*#/ && NF>=2 && $2 ~ /^@[A-Za-z0-9]/ {n++} END{exit !n}' "$WORK/co.json"; then
+      # grep 1 is a complete no-match observation; every other failure is
+      # unknown. Observe both commands so errors outrank a partial finding.
+      co_grep=0; co_awk=0
+      grep -Eq 'CUSTOMIZE|@owner([[:space:]]|$)|@your[-_]' "$WORK/co.json" || co_grep=$?
+      co_entries="$(awk '!/^[[:space:]]*#/ && NF>=2 && $2 ~ /^@[A-Za-z0-9]/ {n++} END{print n ? "found" : "missing"}' "$WORK/co.json")" || co_awk=$?
+      if [ "$co_grep" -gt 1 ] || [ "$co_awk" -ne 0 ] || { [ "$co_entries" != found ] && [ "$co_entries" != missing ]; }; then
+        emit codeowners.tuning UNKNOWN "CODEOWNERS search observation failed" "$TEAM"
+      elif [ "$co_grep" -eq 0 ] || [ "$co_entries" = missing ]; then
         emit codeowners.tuning OFF "adopted tree with unresolved CUSTOMIZE ownership" "$TEAM"
       else
         emit codeowners.tuning ACTIVE "ownership entries observed; membership and coverage require human review" "$TEAM"

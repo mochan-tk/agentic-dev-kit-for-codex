@@ -86,7 +86,11 @@ case "$SRC/" in "$DEST/"*) fail 'source overlaps target checkout' ;; esac
 [ ! -e "$DEST" ] || [ -d "$DEST" ] || fail 'target is not a directory'
 if [ "$MODE" = apply ] || [ "$OP" = rollback ]; then
   [ -d "$DEST" ] || fail 'apply requires an existing Git repository root; initialize it explicitly first'
-  git -C "$DEST" rev-parse --git-dir >/dev/null 2>&1 || fail 'target is not a Git repository'
+  [ "$(git -C "$DEST" rev-parse --is-inside-work-tree)" = true ] || fail 'target is not a Git worktree'
+  [ "$(git -C "$DEST" rev-parse --is-bare-repository)" = false ] || fail 'target is a bare repository'
+  TOP="$(git -C "$DEST" rev-parse --show-toplevel)" || fail 'target Git root is uncheckable'
+  TOP="$(cd "$TOP" && pwd -P)" || fail 'target Git root is unavailable'
+  [ "$TOP" = "$DEST" ] || fail 'target must be the physical Git worktree root'
   PREFIX="$(git -C "$DEST" rev-parse --show-prefix)" || fail 'target Git root is uncheckable'
   [ -z "$PREFIX" ] || fail 'target must be the Git repository root'
 fi

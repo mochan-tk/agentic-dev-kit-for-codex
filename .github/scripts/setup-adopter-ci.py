@@ -27,6 +27,14 @@ def main():
         sensor = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(sensor)
         need = sensor.need
+        # -C does not cancel inherited repository/configuration selection.
+        # Presence (including an empty value) refuses before the first Git call.
+        context = {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+                   "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG",
+                   "GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS", "GIT_NAMESPACE",
+                   "GIT_SHALLOW_FILE", "GIT_REPLACE_REF_BASE"}
+        need(not any(name in context or name.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_")) for name in os.environ),
+             "Git context override is not supported by addon setup")
         target = sensor.safe_root(args.target)
         need(all(shutil.which(x) for x in ("bash", "git", "jq", "gh", "base64")),
              "required dependency unavailable")

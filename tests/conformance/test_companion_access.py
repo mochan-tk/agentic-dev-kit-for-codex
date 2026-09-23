@@ -15,7 +15,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 GUIDE = ROOT / "docs/distribution/companion-checks.md"
 REVISION = "2213860cbb16bf80d80d1c388c31bc75ae12bb7e"
-GOVERNANCE_REVISION = "48d5e6b87bbb609598178eaa385dc4ed9ea0a6d4"
+GOVERNANCE_REVISION = "d0d0061b6cae9c67f08e9c903e2e085ff787277c"
 HELPERS = {"governance": "governance-status.sh", "worktree": "worktree-preflight.sh",
            "connectors": "check-connectors.sh"}
 
@@ -203,6 +203,30 @@ if mode=="valid-but-failed": sys.exit(22)
         self.assertEqual("", fixture.sink.read_text())
         self.transport()
         self.assert_clean()
+
+    def test_governance_published_command_preserves_parser_error_precedence(self):
+        fixture = self.governance_fixture()
+        before = snapshot(self.target)
+        for command in ("grep", "awk"):
+            actual = shutil.which(command)
+            for code in ((2, 7) if command == "grep" else (1, 2, 7)):
+                self.executable(command, "import os,sys\n"
+                    "if sys.argv[-1].endswith('/co.json'): sys.exit(" + str(code) + ")\n"
+                    "os.execv(" + repr(actual) + ",[" + repr(actual) + ",*sys.argv[1:]])\n")
+                for profile in ("team", "solo", "single-maintainer"):
+                    with self.subTest(command=command, status=code, profile=profile):
+                        fixture.baseline(profile)
+                        fixture.records.write_text(json.dumps(fixture.api))
+                        result = self.run_block("governance", CHECK_PROFILE=profile)
+                        self.assertEqual(3 if profile == "team" else 0, result.returncode, result.stdout + result.stderr)
+                        self.assertIn("codeowners.tuning\tUNKNOWN\t", result.stdout)
+                        self.assertEqual(before, snapshot(self.target))
+                        self.assert_clean()
+            (self.bin / command).unlink()
+        self.assertTrue(all("/" + GOVERNANCE_REVISION + "/" in row["argv"][-1] for row in self.transport()))
+        calls = [json.loads(line) for line in fixture.calls.read_text().splitlines()]
+        self.assertTrue(calls)
+        self.assertTrue(all(row["method"] == "GET" and row["body"] is None for row in calls))
 
     def test_every_download_failure_blocks_execution_and_cleans(self):
         self.governance_fixture()

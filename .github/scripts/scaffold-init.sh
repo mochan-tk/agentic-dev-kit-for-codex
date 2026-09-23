@@ -67,7 +67,7 @@ if [ "$SELECTED" -eq 0 ]; then
       [ ! -L "$ancestor" ] || fail 'local engine ancestor is a symlink'
       case "$ancestor" in */*) ancestor="${ancestor%/*}"; [ -n "$ancestor" ] || ancestor=/ ;; *) break ;; esac
     done
-    [ "$(digest < "$ENGINE")" = 3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284 ] || fail 'unreviewed local engine bytes'
+    [ "$(digest < "$ENGINE")" = 63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe ] || fail 'unreviewed local engine bytes'
     # Keep the engine in this PID so terminating the entry cannot leave a
     # child installing. The verified engine's BASH_SOURCE and stdin stay intact.
     # Its operation_finish EXIT trap retains cleanup and calls this exit last.
@@ -166,7 +166,7 @@ if [ "$SELECTED" -eq 0 ]; then
     [ "$(digest < "$WORK/src/.github/distribution/payload/$name")" = "$hash" ] || fail 'payload digest mismatch'
   done < "$MANIFEST"
   for path in .github/scripts/scaffold-init.sh .github/scripts/scaffold-init.ps1 .github/scripts/scaffold-install.sh; do project "$path"; done
-  [ "$(digest < "$WORK/src/.github/scripts/scaffold-install.sh")" = 3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284 ] || fail 'unreviewed local engine bytes'
+  [ "$(digest < "$WORK/src/.github/scripts/scaffold-install.sh")" = 63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe ] || fail 'unreviewed local engine bytes'
   # All selected objects, layout and hashes passed before selected code runs.
   bash "$WORK/src/.github/scripts/scaffold-init.sh" --_selected "$PIN" "$WORK" "$@"
   exit "$?"
@@ -177,7 +177,12 @@ printf 'Selected source-commit=%s\n' "$PIN"
 if [ "$MODE" = dry-run ]; then SCAFFOLD_SOURCE_DIR="$SOURCE" bash "$ENGINE" --dry-run "$TARGET"; exit "$?"; fi
 PLAN="$(SCAFFOLD_SOURCE_DIR="$SOURCE" bash "$ENGINE" --dry-run "$TARGET")" || fail 'local engine preflight failed'
 target_git() { git -c core.fsmonitor=false -c core.hooksPath=/dev/null -C "$TARGET" "$@"; }
-if [ ! -d "$TARGET" ] || ! target_git rev-parse --git-dir >/dev/null 2>&1; then fail 'apply requires an existing Git repository root'; fi
+[ -d "$TARGET" ] || fail 'apply requires an existing Git repository root'
+[ "$(target_git rev-parse --is-inside-work-tree)" = true ] || fail 'target is not a Git worktree'
+[ "$(target_git rev-parse --is-bare-repository)" = false ] || fail 'target is a bare repository'
+TOP="$(target_git rev-parse --show-toplevel)" || fail 'target Git root is uncheckable'
+TOP="$(cd "$TOP" && pwd -P)" || fail 'target Git root is unavailable'
+[ "$TOP" = "$(cd "$TARGET" && pwd -P)" ] || fail 'target must be the physical Git worktree root'
 [ -z "$(target_git rev-parse --show-prefix)" ] || fail 'target must be the Git repository root'
 INDEX="$(target_git rev-parse --git-path index)" || fail 'target index is uncheckable'
 case "$INDEX" in /*|[A-Za-z]:/*) ;; *) INDEX="$TARGET/$INDEX" ;; esac

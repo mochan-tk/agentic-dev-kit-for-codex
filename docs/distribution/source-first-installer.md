@@ -9,6 +9,12 @@ From an existing adopter Git root, the README Bash and PowerShell pipelines
 need no kit clone. External invocation defaults to apply and stages only files
 created in that invocation. Explicit --dry-run changes neither adopter files
 nor index; disposable acquisition scratch is separate and removed on exit.
+Applying an install or known-old upgrade, recorded rollback and the public
+updater require the physical top level of a non-bare Git worktree.
+Git administration directories and bare repositories
+refuse, even when a public bootstrap finds every payload file already identical.
+Normal roots, linked worktrees and real submodules remain supported. Local
+dry-run previews retain their existing non-repository behavior.
 
 For an immutable reviewed revision, replace FULL_COMMIT_SHA with its full
 40-character SHA in both places, so initial entry and selected source agree:
@@ -36,7 +42,7 @@ engine and stages; an older initial wrapper never applies its stage policy to
 a different selected revision. The private dispatch mode is a process routing
 boundary, not an authenticated identity or a general recursive bootstrap API.
 
-The current bootstrap refuses selected revisions with the previous engine,
+The current bootstrap refuses selected revisions with either previous engine,
 including the accepted pre-repair revision. To install that historical revision,
 separately review and pin its own historical entry and selected revision together.
 A new entry is available through `main` only after its PR is merged; an unmerged
@@ -351,7 +357,7 @@ credential helpers, templates and hooks. Unsupported Git context and client
 certificate/TLS override variables refuse. Strict object checks precede bounded
 projection: exact regular-blob modes, the fixed 47-path/class layout, complete
 payload enumeration, Git blob hashes and payload SHA-256 values must pass for
-both revisions. FROM accepts exactly the previous reviewed engine or current
+both revisions. FROM accepts either exact previously reviewed engine or current
 reviewed engine as retained data. TO requires the current reviewed engine, and
 only that new engine executes; selected
 updater or bootstrap code is not projected or executed. Integrity checks do not

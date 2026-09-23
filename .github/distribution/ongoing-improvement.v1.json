@@ -58,17 +58,17 @@
     {
       "path": "docs/known-limitations.md",
       "mode": "100644",
-      "sha256": "1cbc489888894e9d9f9656653528702dbdf1e0b33345217c3ad48652b66f0f2e"
+      "sha256": "d82fb84350fc975b15b9eaadcb80942b17733cfe18d6ede272f9cf5690df63db"
     },
     {
       "path": "docs/product-scope.md",
       "mode": "100644",
-      "sha256": "d8583d54a87a9577f397a2b38625b1609ca0b0b09a476e0d3f857d786a55c416"
+      "sha256": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9"
     },
     {
       "path": "docs/provenance.md",
       "mode": "100644",
-      "sha256": "57697a1a2bb73dc5906fcddc56779b54fb637dbcb1188b6d0b2d034ad118927d"
+      "sha256": "002a7d8ae368cfff7c6b2967960eabdf5b4a9d379edbf52d3fcf2ea2043af4bc"
     },
     {
       "path": "tests/conformance/test_ongoing_improvement.py",
