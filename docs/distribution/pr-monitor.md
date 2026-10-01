@@ -70,8 +70,11 @@ contract is accepted. The bounded file must be regular, non-executable and
 single-link, with no symlink components; FIFOs, hardlinks and malformed or
 contradictory records refuse. Parent components are traversed only after each
 preceding component has passed its no-follow check, so a symlink followed by
-`..` cannot select a different previous file. Ordinary physical paths and
-read/write permission variation are supported. Its bytes and identity are
+`..` cannot select a different previous file. A supplied path ending in `/`,
+`/.` or `/..` refuses rather than being normalized into a different filename.
+Ordinary absolute/relative paths, leading `./`, physical parent traversal,
+dotted or Unicode filenames, and read/write permission variation are supported.
+Its bytes and identity are
 read back before output; mutation
 refuses the observation.
 

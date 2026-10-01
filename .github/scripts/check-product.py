@@ -121,12 +121,12 @@ ADOPTER_RECORD_SHA256 = "3cc8044c1fb173fcff780e3c8a269be7b4d46c1d690cc8964ac86c6
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
 IMPROVEMENT_RECORD_SHA256 = "3b6e6b38fe7150b13da0fc7a549266cfa2163b22c298b789148758242379e516"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "6d25bbf5f45ed13300f7dc17a0f8576655da525ace932fa4b8290b12970dc6ff"
+MONITOR_RECORD_SHA256 = "852bf56ffa4bbfa2df23fd745b4dc8f0c154e94791bd2ecafcb76cc95efdf2aa"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive
 # transport, comparison or fail-closed behavior. Intentional changes need review.
-MONITOR_SCRIPT_SHA256 = "78f066cee6c1b56b86b8957c51c3d6ebe1787f4070b0e670fb0fc638135248a7"
+MONITOR_SCRIPT_SHA256 = "69fca7014cfac32e42ab3248d08c43958e26f35b46f7c848534a52b03b34c138"
 MONITOR_CONTRACT = {
     "schema": "pr-monitor-provenance/v1",
     "product_base": "2c2c2e79394345fb59cf581ac881654d74452b8a",
@@ -760,6 +760,12 @@ def validate_pr_monitor(root):
             link.symlink_to(child, target_is_directory=True)
             if helper.safe_read(str(child) + "/../../" + target.name)[0] != b"physical-report":
                 raise ValueError("monitor physical parent-path guard")
+            for suffix in ("/", "//", "/.", "/./", "/..", "/../", "/../.", "/.//"):
+                refuses(helper.safe_read, str(target) + suffix)
+            dotted = directory / "previous.json."
+            dotted.write_bytes(b"dotted-report")
+            if helper.safe_read(str(directory) + "/./" + dotted.name)[0] != b"dotted-report":
+                raise ValueError("monitor literal filename positive guard")
             try:
                 helper.safe_read(str(link) + "/../" + target.name)
             except (helper.Fault, OSError):

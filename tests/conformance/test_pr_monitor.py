@@ -166,10 +166,11 @@ class MonitorTests(unittest.TestCase):
     def calls(self):
         return json.loads(self.state.read_text())["calls"]
 
-    def run_cli(self, *extra, ok=0, base=True):
+    def run_cli(self, *extra, ok=0, base=True, cwd=None):
         args = [sys.executable, "-I", str(ROOT / SCRIPT)]
         if base: args += ["--repo", REPO, "--check", "quality=15368"]
-        result = subprocess.run(args + list(extra), env=self.env, text=True, capture_output=True, timeout=15)
+        result = subprocess.run(args + list(extra), env=self.env, cwd=cwd,
+                                text=True, capture_output=True, timeout=15)
         self.assertEqual(ok, result.returncode, result.stdout + result.stderr)
         for private in ("PRIVATE_SENTINEL", "private.invalid", str(self.directory)):
             self.assertNotIn(private, result.stdout + result.stderr)
@@ -441,6 +442,43 @@ class MonitorTests(unittest.TestCase):
         self.save()
         result = self.run_cli("--previous", supplied)
         self.assertEqual("unchanged", json.loads(result.stdout)["comparison"]["pull_requests"][0]["indicator"])
+        self.assertEqual(original, self.previous.read_bytes())
+
+    def test_previous_literal_terminal_components_refuse_before_api(self):
+        original = self.save_previous()
+        for suffix in ("/", "//", "/.", "/./", "/..", "/../", "/../.", "/.//"):
+            with self.subTest(suffix=suffix):
+                supplied = str(self.previous) + suffix
+                # The OS lookup is not a regular-file lookup; Path alone would
+                # erase some terminal components and select the existing file.
+                with self.assertRaises(OSError):
+                    with open(supplied, "rb"):
+                        pass
+                self.save()
+                result = self.run_cli("--previous", supplied, ok=2)
+                self.assertEqual("", result.stdout)
+                self.assertEqual("pr-monitor: invalid input or previous report\n", result.stderr)
+                self.assertEqual([], self.calls())
+                self.assertEqual(original, self.previous.read_bytes())
+
+    def test_previous_literal_valid_relative_dotted_and_unicode_filenames(self):
+        original = self.save_previous()
+        child = self.directory / "child"
+        child.mkdir()
+        names = ("previous.json.", ".previous.json", "日本語 report.json", "previous..json")
+        supplied_paths = [str(self.previous), self.previous.name, "./" + self.previous.name,
+                          "child/../" + self.previous.name, "child/./../" + self.previous.name]
+        for name in names:
+            (self.directory / name).write_bytes(original)
+            supplied_paths.append("./" + name)
+        for supplied in supplied_paths:
+            with self.subTest(supplied=supplied):
+                self.save()
+                result = self.run_cli("--previous", supplied, cwd=self.directory)
+                report = json.loads(result.stdout)
+                self.assertEqual("unchanged", report["comparison"]["pull_requests"][0]["indicator"])
+                self.assertEqual("", result.stderr)
+                self.assertEqual(8, len(self.calls()))
         self.assertEqual(original, self.previous.read_bytes())
 
     def publication_command(self, seconds=None):
@@ -909,6 +947,18 @@ class MonitorTests(unittest.TestCase):
                 with self.reseal(root), patch.object(self.checker, "MONITOR_SCRIPT_SHA256",
                                                      hashlib.sha256(helper.read_bytes()).hexdigest()):
                     self.assertTrue(self.checker.validate_pr_monitor(root))
+
+    def test_resealed_terminal_path_normalization_fails_executable_guard(self):
+        with self.guard_fixture() as root:
+            helper = root / SCRIPT
+            helper.write_text(helper.read_text() +
+                              "\n_literal_read=safe_read\ndef safe_read(path):\n"
+                              "    return _literal_read(Path(path))\n")
+            # Reseal both hashes: the executable check must reject the old
+            # normalization behavior independently of integrity bindings.
+            with self.reseal(root), patch.object(self.checker, "MONITOR_SCRIPT_SHA256",
+                                                 hashlib.sha256(helper.read_bytes()).hexdigest()):
+                self.assertTrue(self.checker.validate_pr_monitor(root))
 
 
 if __name__ == "__main__":

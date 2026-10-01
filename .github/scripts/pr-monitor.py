@@ -132,10 +132,14 @@ def identity(info):
 
 def safe_read(path):
     """No-follow components, bounded single-link regular file and identity readback."""
+    supplied = os.fspath(path)
+    # Path removes a terminal slash or '/.' before opening. Preserve the
+    # supplied regular-file lookup instead of selecting a normalized filename.
+    require(isinstance(supplied, str) and supplied.rsplit("/", 1)[-1] not in ("", ".", ".."))
     # Keep parent components until each preceding directory has passed the
     # no-follow open. Lexical abspath would erase a symlink followed by '..'
     # and could select a different file from the one the caller supplied.
-    path = Path(path)
+    path = Path(supplied)
     require(path.name not in ("", ".."))
     descriptor = os.open(path.anchor or ".", os.O_RDONLY | os.O_DIRECTORY)
     try:
