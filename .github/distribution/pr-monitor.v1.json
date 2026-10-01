@@ -1,0 +1,29 @@
+{
+  "schema": "pr-monitor-provenance/v1",
+  "product_base": "2c2c2e79394345fb59cf581ac881654d74452b8a",
+  "task": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+  "scope": "manual-source-checkout-get-only-no-payload-workflow-notification-or-model-change",
+  "evidence": "actual-local-files-and-synthetic-gh-subprocesses-not-runtime-notification-or-adopter-proof",
+  "target_files": [
+    {
+      "path": ".github/scripts/pr-monitor.py",
+      "mode": "100644",
+      "sha256": "dff8439c801f2cf48b93872bf82f931a84f65a086aa2769b793bf1944739fb11"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "sha256": "4b2db9627ae4c214c87110e9c728d30abd28f84f7ecb2a21cb59d0fd8f4c6d73"
+    },
+    {
+      "path": "docs/distribution/pr-monitor.md",
+      "mode": "100644",
+      "sha256": "e5f8490e2df68e3f9cf3c29b58ab07389398085adc31cd66f8d9c922d41262a7"
+    },
+    {
+      "path": "tests/conformance/test_pr_monitor.py",
+      "mode": "100644",
+      "sha256": "e9abc79d74588c360181d118e5444d3d33600de8188328c2a501dfdecb0bb997"
+    }
+  ]
+}
