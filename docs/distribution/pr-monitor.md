@@ -99,6 +99,9 @@ pagination must identify the same API resource/query and a coherent terminal
 boundary. Unsupported HTTP framing, redirects, encodings and pagination
 refuse. Commands clean their own POSIX process group, including descendants
 holding pipes; processes that escape that group are outside this guarantee.
+SIGINT and SIGTERM record cancellation at a controlled boundary so command
+acquisition and cleanup retain ownership. An interrupted observation returns
+non-success with fixed diagnostics; prior signal handlers are restored.
 
 Exit status is 0 for a complete observation (including action required or
 waiting), 1 for a global `UNCONFIRMED` observation, and 2 for invalid input or

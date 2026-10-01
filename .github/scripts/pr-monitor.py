@@ -39,13 +39,28 @@ RUNNING = ("queued", "in_progress", "pending", "waiting", "requested")
 FAILURES = ("failure", "timed_out", "cancelled", "action_required", "startup_failure")
 CONCLUSIONS = ("success", "neutral", "skipped", "stale", *FAILURES)
 REVIEW_STATES = ("APPROVED", "CHANGES_REQUESTED", "DISMISSED", "COMMENTED", "PENDING")
+INTERRUPT_SIGNALS = (signal.SIGINT, signal.SIGTERM)
+_cancelled = False
 
 
 class Fault(ValueError):
     """Fixed CLI diagnostics, independent of raw local or external data."""
 
 
+class Interrupted(Fault):
+    pass
+
+
+def cancel(_number, _frame):
+    # Record only: raising while Popen acquires its child handle could leave an
+    # unowned command. Repeated signals cannot interrupt the finally cleanup.
+    global _cancelled
+    _cancelled = True
+
+
 def require(condition):
+    if _cancelled:
+        raise Interrupted("interrupted")
     if not condition:
         raise Fault("unconfirmed")
 
@@ -149,6 +164,7 @@ class Transport:
                                    stderr=subprocess.PIPE, env=environment, start_new_session=True)
         selector = None
         try:
+            require(True)
             selector = selectors.DefaultSelector()
             outputs = {process.stdout: bytearray(), process.stderr: bytearray()}
             for stream in outputs:
@@ -166,7 +182,13 @@ class Transport:
                     self.total += len(chunk)
                     require(size <= MAX_BYTES + 16384 and self.total <= MAX_TOTAL_BYTES)
                     outputs[selected.fileobj].extend(chunk)
-            require(process.wait(timeout=max(0.01, deadline - time.monotonic())) == 0)
+            while process.poll() is None:
+                require(time.monotonic() < deadline)
+                try:
+                    process.wait(timeout=min(0.1, max(0.01, deadline - time.monotonic())))
+                except subprocess.TimeoutExpired:
+                    pass
+            require(process.returncode == 0)
             # stderr is consumed and bounded but never disclosed.
             outputs[process.stderr].decode("utf-8")
             return outputs[process.stdout].decode("utf-8")
@@ -178,10 +200,12 @@ class Transport:
                     pass
                 process.wait()
             finally:
-                if selector is not None:
-                    selector.close()
-                process.stdout.close()
-                process.stderr.close()
+                try:
+                    if selector is not None:
+                        selector.close()
+                finally:
+                    process.stdout.close()
+                    process.stderr.close()
 
     def api(self, endpoint):
         # Pinned host and method; no request body, authentication mutation or fallback.
@@ -624,13 +648,15 @@ def render(report, style):
     return "\n".join(lines) + "\n"
 
 
-def main(argv=None):
+def run(argv=None):
     try:
         args, expected = arguments(argv)
         previous = previous_bytes = previous_identity = None
         if args.previous is not None:
             previous_bytes, previous_identity = safe_read(args.previous)
             previous = previous_report(previous_bytes, args.repo, expected)
+    except Interrupted:
+        raise
     except (Fault, OSError, UnicodeError, TypeError, RecursionError):
         print("pr-monitor: invalid input or previous report", file=sys.stderr)
         return 2
@@ -649,6 +675,24 @@ def main(argv=None):
         return 1
     print(output, end="")
     return 0
+
+
+def main(argv=None):
+    global _cancelled
+    original_cancelled = _cancelled
+    handlers = {}
+    _cancelled = False
+    try:
+        for number in INTERRUPT_SIGNALS:
+            handlers[number] = signal.signal(number, cancel)
+        return run(argv)
+    except (Interrupted, KeyboardInterrupt):
+        print("pr-monitor: observation interrupted", file=sys.stderr)
+        return 1
+    finally:
+        for number, handler in handlers.items():
+            signal.signal(number, handler)
+        _cancelled = original_cancelled
 
 
 if __name__ == "__main__":

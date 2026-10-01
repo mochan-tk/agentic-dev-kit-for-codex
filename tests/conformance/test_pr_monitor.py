@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -51,7 +52,7 @@ def review(identifier=30, **changes):
 
 
 FAKE_GH = r'''
-import json, os, sys, time
+import json, os, subprocess, sys, time
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode
 path = Path(os.environ['FIXTURE_STATE'])
@@ -112,8 +113,14 @@ if s.get('drift_at') == call or (s.get('drift_route') == route.rsplit('/',1)[1] 
     else: result['head']['sha'] = 'c'*40
 if s.get('mutate_previous_at') == call:
     p = Path(os.environ['FIXTURE_PREVIOUS']); p.write_bytes(p.read_bytes()+b' ')
+if s.get('sleep_at') == call:
+    s['blocked_pid'] = os.getpid()
+    if s.get('spawn_child'):
+        s['blocked_child_pid'] = subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)']).pid
 path.write_text(json.dumps(s))
-if s.get('sleep_at') == call: time.sleep(30)
+if s.get('sleep_at') == call:
+    if s.get('close_pipes'): os.close(1); os.close(2)
+    time.sleep(30)
 if s.get('invalid_utf8_at') == call:
     sys.stdout.buffer.write(b'HTTP/2 200\r\ncontent-type: application/json\r\n\r\n\xff'); sys.exit()
 body = json.dumps(result,ensure_ascii=False)
@@ -466,6 +473,99 @@ class MonitorTests(unittest.TestCase):
             self.assertIsNotNone(launched[-1].returncode)
             self.assertTrue(launched[-1].stdout.closed and launched[-1].stderr.closed)
 
+    def test_cli_sigint_sigterm_initial_and_final_read_cleanup_no_traceback(self):
+        for number in (signal.SIGINT, signal.SIGTERM):
+            for call in (1, 8):
+                with self.subTest(signal=number, call=call):
+                    self.save(sleep_at=call, spawn_child=True)
+                    process = subprocess.Popen([sys.executable, "-I", str(ROOT / SCRIPT),
+                                                "--repo", REPO, "--check", "quality=15368"],
+                                               env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                               text=True)
+                    owned = []
+                    try:
+                        deadline = time.monotonic() + 4
+                        while time.monotonic() < deadline:
+                            try:
+                                state = json.loads(self.state.read_text())
+                                if "blocked_child_pid" in state:
+                                    owned = [state["blocked_pid"], state["blocked_child_pid"]]
+                                    break
+                            except json.JSONDecodeError:
+                                pass
+                            time.sleep(0.01)
+                        self.assertEqual(2, len(owned), "fake gh did not reach controlled signal point")
+                        process.send_signal(number)
+                        output, error = process.communicate(timeout=4)
+                        self.assertEqual(1, process.returncode)
+                        self.assertEqual("UNCONFIRMED", json.loads(output)["state"])
+                        self.assertEqual([], json.loads(output)["pull_requests"])
+                        self.assertEqual("pr-monitor: observation unconfirmed\n", error)
+                        for private in ("Traceback", str(self.directory), str(ROOT), "PRIVATE_SENTINEL"):
+                            self.assertNotIn(private, output + error)
+                        for pid in owned:
+                            self.assert_process_stopped(pid)
+                    finally:
+                        if process.poll() is None:
+                            process.kill()
+                        process.communicate(timeout=4)
+                        for pid in owned:
+                            try:
+                                os.kill(pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+
+    def test_main_restores_signal_handlers_and_keyboard_interrupt_is_fixed(self):
+        handlers = {number: signal.getsignal(number) for number in self.helper.INTERRUPT_SIGNALS}
+        from contextlib import redirect_stderr
+        import io
+        diagnostic = io.StringIO()
+        with patch.object(self.helper, "run", side_effect=KeyboardInterrupt), redirect_stderr(diagnostic):
+            self.assertEqual(1, self.helper.main([]))
+        self.assertEqual("pr-monitor: observation interrupted\n", diagnostic.getvalue())
+        self.assertEqual(handlers, {number: signal.getsignal(number) for number in handlers})
+        self.assertFalse(self.helper._cancelled)
+
+    def test_cli_signal_closed_pipes_live_child_wait_is_cancellable(self):
+        for signals in ((signal.SIGINT,), (signal.SIGTERM,), (signal.SIGINT, signal.SIGTERM)):
+            with self.subTest(signals=signals):
+                self.save(sleep_at=1, close_pipes=True)
+                process = subprocess.Popen([sys.executable, "-I", str(ROOT / SCRIPT),
+                                            "--repo", REPO, "--check", "quality=15368"], env=self.env,
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                owned = None
+                try:
+                    deadline = time.monotonic() + 4
+                    while time.monotonic() < deadline:
+                        try:
+                            owned = json.loads(self.state.read_text()).get("blocked_pid")
+                            if owned is not None:
+                                break
+                        except json.JSONDecodeError:
+                            pass
+                        time.sleep(0.01)
+                    self.assertIsNotNone(owned, "fake gh did not reach closed-pipe wait")
+                    time.sleep(0.1)
+                    started = time.monotonic()
+                    for number in signals:
+                        process.send_signal(number)
+                    output, error = process.communicate(timeout=3)
+                    self.assertLess(time.monotonic() - started, 2)
+                    self.assertEqual(1, process.returncode)
+                    self.assertEqual("UNCONFIRMED", json.loads(output)["state"])
+                    self.assertEqual([], json.loads(output)["pull_requests"])
+                    self.assertEqual("pr-monitor: observation unconfirmed\n", error)
+                    self.assert_process_stopped(owned)
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                    process.communicate(timeout=4)
+                    if owned is not None:
+                        try:
+                            os.kill(owned, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+
     def test_page_total_caps_full_terminal_and_changed_total(self):
         ledger = self.helper.Ledger(None, REPO)
         class Endless:
@@ -503,7 +603,9 @@ class MonitorTests(unittest.TestCase):
                 (root / name).unlink(); self.assertTrue(self.checker.validate_pr_monitor(root))
         for mode in (0o755, 0o744):
             with self.guard_fixture() as root:
-                (root / SCRIPT).chmod(mode); self.assertTrue(self.checker.validate_pr_monitor(root))
+                (root / SCRIPT).chmod(mode)
+                self.assertTrue((root / SCRIPT).stat().st_mode & 0o111)
+                self.assertTrue(self.checker.validate_pr_monitor(root))
 
     def test_manifest_tamper_resealed_closed_schema_inventory_and_modes_refuse(self):
         for kind in ("schema", "source", "task", "scope", "evidence", "inventory", "mode", "extra", "order"):

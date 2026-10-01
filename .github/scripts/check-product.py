@@ -118,12 +118,12 @@ ADOPTER_RECORD_SHA256 = "3cc8044c1fb173fcff780e3c8a269be7b4d46c1d690cc8964ac86c6
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
 IMPROVEMENT_RECORD_SHA256 = "3b6e6b38fe7150b13da0fc7a549266cfa2163b22c298b789148758242379e516"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "ab6d4fecdc593a655c5362082234fbabdf3d379babf0a786033307fa4d4cb314"
+MONITOR_RECORD_SHA256 = "6b552160276a84bf3d840cfb8079720b02ca74b0a9ed07f38b14b5676a9a4118"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive
 # transport, comparison or fail-closed behavior. Intentional changes need review.
-MONITOR_SCRIPT_SHA256 = "dff8439c801f2cf48b93872bf82f931a84f65a086aa2769b793bf1944739fb11"
+MONITOR_SCRIPT_SHA256 = "4c734d19ad80048ce10a5e611b9928ad2724f971ba0f2fee40e157c412aab007"
 MONITOR_CONTRACT = {
     "schema": "pr-monitor-provenance/v1",
     "product_base": "2c2c2e79394345fb59cf581ac881654d74452b8a",
@@ -796,6 +796,11 @@ def validate_pr_monitor(root):
                     raise ValueError("monitor GET-only transport")
                 return "HTTP/2 200\r\nContent-Type: application/json\r\n\r\n[]"
         helper.Transport.api(Capture(), "repos/fixture/example/pulls")
+        helper.cancel(None, None)
+        try:
+            refuses(helper.require, True)
+        finally:
+            helper._cancelled = False
 
         class Snapshot:
             def __init__(self, drift=False):
