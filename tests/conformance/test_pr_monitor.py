@@ -1,12 +1,15 @@
 """Real fake-gh subprocesses, bounded files and mandatory product sensor gates."""
 from contextlib import contextmanager
+import fcntl
 import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
+import pty
 import shutil
 import signal
+import select
 import subprocess
 import sys
 import tempfile
@@ -417,6 +420,263 @@ class MonitorTests(unittest.TestCase):
         self.previous.write_bytes(original); self.save(mutate_previous_at=8)
         self.run_cli("--previous", str(self.previous), ok=1)
 
+    def test_previous_symlink_parent_component_refuses_before_api(self):
+        self.save_previous()
+        child = self.directory / "real" / "child"
+        child.mkdir(parents=True)
+        (child.parent / self.previous.name).write_text("PRIVATE_SENTINEL invalid report")
+        link = self.directory / "linked"
+        link.symlink_to(child, target_is_directory=True)
+        supplied = str(link) + "/../" + self.previous.name
+        self.assertEqual(b"PRIVATE_SENTINEL invalid report", Path(supplied).read_bytes())
+        self.save()
+        self.run_cli("--previous", supplied, ok=2)
+        self.assertEqual([], self.calls())
+
+    def test_previous_physical_parent_component_retains_selected_file(self):
+        original = self.save_previous()
+        child = self.directory / "physical-child"
+        child.mkdir()
+        supplied = str(child) + "/../" + self.previous.name
+        self.save()
+        result = self.run_cli("--previous", supplied)
+        self.assertEqual("unchanged", json.loads(result.stdout)["comparison"]["pull_requests"][0]["indicator"])
+        self.assertEqual(original, self.previous.read_bytes())
+
+    def publication_command(self, seconds=None):
+        args = [sys.executable, "-I"]
+        if seconds is None:
+            args.append(str(ROOT / SCRIPT))
+        else:
+            # Change only the imported constant in this disposable subprocess;
+            # the real CLI, transport, descriptors and signal handlers still run.
+            program = ("import importlib.util,sys\n"
+                       "s=importlib.util.spec_from_file_location('monitor',sys.argv[1])\n"
+                       "m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\n"
+                       f"m.INVOCATION_SECONDS={seconds!r}\n"
+                       "raise SystemExit(m.main(sys.argv[2:]))\n")
+            args += ["-c", program, str(ROOT / SCRIPT)]
+        return args + ["--repo", REPO, "--check", "quality=15368"]
+
+    def wait_for_publication(self, process):
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                if len(self.calls()) == 26 and select.select([process.stdout], [], [], 0)[0]:
+                    # No read: the large report cannot fit in this pipe.
+                    time.sleep(0.05)
+                    self.assertIsNone(process.poll(), "report did not block on the unread pipe")
+                    return
+            except json.JSONDecodeError:
+                pass
+            time.sleep(0.01)
+        self.fail("large report did not reach publication")
+
+    def assert_fixed_publication_error(self, output, error, diagnostic):
+        self.assertEqual(diagnostic, error)
+        for private in (b"Traceback", b"Exception ignored", b"BrokenPipeError",
+                        str(self.directory).encode(), str(ROOT).encode(), b"PRIVATE_SENTINEL"):
+            self.assertNotIn(private, output + error)
+
+    def test_cli_unread_publication_sigint_sigterm_returns_non_success(self):
+        rows = [review(n, user={"id": n}, state="COMMENTED") for n in range(1, 501)]
+        for number in (signal.SIGINT, signal.SIGTERM):
+            with self.subTest(signal=number):
+                self.save(reviews=rows)
+                process = subprocess.Popen(self.publication_command(), env=self.env,
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    self.wait_for_publication(process)
+                    process.send_signal(number)
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        self.fail("cancelled publication remained blocked on unread stdout")
+                    output, error = process.communicate(timeout=2)
+                    self.assertEqual(1, process.returncode)
+                    self.assert_fixed_publication_error(output, error, b"pr-monitor: observation interrupted\n")
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                    process.communicate(timeout=3)
+
+    def test_cli_closed_stdout_large_and_small_have_fixed_error_without_exit_flush(self):
+        rows = [review(n, user={"id": n}, state="COMMENTED") for n in range(1, 501)]
+        for records in (rows, []):
+            with self.subTest(reviews=len(records)):
+                self.save(reviews=records)
+                process = subprocess.Popen(self.publication_command(), env=self.env,
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process.stdout.close()
+                process.stdout = None
+                try:
+                    output, error = process.communicate(timeout=5)
+                    self.assertEqual(1, process.returncode, error)
+                    self.assert_fixed_publication_error(output or b"", error, b"pr-monitor: output unavailable\n")
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                    process.communicate(timeout=3)
+
+    def test_cli_unread_publication_uses_invocation_deadline(self):
+        self.save(reviews=[review(n, user={"id": n}, state="COMMENTED") for n in range(1, 501)])
+        process = subprocess.Popen(self.publication_command(seconds=3), env=self.env,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        started = time.monotonic()
+        try:
+            self.wait_for_publication(process)
+            try:
+                process.wait(timeout=4)
+            except subprocess.TimeoutExpired:
+                self.fail("publication exceeded the invocation deadline on unread stdout")
+            output, error = process.communicate(timeout=2)
+            self.assertLess(time.monotonic() - started, 5)
+            self.assertEqual(1, process.returncode)
+            self.assert_fixed_publication_error(output, error, b"pr-monitor: output unavailable\n")
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.communicate(timeout=3)
+
+    def test_cli_unread_stderr_diagnostic_uses_invocation_deadline(self):
+        reader, writer = os.pipe()
+        os.set_blocking(writer, False)
+        try:
+            while True:
+                os.write(writer, b"x" * 4096)
+        except BlockingIOError:
+            pass
+        os.set_blocking(writer, True)
+        process = subprocess.Popen(self.publication_command(seconds=0.4) + ["--unsupported"],
+                                   env=self.env, stdout=subprocess.PIPE, stderr=writer)
+        try:
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.fail("fixed diagnostic remained blocked on unread stderr")
+            output, _ = process.communicate(timeout=2)
+            self.assertEqual(2, process.returncode)
+            self.assertEqual(b"", output)
+            self.assertEqual([], self.calls())
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.communicate(timeout=3)
+            os.close(reader)
+            os.close(writer)
+
+    def test_cli_regular_file_and_terminal_json_text_publication(self):
+        for style in ("json", "text"):
+            with self.subTest(style=style, destination="file"):
+                target = self.directory / "output"
+                self.save()
+                with target.open("wb") as stream:
+                    result = subprocess.run(self.publication_command() + ["--format", style],
+                                            env=self.env, stdout=stream, stderr=subprocess.PIPE, timeout=5)
+                self.assertEqual(0, result.returncode, result.stderr)
+                output = target.read_bytes()
+                if style == "json":
+                    self.assertEqual("NO_ACTION", json.loads(output)["state"])
+                else:
+                    self.assertTrue(output.startswith(b"PR monitor: NO_ACTION\n"))
+            with self.subTest(style=style, destination="terminal"):
+                self.save()
+                master, slave = pty.openpty()
+                try:
+                    result = subprocess.run(self.publication_command() + ["--format", style],
+                                            env=self.env, stdout=slave, stderr=subprocess.PIPE, timeout=5)
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    # Keep the final slave open until queued data is read;
+                    # Darwin discards unread PTY output at its last close.
+                    chunks = []
+                    while select.select([master], [], [], 1)[0]:
+                        try:
+                            chunk = os.read(master, 4096)
+                        except OSError:
+                            break
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                    output = b"".join(chunks)
+                    if style == "json":
+                        self.assertEqual("NO_ACTION", json.loads(output)["state"])
+                    else:
+                        self.assertTrue(output.startswith(b"PR monitor: NO_ACTION"))
+                finally:
+                    os.close(master)
+                    if slave is not None:
+                        os.close(slave)
+
+    def test_publication_retains_descriptor_flags_and_reaps_blocked_writer(self):
+        reader, writer = os.pipe()
+        stream = os.fdopen(writer, "w")
+        try:
+            # Darwin may add an OS status bit to readback after os.write.
+            # Compare documented descriptor configuration and FD flags.
+            mask = os.O_ACCMODE | os.O_NONBLOCK | os.O_APPEND
+            for name in ("O_ASYNC", "O_SYNC", "O_DSYNC"):
+                mask |= getattr(os, name, 0)
+            flags = fcntl.fcntl(writer, fcntl.F_GETFL) & mask
+            descriptor_flags = fcntl.fcntl(writer, fcntl.F_GETFD)
+            def unchanged():
+                self.assertEqual(flags, fcntl.fcntl(writer, fcntl.F_GETFL) & mask)
+                self.assertEqual(descriptor_flags, fcntl.fcntl(writer, fcntl.F_GETFD))
+            self.helper.publish("bounded\n", stream, time.monotonic() + 1, immediate=True)
+            unchanged()
+            self.assertEqual(b"bounded\n", os.read(reader, 4096))
+            os.set_blocking(writer, False)
+            flags |= os.O_NONBLOCK
+            real_fork = os.fork
+            owned = []
+            def fork():
+                pid = real_fork()
+                if pid:
+                    owned.append(pid)
+                return pid
+            with patch.object(self.helper.os, "fork", side_effect=fork):
+                with self.assertRaises(self.helper.OutputFault):
+                    self.helper.publish("x" * self.helper.FILE_LIMIT, stream, time.monotonic() + 0.2)
+            unchanged()
+            self.assertEqual(1, len(owned))
+            with self.assertRaises(ChildProcessError):
+                os.waitpid(owned[0], os.WNOHANG)
+            with self.assertRaises(self.helper.OutputFault):
+                self.helper.publish("diagnostic\n", stream, time.monotonic() + 1, immediate=True)
+            unchanged()
+        finally:
+            stream.close()
+            os.close(reader)
+
+    def test_cli_help_closed_stdout_uses_fixed_publication_error(self):
+        process = subprocess.Popen([sys.executable, "-I", str(ROOT / SCRIPT), "--help"],
+                                   env=self.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process.stdout.close()
+        process.stdout = None
+        try:
+            output, error = process.communicate(timeout=3)
+            self.assertEqual(1, process.returncode)
+            self.assert_fixed_publication_error(output or b"", error, b"pr-monitor: output unavailable\n")
+            self.assertEqual([], self.calls())
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.communicate(timeout=3)
+
+    def test_cli_absent_standard_descriptors_have_no_traceback(self):
+        bootstrap = ("import os,sys\n"
+                     "os.close(int(sys.argv[1]))\n"
+                     "os.execve(sys.argv[2],sys.argv[2:],os.environ)\n")
+        for descriptor, extra, status in ((1, [], 1), (1, ["--help"], 1), (2, ["--unsupported"], 2)):
+            with self.subTest(descriptor=descriptor, extra=extra):
+                self.save()
+                command = [sys.executable, "-I", "-c", bootstrap, str(descriptor)]
+                command += self.publication_command() + extra
+                result = subprocess.run(command, env=self.env, capture_output=True, timeout=5)
+                self.assertEqual(status, result.returncode, result.stderr)
+                self.assertEqual(b"", result.stdout)
+                error = b"pr-monitor: output unavailable\n" if descriptor == 1 else b""
+                self.assert_fixed_publication_error(result.stdout, result.stderr, error)
+
     def test_streaming_command_byte_call_total_and_deadline_bounds(self):
         for attribute, value in (("calls", self.helper.MAX_CALLS), ("total", self.helper.MAX_TOTAL_BYTES),
                                  ("deadline", time.monotonic() - 1)):
@@ -635,6 +895,20 @@ class MonitorTests(unittest.TestCase):
             with self.subTest(override=override.splitlines()[0]), self.guard_fixture() as root:
                 helper = root / SCRIPT; helper.write_text(helper.read_text()+"\n"+override)
                 with self.reseal(root): self.assertTrue(self.checker.validate_pr_monitor(root))
+
+    def test_resealed_unsafe_path_and_publication_fail_executable_guards(self):
+        overrides = (
+            "_physical_read=safe_read\ndef safe_read(path):\n    return _physical_read(os.path.abspath(path))\n",
+            "def publish(text,stream,deadline,**options):\n    stream.write(text)\n    stream.flush()\n",
+        )
+        for override in overrides:
+            with self.subTest(override=override.splitlines()[0]), self.guard_fixture() as root:
+                helper = root / SCRIPT
+                helper.write_text(helper.read_text() + "\n" + override)
+                # Reseal both bindings deliberately: behavior must still refuse.
+                with self.reseal(root), patch.object(self.checker, "MONITOR_SCRIPT_SHA256",
+                                                     hashlib.sha256(helper.read_bytes()).hexdigest()):
+                    self.assertTrue(self.checker.validate_pr_monitor(root))
 
 
 if __name__ == "__main__":

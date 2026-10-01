@@ -5,11 +5,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
+import tempfile
+import time
 
 EXPORT = ".github/distribution/export-provenance.v1.json"
 HISTORY = "tests/fixtures/history/manifest.json"
@@ -118,12 +121,12 @@ ADOPTER_RECORD_SHA256 = "3cc8044c1fb173fcff780e3c8a269be7b4d46c1d690cc8964ac86c6
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
 IMPROVEMENT_RECORD_SHA256 = "3b6e6b38fe7150b13da0fc7a549266cfa2163b22c298b789148758242379e516"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "6b552160276a84bf3d840cfb8079720b02ca74b0a9ed07f38b14b5676a9a4118"
+MONITOR_RECORD_SHA256 = "6d25bbf5f45ed13300f7dc17a0f8576655da525ace932fa4b8290b12970dc6ff"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive
 # transport, comparison or fail-closed behavior. Intentional changes need review.
-MONITOR_SCRIPT_SHA256 = "4c734d19ad80048ce10a5e611b9928ad2724f971ba0f2fee40e157c412aab007"
+MONITOR_SCRIPT_SHA256 = "78f066cee6c1b56b86b8957c51c3d6ebe1787f4070b0e670fb0fc638135248a7"
 MONITOR_CONTRACT = {
     "schema": "pr-monitor-provenance/v1",
     "product_base": "2c2c2e79394345fb59cf581ac881654d74452b8a",
@@ -730,6 +733,39 @@ def validate_pr_monitor(root):
             except helper.Fault:
                 return
             raise ValueError("monitor mandatory negative guard")
+
+        sink = io.StringIO()
+        helper.publish("bounded\n", sink, time.monotonic() + 1)
+        if sink.getvalue() != "bounded\n":
+            raise ValueError("monitor publication positive guard")
+        sink = io.StringIO()
+        refuses(helper.publish, "bounded\n", sink, time.monotonic() - 1)
+        if sink.getvalue():
+            raise ValueError("monitor expired publication guard")
+        helper.cancel(None, None)
+        try:
+            refuses(helper.publish, "bounded\n", sink, time.monotonic() + 1)
+            if sink.getvalue():
+                raise ValueError("monitor cancelled publication guard")
+        finally:
+            helper._cancelled = False
+        with tempfile.TemporaryDirectory(prefix="monitor-product-") as temporary:
+            directory = Path(temporary).resolve()
+            target = directory / "previous.json"
+            target.write_bytes(b"physical-report")
+            child = directory / "real" / "child"
+            child.mkdir(parents=True)
+            (child.parent / target.name).write_bytes(b"different-report")
+            link = directory / "linked"
+            link.symlink_to(child, target_is_directory=True)
+            if helper.safe_read(str(child) + "/../../" + target.name)[0] != b"physical-report":
+                raise ValueError("monitor physical parent-path guard")
+            try:
+                helper.safe_read(str(link) + "/../" + target.name)
+            except (helper.Fault, OSError):
+                pass
+            else:
+                raise ValueError("monitor symlink parent-path guard")
 
         expected = [{"name": "quality", "app_id": 1}]
         head = "a" * 40

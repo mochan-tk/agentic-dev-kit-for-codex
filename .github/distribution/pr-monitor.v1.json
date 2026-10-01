@@ -8,7 +8,7 @@
     {
       "path": ".github/scripts/pr-monitor.py",
       "mode": "100644",
-      "sha256": "4c734d19ad80048ce10a5e611b9928ad2724f971ba0f2fee40e157c412aab007"
+      "sha256": "78f066cee6c1b56b86b8957c51c3d6ebe1787f4070b0e670fb0fc638135248a7"
     },
     {
       "path": "README.md",
@@ -18,12 +18,12 @@
     {
       "path": "docs/distribution/pr-monitor.md",
       "mode": "100644",
-      "sha256": "a06cea746ac0b2468025d5b6ab9e92e25c376a0bb4b0027a39729037afe600c1"
+      "sha256": "22ed1f18ac3df7f87fa544aa01607be073729c1a00f47d4e79523112a5db0244"
     },
     {
       "path": "tests/conformance/test_pr_monitor.py",
       "mode": "100644",
-      "sha256": "a590c4520e51fd82d7cde59429b018535c72a8dd515b3fcf5abe076b930f19f2"
+      "sha256": "351c035b0cf82a4c74696bc9babb693b863e8d462fc7eb256375a080cc18bc95"
     }
   ]
 }

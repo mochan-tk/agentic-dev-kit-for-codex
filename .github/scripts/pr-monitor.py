@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import re
+import select
 import selectors
 import signal
 import stat
@@ -48,6 +51,10 @@ class Fault(ValueError):
 
 
 class Interrupted(Fault):
+    pass
+
+
+class OutputFault(Fault):
     pass
 
 
@@ -125,10 +132,14 @@ def identity(info):
 
 def safe_read(path):
     """No-follow components, bounded single-link regular file and identity readback."""
-    path = Path(os.path.abspath(path))
-    descriptor = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY)
+    # Keep parent components until each preceding directory has passed the
+    # no-follow open. Lexical abspath would erase a symlink followed by '..'
+    # and could select a different file from the one the caller supplied.
+    path = Path(path)
+    require(path.name not in ("", ".."))
+    descriptor = os.open(path.anchor or ".", os.O_RDONLY | os.O_DIRECTORY)
     try:
-        for component in path.parts[1:-1]:
+        for component in path.parts[bool(path.anchor):-1]:
             child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
                             dir_fd=descriptor)
             os.close(descriptor)
@@ -149,8 +160,8 @@ def safe_read(path):
 
 
 class Transport:
-    def __init__(self):
-        self.deadline = time.monotonic() + INVOCATION_SECONDS
+    def __init__(self, deadline=None):
+        self.deadline = time.monotonic() + INVOCATION_SECONDS if deadline is None else deadline
         self.calls = 0
         self.total = 0
 
@@ -611,9 +622,17 @@ class Parser(argparse.ArgumentParser):
     def error(self, _message):
         raise Fault("invalid-input")
 
+    def _print_message(self, message, file=None):
+        if message:
+            publish(message, file or sys.stderr, self.deadline)
 
-def arguments(argv):
+    def print_help(self, file=None):
+        publish(self.format_help(), sys.stdout if file is None else file, self.deadline)
+
+
+def arguments(argv, deadline=None):
     parser = Parser(description=__doc__, allow_abbrev=False)
+    parser.deadline = time.monotonic() + INVOCATION_SECONDS if deadline is None else deadline
     parser.add_argument("--repo", required=True)
     parser.add_argument("--check", action="append", required=True, metavar="NAME=APP_ID")
     parser.add_argument("--previous")
@@ -648,20 +667,118 @@ def render(report, style):
     return "\n".join(lines) + "\n"
 
 
-def run(argv=None):
+def output_checkpoint(deadline, allow_cancelled=False):
+    if _cancelled and not allow_cancelled:
+        raise Interrupted("interrupted")
+    if time.monotonic() >= deadline:
+        raise OutputFault("output-unavailable")
+
+
+def publish(text, stream, deadline, *, allow_cancelled=False, immediate=False):
+    """Unbuffered publication with owned writer cleanup and a shared deadline.
+
+    A child owns potentially blocking writes, including regular files and TTYs;
+    the parent keeps cancellation and deadline control without changing their
+    shared descriptor flags. No child emits Python diagnostics or flushes at exit.
+    Already unsuccessful reports/diagnostics use one nonblocking attempt instead.
+    """
     try:
-        args, expected = arguments(argv)
+        data = text.encode("utf-8")
+        if len(data) > FILE_LIMIT:
+            raise OutputFault("output-unavailable")
+        if not immediate:
+            output_checkpoint(deadline, allow_cancelled)
+        if isinstance(stream, io.StringIO):
+            stream.write(text)
+            if not immediate:
+                output_checkpoint(deadline, allow_cancelled)
+            return
+        descriptor = stream.fileno()
+        flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+        try:
+            if immediate and not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                fcntl.fcntl(descriptor, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+                if os.write(descriptor, data) != len(data):
+                    raise OutputFault("output-unavailable")
+                return
+            output_checkpoint(deadline, allow_cancelled)
+            pid = os.fork()
+            if pid == 0:
+                try:
+                    os.setsid()
+                    offset = 0
+                    while offset < len(data):
+                        try:
+                            size = os.write(descriptor, data[offset:offset + 65536])
+                            if size <= 0:
+                                os._exit(1)
+                            offset += size
+                        except BlockingIOError:
+                            select.select([], [descriptor], [], 0.1)
+                    os._exit(0)
+                except BaseException:
+                    os._exit(1)
+            reaped = False
+            try:
+                while True:
+                    output_checkpoint(deadline, allow_cancelled)
+                    try:
+                        child, status = os.waitpid(pid, os.WNOHANG)
+                    except ChildProcessError as error:
+                        # An externally reaped child is no longer ours to kill.
+                        reaped = True
+                        raise OutputFault("output-unavailable") from error
+                    if child:
+                        reaped = True
+                        if status != 0:
+                            raise OutputFault("output-unavailable")
+                        output_checkpoint(deadline, allow_cancelled)
+                        return
+                    time.sleep(min(0.01, max(0, deadline - time.monotonic())))
+            finally:
+                if not reaped:
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    try:
+                        os.waitpid(pid, 0)
+                    except ChildProcessError:
+                        pass
+        finally:
+            current = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+            fcntl.fcntl(descriptor, fcntl.F_SETFL,
+                        (current & ~os.O_NONBLOCK) | (flags & os.O_NONBLOCK))
+    except (OSError, ValueError, TypeError, UnicodeError, AttributeError) as error:
+        if isinstance(error, Fault):
+            raise
+        raise OutputFault("output-unavailable") from error
+
+
+def diagnostic(message, deadline):
+    # A full or closed stderr cannot turn a fixed diagnostic into another hang.
+    try:
+        publish("pr-monitor: " + message + "\n", sys.stderr, deadline,
+                allow_cancelled=True, immediate=True)
+    except OutputFault:
+        pass
+
+
+def run(argv=None, deadline=None):
+    transport = Transport(deadline)
+    try:
+        args, expected = arguments(argv, transport.deadline)
         previous = previous_bytes = previous_identity = None
         if args.previous is not None:
             previous_bytes, previous_identity = safe_read(args.previous)
             previous = previous_report(previous_bytes, args.repo, expected)
-    except Interrupted:
+    except (Interrupted, OutputFault):
         raise
     except (Fault, OSError, UnicodeError, TypeError, RecursionError):
-        print("pr-monitor: invalid input or previous report", file=sys.stderr)
+        diagnostic("invalid input or previous report", transport.deadline)
         return 2
     try:
-        report = observe(Ledger(Transport(), args.repo), expected)
+        report = observe(Ledger(transport, args.repo), expected)
         if previous is not None:
             compare(report, previous)
             data, current_identity = safe_read(args.previous)
@@ -670,10 +787,11 @@ def run(argv=None):
         require(len(output.encode("utf-8")) <= FILE_LIMIT)
     except (Fault, OSError, UnicodeError, ValueError, TypeError, KeyError, RecursionError,
             subprocess.SubprocessError):
-        print(render(blank_report(args.repo, expected, True), args.format), end="")
-        print("pr-monitor: observation unconfirmed", file=sys.stderr)
+        publish(render(blank_report(args.repo, expected, True), args.format), sys.stdout,
+                transport.deadline, allow_cancelled=True, immediate=True)
+        diagnostic("observation unconfirmed", transport.deadline)
         return 1
-    print(output, end="")
+    publish(output, sys.stdout, transport.deadline)
     return 0
 
 
@@ -682,12 +800,19 @@ def main(argv=None):
     original_cancelled = _cancelled
     handlers = {}
     _cancelled = False
+    deadline = time.monotonic() + INVOCATION_SECONDS
     try:
         for number in INTERRUPT_SIGNALS:
             handlers[number] = signal.signal(number, cancel)
-        return run(argv)
+        result = run(argv, deadline)
+        if result == 0:
+            output_checkpoint(deadline)
+        return result
     except (Interrupted, KeyboardInterrupt):
-        print("pr-monitor: observation interrupted", file=sys.stderr)
+        diagnostic("observation interrupted", deadline)
+        return 1
+    except OutputFault:
+        diagnostic("output unavailable", deadline)
         return 1
     finally:
         for number, handler in handlers.items():

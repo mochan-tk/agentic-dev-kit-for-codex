@@ -68,8 +68,11 @@ The file is read before network access. Only a successful report from this
 closed schema, the same exact repository spelling and the same sorted check
 contract is accepted. The bounded file must be regular, non-executable and
 single-link, with no symlink components; FIFOs, hardlinks and malformed or
-contradictory records refuse. Ordinary read/write permission variation is
-supported. Its bytes and identity are read back before output; mutation
+contradictory records refuse. Parent components are traversed only after each
+preceding component has passed its no-follow check, so a symlink followed by
+`..` cannot select a different previous file. Ordinary physical paths and
+read/write permission variation are supported. Its bytes and identity are
+read back before output; mutation
 refuses the observation.
 
 The comparison uses typed PR numbers, head/base identities and an SHA-256
@@ -84,8 +87,9 @@ locks, or promise exactly-once delivery.
 
 ## Bounds and limits
 
-The whole invocation is bounded to 120 seconds, 512 commands and 16 MiB of
-combined transport output. Each command has a 20-second deadline and a
+The whole invocation, including report publication, is bounded to 120 seconds,
+512 commands and 16 MiB of combined transport output. Each command has a
+20-second deadline and a
 2 MiB body plus 16 KiB framing limit. There are at most 25 open PRs, 500 check
 runs and 500 reviews per PR, 50 records per page, 11 pages per resource and
 20 explicitly expected checks. Reports and previous files are at most 2 MiB.
@@ -100,11 +104,20 @@ boundary. Unsupported HTTP framing, redirects, encodings and pagination
 refuse. Commands clean their own POSIX process group, including descendants
 holding pipes; processes that escape that group are outside this guarantee.
 SIGINT and SIGTERM record cancellation at a controlled boundary so command
-acquisition and cleanup retain ownership. An interrupted observation returns
-non-success with fixed diagnostics; prior signal handlers are restored.
+acquisition and cleanup retain ownership. Report publication uses an owned
+POSIX writer process with the same deadline and cancellation control, for
+pipes, regular files and terminals. Its raw writes avoid a deferred Python
+buffer flush; cancellation or timeout kills and reaps that writer. Output that
+closes or cannot finish within the deadline returns non-success; discard any
+partial report. Fixed diagnostics and already unsuccessful fallback reports use
+a bounded best-effort attempt; an unavailable stream may receive no message.
+Descriptor configuration and prior signal handlers are restored. These bounds
+cannot guarantee delivery or progress during OS-level process suspension or an
+uninterruptible filesystem operation.
 
 Exit status is 0 for a complete observation (including action required or
-waiting), 1 for a global `UNCONFIRMED` observation, and 2 for invalid input or
+waiting), 1 for a global `UNCONFIRMED` observation, interruption or unavailable
+output, and 2 for invalid input or
 an invalid previous report before network access. Diagnostics are fixed and
 never disclose raw external text or private local paths. Synthetic fake-gh
 and real local-file tests validate these boundaries; passing them is not
