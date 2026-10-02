@@ -315,6 +315,7 @@ unfinished runtime/release work remain in the [predecessor records](docs/provena
 | Draft installer feedback without a clone or share public-safe manual feedback | [Feedback guide and public form](docs/distribution/feedback.md) |
 | Opt in to separate Task metadata, retarget freshness and control drift checks | [Adopter CI companion](docs/distribution/adopter-ci.md) |
 | Review retrospective signals, official content checkpoints and feedback | [Ongoing improvement companions](docs/distribution/ongoing-improvement.md) |
+| Observe open PR checks and reviews manually | [Manual PR monitor](docs/distribution/pr-monitor.md) |
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |
 | Understand Issue-graph authority | [Installed instructions](.github/distribution/payload/AGENTS.md) |
 | Check evidence boundaries and compatibility limits | [Known limitations](docs/known-limitations.md) |

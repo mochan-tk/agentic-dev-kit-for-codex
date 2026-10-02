@@ -5,11 +5,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
+import tempfile
+import time
 
 EXPORT = ".github/distribution/export-provenance.v1.json"
 HISTORY = "tests/fixtures/history/manifest.json"
@@ -44,7 +47,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
 TEST_MODULES = (
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
-    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py", "test_final_boundary.py",
+    "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py", "test_final_boundary.py", "test_pr_monitor.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
@@ -77,7 +80,7 @@ PUBLIC_DOCS = (
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
     "docs/distribution/adopter-ci.md",
-    "docs/distribution/ongoing-improvement.md", "docs/distribution/feedback.md", "docs/parity-status.md",
+    "docs/distribution/ongoing-improvement.md", "docs/distribution/feedback.md", "docs/parity-status.md", "docs/distribution/pr-monitor.md",
 )
 FEEDBACK_RECORD = ".github/distribution/feedback-delivery.v1.json"
 FEEDBACK_RECORD_SHA256 = "acaf0e7ae1cb8789ad479d0f7e1af1e3d0460b96e0b2f1085b53c4ad65184630"
@@ -114,9 +117,23 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "d055e588c3b91bdd60d004edd3de99e0d0ce4879dfb362e7445d81a2ff2dacdf"
+ADOPTER_RECORD_SHA256 = "3cc8044c1fb173fcff780e3c8a269be7b4d46c1d690cc8964ac86c642bb9be74"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "7e3890272ee8ce39af4a9777eb333d0be230d4f3394d5b7a659c4c38fedc585f"
+IMPROVEMENT_RECORD_SHA256 = "3b6e6b38fe7150b13da0fc7a549266cfa2163b22c298b789148758242379e516"
+MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
+MONITOR_RECORD_SHA256 = "852bf56ffa4bbfa2df23fd745b4dc8f0c154e94791bd2ecafcb76cc95efdf2aa"
+MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
+                               "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
+# Independent implementation binding: changing only the manifest cannot waive
+# transport, comparison or fail-closed behavior. Intentional changes need review.
+MONITOR_SCRIPT_SHA256 = "69fca7014cfac32e42ab3248d08c43958e26f35b46f7c848534a52b03b34c138"
+MONITOR_CONTRACT = {
+    "schema": "pr-monitor-provenance/v1",
+    "product_base": "2c2c2e79394345fb59cf581ac881654d74452b8a",
+    "task": "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/21",
+    "scope": "manual-source-checkout-get-only-no-payload-workflow-notification-or-model-change",
+    "evidence": "actual-local-files-and-synthetic-gh-subprocesses-not-runtime-notification-or-adopter-proof",
+}
 IMPROVEMENT_SOURCE_FILES = {
     ".github/scripts/retro-hygiene.sh": "49df279b865f6a6f7484621158fc7c48a2b1b3cd",
     ".github/workflows/retro-hygiene.yml": "8e2db7437c1950e435c04a9210a6461651197a01",
@@ -686,11 +703,172 @@ def validate_ongoing_improvement(root):
     return []
 
 
+def validate_pr_monitor(root):
+    """Mandatory closed provenance, independent code binding and executable guards."""
+    try:
+        record = bound_json(root, MONITOR_RECORD, MONITOR_RECORD_SHA256)
+        if (set(record) != set(MONITOR_CONTRACT) | {"target_files"}
+                or any(record[key] != value for key, value in MONITOR_CONTRACT.items())
+                or [row["path"] for row in record["target_files"]] != list(MONITOR_TARGETS)):
+            raise ValueError("monitor contract")
+        for row in record["target_files"]:
+            if row != {"path": row["path"], "mode": "100644", "sha256": digest(read_bytes(root, row["path"]))}:
+                raise ValueError("monitor target binding")
+        if digest(read_bytes(root, ".github/scripts/pr-monitor.py")) != MONITOR_SCRIPT_SHA256:
+            raise ValueError("monitor independent implementation binding")
+        if "docs/distribution/pr-monitor.md" not in read_bytes(root, "README.md").decode():
+            raise ValueError("monitor navigation")
+        spec = importlib.util.spec_from_file_location("monitor_product_check", Path(root) / ".github/scripts/pr-monitor.py")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        if (helper.PAGE_SIZE, helper.MAX_PAGES, helper.MAX_PRS, helper.MAX_CHECKS, helper.MAX_REVIEWS,
+                helper.MAX_EXPECTED, helper.MAX_BYTES, helper.MAX_TOTAL_BYTES, helper.MAX_CALLS,
+                helper.FILE_LIMIT, helper.INVOCATION_SECONDS, helper.COMMAND_SECONDS) != (
+                50, 11, 25, 500, 500, 20, 2097152, 16777216, 512, 2097152, 120, 20):
+            raise ValueError("monitor bounds")
+
+        def refuses(function, *args):
+            try:
+                function(*args)
+            except helper.Fault:
+                return
+            raise ValueError("monitor mandatory negative guard")
+
+        sink = io.StringIO()
+        helper.publish("bounded\n", sink, time.monotonic() + 1)
+        if sink.getvalue() != "bounded\n":
+            raise ValueError("monitor publication positive guard")
+        sink = io.StringIO()
+        refuses(helper.publish, "bounded\n", sink, time.monotonic() - 1)
+        if sink.getvalue():
+            raise ValueError("monitor expired publication guard")
+        helper.cancel(None, None)
+        try:
+            refuses(helper.publish, "bounded\n", sink, time.monotonic() + 1)
+            if sink.getvalue():
+                raise ValueError("monitor cancelled publication guard")
+        finally:
+            helper._cancelled = False
+        with tempfile.TemporaryDirectory(prefix="monitor-product-") as temporary:
+            directory = Path(temporary).resolve()
+            target = directory / "previous.json"
+            target.write_bytes(b"physical-report")
+            child = directory / "real" / "child"
+            child.mkdir(parents=True)
+            (child.parent / target.name).write_bytes(b"different-report")
+            link = directory / "linked"
+            link.symlink_to(child, target_is_directory=True)
+            if helper.safe_read(str(child) + "/../../" + target.name)[0] != b"physical-report":
+                raise ValueError("monitor physical parent-path guard")
+            for suffix in ("/", "//", "/.", "/./", "/..", "/../", "/../.", "/.//"):
+                refuses(helper.safe_read, str(target) + suffix)
+            dotted = directory / "previous.json."
+            dotted.write_bytes(b"dotted-report")
+            if helper.safe_read(str(directory) + "/./" + dotted.name)[0] != b"dotted-report":
+                raise ValueError("monitor literal filename positive guard")
+            try:
+                helper.safe_read(str(link) + "/../" + target.name)
+            except (helper.Fault, OSError):
+                pass
+            else:
+                raise ValueError("monitor symlink parent-path guard")
+
+        expected = [{"name": "quality", "app_id": 1}]
+        head = "a" * 40
+        base = "b" * 40
+        repo = "fixture/example"
+        run = {"id": 20, "name": "quality", "app_id": 1, "head_sha": head,
+               "status": "completed", "conclusion": "success"}
+        row = {"id": 1001, "number": 1, "draft": False, "updated_at": "2026-01-01T00:00:00Z",
+               "head": {"sha": head, "repository_id": 91, "ref": "topic"},
+               "base": {"sha": base, "repository_id": 90, "ref": "main"}}
+        good = helper.pr_observation(row, [run], [], expected, repo)
+        if good["state"] != "NO_ACTION" or good["head"] != row["head"] or good["base"] != row["base"]:
+            raise ValueError("monitor identity positive guard")
+        for conclusion in ("failure", "timed_out", "cancelled", "action_required", "startup_failure"):
+            if helper.pr_observation(row, [dict(run, conclusion=conclusion)], [], expected, repo)["state"] != "ACTION_REQUIRED":
+                raise ValueError("monitor failure guard")
+        if helper.pr_observation(row, [dict(run, status="queued", conclusion=None)], [], expected, repo)["state"] != "WAITING":
+            raise ValueError("monitor waiting guard")
+        for rows in ([], [dict(run, app_id=2)], [run, dict(run, id=21)],
+                     [run, dict(run, id=21, app_id=2)], [dict(run, conclusion="skipped")]):
+            refuses(helper.selected_checks, rows, expected, repo)
+        old = {"id": 30, "user_id": 50, "state": "CHANGES_REQUESTED", "commit_sha": "c" * 40,
+               "submitted_at": "2026-01-02T00:00:00Z"}
+        comment = dict(old, id=1, state="COMMENTED", submitted_at="2026-01-03T00:00:00Z")
+        if helper.pr_observation(row, [run], [old, comment], expected, repo)["state"] != "ACTION_REQUIRED":
+            raise ValueError("monitor old decisive review guard")
+        if helper.pr_observation(row, [run], [old, dict(comment, state="DISMISSED")], expected, repo)["state"] != "NO_ACTION":
+            raise ValueError("monitor dismissal guard")
+        refuses(helper.selected_reviews, [old, dict(old, id=31, state="APPROVED")], repo, 1)
+        for bad in (b'{"x":1,"x":2}', b"NaN", b"Infinity", b"-Infinity", b"\xff"):
+            refuses(helper.parse_json, bad)
+        if helper.response("HTTP/2 200\r\nContent-Type: application/json\r\n\r\n[]")[0] != []:
+            raise ValueError("monitor HTTP positive guard")
+        for bad in ("HTTP/2 403\r\nContent-Type: application/json\r\n\r\n[]",
+                    "HTTP/2 200\r\nContent-Type: application/json\r\nContent-Encoding: gzip\r\n\r\n[]",
+                    "HTTP/2 200\r\nContent-Type: application/json\r\ncontent-type: application/json\r\n\r\n[]"):
+            refuses(helper.response, bad)
+        previous = helper.blank_report(repo, expected)
+        previous["pull_requests"] = [good]
+        helper.previous_report(helper.canonical(previous), repo, expected)
+        refuses(helper.previous_report, helper.canonical(dict(previous, delivery=True)), repo, expected)
+        refuses(helper.previous_report, helper.canonical(previous), "foreign/repo", expected)
+        bad = dict(previous, pull_requests=[dict(good, state="ACTION_REQUIRED")])
+        refuses(helper.previous_report, helper.canonical(bad), repo, expected)
+        failed = helper.blank_report(repo, expected)
+        failed["pull_requests"] = [helper.pr_observation(row, [dict(run, conclusion="failure")], [], expected, repo)]
+        failed["state"] = "ACTION_REQUIRED"
+        current = helper.blank_report(repo, expected)
+        current["pull_requests"] = [good]
+        helper.compare(current, failed)
+        if current["comparison"]["pull_requests"][0]["indicator"] != "observed-recovery":
+            raise ValueError("monitor same identity recovery guard")
+        retarget = dict(row, base=dict(row["base"], ref="other"))
+        current["pull_requests"] = [helper.pr_observation(retarget, [run], [], expected, repo)]
+        helper.compare(current, failed)
+        if current["comparison"]["pull_requests"][0]["indicator"] != "changed":
+            raise ValueError("monitor retarget comparison guard")
+
+        class Capture:
+            def command(self, args):
+                if args != ["gh", "api", "--hostname", "github.com", "--method", "GET", "--include",
+                            "-H", "Accept: application/vnd.github+json", "-H",
+                            "X-GitHub-Api-Version: 2022-11-28", "repos/fixture/example/pulls"]:
+                    raise ValueError("monitor GET-only transport")
+                return "HTTP/2 200\r\nContent-Type: application/json\r\n\r\n[]"
+        helper.Transport.api(Capture(), "repos/fixture/example/pulls")
+        helper.cancel(None, None)
+        try:
+            refuses(helper.require, True)
+        finally:
+            helper._cancelled = False
+
+        class Snapshot:
+            def __init__(self, drift=False):
+                self.repo, self.drift, self.reads = repo, drift, 0
+            def inventory(self):
+                self.reads += 1
+                return [] if self.drift and self.reads > 1 else [row]
+            def detail(self, number):
+                return row
+            def checks(self, value):
+                return [run]
+            def reviews(self, value):
+                return []
+        if helper.observe(Snapshot(), expected)["pull_requests"] != [good]:
+            raise ValueError("monitor observation positive guard")
+        refuses(helper.observe, Snapshot(True), expected)
+    except (OSError, ValueError, UnicodeError, KeyError, TypeError, AttributeError, ImportError):
+        return ["mandatory manual PR monitor is missing, unsafe or unbound"]
+    return []
+
+
 def validate(root):
     root = Path(root)
     errors = (validate_export(root) + validate_navigation(root) + validate_policy(root)
               + validate_companion_access(root) + validate_adopter_ci(root) + validate_ongoing_improvement(root)
-              + validate_feedback_delivery(root))
+              + validate_feedback_delivery(root) + validate_pr_monitor(root))
     try:
         spec = importlib.util.spec_from_file_location("installer_product_check", root / ".github/scripts/check-installer.py")
         checker = importlib.util.module_from_spec(spec)
