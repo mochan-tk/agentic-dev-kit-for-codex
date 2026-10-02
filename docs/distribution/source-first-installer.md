@@ -365,10 +365,14 @@ authenticate a publisher. Normal trusted Git, Bash and Unix tools are required.
 
 The current updater deliberately refuses a legacy-engine TO revision. A separate
 reviewed, pinned historical updater remains the route for the old engine family;
-do not assume the current entry accepts every historical source. Accepted-old to
-current updates change one installed file, the ritual helper, while preserving
-the other 46 payload contents. Current to current already-new updates are a
-separate no-op case. The `local-upgrade/v1` format is unchanged; current local
+do not assume the current entry accepts every historical source. The one-file
+ritual transition described in the [boundary-repair provenance](../provenance.md#current-boundary-repair)
+and exercised by its regression fixture is a historical case, not a guarantee
+for every accepted-old to current update. The later final-boundary correction
+also changed `tuning-status.sh`. The payload delta depends on the exact selected
+FROM/TO revisions; review their preview instead of assuming only the ritual
+helper changes. Current to current already-new updates are a separate no-op
+case. The `local-upgrade/v1` format is unchanged; current local
 code can read retained old-engine operations using their original source roots.
 
 Preview acquires sources in owned temporary scratch and removes that scratch

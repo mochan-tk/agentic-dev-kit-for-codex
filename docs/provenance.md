@@ -211,3 +211,24 @@ G09 and bounded E01 receipts without rewriting historical checkpoints or
 reproducing private evidence. Current correction tests use disposable targets
 and synthetic transport. No new live operation, runtime/Windows qualification,
 existing-addon migration, release or owner acceptance is implied.
+
+## Current documentation clarification
+
+The D01/D02 documentation stage of Task 23
+was first prepared and statically checked at product base
+`2c2c2e79394345fb59cf581ac881654d74452b8a`. Its separate publication stage
+reconciles that prose with accepted main
+`8ff74439a15f8bba759c0061be008c980fd9f8be`. The earlier one-file ritual update
+is a historical transition and regression fixture, not a claim about every
+accepted-old to current revision pair. The limitations now describe both
+reviewed-checkout and existing pinned two-file no-clone feedback routes, with
+explicit draft/send consent and manual installer handoff unchanged.
+
+Only prose and its existing current-target integrity bindings change. Earlier
+source/evidence fields, original export and historical baseline seals remain
+unchanged, as do all 47 payload files, executable examples, helper behavior and
+delivery pins. This stage does not implement or claim repair of the separate
+A01-A06 behavioral corrections, run a live installer or submit feedback.
+Ordinary existing regression/CI results and independent review for the exact
+publication head are recorded separately in the Task and PR; this provenance
+section does not assert their outcome or owner acceptance.

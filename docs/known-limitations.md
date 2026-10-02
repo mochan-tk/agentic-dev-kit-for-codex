@@ -71,8 +71,11 @@ The latter require trusted Bash/curl/hash tools, validate the complete download
 before execution and clean only their owned scratch. This adds no sandbox,
 automatic update, crash-cleanup or hostile-concurrent-writer guarantee. Checks
 preserve their original exit semantics and require actual inputs; a download
-failure is not a sensor verdict. The failure reporter still uses a reviewed
-checkout. None are installed or wired into an adopter's CI.
+failure is not a sensor verdict. The failure reporter can use a reviewed kit
+checkout or its separate [two-file pinned no-clone route](distribution/feedback.md).
+Both routes default to a local draft; sending requires explicit invocation and
+original-terminal consent. Installer failures provide only a manual handoff,
+not automatic reporting. None are installed or wired into an adopter's CI.
 Startup quiet/report return observation error (2) when required instructions,
 present targets or enumeration/search cannot be inspected completely, even if
 markers were found elsewhere. Optional CI/CODEOWNERS and advisory agreement
