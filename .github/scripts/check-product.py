@@ -117,9 +117,9 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "3cc8044c1fb173fcff780e3c8a269be7b4d46c1d690cc8964ac86c642bb9be74"
+ADOPTER_RECORD_SHA256 = "8561e0e9569d5c4b553fd1788fc9140feb10ec3d2c4146a55f1d4f8bb177ea20"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "3b6e6b38fe7150b13da0fc7a549266cfa2163b22c298b789148758242379e516"
+IMPROVEMENT_RECORD_SHA256 = "8f90eabb77f99c91489022d04f974638c138860b29e2a0fa3897b7522ba7d5c3"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
 MONITOR_RECORD_SHA256 = "bc3c8a158dfdd4af8d872e2161a1c69de42745da990fdf2cd530a3fd8a3091fb"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
