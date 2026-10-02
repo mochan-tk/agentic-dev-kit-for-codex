@@ -121,7 +121,7 @@ ADOPTER_RECORD_SHA256 = "3cc8044c1fb173fcff780e3c8a269be7b4d46c1d690cc8964ac86c6
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
 IMPROVEMENT_RECORD_SHA256 = "3b6e6b38fe7150b13da0fc7a549266cfa2163b22c298b789148758242379e516"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "852bf56ffa4bbfa2df23fd745b4dc8f0c154e94791bd2ecafcb76cc95efdf2aa"
+MONITOR_RECORD_SHA256 = "bc3c8a158dfdd4af8d872e2161a1c69de42745da990fdf2cd530a3fd8a3091fb"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive

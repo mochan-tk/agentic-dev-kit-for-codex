@@ -18,7 +18,7 @@
     {
       "path": "docs/distribution/pr-monitor.md",
       "mode": "100644",
-      "sha256": "b8990d8aba559b48b329d493bb3e6db014b5e136023c63d0479fe1466314ee41"
+      "sha256": "71c64c31ac20abc3964457044b50f020248f95ea6dc422268dd6ef63f197fc30"
     },
     {
       "path": "tests/conformance/test_pr_monitor.py",
