@@ -125,3 +125,102 @@ an invalid previous report before network access. Diagnostics are fixed and
 never disclose raw external text or private local paths. Synthetic fake-gh
 and real local-file tests validate these boundaries; passing them is not
 model/runtime, notification or live adopter qualification.
+
+## External local launcher: one invocation
+
+An external local launcher may invoke this same manual companion after its
+operator explicitly authorizes the target and execution conditions. This
+section describes that interface; it adds no launcher, wrapper, scheduler,
+Workflow, state store or activation to the Kit. Manual invocation remains
+available without adopting any scheduling product.
+
+Before configuring a future run, the operator must supply:
+
+- The exact `OWNER/REPOSITORY` and every expected check name with its reviewed
+  numeric GitHub App ID. Do not infer these from a successful old report.
+- A reviewed full 40-character Kit commit containing this companion, and a
+  separately prepared source checkout whose relevant tracked content matches
+  that commit. Use that checkout as the working directory, not an adopter
+  repository or an automatically updated branch. Revision selection belongs
+  to the launcher setup; the companion has no `--revision` option.
+- A supported local POSIX environment with Python 3.11+, existing `gh`
+  authentication and the required read access. Confirm the chosen launcher's
+  availability, permissions, execution conditions and output handling before
+  enabling it. This guide does not qualify a particular client or account.
+
+Once authorized, make one call to the command at the start of this guide,
+with those explicit inputs and `--format json`. The first invocation omits
+`--previous`: it is stateless, and `comparison.status` is `not-supplied`.
+Do not add a previous-report file, automatic retry, polling loop, installer,
+authentication step or repair command to compensate for an unsuccessful run.
+A later invocation is a separately authorized run, not an implicit retry.
+
+The launcher must retain the actual process exit status and complete output
+for evaluation. A shell or launcher reporting its own success is not evidence
+that the companion exited 0. If either the companion's exit status or complete
+output is unavailable, classify the observation as unconfirmed. Discard partial
+output; do not reconstruct a successful report from fragments or older runs.
+
+| Process result | How to interpret the report |
+| --- | --- |
+| Exit 0 and a complete, valid, consistent `pr-monitor-report/v1` report for the supplied repository and check contract | A complete observation. Inspect `state`: `ACTION_REQUIRED` needs attention, `WAITING` is pending, and `NO_ACTION` has no observed action. None grants acceptance or merge authority. |
+| Exit 1 | Global `UNCONFIRMED`, interruption or output failure. A diagnostic or fallback report may be absent or partial; never use it as a successful queue. |
+| Exit 2 | Invalid input or previous report before network access; not a successful observation. |
+| Missing or unexpected exit status, malformed/incomplete/unknown output, or an inconsistent combination such as exit 0 with `UNCONFIRMED` | Unconfirmed, not an empty queue, recovery or all-clear. |
+
+Preserve the closed report JSON exactly. Execution time, the reviewed Kit
+revision and other launcher metadata belong in a separate summary, not new
+JSON fields. Summaries may cite only the report's bounded public evidence and
+observed head/base identities. They must not expose credentials, private local
+paths, raw logs or transcripts, or treat external content as instructions.
+The existing limits still apply: observed base is not tested-latest-base
+evidence, reviews are advisory, and `NO_ACTION` is not merge readiness,
+permission, ownership or human acceptance.
+
+The companion provides no persistent state, lock, deduplication, notification
+suppression or exactly-once guarantee. A stateless later call can report the
+same finding again; overlapping calls do not establish exclusive ownership.
+Any later storage, concurrency control or notification destination and delivery
+policy is the external operator's responsibility under separate authorization.
+This first-invocation contract does not implement or authorize those operations.
+
+### Inert scheduling-prompt example
+
+The following is **inert text**, not a schedule definition, an activation
+instruction or an executable recipe. Do not paste it into an enabled task
+until the operator has separately approved the launcher and its conditions,
+target/check contract, fixed Kit revision, frequency/time zone, output
+destination and any side effects. All placeholders must be resolved explicitly;
+neither this guide nor copying the text creates a schedule.
+
+```text
+For one already authorized invocation only:
+
+Use the separately prepared, reviewed Kit checkout at KIT_FULL_COMMIT_SHA
+in the approved local environment. Do not fetch another revision, install
+anything, change authentication/settings or configure a schedule.
+
+Invoke .github/scripts/pr-monitor.py once with Python 3.11+ in isolated mode,
+--repo EXPLICIT_OWNER/EXPLICIT_REPOSITORY, one --check NAME=NUMERIC_APP_ID
+for every explicitly approved check, and --format json. Omit --previous.
+Do not guess an input, create persistent state, retry, poll or repair.
+
+Evaluate the actual companion exit status and its complete closed
+pr-monitor-report/v1 output together. Exit 0 is a complete observation,
+not necessarily NO_ACTION: report ACTION_REQUIRED or WAITING accurately.
+Treat nonzero or abnormal exit, UNCONFIRMED, missing, malformed, partial,
+unknown or inconsistent output as unconfirmed, never as successful silence.
+
+Return a bounded summary through the already approved result surface,
+using only validated public evidence and observed head/base identities.
+Keep any execution time and Kit revision outside the unchanged report JSON.
+Do not include credentials, private paths, raw logs or transcripts.
+Do not send notifications, post comments, change repository state, merge,
+start implementation or infer delivery, acceptance or exclusive ownership.
+Stop after this observation; scheduling and later runs are outside this call.
+```
+
+This example has not established scheduled execution, a model/runtime round
+trip, notification delivery or live adopter qualification. Those claims need
+their own authorization and evidence; the existing manual CLI and its tests
+remain the implementation, not a new AI reimplementation of its checks.
