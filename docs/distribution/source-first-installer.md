@@ -3,6 +3,76 @@
 Read [product scope](../product-scope.md), [limitations](../known-limitations.md) and
 [source provenance](../provenance.md) for shipped behavior and historical acceptance.
 
+## Prepare context and the desktop project
+
+The [README walkthrough](../../README.md#quick-start) assumes **Codex in the
+desktop app with a local adopter repository**. If the desktop app offers
+ChatGPT and Codex in its product selector, choose Codex for the kit's
+installation/onboarding/development work. ChatGPT Chat or Work is the
+preparation surface below, not a substitute for selecting the local Codex
+project. Shell installation is still available outside the desktop app;
+this walkthrough does not qualify every client or operating system.
+
+### Prepare the specification before adoption
+
+Before using the kit, prepare your specification context in **ChatGPT Chat
+or Work**. Use Chat to discuss goals, compare options and clarify requirements;
+use Work when you want notes or multiple sources organized into a reviewable
+document. Review the output yourself. If you already have suitable requirements
+or design material, reuse it rather than regenerating it just for onboarding.
+Unresolved choices should remain explicit questions, not invented decisions.
+
+The handoff should identify:
+
+- the problem, goal and intended users;
+- in-scope behavior and explicit non-goals;
+- technical, operational or other relevant constraints;
+- observable acceptance criteria and priorities;
+- open questions, assumptions and links or file names for source material.
+
+Save a readable copy you can provide to Codex, for example a Markdown/text
+file or an attachment. Supply the path, attachment or relevant text during
+onboarding's material step; for already committed documents, point to their
+repository paths and keep the existing files in place. Confirm the receiving
+chat can actually read the material. A source-chat link alone is not a promise
+of access, and Chat/Work history is not automatically the Codex project's
+context. Do not include credentials or material you are not authorized to
+share. Reference drafts inform planning but do not become approved agreements
+without human review. This preparation is guidance, not an installer-enforced
+gate, a required external connector, or automatic context synchronization.
+
+### Create the Codex project before the first kit command
+
+1. Prepare or clone the **adopter Git repository**: the application you intend
+   to build. The kit installer does not initialize Git or create the GitHub
+   repository. Do not select this kit's source checkout as your application.
+2. In the desktop app's Codex view, create a project for that repository, or
+   select its existing project. Attach the local repository root and make it
+   the **primary folder**. In versions with these controls, use the project's
+   **Edit project**, **Add folder**, and **Make primary** actions. New chats
+   use the primary folder for Git operations and automatic discovery of
+   `AGENTS.md`, Skills and configuration; do not rely on a secondary folder
+   for that discovery.
+3. Start a **local chat inside that Codex project**. Confirm the working
+   directory and Git root name the adopter repository, then use a terminal
+   at that root for the installation commands below. Keep one writer and
+   review existing changes before allowing installation.
+4. Review and land the installed files on the remote default branch, as
+   described below. Start a new local chat in the same project for the
+   installed onboarding Skill, with the prepared context ready. Answer its
+   material and model questions explicitly; no answer is not `auto`.
+
+The Codex project is an execution context, distinct from a ChatGPT project
+used to prepare documents and from an optional GitHub Projects board. The
+kit neither creates those app projects nor transfers conversation history.
+GitHub records and reviewed repository files remain the durable work record.
+
+Official UI references (checked 2026-10-05): [desktop app and mode selection](https://learn.chatgpt.com/docs/app),
+[local projects and primary folders](https://learn.chatgpt.com/docs/projects#use-local-projects-for-folders-and-codebases),
+and [Chat, Work and Codex](https://learn.chatgpt.com/docs/use-chatgpt#choose-how-you-want-to-work).
+Labels and availability can vary by client, plan and workspace; follow the
+controls available to you without assuming automatic cross-surface access.
+
 ## One-command first installation
 
 From an existing adopter Git root, the README Bash and PowerShell pipelines
@@ -116,8 +186,10 @@ missing or unsuccessful conversion fails rather than prepending the current
 directory. This boundary is mocked in offline tests, not measured on Windows.
 
 Review the plan before apply. Review the resulting Git diff, then stage,
-commit, and push explicitly. Then open or select the adopter checkout in Codex
-and invoke `$project-onboarding` from its installed
+commit, and push explicitly, landing the reviewed installation on the remote
+default branch before onboarding's GitHub writes. Then open or select the adopter checkout in Codex
+through the desktop project prepared above. Start a new local chat and invoke
+`$project-onboarding` from its installed
 `.agents/skills/project-onboarding/SKILL.md`, using the installed file in that project. Keep the
 remote-default-before-GitHub-write, clean-checkout verify-by-running,
 evidence-PR, and durable deferred-work ledger gates from the source workflow.

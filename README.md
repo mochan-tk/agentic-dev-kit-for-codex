@@ -36,10 +36,47 @@ native session hierarchy or a complete autonomous runtime.
 
 ## Quick start
 
+### Before you start: prepare context and a Codex project
+
+This walkthrough assumes **Codex in the desktop app**, working locally in
+your application's repository. In desktop versions with a product selector,
+select **Codex**, not ChatGPT Chat or Work, for installation and development.
+The CLI and IDE extension remain alternative execution surfaces; this guide
+does not establish equivalent behavior across clients.
+
+1. **Prepare specification context before using the kit.** Use ChatGPT
+   **Chat** for back-and-forth requirements clarification, or **Work** to
+   assemble a reviewable specification from your notes and sources. Write
+   down the goal, intended users, scope/non-goals, constraints, acceptance
+   criteria, and unresolved questions. Review the result; reuse suitable
+   existing specifications rather than recreating them. This is preparation
+   for this walkthrough, not a new installer check or a required connector.
+2. **First in Codex, create or select your project.** Attach the local Git
+   repository where you will build your application and make its root the
+   project's primary folder. This is the **adopter repository**, not this
+   kit's source checkout. Prepare or clone the repository first if needed;
+   creating an app project does not replace Git setup. Start a local chat
+   inside that project and confirm its working directory before step 1 below.
+3. **Bring the prepared context with you.** Save it in a readable file, attach
+   it, or paste the relevant text when the onboarding Skill asks for material.
+   For documents already committed in the adopter repository, give their
+   paths instead of duplicating them. Do not assume Chat/Work history, a
+   ChatGPT project, or a chat link automatically supplies context to Codex.
+   Share only material you are authorized to use; drafts are not approved
+   agreements until reviewed through the kit's human decision process.
+
+A Codex project selects the execution context. It is not a ChatGPT preparation
+project or a GitHub Projects board. See the [detailed preparation checklist](docs/distribution/source-first-installer.md#prepare-context-and-the-desktop-project)
+and official guidance on [desktop mode selection](https://learn.chatgpt.com/docs/app),
+[local project folders](https://learn.chatgpt.com/docs/projects#use-local-projects-for-folders-and-codebases),
+and [Chat versus Work](https://learn.chatgpt.com/docs/use-chatgpt#choose-how-you-want-to-work).
+
 ### 1. Install in your project
 
 Use the root of an **existing Git repository** that no other agent or person
-is changing concurrently. You do not need to clone this kit first.
+is changing concurrently: the adopter root selected in your Codex desktop
+project above. Run these commands from a terminal at that root. You do not
+need to clone this kit first.
 
 | For | Prerequisites |
 |---|---|
@@ -104,10 +141,16 @@ entry above stages new files. The public installation guide distinguishes both.
 ### 3. Onboard in Codex
 
 Before invoking the Skill, open or select the adopter checkout in Codex—
-**your project**, not this kit's repository. In the CLI or IDE extension,
-explicitly mention the installed Skill (the
+**your project**, not this kit's repository. In the desktop app, start a new
+local chat in the project prepared above so it can read the newly installed
+files. Keep your prepared specification context ready for the material
+question, and answer each pending question explicitly, including the model
+preference (`auto` is an explicit choice, not a timeout default).
+
+When the selected client supports explicit Skill invocation, mention the
+installed Skill. For CLI/IDE alternatives, the
 [official Skill invocation guide](https://developers.openai.com/codex/skills/)
-also documents `/skills` selection):
+also documents `/skills` selection:
 
 ```text
 $project-onboarding
