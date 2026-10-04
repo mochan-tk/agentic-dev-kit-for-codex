@@ -232,3 +232,27 @@ A01-A06 behavioral corrections, run a live installer or submit feedback.
 Ordinary existing regression/CI results and independent review for the exact
 publication head are recorded separately in the Task and PR; this provenance
 section does not assert their outcome or owner acceptance.
+
+## Current onboarding answer-wait correction
+
+Task 27 addresses owner feedback at accepted public base
+`e7d830ddcac80ac03cf57313b9475747dbeee16b`, tree
+`c97c3d5c025128cc100db7f81089e1670bce62d6`. Only the installed
+`project-onboarding` Skill changes among the 47 payload files; the other 46
+contents and all paths, preservation classes and modes remain unchanged.
+The P2 interview waits for explicit answers with no deadline. Material intake
+requires the offered material or an explicit decline; model preference requires
+an explicit name or `auto`. P4 no longer converts silence into `auto`.
+
+Nonblocking, unavailable or unanswered dialogs fall back to a normal final chat
+question with the interview paused until the reply. No app timeout setting,
+runtime tool, automatic model switching, adopter rollout or persistent-widget
+guarantee is added. Procedure review is not measured model compliance or UI
+persistence. Existing install/upgrade/rollback tests exercise delivery of the
+current Skill bytes, not a live interview.
+
+Current inventory, parity/export adaptations and shared documentation digests
+bind this correction. Earlier source attribution, original export/history seals
+and accepted-old regression baselines remain immutable. This change is separate
+from Task 23's held A01-A06 work and Tracker 20 activation. Acceptance and merge
+remain owner decisions.
