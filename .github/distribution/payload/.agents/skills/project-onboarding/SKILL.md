@@ -115,7 +115,26 @@ interviewed up front. Every
 question must be answerable by a project owner without digging through
 the repository.
 
-Ask in sequence, second step branching on the first answer:
+**Wait for an explicit answer, without a time limit.** Ask one step at a
+time, with the second step branching on the first answer. Keep the current
+question pending until the adopter answers it; do not ask the next step,
+close P2, run its writes, or start P3/P4 while an answer is missing. Silence,
+elapsed time, an empty response, a dismissed or unavailable dialog, and a
+preselected choice are not answers. An unrelated or unclear reply leaves the
+question pending; clarify only the unresolved point. An explicit request to
+cancel or pause onboarding stops it rather than selecting an answer.
+
+Use a blocking question tool only when the current surface documents that
+capability and permits it for this question. If input is asynchronous, the
+dialog returns without an answer, or the tool treats no answer as permission
+to continue, ask the pending question in a regular final chat message and
+end the turn awaiting the adopter's reply. Do not infer an answer from tool
+return, use a countdown/default, poll, or repeatedly reissue the dialog.
+Resume the same interview at the unanswered step when the reply arrives;
+retain earlier explicit answers. This is a workflow wait, not a promise to
+control the native app's dialog lifetime.
+
+The three steps are:
 
 1. **Connector choice.** How should specification or design material be
    handed over — through the built-in chat flow (default, needs no
@@ -135,7 +154,9 @@ Ask in sequence, second step branching on the first answer:
      scope). It will be stored as raw reference material for future
      planning. Extend this invitation unconditionally. When the adopter
      says yes, wait and receive the material (path, pasted text, or
-     attachment) before leaving P2. Documents already committed to the
+     attachment) before asking the model question. Yes alone is not the
+     material. An explicit "no additional material" (including a later
+     change of mind) completes this step; no reply does not. Documents already committed to the
      repository are not part of this question — P1's inventory names
      them and agents read them in place.
 
@@ -153,7 +174,8 @@ Ask in sequence, second step branching on the first answer:
    model name** — not in the question, not as an example, not as a
    default. Naming one dates this skill to the month it was written, and
    the adopter knows today's names better than it does. `auto` is a
-   complete answer.
+   complete answer only when the adopter explicitly supplies or selects it.
+   Without an explicit model preference or `auto`, keep this step pending.
 
 **Close P2 before starting P3** — verification is the long stretch, so
 give the adopter something to review during it:
@@ -288,8 +310,8 @@ unrun command.
   stay in place and are read where they live. Do **not**
   write agreements — distillation is a separate, human-gated phase.
 - Record the P2 implementation-model answer verbatim in
-  codex-instructions' **Models** block. An unanswered question is
-  `auto`, which is a complete answer and not a gap.
+  codex-instructions' **Models** block. If no answer was recorded, return to
+  that pending P2 question and wait; never substitute `auto` for silence.
 - Do **not** touch `AGENTS.md` (Budget rule; behavior is project-independent).
 
 ### P5 — Prove

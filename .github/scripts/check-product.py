@@ -51,9 +51,9 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "5b17b483e8a68c8a8dffac7ff430dafb92f49ce7b4a62eaa9220e97b89215821",
+    ".github/distribution/payload.v1.tsv": "ff2b30e000915e3439d4eb058d81f4db75af8de5e6f150c9ad12bd929c08a5ef",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
-    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "0471efc8e37df4c9e63f6a4600018ada490fc183bec06dfcb959f5931d06606e",
+    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "f6616042692db6c45bfa52f0465985498f2cd12e54c541da4ad285f495a0841f",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
@@ -117,9 +117,9 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "8561e0e9569d5c4b553fd1788fc9140feb10ec3d2c4146a55f1d4f8bb177ea20"
+ADOPTER_RECORD_SHA256 = "7d40001f6ba44c0a182ced11d9edce73dd85ca1bbed8946b7f6a9a0999e98f92"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "8f90eabb77f99c91489022d04f974638c138860b29e2a0fa3897b7522ba7d5c3"
+IMPROVEMENT_RECORD_SHA256 = "bde188b5511825f8a3b6f0947690ec519d61167dc68bfa043b7b3062d4a8acb9"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
 MONITOR_RECORD_SHA256 = "bc3c8a158dfdd4af8d872e2161a1c69de42745da990fdf2cd530a3fd8a3091fb"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",

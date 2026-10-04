@@ -53,7 +53,7 @@
     {
       "path": "docs/provenance.md",
       "mode": "100644",
-      "sha256": "4619aa0647ca4945a669c62c3479ab39d72f10b9b61ca8e5b912098e0254e4e2"
+      "sha256": "202681e7dad41a326364927f9e754e8b92585302eeffc8f57b85f6d20d347131"
     },
     {
       "path": "tests/conformance/test_adopter_ci.py",
