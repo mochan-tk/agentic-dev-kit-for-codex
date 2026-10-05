@@ -1165,17 +1165,17 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "7deeef00bd5d915cf56db9fb0ffafa3821d7f754bbd926b7d66874e2e6603807"
+        "sha256": "933cfdc8165b813181088ca3437f5b6a1dcb293cd081d97e2be310d8c58f739b"
       },
       {
         "path": "docs/known-limitations.md",
         "mode": "100644",
-        "sha256": "d5813a4af05b700973f28a8a3f5dc751b540e7cf9a37589502cd0e97612dcf32"
+        "sha256": "aa1203bc91a5acebdc30634f303c249732a95ffa02ae7754b88a68ea210b4493"
       },
       {
         "path": "docs/product-scope.md",
         "mode": "100644",
-        "sha256": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9"
+        "sha256": "50edcc2f294d7355cff2b45d85c8da8f154b77d91eb0af78e097017e87db24d3"
       },
       {
         "path": "docs/provenance.md",
@@ -1304,12 +1304,12 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "7deeef00bd5d915cf56db9fb0ffafa3821d7f754bbd926b7d66874e2e6603807"
+        "sha256": "933cfdc8165b813181088ca3437f5b6a1dcb293cd081d97e2be310d8c58f739b"
       },
       {
         "path": "docs/known-limitations.md",
         "mode": "100644",
-        "sha256": "d5813a4af05b700973f28a8a3f5dc751b540e7cf9a37589502cd0e97612dcf32"
+        "sha256": "aa1203bc91a5acebdc30634f303c249732a95ffa02ae7754b88a68ea210b4493"
       },
       {
         "path": "docs/parity-status.md",
@@ -1319,7 +1319,7 @@
       {
         "path": "docs/product-scope.md",
         "mode": "100644",
-        "sha256": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9"
+        "sha256": "50edcc2f294d7355cff2b45d85c8da8f154b77d91eb0af78e097017e87db24d3"
       },
       {
         "path": "docs/provenance.md",

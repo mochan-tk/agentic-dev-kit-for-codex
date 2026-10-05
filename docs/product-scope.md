@@ -5,6 +5,17 @@ Codex: 47 installable files, eight Skills, three role instruction files,
 Issue/PR templates, connectors, agreement/context seeds and Bash helpers.
 The payload has 32 engine, four tuned, eight instance and three seed entries.
 
+**The ChatGPT Codex desktop app is required to use this kit.** This is a
+product prerequisite for onboarding, coordination and development, not a
+tutorial preference. Codex CLI-only or IDE-only operation is unsupported.
+See the [complete prerequisites](../README.md#prerequisites) for the GitHub
+repository, authentication and local tools; prepare the specification context
+and adopter desktop project before installation. Terminal-based installers,
+helpers and CI checks remain available components, not replacements for the
+desktop workflow. They do not detect or enforce app installation. This
+requirement adds no runtime guarantee, native-Windows qualification or
+cross-client parity claim.
+
 The public Bash/PowerShell entrance acquires a selected source revision,
 validates it, installs into an existing Git repository and stages only newly
 created files. A reviewed local checkout supports explicit install, known-old

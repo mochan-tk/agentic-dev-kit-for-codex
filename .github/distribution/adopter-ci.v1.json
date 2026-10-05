@@ -33,7 +33,7 @@
     {
       "path": "README.md",
       "mode": "100644",
-      "sha256": "4b2db9627ae4c214c87110e9c728d30abd28f84f7ecb2a21cb59d0fd8f4c6d73"
+      "sha256": "9c04357df104c7c8926a4c2e2dcf86561b53edf918d87ec37ec9e005feb990b9"
     },
     {
       "path": "docs/distribution/adopter-ci.md",
@@ -43,12 +43,12 @@
     {
       "path": "docs/known-limitations.md",
       "mode": "100644",
-      "sha256": "d5813a4af05b700973f28a8a3f5dc751b540e7cf9a37589502cd0e97612dcf32"
+      "sha256": "aa1203bc91a5acebdc30634f303c249732a95ffa02ae7754b88a68ea210b4493"
     },
     {
       "path": "docs/product-scope.md",
       "mode": "100644",
-      "sha256": "99942a3abb2df877a217feba599a6103ebe6e6157b97de9d880f1c06ca7506e9"
+      "sha256": "50edcc2f294d7355cff2b45d85c8da8f154b77d91eb0af78e097017e87db24d3"
     },
     {
       "path": "docs/provenance.md",

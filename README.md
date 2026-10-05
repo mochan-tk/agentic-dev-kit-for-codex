@@ -15,6 +15,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
+  <a href="#prerequisites">Prerequisites</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#eight-skills-one-workflow">Skills</a> ·
   <a href="#safety-and-project-status">Safety and status</a> ·
@@ -36,16 +37,72 @@ native session hierarchy or a complete autonomous runtime.
 
 ## Quick start
 
+### Prerequisites
+
+Using this kit requires:
+
+- a GitHub repository with a local Git checkout;
+- the **[ChatGPT Codex desktop app](https://learn.chatgpt.com/docs/app)**;
+- authenticated [`gh`](https://cli.github.com/) with access to that repository;
+- `jq`;
+- Git and Bash 3.2 or later;
+- on Windows, [Git for Windows](https://gitforwindows.org/), including Git Bash.
+
+**The desktop app is required for this OSS, not just for this tutorial.**
+Use Codex in the desktop app for onboarding, coordination and development.
+Codex CLI or the IDE extension alone is not a supported way to operate the
+kit. Running an installer or helper in a terminal does not replace this
+requirement; those commands do not check whether the app is installed.
+
+Before installation, prepare your specification context and create/select
+the adopter's Codex project as described below. Platform-specific installation
+utilities are listed in [step 1](#1-install-in-your-project).
+
+### Before you start: prepare context and a Codex project
+
+Use the required desktop app with your local application repository.
+In desktop versions with a product selector,
+select **Codex**, not ChatGPT Chat or Work, for installation and development.
+
+1. **Prepare specification context before using the kit.** Use ChatGPT
+   **Chat** for back-and-forth requirements clarification, or **Work** to
+   assemble a reviewable specification from your notes and sources. Write
+   down the goal, intended users, scope/non-goals, constraints, acceptance
+   criteria, and unresolved questions. Review the result; reuse suitable
+   existing specifications rather than recreating them. Prepare this handoff
+   before adoption; the installer does not validate its contents and no
+   external connector is required.
+2. **First in Codex, create or select your project.** Attach the local Git
+   repository where you will build your application and make its root the
+   project's primary folder. This is the **adopter repository**, not this
+   kit's source checkout. Prepare or clone the repository first if needed;
+   creating an app project does not replace Git setup. Start a local chat
+   inside that project and confirm its working directory before step 1 below.
+3. **Bring the prepared context with you.** Save it in a readable file, attach
+   it, or paste the relevant text when the onboarding Skill asks for material.
+   For documents already committed in the adopter repository, give their
+   paths instead of duplicating them. Do not assume Chat/Work history, a
+   ChatGPT project, or a chat link automatically supplies context to Codex.
+   Share only material you are authorized to use; drafts are not approved
+   agreements until reviewed through the kit's human decision process.
+
+A Codex project selects the execution context. It is not a ChatGPT preparation
+project or a GitHub Projects board. See the [detailed preparation checklist](docs/distribution/source-first-installer.md#prepare-context-and-the-desktop-project)
+and official guidance on [desktop mode selection](https://learn.chatgpt.com/docs/app),
+[local project folders](https://learn.chatgpt.com/docs/projects#use-local-projects-for-folders-and-codebases),
+and [Chat versus Work](https://learn.chatgpt.com/docs/use-chatgpt#choose-how-you-want-to-work).
+
 ### 1. Install in your project
 
 Use the root of an **existing Git repository** that no other agent or person
-is changing concurrently. You do not need to clone this kit first.
+is changing concurrently: the adopter root selected in your Codex desktop
+project above. Run these commands from a terminal at that root. You do not
+need to clone this kit first.
 
-| For | Prerequisites |
+| Installation route | Additional utilities |
 |---|---|
-| macOS / Linux installation | Git, Bash 3.2+, curl, find, standard Unix utilities (including GNU/BSD `stat`), and `sha256sum` or `shasum` |
-| Windows installation | PowerShell and Git for Windows, including Git Bash and its Unix utilities |
-| GitHub-based development | A GitHub remote, a Codex client with access to your project, and authenticated `gh` plus `jq` for the GitHub helpers |
+| macOS / Linux installation | curl, find, standard Unix utilities (including GNU/BSD `stat`), and `sha256sum` or `shasum` |
+| Windows installation | PowerShell and the Unix utilities supplied by Git for Windows / Git Bash |
 
 **macOS / Linux**
 
@@ -59,7 +116,9 @@ curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex
 irm https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-init.ps1 | iex
 ```
 
-Public kit acquisition needs no GitHub login; authenticated helpers are a later step.
+Downloading the public kit needs no GitHub login. Operating the kit still
+requires the authenticated `gh` listed above; anonymous acquisition is not
+an alternative to the workflow prerequisites.
 The Windows entry uses Git Bash, not WSL. It has synthetic-test coverage;
 native Windows installation has not been measured.
 
@@ -104,23 +163,27 @@ entry above stages new files. The public installation guide distinguishes both.
 ### 3. Onboard in Codex
 
 Before invoking the Skill, open or select the adopter checkout in Codex—
-**your project**, not this kit's repository. In the CLI or IDE extension,
-explicitly mention the installed Skill (the
-[official Skill invocation guide](https://developers.openai.com/codex/skills/)
-also documents `/skills` selection):
+**your project**, not this kit's repository. In the desktop app, start a new
+local chat in the project prepared above so it can read the newly installed
+files. Keep your prepared specification context ready for the material
+question, and answer each pending question explicitly, including the model
+preference (`auto` is an explicit choice, not a timeout default).
+
+In the desktop project chat, invoke the installed Skill:
 
 ```text
 $project-onboarding
 ```
 
-When your client does not expose that invocation, use this explicit fallback:
+If your desktop app version does not expose that invocation, use this
+explicit installed-file fallback in the same chat:
 
 ```text
 Read and follow .agents/skills/project-onboarding/SKILL.md in this project.
 ```
 
 Confirm it reads the installed file, not the kit-development Skill. This is
-an explicit handoff, not a guarantee of automatic discovery on every client.
+an explicit handoff, not a guarantee of automatic discovery in every app version.
 
 Onboarding inventories the project, verifies its existing commands, tunes
 project instructions, and prepares an evidence-bearing onboarding PR and
@@ -231,7 +294,7 @@ flowchart LR
 ```
 
 This diagram describes the workflow, not a guaranteed native session tree.
-Use the tools actually available in the selected Codex client, or an explicit
+Use the tools actually available in the required Codex desktop app, or an explicit
 handoff based on the committed files and GitHub records.
 
 | Responsibility | Focus |
@@ -288,7 +351,7 @@ autonomous service or a guarantee that generated code is correct.
 | Updates and recovery | Explicit old/new commit IDs support a one-command update with preserved customizations and retained offline operation rollback; no automatic or whole-repository recovery |
 | Governance helpers | Reads report missing evidence as non-success; setup writes require separate, explicit authority |
 | Feedback and retro | Reporting is consent-gated; retrospective proposals do not approve or retire controls automatically |
-| Codex compatibility | Evidence is specific to the observed client and invocation path; cross-client parity and universal automatic Skill discovery are not promised |
+| Codex compatibility | The ChatGPT Codex desktop app is required; CLI-only/IDE-only operation is unsupported. Evidence remains version/path-specific; automatic Skill discovery and cross-client parity are not promised |
 | Product and release | A source-first workflow kit with bounded product tests; native Windows and cross-client runtime parity remain unmeasured |
 
 The explicit governance, worktree and connector companions can run from a
