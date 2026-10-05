@@ -5,14 +5,37 @@ Codex Skills and role files. GitHub is durable authority; threads are
 replaceable transport. This is a local-source workflow payload, not a claim
 of complete autonomous execution or full runtime parity.
 
+## Before you start
+
+The ChatGPT Codex desktop app is required for this kit. CLI-only or IDE-only
+operation is unsupported; terminal installer/helper commands do not replace
+the desktop workflow or check whether the app is installed.
+
+Prepare specification context in ChatGPT Chat or Work before adoption, or
+reuse a suitable reviewed specification. Include the goal, intended users,
+scope/non-goals, constraints, acceptance criteria and open questions. Save or
+attach the reviewed handoff explicitly; another chat's history is not assumed
+to be available to Codex. This does not require an external connector.
+
+First in Codex, create or select a local project with your application Git
+checkout as its primary folder, then start the development chat there. A
+secondary folder or a prior chat is not a substitute for loading this
+repository's instructions and Skills. Follow the explicit loading step below.
+
 ## Start
 
 1. Review the installation diff. If your existing AGENTS.md was preserved,
    explicitly link `.github/codex-instructions.md` and the installed Skills.
-2. Stage and land the reviewed adoption on the remote default branch before
-   onboarding performs GitHub writes. The installer never stages or commits.
-3. Open this repository in your available Codex client and explicitly invoke
-   `$project-onboarding`. Existing commands are verified in a clean checkout;
+2. Review the staged and unstaged adoption diff, then land the reviewed adoption
+   on the remote default branch before onboarding performs GitHub writes.
+   The public external entry stages only newly installed files; the reviewed
+   local installer engine does not stage. Neither entry commits or pushes.
+   Preserve unrelated staged work and commit only reviewed adoption changes.
+3. In the desktop project rooted in this repository, explicitly invoke
+   `$project-onboarding`. If invocation/discovery is unavailable, explicitly
+   ask Codex to read `.agents/skills/project-onboarding/SKILL.md` and follow it;
+   file presence alone does not prove loading or successful execution.
+   Existing commands are verified in a clean checkout;
    unverified work goes into the evidence PR or first Epic deferred ledger.
 4. Use `$context-collection`, `$context-distillation` and `$plan-management`
    when material and an approved goal are ready. Use `$task-routing`,
@@ -22,11 +45,12 @@ of complete autonomous execution or full runtime parity.
 
 1. Collect existing material with the
    [context-collection Skill](.agents/skills/context-collection/SKILL.md) and the
-   appropriate source connector. If you have no requirements source, explicitly
-   choose builtin kickoff. In Codex CLI or IDE, for example:
+   appropriate source connector. If you need additional draft context beyond
+   the prepared handoff and have no existing source for it, explicitly choose
+   builtin kickoff in the desktop chat, for example:
    `$context-collection Start builtin kickoff for <topic>; I have no existing requirements source.`
-   On another surface, explicitly request that installed Skill file and the
-   builtin route. It reads [builtin retrieve](.github/connectors/builtin.md#retrieve)
+   If Skill invocation is unavailable, explicitly request that installed Skill
+   file and the builtin route. It reads [builtin retrieve](.github/connectors/builtin.md#retrieve)
    for draft-first candidates and bounded questions, retaining drafts,
    provenance, assumptions and unanswered questions under `.github/docs/context/`.
    Stop the interview at any time; ordinary collection does not start it.
@@ -44,17 +68,21 @@ of complete autonomous execution or full runtime parity.
    distillation PR. Apply the connector's verification and sufficiency test
    before decomposition.
 
-Existing adopter README files are preserved by install and upgrade. The
-installed context-collection Skill links directly to builtin retrieve, so
+Existing adopter README files are preserved by install and upgrade. README is
+a seed: revised guide text is delivered only when that destination is missing,
+not automatically applied to an existing README. Review current public kit
+instructions and manually reconcile guidance you want to adopt. The installed
+context-collection Skill links directly to builtin retrieve, so
 explicit kickoff remains available through that Skill even with your own README.
 These are installed instructions; client invocation and successful elicitation
 need evidence from the actual Codex surface. No implicit preload is assumed.
 
 ## Scope and prerequisites
 
-Local files require Git, Bash and a SHA-256 utility. The GitHub helpers
-require authenticated gh with the features they invoke; inspect `--help`
-first. GitHub writes, rulesets, boards and source activation are explicit
+Use a GitHub repository with a local checkout, the required desktop app,
+authenticated `gh`, `jq`, Git, Bash 3.2 or later and a SHA-256 utility.
+On Windows, install Git for Windows including Git Bash. Inspect GitHub helpers'
+`--help` for the features they invoke. GitHub writes, rulesets, boards and source activation are explicit
 owner-approved actions, never installer side effects. The PowerShell helper
 selects Git Bash, not WSL. Real Windows/Codex orchestration must be verified
 on the chosen client; offline file tests do not prove it.

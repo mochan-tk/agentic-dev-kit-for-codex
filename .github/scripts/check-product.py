@@ -23,6 +23,14 @@ SOURCE_TREE = "bf38214c82484a5edb47d467a4be951f9c53bea6"
 # Reviewed public records; an intentional product change updates these bindings.
 EXPORT_SHA256 = "fc48db9474c8cd1a8320805a0c61afe60cd831f3291e3b984315925cf533d4b8"
 HISTORY_SHA256 = "d1adafd9d9b91a8ac82648013cb3d720ef5fd85d79e156b4c808f66ddd9f7dd3"
+# One documentation-only current adaptation; no general export exemption.
+ADOPTION_README_EXPORT = {
+    "path": ".github/distribution/payload/README.md",
+    "mode": "100644",
+    "source_blob": "45f522d80380d130d2894606fa41fa19dada2f3a",
+    "sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b",
+}
+ADOPTION_README_SHA256 = "a3fb829b85281db8ae63a0cfdb3f9027197d9578edd6cf5c4d8e1c0a5f3fe893"
 # This single reviewed fixture adaptation has separate current-target evidence.
 # The immutable export still describes its original bytes, not the adapted file.
 CONNECTOR_FIXTURE_PATH = "tests/conformance/test_connector_validation.py"
@@ -45,13 +53,14 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
 }
 TEST_MODULES = (
+    "test_adoption_evidence.py",
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
     "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py", "test_final_boundary.py", "test_pr_monitor.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5",
+    ".github/distribution/payload.v1.tsv": "a0b848f4bfdd21f34c1ea1b953a80a1343125aed5f0c628f63182686c011def0",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "f6616042692db6c45bfa52f0465985498f2cd12e54c541da4ad285f495a0841f",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
@@ -76,7 +85,7 @@ CURRENT_RECEIPTS = {
 }
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
-    "docs/provenance.md", "docs/known-limitations.md",
+    "docs/provenance.md", "docs/known-limitations.md", "docs/evidence-status.md",
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
     "docs/distribution/adopter-ci.md",
@@ -117,11 +126,11 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "4d04c71354f9cb46d9cdd879dbf40597ce45bf819195b453bd970e8fffd0d0f3"
+ADOPTER_RECORD_SHA256 = "1979d9faa133c770a6cc5151d77d404848e191660a182465cb9f8bf7ab365944"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "a2f174b1648004adc3f61e43b0e4cd47aa55bbb65b2cfd6db565022f281f39e9"
+IMPROVEMENT_RECORD_SHA256 = "05b5958bcd719ef435677069828b6d6b7df118cedbeb48a3c78fd1442748ab0a"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "b919cdef10cfc0879725291464232b63ee84e793a12ac75609afcbadd0f4e75f"
+MONITOR_RECORD_SHA256 = "c2a681b90cd64983335b4c540aff31f22327e4566ed429dfd93d2c810f881b09"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive
@@ -292,6 +301,11 @@ def validate_export(root):
         if [row["path"] for row in adaptations] != sorted(WORKFLOW_EXPORT_DIGESTS):
             raise ValueError("workflow adaptation inventory")
         for row in record["frozen_files"]:
+            if row["path"] == ADOPTION_README_EXPORT["path"]:
+                if (row != ADOPTION_README_EXPORT
+                        or digest(read_bytes(root, row["path"])) != ADOPTION_README_SHA256):
+                    errors.append("adoption README exact original/current binding changed")
+                continue
             if row["path"] == CONNECTOR_FIXTURE_PATH:
                 errors.extend(validate_connector_fixture_adaptation(root, row))
                 continue
