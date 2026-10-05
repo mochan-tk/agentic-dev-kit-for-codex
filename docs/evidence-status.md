@@ -50,3 +50,8 @@ See [known limitations](known-limitations.md) for operational exclusions,
   a blank result record and a comparison protocol. This is not a benchmark
   runner or evidence that a model passed these cases. Historical E01 and
   product conformance results do not populate them.
+- [Offline CI-diagnosis fixtures](evaluation-fixtures/README.md): EC05/EC06
+  have authored synthetic input packets and separate public reference rubrics.
+  Offline checks validate fixture consistency, including an intentionally red
+  seed test; they do not run a model or populate case results. These public
+  answers are teaching/development material, not secret held-out evaluations.

@@ -55,6 +55,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
 TEST_MODULES = (
     "test_adoption_evidence.py",
     "test_public_examples.py",
+    "test_evaluation_fixtures.py",
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
     "test_installer_bootstrap.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
     "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py", "test_final_boundary.py", "test_pr_monitor.py",
@@ -88,6 +89,7 @@ PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md", "docs/evidence-status.md",
     "docs/worked-example.md", "docs/evaluation-cases.md",
+    "docs/evaluation-fixtures/README.md",
     "docs/distribution/source-first-installer.md", ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/distribution/companion-checks.md",
     "docs/distribution/adopter-ci.md",
