@@ -51,8 +51,8 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "ff2b30e000915e3439d4eb058d81f4db75af8de5e6f150c9ad12bd929c08a5ef",
-    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
+    ".github/distribution/payload.v1.tsv": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5",
+    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "f6616042692db6c45bfa52f0465985498f2cd12e54c541da4ad285f495a0841f",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "8c458972ea49e94d4d167d6505ff5ce3c90a294ad761e068576c4db787b6cb7b",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
@@ -117,9 +117,9 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "97e5a5fff29d4cb0dac6b217f5828d0f4ef76132e09e386a28706affef895491"
+ADOPTER_RECORD_SHA256 = "4d04c71354f9cb46d9cdd879dbf40597ce45bf819195b453bd970e8fffd0d0f3"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "bec508ac5f08d9e5efe9ea50b318ee15f853da79f3dbaf806e2f65c951aa3923"
+IMPROVEMENT_RECORD_SHA256 = "a2f174b1648004adc3f61e43b0e4cd47aa55bbb65b2cfd6db565022f281f39e9"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
 MONITOR_RECORD_SHA256 = "b919cdef10cfc0879725291464232b63ee84e793a12ac75609afcbadd0f4e75f"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",

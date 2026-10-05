@@ -53,15 +53,17 @@ this.
    the board exists, backfill every open `type:epic` issue returned by
    `gh issue list --label type:epic --state open` with `bash .github/scripts/setup-project.sh add`;
    onboarding created those sibling Epics before this first decomposition, so
-   waiting for future creation would leave them invisible again.
+   waiting for future creation would leave them invisible again. Include these
+   Epics in the proposed-date pass in step 6; creating date fields alone does
+   not populate a schedule.
 1. Create Epics for the whole outline up front — cheap, low detail, gives the
    "what comes next" visibility agents need for preparation. One Epic per
    phase, all siblings: the graph is two levels, so an Epic is never a
    sub-issue of another Epic. Order them with `blocked-by`. When the roadmap
    exists, add every Epic as it is created with
    `bash .github/scripts/setup-project.sh add --project <number> --issue <n>` —
-   visibility must not wait for dates that rolling-wave planning deliberately
-   has not invented.
+   visibility must not wait for dates. Propose coarse spans for later Epics
+   rather than requiring a committed deadline before scheduling them.
 2. Decompose an Epic into Task sub-issues only when its phase is about to
    start (or when the frontier is nearly empty). Detail decays; write it late.
 3. Every Task must clear the planner quality bar
@@ -71,7 +73,8 @@ this.
    deploy check) must say so in the work order — they commit the PR to
    `Refs #<n>` and a manual close (AGENTS.md §4). When the roadmap exists,
    add each Task as it is created too; its visibility must not depend on
-   whether scheduling dates are known.
+   whether scheduling dates are known. Include new Tasks in step 6 even when
+   the board already existed before this round.
 4. Partition for parallelism: tasks meant to run concurrently must have
    disjoint **File ownership** path sets. If two tasks need the same paths,
    add a `blocked-by` edge between them — serialization by dependency beats
@@ -85,9 +88,11 @@ this.
    is the one issue body an executing session may edit: AGENTS.md §5 binds
    an agent to its own **Task** issue, and the Epic is the plan it works
    from, not the work order it executes.
-6. When the round has real dates, schedule its Epic and Tasks with
-   `bash .github/scripts/setup-project.sh dates`. Dates are evidence, not board
-   admission tickets: never invent them to make an issue visible.
+6. **Propose the round's dates before reporting roadmap setup complete.** After
+   creation/backfill and each decomposition or schedule-changing replan, follow
+   [Proposed dates and application](#proposed-dates-and-application) for the
+   in-scope Epics and Tasks. A tentative plan does not require a committed
+   deadline; never present estimated dates as observed starts or promises.
 
 ## The frontier
 
@@ -191,8 +196,62 @@ authenticated actor boundary or protection from later concurrent changes.
 Optional: visualize Epics and Tasks as spans on a Projects v2 roadmap. The
 board stays a *view* of the issue graph — fields are derived from issues,
 never the reverse (see the Portfolio view row in the Data model). Rolling-wave
-steps 0, 1, and 6 own *when* the board is offered, populated, and scheduled;
-this section owns only *how* those commands work.
+steps 0, 1, 3, and 6 own *when* the board is offered, populated, and scheduled.
+Once a board is in use, proactively propose dates instead of leaving its
+items empty until the human asks again. A declined/unavailable board or a
+pending date decision does not block otherwise authorized decomposition.
+
+### Proposed dates and application
+
+1. Resolve the intended repository, Project owner/number and exact Issue items.
+   Read the current Issue dependencies, scope, existing dates and any prior
+   schedule decisions. Do not substitute another Project when identity or
+   access is uncertain. Keep existing actual or approved dates unless the
+   human authorizes a specific replan; do not overwrite a populated date just
+   to fill its missing partner.
+2. Prepare a proposal table for the in-scope open Epics and Tasks, including
+   newly backfilled Epics and newly created Tasks: Issue, proposed Start date,
+   proposed Target date, and rationale/uncertainty. Use known constraints and
+   estimates; disclose the planning start, timezone, calendar convention,
+   expected durations, parallel capacity and buffers. Keep later Epics coarse
+   rather than decomposing them just for dates. Validate actual calendar dates
+   in `YYYY-MM-DD`, start <= target, dependency ordering, feasible concurrency,
+   and child spans within their Epic. The helper only checks format/order,
+   not calendar validity or plan feasibility. If an estimate cannot reasonably
+   be made, identify that item and the needed decision instead of inventing
+   a deadline or silently leaving every item blank. Example dates below are
+   syntax examples, not default dates for a new project.
+3. Present the dates as **proposed planning estimates**, not observed starts,
+   committed delivery dates, or permission to execute/merge/release. Ask one
+   scoped question to apply the table unless the current human request already
+   explicitly authorizes populating proposed dates; in that case disclose the
+   proposal and assumptions and proceed within that authorization without a
+   duplicate approval round. Board creation consent alone does not authorize
+   date writes. With no answer, pause only date application and end with the
+   question; silence, a vanished dialog or elapsed time is not consent. An
+   explicit decline/defer leaves dates unchanged and is recorded.
+4. Before Project writes, record the authorized proposal, assumptions and
+   decision on the relevant Epic/Task Issues. A shared table on the Epic may
+   cover its Tasks; each affected Issue must link to its schedule record.
+   The Issue graph and these dated proposal/replan records remain authoritative;
+   Project fields are their projection. Re-read existing fields before writes;
+   unexpected changes require reconciliation, not an overwrite.
+5. Apply each authorized span with the existing `setup-project.sh dates`
+   command below. Then read back both date fields for every exact Project item
+   and compare with the recorded proposal, using complete `gh project item-list`
+   output or paginated API reads. Field creation, item membership or a successful
+   command exit is not proof that both dates match. The helper writes the fields
+   separately and performs no readback: a failure may leave one field changed.
+   Report verified, pending and failed items separately; on partial or unknown
+   results inspect actual state and stop the affected application, without an
+   automatic retry, duplicate item or claim of complete scheduling.
+6. Record the bounded readback outcome in the Issue graph before reporting
+   completion. When dependencies, capacity or outcomes change, propose a revised
+   table and apply the same scoped-decision/readback process. Estimated dates
+   never clear blockers, set `ai:ready`, dispatch work or create a timer; actual
+   execution still uses the frontier, ownership and human gates.
+
+### Existing Project commands
 
 Bootstrap the board once per repository (idempotent: reuses the same-title
 project, skips existing fields, re-links safely). `init` creates the DATE
@@ -218,9 +277,9 @@ which makes it appear in the repo's **Projects** tab
 (`https://github.com/<owner>/<repo>/projects`) — look for it there. Pass
 `--owner <login>` only to place the board under a different user/org.
 
-When the board exists, set an issue's schedule span only when real dates are
-known, and update it whenever replanning moves the schedule (re-running
-replaces both dates on the existing item). The same call sets `Kind`
+When the board exists and a proposed or committed span is authorized, set
+both dates. Re-running replaces both dates on the existing item, so preserve
+existing values and review changed spans as described above. The same call sets `Kind`
 automatically
 from the issue's labels — `type:epic` → Epic, `type:task` → Task:
 

@@ -25,10 +25,11 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
+      "target_sha256": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
-        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged.",
+        "Task 31: proactively propose roadmap dates after board setup and decomposition; scoped consent, durable Issue estimates, existing-date preservation and exact date-field readback; unchanged Project helper."
       ]
     },
     {
@@ -528,7 +529,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1"
+        "sha256": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956"
       },
       {
         "path": ".agents/skills/plan-management/scripts/new-task.sh",
@@ -663,7 +664,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1"
+        "sha256": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956"
       },
       {
         "path": ".agents/skills/plan-management/scripts/frontier.sh",
@@ -898,12 +899,12 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "ff2b30e000915e3439d4eb058d81f4db75af8de5e6f150c9ad12bd929c08a5ef"
+        "sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1"
+        "sha256": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -961,8 +962,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "ff2b30e000915e3439d4eb058d81f4db75af8de5e6f150c9ad12bd929c08a5ef",
-        "target_blob": "e4e57821d566b2b27723b144de6b7eaa86acd112"
+        "target_sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5",
+        "target_blob": "9bde6305a69a376215d6b1aecca7f096ab8bed34"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -973,8 +974,8 @@
           "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
         },
         "target_mode": "100644",
-        "target_sha256": "dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1",
-        "target_blob": "505ba62a88a5e744cf7fb88e22c4d79f721306df"
+        "target_sha256": "497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956",
+        "target_blob": "fdc1a32bf1c091aaa5c82c854cc08e8e0c802b02"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -1135,7 +1136,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "ff2b30e000915e3439d4eb058d81f4db75af8de5e6f150c9ad12bd929c08a5ef"
+        "sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1180,7 +1181,7 @@
       {
         "path": "docs/provenance.md",
         "mode": "100644",
-        "sha256": "202681e7dad41a326364927f9e754e8b92585302eeffc8f57b85f6d20d347131"
+        "sha256": "dc097af5825bce1a45fc15b3f7653fa0a109cc009ecb157aaf767f8cb4fc43f6"
       },
       {
         "path": "tests/conformance/test_adopter_ci.py",
@@ -1259,7 +1260,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "ff2b30e000915e3439d4eb058d81f4db75af8de5e6f150c9ad12bd929c08a5ef"
+        "sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1324,7 +1325,7 @@
       {
         "path": "docs/provenance.md",
         "mode": "100644",
-        "sha256": "202681e7dad41a326364927f9e754e8b92585302eeffc8f57b85f6d20d347131"
+        "sha256": "dc097af5825bce1a45fc15b3f7653fa0a109cc009ecb157aaf767f8cb4fc43f6"
       },
       {
         "path": "tests/conformance/test_companion_access.py",

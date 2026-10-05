@@ -1,7 +1,7 @@
 # destination	class	sha256
 .agents/skills/context-collection/SKILL.md	engine	b6ff274078b681778ba776f0cc6f2cde0cfb6dc3d272db05ff0afdd0ea9b3c97
 .agents/skills/context-distillation/SKILL.md	engine	3d6e4955a67f83758cf15ad96e4357de0a64a67e24394aed61f2c7d563f41a62
-.agents/skills/plan-management/SKILL.md	engine	dca2c5bc0f8bdb0910fa9ea48b55fb0a81da8be4bdceca96b1904bac16d572f1
+.agents/skills/plan-management/SKILL.md	engine	497beb1d8f00cba15753233568eda8fd8802379edb5a22898621158ada15a956
 .agents/skills/plan-management/scripts/frontier.sh	engine	0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6
 .agents/skills/plan-management/scripts/new-task.sh	engine	8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c
 .agents/skills/plan-management/templates/epic-body.md	engine	28adc386b85e5d9a4861aede3a476606b9b826a74d08308ac69461232aa248b4
