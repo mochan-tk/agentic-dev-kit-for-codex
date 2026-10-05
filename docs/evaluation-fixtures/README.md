@@ -107,3 +107,6 @@ correctly diagnose the supplied product failure without fixing it. Do not
 confuse scenario conclusions, fixture-check results and candidate-trial results.
 No elapsed time, token count or cost has been measured here; unavailable
 measurements stay null, never zero.
+
+For the separate EC02/EC03 staged human-choice and context-recovery examples,
+see [interaction teaching fixtures](interaction.md).
