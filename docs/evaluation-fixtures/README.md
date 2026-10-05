@@ -110,3 +110,6 @@ measurements stay null, never zero.
 
 For the separate EC02/EC03 staged human-choice and context-recovery examples,
 see [interaction teaching fixtures](interaction.md).
+
+For EC01/EC04 ownership, user-edit preservation and candidate-authored regression
+examples, see [scope and regression teaching fixtures](code-change.md).
