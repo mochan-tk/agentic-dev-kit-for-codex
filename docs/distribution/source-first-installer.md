@@ -5,13 +5,20 @@ Read [product scope](../product-scope.md), [limitations](../known-limitations.md
 
 ## Prepare context and the desktop project
 
-The [README walkthrough](../../README.md#quick-start) assumes **Codex in the
-desktop app with a local adopter repository**. If the desktop app offers
-ChatGPT and Codex in its product selector, choose Codex for the kit's
-installation/onboarding/development work. ChatGPT Chat or Work is the
-preparation surface below, not a substitute for selecting the local Codex
-project. Shell installation is still available outside the desktop app;
-this walkthrough does not qualify every client or operating system.
+**This kit requires the ChatGPT Codex desktop app**, not only for this
+walkthrough but for onboarding, coordination and development. Meet all
+[product prerequisites](../../README.md#prerequisites), including the GitHub
+repository, authenticated `gh`, `jq`, Git/Bash and Windows-specific tools,
+before starting. Codex CLI or the IDE extension alone does not satisfy the
+desktop requirement.
+
+If the desktop app offers ChatGPT and Codex in its product selector, choose
+Codex for the kit's installation/onboarding/development work. ChatGPT Chat or
+Work is the preparation surface below, not a substitute for the local Codex
+project. Shell installers and helpers can run in a terminal, but that does
+not make a terminal-only workflow a supported way to operate the kit. The
+installer does not detect the app or enforce this product requirement, and
+the requirement does not qualify every app version or operating system.
 
 ### Prepare the specification before adoption
 

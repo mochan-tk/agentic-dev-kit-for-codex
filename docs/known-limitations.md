@@ -59,8 +59,14 @@ not qualified. Existing addon updates still require an owner-reviewed transition
 
 ## Workflow and helpers
 
-Skill discovery, named roles, delegation and handoffs depend on the selected
-Codex client. There is no verified cross-client runtime parity, universal
+The **ChatGPT Codex desktop app is required** for the kit's workflow; Codex
+CLI-only or IDE-only operation is unsupported. See the
+[product prerequisites](../README.md#prerequisites). Being able to execute a
+shell helper or installer does not satisfy the desktop requirement, and the
+installer does not verify that the app is installed.
+
+Skill discovery, named roles, delegation and handoffs depend on the desktop
+app version and its available tools. There is no verified cross-client runtime parity, universal
 automatic discovery, authenticated supervision, crash recovery, budget circuit
 breaker or immutable identity/control plane. Use explicit installed-file
 instructions and available tools; report unsupported or uncheckable states.

@@ -117,11 +117,11 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "45eda93a1ba682c43830e2137bf7664ec3e5999a42ab4dbc077bcf218530774c"
+ADOPTER_RECORD_SHA256 = "97e5a5fff29d4cb0dac6b217f5828d0f4ef76132e09e386a28706affef895491"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "91687d9379503a776cf243d91eddb5c09f9caf96fda7bf09014d00a681830dfa"
+IMPROVEMENT_RECORD_SHA256 = "bec508ac5f08d9e5efe9ea50b318ee15f853da79f3dbaf806e2f65c951aa3923"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "323e18c6a89154d92926d837be20d3e01c15a358b1f0ea13fa1fe8037201b219"
+MONITOR_RECORD_SHA256 = "b919cdef10cfc0879725291464232b63ee84e793a12ac75609afcbadd0f4e75f"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive
