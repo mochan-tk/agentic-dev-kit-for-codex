@@ -55,8 +55,9 @@ gate, a required external connector, or automatic context synchronization.
    for that discovery.
 3. Start a **local chat inside that Codex project**. Confirm the working
    directory and Git root name the adopter repository, then use a terminal
-   at that root for the installation commands below. Keep one writer and
-   review existing changes before allowing installation.
+   at that root for the **public one-command installation** below. The
+   [local-source alternative](#local-use) uses a separate kit-checkout terminal
+   location. Keep one writer and review existing changes before installation.
 4. Review and land the installed files on the remote default branch, as
    described below. Start a new local chat in the same project for the
    installed onboarding Skill, with the prepared context ready. Answer its
@@ -166,6 +167,11 @@ interpret the payload's local-engine statement as its external staging policy.
 
 Inspect the local source checkout first. Create an adopter Git repository
 yourself if needed. Do not run concurrently with another writer in it.
+For this alternative, run the following commands **from the reviewed kit
+checkout's root**, not the adopter root: the relative bootstrap path belongs
+to the kit source. Replace `/path/to/adopter` with your actual adopter root.
+Keep the Codex project's primary folder at the adopter; using a kit-source
+terminal for these commands does not change the onboarding project.
 
 ```sh
 bash .github/scripts/scaffold-init.sh --dry-run /path/to/adopter
