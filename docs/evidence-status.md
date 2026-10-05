@@ -55,3 +55,8 @@ See [known limitations](known-limitations.md) for operational exclusions,
   Offline checks validate fixture consistency, including an intentionally red
   seed test; they do not run a model or populate case results. These public
   answers are teaching/development material, not secret held-out evaluations.
+- [Offline interaction fixtures](evaluation-fixtures/interaction.md): EC02/EC03
+  have authored choice/context packets, a staged hypothetical reply and public
+  reference rubrics. These are preparation artifacts, not observed waiting,
+  predecessor completion or a full handoff. All six cases remain NOT_RUN;
+  actual trials and their action evidence require separate authorization.
