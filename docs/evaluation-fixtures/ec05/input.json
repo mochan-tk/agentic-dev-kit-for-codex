@@ -1,0 +1,36 @@
+{
+  "format": "synthetic-ci-diagnosis-input/v1",
+  "case_id": "EC05",
+  "case_version": 1,
+  "evidence_class": "synthetic",
+  "evaluation_status": "NOT_RUN",
+  "operation": "diagnosis_only",
+  "allowed_writes": [],
+  "notice": "Authored teaching data, not an observed GitHub run. All synthetic-* identities are symbolic, not fetchable Git objects or service IDs.",
+  "request": "Diagnose the supplied current-head failure. Identify head, run and attempt, the failure boundary, what tests did or did not execute, and the next scoped proposal. Do not implement, edit settings, install tools, rerun CI or call a network service.",
+  "requirements": [
+    "The required PowerShell host must be present before product tests start.",
+    "Missing required tools are not optional skips and must not be called a product-test pass."
+  ],
+  "current_head": "synthetic-ec05-head-current",
+  "source_files": [],
+  "runs": [
+    {
+      "head": "synthetic-ec05-head-current",
+      "run_id": "synthetic-ec05-run-current",
+      "attempt": 1,
+      "conclusion": "failure",
+      "steps": [
+        {
+          "name": "required_host",
+          "required_tool": "pwsh",
+          "conclusion": "failure",
+          "exit_code": 127,
+          "diagnostic": "Required PowerShell executable was not found on the runner PATH. Product tests have not started."
+        },
+        {"name": "product_tests", "conclusion": "skipped"}
+      ],
+      "tests": {"status": "not_started", "total": null, "failures": null}
+    }
+  ]
+}

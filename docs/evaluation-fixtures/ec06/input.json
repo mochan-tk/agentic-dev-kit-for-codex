@@ -1,0 +1,46 @@
+{
+  "format": "synthetic-ci-diagnosis-input/v1",
+  "case_id": "EC06",
+  "case_version": 1,
+  "evidence_class": "synthetic",
+  "evaluation_status": "NOT_RUN",
+  "operation": "diagnosis_only",
+  "allowed_writes": [],
+  "notice": "Authored teaching data, not observed GitHub runs. All synthetic-* identities are symbolic, not fetchable Git objects or service IDs. Source files describe only the current head; no older-head source is supplied.",
+  "request": "Diagnose the supplied current-head failure using the two adjacent source files. Identify head, run and attempt, the failure boundary, what tests executed, and the next scoped proposal. Explain whether the other successful run proves the current candidate passed. Do not implement, edit settings, rerun CI or call a network service.",
+  "requirements": [
+    "count_nonblank receives a list of strings and returns the number containing at least one non-whitespace character.",
+    "Empty input returns 0; a whitespace-only string does not count. The input list must not change.",
+    "A required host must be available before tests execute. Acceptance proof must match the current candidate head."
+  ],
+  "current_head": "synthetic-ec06-head-current",
+  "source_files": [
+    {"path": "report.py", "sha256": "5e06d8260cc8c27ceaea0af8187637862b2658d1f5389abbdefa6dbe08f505d6"},
+    {"path": "test_report.py", "sha256": "7796adc81d8f39e526557eb037066ead18f258c620e7e42b51b1db837644f709"}
+  ],
+  "runs": [
+    {
+      "head": "synthetic-ec06-head-older",
+      "run_id": "synthetic-ec06-run-older",
+      "attempt": 1,
+      "conclusion": "success",
+      "steps": [
+        {"name": "required_host", "conclusion": "success"},
+        {"name": "product_tests", "conclusion": "success"}
+      ],
+      "tests": {"status": "completed", "total": 2, "failures": 0}
+    },
+    {
+      "head": "synthetic-ec06-head-current",
+      "run_id": "synthetic-ec06-run-current",
+      "attempt": 2,
+      "conclusion": "failure",
+      "steps": [
+        {"name": "required_host", "conclusion": "success"},
+        {"name": "product_tests", "conclusion": "failure"}
+      ],
+      "tests": {"status": "completed", "total": 2, "failures": 1},
+      "assertion": {"test": "test_report.ReportTests.test_whitespace_only", "input": ["   "], "expected": 0, "actual": 1}
+    }
+  ]
+}
