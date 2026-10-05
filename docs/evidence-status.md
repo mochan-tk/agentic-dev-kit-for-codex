@@ -60,3 +60,9 @@ See [known limitations](known-limitations.md) for operational exclusions,
   reference rubrics. These are preparation artifacts, not observed waiting,
   predecessor completion or a full handoff. All six cases remain NOT_RUN;
   actual trials and their action evidence require separate authorization.
+- [Offline scope/regression fixtures](evaluation-fixtures/code-change.md):
+  EC01/EC04 have a shared defective seed, separate case packets, authored user
+  notes and public reviewer references. Offline checks demonstrate fixture
+  consistency and an initial-working-tree comparison method, not observed
+  agent preservation or a candidate-authored regression/fix. All six cases
+  remain NOT_RUN and actual trials require separate authorization.
