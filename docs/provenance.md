@@ -284,3 +284,34 @@ accepted-old baselines remain immutable. Synthetic forward scenarios and
 disposable install/update/rollback checks are not a live GitHub Project test
 or proof of universal model compliance. Exact-head evidence, acceptance and
 merge are recorded separately in the Task and PR.
+
+## Current adoption and evidence documentation alignment
+
+Task 33 aligns documentation at accepted public base
+`9fdbf91d9980b5c632e0f3483c97098358ce519f`, tree
+`455adcd64ef2af0e19d5899dfa3c5d56f08c6dd4`. Only installed README content
+changes among the 47 payload files; the other 46 contents and all paths,
+preservation classes and modes remain unchanged. README remains a seed:
+fresh/missing destinations receive the new text; existing adopter READMEs
+are preserved by install and update, not silently upgraded.
+
+The installed guide now follows the existing desktop-app requirement,
+specification preparation, local project primary-folder setup, explicit
+instruction loading and entry-specific staging contract. The public first-Task
+example follows existing-codebase characterization before feature work.
+No Skill, installer/update engine, helper or workflow behavior changes.
+
+The dated evidence map distinguishes baseline CI, synthetic conformance,
+historical bounded E01 acceptance and later unmeasured live behavior. It retains
+the old Pending checkpoint and existing sanitized public receipts without
+republishing private evidence or claiming a new E01 run. T12 and release limits
+remain unchanged. Neither support-program selection nor model/API performance
+is claimed.
+
+The product checker independently binds the exact original README export row
+and reviewed current README digest. Current inventory/parity and documentation
+bindings are synchronized; original export/history seals, source attribution
+and accepted-old baselines remain immutable. Negative regressions and disposable
+delivery/preservation checks do not measure live model compliance. Candidate
+verification, independent review, final acceptance and merge are recorded
+separately in the Task and PR.

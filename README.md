@@ -207,10 +207,14 @@ considering check activation; it is outside the legacy 47-file update path.
 
 ### 4. Complete one small Task
 
-Start with a change you can easily review. For example:
+For an existing codebase, start with characterization tests for the area you
+intend to change, before feature work. This follows the onboarding Skill's
+legacy path and gives later changes an observed-behavior baseline. For example:
 
 ```text
-Use the installed kit workflow to add CSV export to the existing report page.
+Use the installed kit workflow to add characterization tests for the existing
+report page. Capture its current behavior without adding a feature or changing
+application behavior.
 
 Inspect the code first. Propose the acceptance criteria, owned files,
 verification commands, and Task plan. Ask me to resolve unclear requirements.
@@ -220,7 +224,9 @@ with the results and any remaining concerns. Leave the merge decision to me.
 
 Review the Task, diff, and evidence—not only the final chat message. Accept,
 redirect, or reject the result. Use the retrospective workflow when repeated
-friction suggests a reusable improvement.
+friction suggests a reusable improvement. After the characterization baseline
+is accepted, plan a small feature Task separately. For a new codebase, agree
+the initial behavior and tests in its first bounded Task.
 
 ### 5. Update explicitly when you choose
 
@@ -368,6 +374,9 @@ predecessor's 47-file payload and installer engine. See
 [product scope](docs/product-scope.md) and [known limitations](docs/known-limitations.md)
 for current behavior and evidence boundaries. Earlier acceptance, research and
 unfinished runtime/release work remain in the [predecessor records](docs/provenance.md).
+The [dated evidence status](docs/evidence-status.md) separates baseline CI,
+synthetic conformance, the accepted historical desktop exercise and unmeasured
+behavior. Historical acceptance does not establish live behavior of later revisions.
 
 ## Documentation
 
@@ -382,6 +391,7 @@ unfinished runtime/release work remain in the [predecessor records](docs/provena
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |
 | Understand Issue-graph authority | [Installed instructions](.github/distribution/payload/AGENTS.md) |
 | Check evidence boundaries and compatibility limits | [Known limitations](docs/known-limitations.md) |
+| Distinguish tested behavior, historical live acceptance and unmeasured claims | [Dated evidence status](docs/evidence-status.md) |
 | Inspect the shipped scope | [Product scope](docs/product-scope.md) |
 | Inspect earlier acceptance and development history | [Source provenance](docs/provenance.md) |
 | Run checks or contribute to the kit | [Contributing](CONTRIBUTING.md) and [contributor instructions](AGENTS.md) |

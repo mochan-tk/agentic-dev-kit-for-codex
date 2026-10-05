@@ -430,9 +430,10 @@
       "destination": "README.md",
       "source_path": "README.md",
       "source_blob": "76480f3ae0458926d854e62f51d10958ff229bd3",
-      "target_sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b",
+      "target_sha256": "a3fb829b85281db8ae63a0cfdb3f9027197d9578edd6cf5c4d8e1c0a5f3fe893",
       "adaptations": [
-        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth."
+        "Replace source-repository history/marketing with generic adopter entry or empty instance ledger; do not export source acceptance as adopter truth.",
+        "Align the seed README with the required desktop app, prepared specification, primary-folder project, explicit Skill loading and entry-specific staging; preserve existing adopter README bytes."
       ]
     },
     {
@@ -485,7 +486,7 @@
       {
         "path": "README.md",
         "mode": "100644",
-        "sha256": "48fb7e3655acaf651a62ddb801e0a8586b2f991a262c6f633338e3d5a86d726b"
+        "sha256": "a3fb829b85281db8ae63a0cfdb3f9027197d9578edd6cf5c4d8e1c0a5f3fe893"
       }
     ]
   },
@@ -899,7 +900,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5"
+        "sha256": "a0b848f4bfdd21f34c1ea1b953a80a1343125aed5f0c628f63182686c011def0"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -962,8 +963,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5",
-        "target_blob": "9bde6305a69a376215d6b1aecca7f096ab8bed34"
+        "target_sha256": "a0b848f4bfdd21f34c1ea1b953a80a1343125aed5f0c628f63182686c011def0",
+        "target_blob": "fac88ddd15f37d1eb6bc0ce9a18fa36480371b87"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1097,7 +1098,7 @@
       {
         "path": "docs/parity-status.md",
         "mode": "100644",
-        "sha256": "21c0bf6959fb25627558f474c45f01ed35442dd9bac05931adbb7447aa33284a"
+        "sha256": "cdaa3158ce05f722a6183e72559663033903cd61d89bd8cffa8ac8a2e469e79c"
       }
     ],
     "export_adaptation": {
@@ -1136,7 +1137,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5"
+        "sha256": "a0b848f4bfdd21f34c1ea1b953a80a1343125aed5f0c628f63182686c011def0"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1171,7 +1172,7 @@
       {
         "path": "docs/known-limitations.md",
         "mode": "100644",
-        "sha256": "aa1203bc91a5acebdc30634f303c249732a95ffa02ae7754b88a68ea210b4493"
+        "sha256": "f499ef7d9c641bf9d0fa2080a52235ec40455ea75fff93d19fbb3110504da65f"
       },
       {
         "path": "docs/product-scope.md",
@@ -1181,7 +1182,7 @@
       {
         "path": "docs/provenance.md",
         "mode": "100644",
-        "sha256": "dc097af5825bce1a45fc15b3f7653fa0a109cc009ecb157aaf767f8cb4fc43f6"
+        "sha256": "a4ea663d1738d1577428b913a5a5f96442fc267f8ebf9642ad22512380479687"
       },
       {
         "path": "tests/conformance/test_adopter_ci.py",
@@ -1260,7 +1261,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "f7a68b95da105c965dfa9f03a9693706d65d2b8d8ae6bb46994ee5a462bbd5e5"
+        "sha256": "a0b848f4bfdd21f34c1ea1b953a80a1343125aed5f0c628f63182686c011def0"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1310,12 +1311,12 @@
       {
         "path": "docs/known-limitations.md",
         "mode": "100644",
-        "sha256": "aa1203bc91a5acebdc30634f303c249732a95ffa02ae7754b88a68ea210b4493"
+        "sha256": "f499ef7d9c641bf9d0fa2080a52235ec40455ea75fff93d19fbb3110504da65f"
       },
       {
         "path": "docs/parity-status.md",
         "mode": "100644",
-        "sha256": "21c0bf6959fb25627558f474c45f01ed35442dd9bac05931adbb7447aa33284a"
+        "sha256": "cdaa3158ce05f722a6183e72559663033903cd61d89bd8cffa8ac8a2e469e79c"
       },
       {
         "path": "docs/product-scope.md",
@@ -1325,7 +1326,7 @@
       {
         "path": "docs/provenance.md",
         "mode": "100644",
-        "sha256": "dc097af5825bce1a45fc15b3f7653fa0a109cc009ecb157aaf767f8cb4fc43f6"
+        "sha256": "a4ea663d1738d1577428b913a5a5f96442fc267f8ebf9642ad22512380479687"
       },
       {
         "path": "tests/conformance/test_companion_access.py",

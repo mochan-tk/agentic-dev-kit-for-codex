@@ -1,0 +1,41 @@
+# Evidence status
+
+Recorded on **2026-10-05**, at documentation-change base
+`9fdbf91d9980b5c632e0f3483c97098358ce519f`. This is a dated map of available
+evidence, not a live dashboard or a product-completion claim. GitHub records
+and exact-head checks remain authoritative; consult a later Task/PR for later
+candidate results. Baseline CI does not validate this documentation change.
+
+## What the evidence supports
+
+| Evidence class | Recorded result | What it does not establish |
+| --- | --- | --- |
+| Baseline product CI | [`quality` and `conformance` succeeded](https://github.com/mochan-tk/agentic-dev-kit-for-codex/actions/runs/37250779904), attempt 1, for the exact base above on 2026-10-05. | A pass for a later commit, live model behavior, adopter deployment or owner acceptance. |
+| Deterministic conformance | [The test method](../CONTRIBUTING.md#tests-and-provenance) uses real Bash/Git/jq, disposable local targets and synthetic external transport. CI requires a real PowerShell host; a local skip is not that evidence. | Native Windows end-to-end operation, live GitHub governance, or a live Codex workflow. A historical test count is not a current suite count. |
+| Historical bounded E01 | [The dated public acceptance](parity-status.md#current-acceptance-as-of-2026-09-23) records acceptance on 2026-09-23 of one disposable macOS desktop exercise with explicitly loaded installed instructions/Skills, a test-first worker, a successor after normal completion, an ordinary PR, real application and metadata Actions, and owner-reviewed merge. | Automatic Skill/role discovery, authenticated identities, forced-stop/crash recovery, required-check merge enforcement, retarget freshness, Windows, or existing-addon migration. Onboarding, Projects and Rulesets were explicitly declined. |
+| Later onboarding and planning changes | [Provenance](provenance.md#current-onboarding-answer-wait-correction) separates procedure/delivery tests and synthetic date-proposal scenarios from live observations. | Historical E01 acceptance does not remeasure later kit revisions. No live interview, Project-date execution or universal model-compliance result follows from those tests. |
+
+The old E01 **Pending** row in the [parity checkpoint](parity-status.md#historical-implementation-checkpoint)
+is retained historical state, not a denial of the later bounded acceptance.
+This documentation update records **no new E01 run**. Private application
+records, local paths, raw logs and transcripts are not published here; the
+sanitized public acceptance receipt is linked from the dated parity section.
+
+## Remaining boundaries
+
+- The desktop app is required by the product's operating contract. That
+  requirement is not proof of every desktop version, platform or workflow.
+- Fresh-install and update tests check delivered files and preservation, not
+  whether a model follows the instructions. Installed README is a `seed`;
+  existing README files are not overwritten by an update. Existing adopters
+  should review the [current public entry instructions](../README.md#quick-start)
+  and reconcile their own guide explicitly.
+- Receivers and schedules remain inactive. No live adopter update, integration,
+  new model/API experiment or ongoing monitor is started by this page.
+- T12 remains paused, `release_blocked=true` remains in force, and the original
+  136 scenarios remain `not-run` with `results: []`. Bounded Task acceptance
+  and CI success do not declare repository-level completion or release.
+
+See [known limitations](known-limitations.md) for operational exclusions,
+[product scope](product-scope.md) for shipped surfaces, and
+[CONTRIBUTING](../CONTRIBUTING.md) for candidate verification commands.

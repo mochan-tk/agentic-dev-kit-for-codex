@@ -140,8 +140,9 @@ NO_RETARGET is not application-code success. A normal base-SHA advance without
 retarget is outside historical run freshness, but metadata retains an exact
 event/current-base SHA binding for trusted control checkout. An old metadata
 event can therefore require a new PR event after base advancement; rerunning
-that old event does not refresh its payload. Live adopter Actions deployment
-and native Windows addon setup are unmeasured.
+that old event does not refresh its payload. Live deployment evidence is limited
+to the separately accepted bounded E01 exercise described below. Native Windows
+addon setup remains unmeasured.
 
 Product conformance uses real Bash, Git and jq with disposable local fixtures
 and synthetic external transport. It is not live Codex E2E, live governance,
@@ -154,8 +155,14 @@ intentional differences. The [feedback guide](distribution/feedback.md) now
 offers a pinned no-clone draft/send route and public manual form. Installer
 failures print only fixed links; there is no automatic interactive source hook.
 The form cannot prevent private-text or attachment disclosure; the user must
-review all content. Receivers and schedules remain inactive. Current-version live adopter/worker/CI integration is
-pending; accepted old use and new synthetic checks are different evidence.
+review all content. Receivers and schedules remain inactive. A bounded E01
+exercise was accepted on 2026-09-23: one fresh disposable macOS desktop project
+used explicitly loaded installed instructions and Skills, a worker and
+normal-checkpoint successor, and real application and metadata Actions.
+Onboarding, Projects and Rulesets were declined. This dated acceptance does not
+establish live behavior of later kit revisions; this documentation update records
+no new E01 run. See the [dated acceptance and remaining boundaries](parity-status.md#current-acceptance-as-of-2026-09-23)
+and the [evidence status](evidence-status.md) for the distinct evidence classes.
 
 The [installation guide](distribution/source-first-installer.md) explains
 operations and trust boundaries; [product scope](product-scope.md) lists what

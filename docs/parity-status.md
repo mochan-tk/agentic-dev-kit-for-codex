@@ -8,7 +8,15 @@ new candidate evidence and owner acceptance are distinct. The following table
 is the retained implementation snapshot; the dated acceptance section below
 records later public decisions without rewriting those checkpoints.
 
-| Audit ID | Current implementation and disposition | Evidence and remaining boundary |
+For a concise view across evidence classes, read the [dated evidence status](evidence-status.md).
+The E01 Pending entry below records the earlier checkpoint. The separately
+authorized bounded exercise was accepted on 2026-09-23, as recorded in the
+[dated acceptance section](#current-acceptance-as-of-2026-09-23). That acceptance
+does not remeasure later kit revisions.
+
+## Historical implementation checkpoint
+
+| Audit ID | Implementation at the recorded checkpoint and disposition | Evidence and remaining boundary |
 | --- | --- | --- |
 | G01 | Explicit three-file adopter CI addon reaches the installed Task ritual. | Accepted public product PR #9; real local tools and synthetic GitHub. Not automatic installation or live rollout. |
 | G02 | Explicit single-maintainer governance profile; startup distinguishes tuned, untuned and observation failure. | Accepted public product PR #7; scoped owner decline and fail-closed sensor regressions. No inferred consent or live setting change. |
