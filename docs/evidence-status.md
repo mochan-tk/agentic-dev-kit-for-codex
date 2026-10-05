@@ -39,3 +39,14 @@ sanitized public acceptance receipt is linked from the dated parity section.
 See [known limitations](known-limitations.md) for operational exclusions,
 [product scope](product-scope.md) for shipped surfaces, and
 [CONTRIBUTING](../CONTRIBUTING.md) for candidate verification commands.
+
+## Try the reference material
+
+- [Worked example](worked-example.md): a tiny Python formatter, one supplied
+  baseline test and five reference characterization tests, with illustrative
+  Epic/Task/plan/PR records. Running the reference tests is not a live Codex
+  workflow or an accepted adopter exercise.
+- [Evaluation cases](evaluation-cases.md): six **NOT_RUN** case specifications,
+  a blank result record and a comparison protocol. This is not a benchmark
+  runner or evidence that a model passed these cases. Historical E01 and
+  product conformance results do not populate them.
