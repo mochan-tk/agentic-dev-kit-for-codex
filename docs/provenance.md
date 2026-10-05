@@ -256,3 +256,31 @@ bind this correction. Earlier source attribution, original export/history seals
 and accepted-old regression baselines remain immutable. This change is separate
 from Task 23's held A01-A06 work and Tracker 20 activation. Acceptance and merge
 remain owner decisions.
+
+## Current roadmap date-proposal correction
+
+Task 31 addresses owner feedback at accepted public base
+`196061dcb91575114417670470aca1a73a8f31ca`, tree
+`b1d147fe10c373294fca8ce6f5f25a913853524e`. Only the installed
+`plan-management` Skill changes among the 47 payload files; the other 46
+contents and all paths, preservation classes and modes remain unchanged.
+Roadmap setup/backfill and later decomposition now include a proposed-date
+pass instead of waiting for committed dates. Estimates disclose dependencies,
+capacity, calendar assumptions and uncertainty, and do not claim observed
+starts, delivery promises or execution authority.
+
+Date application needs scoped human authorization, durable Issue records,
+preservation of existing dates and exact per-item readback of both fields.
+An explicit request to populate proposed dates needs no duplicate approval;
+board-only consent, silence and elapsed time do not authorize date writes.
+Partial writes remain incomplete. The existing Project helper, date-field
+writes, installer/update/rollback engines and optional-board boundary are
+unchanged; no scheduling engine, automatic dispatch, timer, live Project or
+adopter update is introduced.
+
+Current inventory, parity/export adaptations and shared documentation digests
+bind this correction. Original export/history seals, source attribution and
+accepted-old baselines remain immutable. Synthetic forward scenarios and
+disposable install/update/rollback checks are not a live GitHub Project test
+or proof of universal model compliance. Exact-head evidence, acceptance and
+merge are recorded separately in the Task and PR.
