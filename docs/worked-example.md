@@ -191,11 +191,12 @@ an evidence receipt as though a command had been executed.
 
 ## 5. Review and request the human decision
 
-Use the installed [PR template](../.github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md).
+Read the installed [verification Skill](../.github/distribution/payload/.agents/skills/verification/SKILL.md)
+and use the installed [PR template](../.github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md).
 This illustrative PR is intentionally unfilled and has no completed checklist:
 
 ```markdown
-Refs #<TASK_NUMBER>
+Closes #<TASK_NUMBER>
 Plan: <ACTUAL_PLAN_COMMENT_URL>
 
 ## Summary
@@ -206,6 +207,7 @@ Add four characterization tests; application behavior remains unchanged.
 | --- | --- | --- |
 | Five tests and exact-head required checks | <ACTUAL_HEAD_TREE_COMMANDS_AND_CI_REFERENCES> | NOT_RUN |
 | Ownership and unchanged report.py | <ACTUAL_BASE_COMPARISON_AND_REVIEW> | NOT_RUN |
+| Post-PR ritual sensor | <ACTUAL_PR_NUMBER_HEAD_BASE_AND_SENSOR_RESULT> | NOT_RUN |
 
 ## Deviations
 PENDING: record actual deviations, or confirm none after review.
@@ -218,10 +220,33 @@ Human final acceptance and merge decision: PENDING.
 - [ ] Human acceptance decision recorded separately from technical checks.
 ```
 
-Use `Refs` while post-merge acceptance remains open; do not auto-close work
-whose acceptance is still pending. Replace `NOT_RUN` only with observed results
-bound to the actual candidate head. An independent review can be advisory;
-neither model praise nor green CI is a human acceptance/merge decision.
+This single-PR sample has pre-merge criteria, so it uses the ordinary `Closes`
+relationship; closure takes effect only upon an authorized merge. Use `Refs`
+instead when the actual Task has post-merge acceptance steps or this is a
+non-final stacked layer. Pending human review alone does not make a Task's
+criteria post-merge or authorize a merge.
+
+After the real PR exists, run the installed read-only sensor from the adopter
+repository before ready-for-review. Replace the placeholder with its numeric
+PR number, and record the observed head/base and actual result in the table:
+
+```bash
+bash .github/scripts/check-task-ritual.sh <ACTUAL_PR_NUMBER>
+```
+
+This GET-only sensor does not replace implementation tests, current-head CI,
+independent review or human acceptance. Missing, stale or uncheckable evidence
+is non-success; rerun the sensor if the head or Task/plan evidence changes.
+Replace `NOT_RUN` only with observed results bound to the actual candidate head.
+An independent review can be advisory; neither model praise nor green CI is a
+human acceptance/merge decision.
+
+Before the final narrative report, the supervisor records the structured Task
+outcome comment and updates the PR evidence using the installed session
+orchestration format. State actual results, deviations, pending decisions and
+next steps. Do not record `Outcome: completed` while required evidence or an
+applicable human acceptance decision is missing; use the appropriate non-success
+outcome with the concrete blocker. No outcome is prefilled as completed here.
 
 An optional handoff at a **normal completed checkpoint** should leave the
 current Issue/plan, branch/base/head, owned paths, evidence and pending decisions

@@ -79,6 +79,9 @@ class PublicExampleTests(unittest.TestCase):
         for fragment in ("illustrative", "not a live Codex", "primary folder",
                          "no worker will be spawned", "Starting in session", "## Plan",
                          "claim → plan → first commit", "NOT_RUN", "PENDING",
+                         "Closes #<TASK_NUMBER>", "Post-PR ritual sensor",
+                         "bash .github/scripts/check-task-ritual.sh <ACTUAL_PR_NUMBER>",
+                         "structured Task outcome comment", "Do not record `Outcome: completed`",
                          "normal completed checkpoint", "not crash recovery"):
             self.assertIn(fragment, prose)
         self.assertIn("\n- `test_report.py`\n", text)
