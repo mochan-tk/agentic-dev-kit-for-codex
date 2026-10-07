@@ -64,6 +64,48 @@ class PublicExampleTests(unittest.TestCase):
                 target.write_text(target.read_text() + "\n[missing](missing-example.md)\n")
                 self.assertTrue(self.checker.validate_navigation(root))
 
+    def assert_first_task_example_navigation(self, text):
+        # Ignore fenced examples and comments, then check the two entry-point
+        # forms. This is a focused README check, not a general Markdown parser.
+        text = re.sub(r"(?ms)^ {0,3}(`{3,}|~{3,})[^\n]*\n.*?^ {0,3}\1[ \t]*(?:\n|$)", "", text)
+        text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+        link = r"(?<!!)(?<!\\)\[[^\[\]`<>\\\n]+\]\(docs/worked-example\.md\)"
+        for heading, level, row in (("### 4. Complete one small Task", 3, False),
+                                    ("## Documentation", 2, True)):
+            self.assertEqual(1, text.splitlines().count(heading))
+            section = text.split(heading + "\n", 1)[1]
+            section = re.split(r"(?m)^#{1," + str(level) + r"} ", section, maxsplit=1)[0]
+            pattern = (r"^\| [^|`<>\n]+ \| " + link + r" \|$" if row else
+                       r"^[A-Za-z][^`<>\n]*" + link + r"[^`<>\n]*$")
+            self.assertRegex(section, "(?m)" + pattern)
+
+    def test_readme_first_task_example_navigation(self):
+        text = (ROOT / "README.md").read_text()
+        self.assert_first_task_example_navigation(text)
+        for heading in ("### 4. Complete one small Task", "## Documentation"):
+            self.assert_first_task_example_navigation(text.replace(
+                heading + "\n", heading + "\n\nOther `code` and <em>prose</em>.\n", 1))
+
+    def test_readme_example_navigation_guard_rejects_missing_or_hidden_links(self):
+        original = (ROOT / "README.md").read_text()
+        lines = [line for line in original.splitlines(keepends=True)
+                 if "](docs/worked-example.md)" in line]
+        self.assertEqual(2, len(lines))
+        for line in lines:
+            mutations = (
+                original.replace(line, "", 1),
+                original.replace(line, line.replace("worked-example.md", "evidence-status.md"), 1),
+                original.replace(line, "", 1) + "\n## Elsewhere\n" + line,
+                original.replace(line, "```text\n" + line + "```\n", 1),
+                original.replace(line, "<!--\n" + line + "-->\n", 1),
+                original.replace(line, line.replace("[", "![", 1), 1),
+                original.replace(line, line.replace("[", "\\[", 1), 1),
+                original.replace(line, "    " + line, 1),
+            )
+            for index, mutated in enumerate(mutations):
+                with self.subTest(line=line, mutation=index), self.assertRaises(AssertionError):
+                    self.assert_first_task_example_navigation(mutated)
+
     def test_reference_production_code_is_unchanged(self):
         self.assertEqual((EXAMPLE / "before/report.py").read_bytes(), (EXAMPLE / "after/report.py").read_bytes())
         counts = []
