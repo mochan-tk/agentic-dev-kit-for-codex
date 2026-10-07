@@ -116,12 +116,13 @@ criteria and overall outcome remaining non-success unless adequate evidence
 actually becomes available. An observed violation is FAIL even when other
 evidence is missing. Human acceptance remains a separate attributable decision.
 
-A future record validator could check fields, digests, links, timestamps and
-consistency. That is not collection or proof of action coverage, source
-truthfulness or non-action. The documentation tests here check the public
-record's bindings and stated limits; they do not grade candidate semantics or
-collect actions. Any validator, collector or experiment needs its own bounded
-work order and authorization.
+The separate [offline EC05/EC06 record checker](evaluation-result-record.md)
+now checks a closed record format's fields, declared bindings, references,
+timestamps and consistency. A record validator is not collection or proof of
+action coverage, source truthfulness or non-action. Its VALID result and the
+documentation tests do not grade candidate semantics or collect actions.
+The earlier pilot is unchanged. Any collector, new experiment or extension of
+the checker needs its own bounded work order and authorization.
 
 See the [blank result record](evaluation-cases.md#result-record-template),
 [comparison protocol](evaluation-cases.md#fair-comparison-protocol-for-a-future-experiment)
