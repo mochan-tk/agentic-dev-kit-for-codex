@@ -222,6 +222,10 @@ After the plan is agreed, implement and test the change, then open a PR
 with the results and any remaining concerns. Leave the merge decision to me.
 ```
 
+The [illustrative worked example](docs/worked-example.md) walks through a
+first characterization Task with locally runnable reference tests. It is not a
+record of accepted live work and is not installed into your project.
+
 Review the Task, diff, and evidence—not only the final chat message. Accept,
 redirect, or reject the result. Use the retrospective workflow when repeated
 friction suggests a reusable improvement. After the characterization baseline
@@ -389,6 +393,7 @@ behavior. Historical acceptance does not establish live behavior of later revisi
 | Review retrospective signals, official content checkpoints and feedback | [Ongoing improvement companions](docs/distribution/ongoing-improvement.md) |
 | Observe open PR checks and reviews manually | [Manual PR monitor](docs/distribution/pr-monitor.md) |
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |
+| Walk through a first characterization Task with runnable reference tests | [Illustrative worked example](docs/worked-example.md) |
 | Understand Issue-graph authority | [Installed instructions](.github/distribution/payload/AGENTS.md) |
 | Check evidence boundaries and compatibility limits | [Known limitations](docs/known-limitations.md) |
 | Distinguish tested behavior, historical live acceptance and unmeasured claims | [Dated evidence status](docs/evidence-status.md) |
