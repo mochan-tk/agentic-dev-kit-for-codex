@@ -87,10 +87,17 @@ CURRENT_RECEIPTS = {
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/12#issuecomment-5788166242",
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/16#issuecomment-5781753917",
 }
+PILOT_REPORT = "docs/evaluation-results/ec05-ec06-pilot-20261007.md"
+PILOT_RECEIPTS = {
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-6038180097",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-6038244192",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-6038530318",
+}
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md", "docs/evidence-status.md",
     "docs/worked-example.md", "docs/evaluation-cases.md",
+    PILOT_REPORT, "docs/evaluation-observation-preflight.md",
     "docs/evaluation-fixtures/README.md",
     "docs/evaluation-fixtures/interaction.md",
     "docs/evaluation-fixtures/code-change.md",
@@ -411,6 +418,23 @@ def validate_navigation(root):
                 section = re.sub(r'\[[^\]]+\]\(([^)]+)\)',
                     lambda match: "[accepted public receipt]" if match.group(1) in CURRENT_RECEIPTS else match.group(0), section)
                 text = prefix + heading + section + following + rest
+            if name == PILOT_REPORT:
+                # Fixed-format dated report only: plain bullet links, no raw
+                # HTML, fences or Setext structures. Other ATX headings end it.
+                heading = "## Source receipts (2026-10-07)\n"
+                lines = text.splitlines(keepends=True)
+                if (lines.count(heading) == 1
+                        and not re.search(r"[<>]|^ {0,3}(?:`{3,}|~{3,}|(?:=+|-+)[ \t]*$)", text, re.M)):
+                    index = lines.index(heading)
+                    prefix = "".join(lines[:index])
+                    following = "".join(lines[index + 1:])
+                    end = re.search(r"(?m)^ {0,3}#{1,2}(?:[ \t]+|$)", following)
+                    section = following[:end.start()] if end else following
+                    rest = following[end.start():] if end else ""
+                    section = re.sub(r'(?m)^- \[([^\[\]`\\\n<>]+)\]\(([^)\n]+)\)$',
+                        lambda match: "- " + match.group(1) + " (permitted pilot receipt)"
+                        if match.group(2) in PILOT_RECEIPTS else match.group(0), section)
+                    text = prefix + heading + section + rest
             if re.search(r"agentic-dev-kit-for-codex/(?:issues|pull)/[0-9]+", text):
                 errors.append("historical Issue/PR points to new repository: " + name)
         for name in (".github/ISSUE_TEMPLATE/ai-task.yml", ".github/ISSUE_TEMPLATE/epic.yml"):

@@ -1,8 +1,11 @@
 # Offline human-choice and handoff teaching fixtures
 
 Version 1, authored 2026-10-06. These are synthetic teaching artifacts for
-[EC02 and EC03](../evaluation-cases.md), not executed trials. All six cases
-remain **NOT_RUN**. Consistency checks call **no model**, use no network and
+[EC02 and EC03](../evaluation-cases.md), not executed trials. All six source
+specifications and blank templates remain **NOT_RUN**. The separate
+[EC05/EC06 pilot](../evaluation-results/ec05-ec06-pilot-20261007.md) records two
+actual attempts with overall UNCHECKABLE results. EC01-EC04 have no new trial
+evidence here. Consistency checks call **no model**, use no network and
 fill no result record. This is **not an agent grader**, runtime, dispatcher,
 UI waiting fix or permission to run an experiment.
 

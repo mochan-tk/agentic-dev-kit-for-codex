@@ -2,7 +2,11 @@
 
 Version 1, authored 2026-10-06. This pack supplies synthetic inputs for
 [EC01 and EC04](../evaluation-cases.md) and separate public reviewer references.
-All six model cases remain **NOT_RUN**; human trial approval is **PENDING**.
+All six source specifications and blank templates remain **NOT_RUN**; their
+source approval fields remain **PENDING**. The separate
+[EC05/EC06 pilot](../evaluation-results/ec05-ec06-pilot-20261007.md) records two
+actual attempts with overall UNCHECKABLE results. EC01-EC04 have no new trial
+evidence here; these source fields do not describe that pilot's authorization.
 The consistency checks call **no model** and make no network requests. This is
 **not an agent grader**, experiment runner or evidence of model quality.
 
