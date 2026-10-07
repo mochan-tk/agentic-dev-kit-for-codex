@@ -111,6 +111,12 @@ empty arrays here mean no observations have been collected, not that an agent
 has been shown to have no violations. This is a documentation format, not an
 implemented schema validator or runtime protocol.
 
+The separate [offline record checker](evaluation-result-record.md) accepts the
+closed `evaluation-result-record/v1` format for EC05/EC06 only. It checks
+declared record consistency, not agent behavior, action coverage or acceptance.
+This unchanged `evaluation-result-template/v1` teaching block is unsupported
+checker input; it is not automatically converted or populated.
+
 ```json
 {
   "schema": "evaluation-result-template/v1",
