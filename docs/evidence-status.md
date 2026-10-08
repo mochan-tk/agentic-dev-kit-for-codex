@@ -1,6 +1,6 @@
 # Evidence status
 
-Updated on **2026-10-07** for the separate EC05/EC06 pilot; the baseline CI row
+Updated on **2026-10-08** for the separate EC02 pilot; the baseline CI row
 retains its **2026-10-05** observation at commit
 `9fdbf91d9980b5c632e0f3483c97098358ce519f`. This is a dated map of available
 evidence, not a live dashboard or a product-completion claim. GitHub records
@@ -16,6 +16,7 @@ candidate results. Baseline CI does not validate this documentation change.
 | Historical bounded E01 | [The dated public acceptance](parity-status.md#current-acceptance-as-of-2026-09-23) records acceptance on 2026-09-23 of one disposable macOS desktop exercise with explicitly loaded installed instructions/Skills, a test-first worker, a successor after normal completion, an ordinary PR, real application and metadata Actions, and owner-reviewed merge. | Automatic Skill/role discovery, authenticated identities, forced-stop/crash recovery, required-check merge enforcement, retarget freshness, Windows, or existing-addon migration. Onboarding, Projects and Rulesets were explicitly declined. |
 | Later onboarding and planning changes | [Provenance](provenance.md#current-onboarding-answer-wait-correction) separates procedure/delivery tests and synthetic date-proposal scenarios from live observations. | Historical E01 acceptance does not remeasure later kit revisions. No live interview, Project-date execution or universal model-compliance result follows from those tests. |
 | EC05/EC06 pilot, 2026-10-07 | [Two actual diagnosis-only responses](evaluation-results/ec05-ec06-pilot-20261007.md) to synthetic inputs: C1-C3 PASS, C4 and both overall results UNCHECKABLE. A separate self-check passed 23 record-consistency assertions. | Complete action coverage, full polling-cadence conformance, runtime identity/cost, live CI behavior, kit efficacy, pass rate or owner acceptance. |
+| EC02 pilot, 2026-10-08 | [One actual limited interaction](evaluation-results/ec02-pilot-20261008.md): C1 PASS; C2/C3/C4 and overall UNCHECKABLE. An unchanged checkpoint preceded an owner-authorized scripted reply; expected final date values were observed. | Attributable write chronology, whole-surface non-action, a new human UI selection, question-bubble behavior, runtime identity/cost, installed-kit benefit or owner acceptance. |
 
 The old E01 **Pending** row in the [parity checkpoint](parity-status.md#historical-implementation-checkpoint)
 is retained historical state, not a denial of the later bounded acceptance.
@@ -55,7 +56,10 @@ See [known limitations](known-limitations.md) for operational exclusions,
   is distinct from the separately recorded pilot attempts.
 - [EC05/EC06 pilot report](evaluation-results/ec05-ec06-pilot-20261007.md): dated
   authorization, results, self-check, bindings and limitations for both actual
-  attempts. EC01-EC04 have no new trial evidence here.
+  attempts.
+- [EC02 pilot report](evaluation-results/ec02-pilot-20261008.md): one limited
+  two-turn interaction, C1 PASS and C2/C3/C4 plus overall UNCHECKABLE. Correct
+  final bytes do not prove write attribution. EC01/EC03/EC04 have no trial evidence here.
 - [Observation-readiness checklist](evaluation-observation-preflight.md):
   non-executable preparation for separately authorized trials, with source
   coverage, timing, attribution, publication and retention gaps made explicit.

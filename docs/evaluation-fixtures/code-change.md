@@ -5,8 +5,11 @@ Version 1, authored 2026-10-06. This pack supplies synthetic inputs for
 All six source specifications and blank templates remain **NOT_RUN**; their
 source approval fields remain **PENDING**. The separate
 [EC05/EC06 pilot](../evaluation-results/ec05-ec06-pilot-20261007.md) records two
-actual attempts with overall UNCHECKABLE results. EC01-EC04 have no new trial
-evidence here; these source fields do not describe that pilot's authorization.
+actual attempts with overall UNCHECKABLE results. The separate
+[2026-10-08 EC02 pilot](../evaluation-results/ec02-pilot-20261008.md) records one
+limited interaction: C1 PASS; C2/C3/C4 and overall UNCHECKABLE.
+EC01/EC03/EC04 have no trial evidence here; these source fields do not describe
+the separate pilots' authorization.
 The consistency checks call **no model** and make no network requests. This is
 **not an agent grader**, experiment runner or evidence of model quality.
 
