@@ -10,7 +10,10 @@ No model experiment runner is supplied.
 All six source specifications and the blank result template remain **NOT_RUN**.
 Separate actual attempts are recorded in the
 [2026-10-07 EC05/EC06 pilot](evaluation-results/ec05-ec06-pilot-20261007.md):
-both overall results are UNCHECKABLE. EC01-EC04 have no new trial evidence here.
+both overall results are UNCHECKABLE. The separate
+[2026-10-08 EC02 pilot](evaluation-results/ec02-pilot-20261008.md) records one
+limited interaction: C1 PASS; C2/C3/C4 and overall UNCHECKABLE.
+EC01/EC03/EC04 have no trial evidence here.
 This document is **not a benchmark runner**, an API
 integration, an automatic grader or evidence of a model's quality. The local
 [worked example](worked-example.md) tests reference Python behavior; it does not

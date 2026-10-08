@@ -94,11 +94,18 @@ PILOT_RECEIPTS = {
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-6038244192",
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-6038530318",
 }
+EC02_REPORT = "docs/evaluation-results/ec02-pilot-20261008.md"
+EC02_RECEIPTS = {
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/50#issuecomment-6050705018",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/50#issuecomment-6050715762",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/50#issuecomment-6050728607",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/50#issuecomment-6050762273",
+}
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md", "docs/evidence-status.md",
     "docs/worked-example.md", "docs/evaluation-cases.md",
-    PILOT_REPORT, "docs/evaluation-observation-preflight.md",
+    PILOT_REPORT, EC02_REPORT, "docs/evaluation-observation-preflight.md",
     "docs/evaluation-result-record.md",
     "docs/evaluation-fixtures/README.md",
     "docs/evaluation-fixtures/interaction.md",
@@ -420,10 +427,15 @@ def validate_navigation(root):
                 section = re.sub(r'\[[^\]]+\]\(([^)]+)\)',
                     lambda match: "[accepted public receipt]" if match.group(1) in CURRENT_RECEIPTS else match.group(0), section)
                 text = prefix + heading + section + following + rest
-            if name == PILOT_REPORT:
+            if name in (PILOT_REPORT, EC02_REPORT):
                 # Fixed-format dated report only: plain bullet links, no raw
                 # HTML, fences or Setext structures. Other ATX headings end it.
-                heading = "## Source receipts (2026-10-07)\n"
+                # Each report has its own exact date and receipts; the two
+                # sets are not interchangeable or a general Issue exception.
+                heading, receipts = {
+                    PILOT_REPORT: ("## Source receipts (2026-10-07)\n", PILOT_RECEIPTS),
+                    EC02_REPORT: ("## Source receipts (2026-10-08)\n", EC02_RECEIPTS),
+                }[name]
                 lines = text.splitlines(keepends=True)
                 if (lines.count(heading) == 1
                         and not re.search(r"[<>]|^ {0,3}(?:`{3,}|~{3,}|(?:=+|-+)[ \t]*$)", text, re.M)):
@@ -435,7 +447,7 @@ def validate_navigation(root):
                     rest = following[end.start():] if end else ""
                     section = re.sub(r'(?m)^- \[([^\[\]`\\\n<>]+)\]\(([^)\n]+)\)$',
                         lambda match: "- " + match.group(1) + " (permitted pilot receipt)"
-                        if match.group(2) in PILOT_RECEIPTS else match.group(0), section)
+                        if match.group(2) in receipts else match.group(0), section)
                     text = prefix + heading + section + rest
             if re.search(r"agentic-dev-kit-for-codex/(?:issues|pull)/[0-9]+", text):
                 errors.append("historical Issue/PR points to new repository: " + name)

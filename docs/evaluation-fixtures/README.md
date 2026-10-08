@@ -4,7 +4,10 @@ Version 1, authored 2026-10-05. This pack supplies **synthetic inputs and public
 reference rubrics** for [EC05 and EC06](../evaluation-cases.md). All six source
 specifications and blank templates remain **NOT_RUN**. Separate actual attempts
 are recorded in the [2026-10-07 pilot](../evaluation-results/ec05-ec06-pilot-20261007.md),
-with both overall results UNCHECKABLE; EC01-EC04 have no new trial evidence here.
+with both overall results UNCHECKABLE. The separate
+[2026-10-08 EC02 pilot](../evaluation-results/ec02-pilot-20261008.md) records one
+limited interaction: C1 PASS; C2/C3/C4 and overall UNCHECKABLE.
+EC01/EC03/EC04 have no trial evidence here.
 Fixture consistency tests call **no model**,
 make no network requests, and do not populate an evaluation result. This is
 **not an agent grader**, experiment runner, runtime protocol or live CI record.
