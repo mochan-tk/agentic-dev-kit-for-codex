@@ -101,11 +101,18 @@ EC02_RECEIPTS = {
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/50#issuecomment-6050728607",
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/50#issuecomment-6050762273",
 }
+EC04_REPORT = "docs/evaluation-results/ec04-checkpoint-pilot-20261009.md"
+EC04_RECEIPTS = {
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/53#issuecomment-6069266306",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/53#issuecomment-6069369140",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/53#issuecomment-6069407447",
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/53#issuecomment-6069497243",
+}
 PUBLIC_DOCS = (
     "README.md", "AGENTS.md", "CONTRIBUTING.md", "docs/product-scope.md",
     "docs/provenance.md", "docs/known-limitations.md", "docs/evidence-status.md",
     "docs/worked-example.md", "docs/evaluation-cases.md",
-    PILOT_REPORT, EC02_REPORT, "docs/evaluation-observation-preflight.md",
+    PILOT_REPORT, EC02_REPORT, EC04_REPORT, "docs/evaluation-observation-preflight.md",
     "docs/evaluation-result-record.md",
     "docs/evaluation-fixtures/README.md",
     "docs/evaluation-fixtures/interaction.md",
@@ -427,14 +434,15 @@ def validate_navigation(root):
                 section = re.sub(r'\[[^\]]+\]\(([^)]+)\)',
                     lambda match: "[accepted public receipt]" if match.group(1) in CURRENT_RECEIPTS else match.group(0), section)
                 text = prefix + heading + section + following + rest
-            if name in (PILOT_REPORT, EC02_REPORT):
+            if name in (PILOT_REPORT, EC02_REPORT, EC04_REPORT):
                 # Fixed-format dated report only: plain bullet links, no raw
                 # HTML, fences or Setext structures. Other ATX headings end it.
-                # Each report has its own exact date and receipts; the two
+                # Each report has its own exact date and receipts; the
                 # sets are not interchangeable or a general Issue exception.
                 heading, receipts = {
                     PILOT_REPORT: ("## Source receipts (2026-10-07)\n", PILOT_RECEIPTS),
                     EC02_REPORT: ("## Source receipts (2026-10-08)\n", EC02_RECEIPTS),
+                    EC04_REPORT: ("## Source receipts (2026-10-09)\n", EC04_RECEIPTS),
                 }[name]
                 lines = text.splitlines(keepends=True)
                 if (lines.count(heading) == 1

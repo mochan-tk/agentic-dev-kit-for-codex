@@ -8,7 +8,9 @@ actual attempts with overall UNCHECKABLE results. The separate
 [2026-10-08 EC02 pilot](../evaluation-results/ec02-pilot-20261008.md) records one
 limited interaction: C1 PASS; C2/C3/C4 and overall UNCHECKABLE. Its reply was
 authorized in advance, not newly selected through a human UI at the checkpoint.
-EC01/EC03/EC04 have no trial evidence here.
+The separate [2026-10-09 EC04 pilot](../evaluation-results/ec04-checkpoint-pilot-20261009.md)
+records one checkpointed regression/fix attempt: C1/C2/C3 PASS; C4 and overall
+UNCHECKABLE. EC01/EC03 have no trial evidence here.
 Consistency checks call **no model**, use no network and
 fill no result record. This is **not an agent grader**, runtime, dispatcher,
 UI waiting fix or permission to run an experiment.
