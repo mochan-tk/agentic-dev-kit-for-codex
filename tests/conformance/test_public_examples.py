@@ -66,6 +66,24 @@ EC04_BINDINGS = {
     "code-change/baseline/user-notes.md": "7d554744c94ab8ea642e823d1dee165feffd1db15a2878cde9b20237147ebf25",
     "code-change/reference/test_capacity_reference.py": "eac16ed789b38a34b9406f3aedec22df7291dd31e354774338cf10b7c23e7193",
 }
+# Fixed public Task #53 receipt bindings, independent of the report under test.
+EC04_RETAINED_BINDINGS = {
+    "Initial prompt": "a76ff73dd9ba96188cbab621602df329600599010354dfc54a93827b19226c7d",
+    "Continuation prompt": "96b0165ce6763169c4c36471129d89776342171c8312fda7b04eb69a83b5f062",
+    "Original user delta": "ff45bfb40d9012734768bff41d11b88feee710876c931e88bf22fec43999b392",
+    "Index inventory": "1da5ba4a4fed9ce1854ae70184bb2efa7ef538bebd9c52a5240a80dc5b142bbc",
+    "Checkpoint/final candidate tests": "483c919ab99cb860bd2b3d3a40f8bad2d6ce10e315483c88e01682a92c3e320b",
+    "Final candidate source": "4f760bef1396b20489c1c8329fb2422b8d15a44b09252ca91ac1961e4b6f7614",
+    "Checkpoint inventory/diff evidence": "57ee90496cc80a90b4f3231e510072a592b850093b0dc107f283b63298238e71",
+    "Supervisor red replay": "1fe603d276ce764d5970401ecd7f2ec279762327426d88f234041591288564f2",
+    "Native two-turn evidence, reasoning omitted": "e64b6c3488300d60b641229750521fc13540f35392ad3ac38a4ea130f3b8bb6c",
+    "Extracted native parent-to-child mapping": "acd9fbc189de3721a53312231aa2ae0d2b4e3a50fe3cee61c47f2aa0a09c452c",
+    "Supervisor green replay": "e148b6965dc974fc19aad5b33bfdc546c449fcc9ce3e67f1eaaf870ea63671bf",
+    "Supervisor reference replay": "c0bc2fb7f9fa16fefd17386f3975b8fdc8a8ac185f89261c34307c206f1cb723",
+    "Independent advisory review": "d28e02316a0bd5aafceb0cd3966f79207d1038406f3d72ec9f5c51e738fb8bb2",
+    "Timing record": "96a982306575aca5105f35f609c5c88bf84afe3269d846f2664422dc5f92876d",
+    "Final normalized result": "1cfefa57f5e507eca86d88d221a21dd929dbeef8ed40a07925375f58f578052f",
+}
 
 
 class PublicExampleTests(unittest.TestCase):
@@ -569,16 +587,26 @@ class PublicExampleTests(unittest.TestCase):
             self.assertIn(f"| {field} | null |", text)
         for path, digest in EC04_BINDINGS.items():
             self.assertIn(f"| `{path}` | `{digest}` |", text)
-        for label, digest in (
-                ("Checkpoint/final candidate tests", "483c919ab99cb860bd2b3d3a40f8bad2d6ce10e315483c88e01682a92c3e320b"),
-                ("Final candidate source", "4f760bef1396b20489c1c8329fb2422b8d15a44b09252ca91ac1961e4b6f7614"),
-                ("Native two-turn evidence, reasoning omitted", "e64b6c3488300d60b641229750521fc13540f35392ad3ac38a4ea130f3b8bb6c"),
-                ("Timing record", "96a982306575aca5105f35f609c5c88bf84afe3269d846f2664422dc5f92876d"),
-                ("Final normalized result", "1cfefa57f5e507eca86d88d221a21dd929dbeef8ed40a07925375f58f578052f")):
+        for label, digest in EC04_RETAINED_BINDINGS.items():
             self.assertIn(f"| {label} | `{digest}` |", text)
 
     def test_ec04_report_preserves_actual_results_and_limits(self):
         self.assert_ec04_report((ROOT / EC04_REPORT).read_text())
+
+    def test_ec04_guard_rejects_every_retained_binding_mutation(self):
+        original = (ROOT / EC04_REPORT).read_text()
+        self.assertEqual(15, len(EC04_RETAINED_BINDINGS))
+        for label, digest in EC04_RETAINED_BINDINGS.items():
+            row = f"| {label} | `{digest}` |"
+            for mutation, replacement in (
+                    ("hash", row.replace(digest, "0" * 64)),
+                    ("missing", ""),
+                    ("label", row.replace(label, "Unbound artifact"))):
+                with self.subTest(label=label, mutation=mutation):
+                    mutated = original.replace(row, replacement)
+                    self.assertNotEqual(original, mutated)
+                    with self.assertRaises(AssertionError):
+                        self.assert_ec04_report(mutated)
 
     def test_ec04_guard_rejects_false_results_and_removed_limits(self):
         original = (ROOT / EC04_REPORT).read_text()
@@ -657,6 +685,26 @@ class PublicExampleTests(unittest.TestCase):
                 target.write_text(target.read_text() + "\n" + synthetic_private_value + "\n")
                 self.assertTrue(any("private-path or credential pattern" in error
                                     for error in self.checker.validate_policy(root)))
+
+    def test_receipt_sections_end_at_every_atx_heading(self):
+        for report, label, reference in (
+                (REPORT, PILOT_RECEIPT_LABELS[0], PILOT_RECEIPTS[0]),
+                (EC02_REPORT, EC02_RECEIPT_LABELS[0], EC02_RECEIPTS[0]),
+                (EC04_REPORT, EC04_RECEIPT_LABELS[0], EC04_RECEIPTS[0])):
+            original = (ROOT / report).read_text()
+            bullet = f"- [{label}]({reference})"
+            root = self.fixture()
+            for level in range(1, 7):
+                for heading in ("#" * level + " Outside receipts",
+                                "   " + "#" * level + "\tOutside receipts",
+                                "#" * level,
+                                "#" * level + "\r",
+                                "#" * level + "\rFollowing paragraph",
+                                "Preceding paragraph\r" + "#" * level + "\rFollowing paragraph"):
+                    with self.subTest(report=report, heading=heading):
+                        (root / report).write_text(original.replace(bullet, heading + "\n\n" + bullet))
+                        self.assertTrue(any("historical Issue/PR" in error
+                                            for error in self.checker.validate_navigation(root)))
 
 
 if __name__ == "__main__":

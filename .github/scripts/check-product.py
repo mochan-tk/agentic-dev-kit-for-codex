@@ -450,7 +450,8 @@ def validate_navigation(root):
                     index = lines.index(heading)
                     prefix = "".join(lines[:index])
                     following = "".join(lines[index + 1:])
-                    end = re.search(r"(?m)^ {0,3}#{1,2}(?:[ \t]+|$)", following)
+                    # Match LF, CRLF and CR boundaries without changing source offsets.
+                    end = re.search(r"(?m)(?:^|(?<=\r)) {0,3}#{1,6}(?=[ \t\r\n]|$)", following)
                     section = following[:end.start()] if end else following
                     rest = following[end.start():] if end else ""
                     section = re.sub(r'(?m)^- \[([^\[\]`\\\n<>]+)\]\(([^)\n]+)\)$',
