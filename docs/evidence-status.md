@@ -1,6 +1,6 @@
 # Evidence status
 
-Updated on **2026-10-08** for the separate EC02 pilot; the baseline CI row
+Updated on **2026-10-09** for the separate EC04 pilot; the baseline CI row
 retains its **2026-10-05** observation at commit
 `9fdbf91d9980b5c632e0f3483c97098358ce519f`. This is a dated map of available
 evidence, not a live dashboard or a product-completion claim. GitHub records
@@ -17,6 +17,7 @@ candidate results. Baseline CI does not validate this documentation change.
 | Later onboarding and planning changes | [Provenance](provenance.md#current-onboarding-answer-wait-correction) separates procedure/delivery tests and synthetic date-proposal scenarios from live observations. | Historical E01 acceptance does not remeasure later kit revisions. No live interview, Project-date execution or universal model-compliance result follows from those tests. |
 | EC05/EC06 pilot, 2026-10-07 | [Two actual diagnosis-only responses](evaluation-results/ec05-ec06-pilot-20261007.md) to synthetic inputs: C1-C3 PASS, C4 and both overall results UNCHECKABLE. A separate self-check passed 23 record-consistency assertions. | Complete action coverage, full polling-cadence conformance, runtime identity/cost, live CI behavior, kit efficacy, pass rate or owner acceptance. |
 | EC02 pilot, 2026-10-08 | [One actual limited interaction](evaluation-results/ec02-pilot-20261008.md): C1 PASS; C2/C3/C4 and overall UNCHECKABLE. An unchanged checkpoint preceded an owner-authorized scripted reply; expected final date values were observed. | Attributable write chronology, whole-surface non-action, a new human UI selection, question-bubble behavior, runtime identity/cost, installed-kit benefit or owner acceptance. |
+| EC04 pilot, 2026-10-09 | [One checkpointed regression/fix attempt](evaluation-results/ec04-checkpoint-pilot-20261009.md): C1/C2/C3 PASS; C4 and overall UNCHECKABLE. Native candidate red/green observations are distinct from supervisor replays and advisory review. | Complete action coverage, global non-action, unguided autonomous TDD, runtime identity/cost, inference speed, installed-kit efficacy or owner acceptance. A 33-second polling gap exceeded the planned interval by 3 seconds. |
 
 The old E01 **Pending** row in the [parity checkpoint](parity-status.md#historical-implementation-checkpoint)
 is retained historical state, not a denial of the later bounded acceptance.
@@ -59,7 +60,11 @@ See [known limitations](known-limitations.md) for operational exclusions,
   attempts.
 - [EC02 pilot report](evaluation-results/ec02-pilot-20261008.md): one limited
   two-turn interaction, C1 PASS and C2/C3/C4 plus overall UNCHECKABLE. Correct
-  final bytes do not prove write attribution. EC01/EC03/EC04 have no trial evidence here.
+  final bytes do not prove write attribution.
+- [EC04 checkpointed pilot report](evaluation-results/ec04-checkpoint-pilot-20261009.md):
+  one two-turn regression/fix attempt, C1/C2/C3 PASS with C4 and overall
+  UNCHECKABLE. Focal native observations do not establish complete action
+  coverage. EC01/EC03 have no trial evidence here.
 - [Observation-readiness checklist](evaluation-observation-preflight.md):
   non-executable preparation for separately authorized trials, with source
   coverage, timing, attribution, publication and retention gaps made explicit.

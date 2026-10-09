@@ -14,8 +14,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 REPORT = "docs/evaluation-results/ec05-ec06-pilot-20261007.md"
 EC02_REPORT = "docs/evaluation-results/ec02-pilot-20261008.md"
+EC04_REPORT = "docs/evaluation-results/ec04-checkpoint-pilot-20261009.md"
 PREFLIGHT = "docs/evaluation-observation-preflight.md"
-GUIDES = ("docs/worked-example.md", "docs/evaluation-cases.md", REPORT, PREFLIGHT, EC02_REPORT)
+GUIDES = ("docs/worked-example.md", "docs/evaluation-cases.md", REPORT, PREFLIGHT, EC02_REPORT, EC04_REPORT)
 EXAMPLE = ROOT / "docs/examples/report-summary"
 PILOT_RECEIPTS = tuple(
     "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/43#issuecomment-" + number
@@ -46,6 +47,42 @@ EC02_BINDINGS = {
     "ec02/milestone.json": "88718464b353f975be04da9da5e26d9987526149e4bb0c5d6206eeb6cfdedef3",
     "ec02/controller.json": "f801b46042e7322b499459748060ca4b842e6e9ac5731124c8a76a76071c697c",
     "interaction-oracles.json": "8ccf07c204810e13c66e7c2d0221aa7a5e1e501d814c0f998ae749bd7caa56d2",
+}
+EC04_RECEIPTS = tuple(
+    "https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/53#issuecomment-" + number
+    for number in ("6069266306", "6069369140", "6069407447", "6069497243")
+)
+EC04_RECEIPT_LABELS = (
+    "Owner trial authorization", "Frozen staging and focal observation qualification",
+    "Observed red checkpoint and separate supervisor replay", "Final result and advisory scoring review",
+)
+EC04_BINDINGS = {
+    "ec04/input.json": "e1af01bfacc850c3bd575534f4dff8d4318a7e95571c12e1dffff86c55877474",
+    "code-change-oracles.json": "07e9ac8d7e5f3f520d6a7aae32ec2363c5b32b2d6101ff97542c0e97ffdc716c",
+    "code-change/seed/capacity.py": "cae3a5479ec05e92ea34ec4d8a6b57933e1eda824e3b2aa10062ef6225f01413",
+    "code-change/seed/test_capacity.py": "f9a25d165b2d9ed49c4128dde296aa4a39e0fd790e6d28132dd9ba93ac449483",
+    "code-change/seed/backlog.md": "c5053788eaa88c73ec8c1e2ccc8bb77686bcc2635f17d5488e28c6cf7a35fd38",
+    "code-change/seed/user-notes.md": "9cc2a7fa4ca9f8cce75b77648bb719b3ce7924ce9a3c2a569ba7974ed778dd99",
+    "code-change/baseline/user-notes.md": "7d554744c94ab8ea642e823d1dee165feffd1db15a2878cde9b20237147ebf25",
+    "code-change/reference/test_capacity_reference.py": "eac16ed789b38a34b9406f3aedec22df7291dd31e354774338cf10b7c23e7193",
+}
+# Fixed public Task #53 receipt bindings, independent of the report under test.
+EC04_RETAINED_BINDINGS = {
+    "Initial prompt": "a76ff73dd9ba96188cbab621602df329600599010354dfc54a93827b19226c7d",
+    "Continuation prompt": "96b0165ce6763169c4c36471129d89776342171c8312fda7b04eb69a83b5f062",
+    "Original user delta": "ff45bfb40d9012734768bff41d11b88feee710876c931e88bf22fec43999b392",
+    "Index inventory": "1da5ba4a4fed9ce1854ae70184bb2efa7ef538bebd9c52a5240a80dc5b142bbc",
+    "Checkpoint/final candidate tests": "483c919ab99cb860bd2b3d3a40f8bad2d6ce10e315483c88e01682a92c3e320b",
+    "Final candidate source": "4f760bef1396b20489c1c8329fb2422b8d15a44b09252ca91ac1961e4b6f7614",
+    "Checkpoint inventory/diff evidence": "57ee90496cc80a90b4f3231e510072a592b850093b0dc107f283b63298238e71",
+    "Supervisor red replay": "1fe603d276ce764d5970401ecd7f2ec279762327426d88f234041591288564f2",
+    "Native two-turn evidence, reasoning omitted": "e64b6c3488300d60b641229750521fc13540f35392ad3ac38a4ea130f3b8bb6c",
+    "Extracted native parent-to-child mapping": "acd9fbc189de3721a53312231aa2ae0d2b4e3a50fe3cee61c47f2aa0a09c452c",
+    "Supervisor green replay": "e148b6965dc974fc19aad5b33bfdc546c449fcc9ce3e67f1eaaf870ea63671bf",
+    "Supervisor reference replay": "c0bc2fb7f9fa16fefd17386f3975b8fdc8a8ac185f89261c34307c206f1cb723",
+    "Independent advisory review": "d28e02316a0bd5aafceb0cd3966f79207d1038406f3d72ec9f5c51e738fb8bb2",
+    "Timing record": "96a982306575aca5105f35f609c5c88bf84afe3269d846f2664422dc5f92876d",
+    "Final normalized result": "1cfefa57f5e507eca86d88d221a21dd929dbeef8ed40a07925375f58f578052f",
 }
 
 
@@ -446,13 +483,15 @@ class PublicExampleTests(unittest.TestCase):
                 (ROOT / "docs/evaluation-fixtures" / path).read_bytes()).hexdigest())
         self.assert_unrun_record(self.initial_record((ROOT / GUIDES[1]).read_text()))
 
-    def test_current_guides_link_ec02_without_claiming_unrun_cases_ran(self):
+    def test_current_guides_link_pilots_without_claiming_unrun_cases_ran(self):
         for path in ("docs/evidence-status.md", GUIDES[1], "docs/evaluation-fixtures/README.md",
                      "docs/evaluation-fixtures/interaction.md", "docs/evaluation-fixtures/code-change.md"):
             with self.subTest(path=path):
                 text = (ROOT / path).read_text()
                 self.assertRegex(text, r"\[[^\]]+\]\((?:\.\./)?evaluation-results/ec02-pilot-20261008\.md\)")
-                self.assertIn("EC01/EC03/EC04 have no trial evidence", re.sub(r"\s+", " ", text))
+                self.assertRegex(text, r"\[[^\]]+\]\((?:\.\./)?evaluation-results/ec04-checkpoint-pilot-20261009\.md\)")
+                self.assertIn("EC01/EC03 have no trial evidence", re.sub(r"\s+", " ", text))
+                self.assertNotIn("EC01/EC03/EC04 have no trial evidence", text)
                 self.assertNotIn("EC01-EC04 have no new trial", text)
                 self.assertIn("NOT_RUN", text)
                 self.assertIn("UNCHECKABLE", text)
@@ -501,6 +540,171 @@ class PublicExampleTests(unittest.TestCase):
                 (root / path).write_text(mutated)
                 self.assertTrue(any("historical Issue/PR" in error
                                     for error in self.checker.validate_navigation(root)))
+
+    def assert_ec04_report(self, text):
+        """Guard fixed publication facts; this does not score or rerun a candidate."""
+        prose = re.sub(r"\s+", " ", text)
+        heading = "## Source receipts (2026-10-09)"
+        links = "\n".join(f"- [{label}]({reference})"
+                          for label, reference in zip(EC04_RECEIPT_LABELS, EC04_RECEIPTS))
+        self.assertEqual(1, text.splitlines().count(heading))
+        self.assertRegex(text, r"(?m)^" + re.escape(heading + "\n\n" + links + "\n\n"))
+        self.assertNotRegex(text, r"[<>]|(?m:^[ ]{0,3}(?:`{3,}|~{3,}|(?:=+|-+)[ \t]*$))")
+        self.assertEqual(["UNCHECKABLE"], re.findall(r"Overall evaluation: ([A-Z_]+)", text))
+        self.assertEqual([(f"EC04-C{number}", "PASS") for number in range(1, 4)] +
+                         [("EC04-C4", "UNCHECKABLE")],
+                         re.findall(r"(?m)^\| (EC04-C[1-4]) \| ([A-Z_]+) \|", text))
+        for token in (
+                "EC04-CHECKPOINT-PILOT-068f5923-20261009", "EC04-20261009-A1", "case EC04 version 1",
+                "068f592329980f2a17083e1eedc48a6f8a34120c", "8771f2f631d842b73aa980c25e15da9093aad8b2",
+                "690455a63ab6328c6a31efb160c4ea58cbcc9717", "fecbf4bd19e1da28cc6bbdc4d90178b01efe56ee",
+                "1 candidate attempt", "2 candidate turns", "1 frozen checkpoint continuation",
+                "0 retries", "0 replacements", "1 advisory scoring review",
+                "candidate output HEAD/tree remain null, not the baseline identities",
+                "source/test fingerprint immediately before", "source retained its seed digest",
+                "nine subtest failures produced exit 1", "no syntax/import/setup failure",
+                "supervisor evidence, not candidate-run proof", "explicit supervisory intervention",
+                "native final run passed all three methods, exit 0", "eight methods, exit 0",
+                "Checkpoint and final test bytes were identical", "less than or equal to capacity",
+                "Complete action coverage is missing", "does not establish global non-action",
+                "not independent action proof", "FAIL override missing evidence",
+                "47.635 seconds and 22.130 seconds, sum 69.765 seconds",
+                "not total wall-clock work, cost or an inference-latency benchmark",
+                "33 seconds; 3 seconds beyond the planned 30-second interval",
+                "21:27:34 to 21:28:07", "21:29:36 to 21:30:05", "29 seconds",
+                "supervision deviation, not a demonstrated candidate violation",
+                "did not independently certify the supervisor clock observations",
+                "mapping payload were additionally preserved after the advisory review",
+                "non-truncated focal command outputs/diffs", "Shared tools/filesystem",
+                "public teaching-material exposure", "not blind evaluation", "runtime isolation",
+                "installed-kit efficacy", "not claimed to be free", "owner final acceptance remains separate",
+                "source specifications and blank templates remain NOT_RUN",
+                "pending approval fields describe authored preparation",
+                "EC01/EC03 have no trial evidence", "EC05/EC06-only record validator"):
+            self.assertIn(token, prose)
+        for field in ("Actual model", "Actual reasoning setting", "Client version",
+                      "Input tokens", "Output tokens", "Billed cost", "Estimated cost"):
+            self.assertIn(f"| {field} | null |", text)
+        for path, digest in EC04_BINDINGS.items():
+            self.assertIn(f"| `{path}` | `{digest}` |", text)
+        for label, digest in EC04_RETAINED_BINDINGS.items():
+            self.assertIn(f"| {label} | `{digest}` |", text)
+
+    def test_ec04_report_preserves_actual_results_and_limits(self):
+        self.assert_ec04_report((ROOT / EC04_REPORT).read_text())
+
+    def test_ec04_guard_rejects_every_retained_binding_mutation(self):
+        original = (ROOT / EC04_REPORT).read_text()
+        self.assertEqual(15, len(EC04_RETAINED_BINDINGS))
+        for label, digest in EC04_RETAINED_BINDINGS.items():
+            row = f"| {label} | `{digest}` |"
+            for mutation, replacement in (
+                    ("hash", row.replace(digest, "0" * 64)),
+                    ("missing", ""),
+                    ("label", row.replace(label, "Unbound artifact"))):
+                with self.subTest(label=label, mutation=mutation):
+                    mutated = original.replace(row, replacement)
+                    self.assertNotEqual(original, mutated)
+                    with self.assertRaises(AssertionError):
+                        self.assert_ec04_report(mutated)
+
+    def test_ec04_guard_rejects_false_results_and_removed_limits(self):
+        original = (ROOT / EC04_REPORT).read_text()
+        replacements = (
+            ("Overall evaluation: UNCHECKABLE", "Overall evaluation: PASS"),
+            ("| EC04-C4 | UNCHECKABLE |", "| EC04-C4 | PASS |"),
+            ("1 candidate attempt", "2 candidate attempts"),
+            ("Complete action coverage is missing", "Complete action coverage is established"),
+            ("supervisor evidence, not candidate-run proof", "candidate-run proof"),
+            ("explicit supervisory intervention", "autonomous continuation"),
+            ("candidate output HEAD/tree remain null, not the baseline identities", "candidate output is baseline"),
+            ("33 seconds; 3 seconds beyond the planned 30-second interval", "30 seconds; no deviation"),
+            ("did not independently certify", "independently certified"),
+            ("additionally preserved after the advisory review", "verified during the advisory review"),
+            ("an inference-latency benchmark", "measured inference latency"),
+        )
+        mutations = [original.replace(old, new) for old, new in replacements]
+        mutations += [original + "\nOverall evaluation: PASS.\n"]
+        mutations += [original.replace(f"| {field} | null |", f"| {field} | 0 |")
+                      for field in ("Input tokens", "Output tokens", "Billed cost", "Estimated cost")]
+        for index, mutated in enumerate(mutations):
+            with self.subTest(index=index), self.assertRaises(AssertionError):
+                self.assert_ec04_report(mutated)
+
+    def test_ec04_publication_preserves_source_bindings(self):
+        for path, digest in EC04_BINDINGS.items():
+            with self.subTest(path=path):
+                self.assertEqual(digest, hashlib.sha256(
+                    (ROOT / "docs/evaluation-fixtures" / path).read_bytes()).hexdigest())
+        self.assert_unrun_record(self.initial_record((ROOT / GUIDES[1]).read_text()))
+
+    def test_ec04_receipts_are_exact_section_scoped_and_not_interchangeable(self):
+        original = (ROOT / EC04_REPORT).read_text()
+        heading = "## Source receipts (2026-10-09)"
+        reference = EC04_RECEIPTS[0]
+        bullet = f"- [{EC04_RECEIPT_LABELS[0]}]({reference})"
+        mutations = [original.replace(heading, "## Other receipts"),
+                     original + "\n" + heading + "\n",
+                     original.replace(heading, "Prose " + heading),
+                     original + "\n## Outside receipts\n" + bullet + "\n"]
+        for replacement in (
+                "# Outside receipts\n" + bullet, " ##\tOutside receipts\n" + bullet,
+                "```text\n" + bullet + "\n```", "~~~text\n" + bullet + "\n~~~",
+                reference, "- `" + bullet[2:] + "`", "- !" + bullet[2:],
+                "- \\" + bullet[2:], "    " + bullet, "<!-- " + bullet + " -->",
+                "<div>\n" + bullet + "\n</div>", "Outside receipts\n---\n\n" + bullet,
+                "Outside receipts\n===\n\n" + bullet):
+            mutations.append(original.replace(bullet, replacement))
+        mutations += [original.replace(url, url + "0") for url in EC04_RECEIPTS]
+        mutations += [original.replace(url, url.replace("/53#", "/54#")) for url in EC04_RECEIPTS]
+        mutations += [original.replace(reference, url)
+                      for url in (*EC02_RECEIPTS, *PILOT_RECEIPTS, *self.checker.CURRENT_RECEIPTS)]
+        targets = [(EC04_REPORT, mutated) for mutated in mutations]
+        targets += [(EC02_REPORT, (ROOT / EC02_REPORT).read_text().replace(EC02_RECEIPTS[0], reference)),
+                    (REPORT, (ROOT / REPORT).read_text().replace(PILOT_RECEIPTS[0], reference)),
+                    (PREFLIGHT, (ROOT / PREFLIGHT).read_text() + "\n" + bullet + "\n"),
+                    ("docs/parity-status.md", (ROOT / "docs/parity-status.md").read_text().replace(
+                        "## Current acceptance as of 2026-09-23\n",
+                        "## Current acceptance as of 2026-09-23\n" + bullet + "\n"))]
+        self.assertEqual(set(EC04_RECEIPTS), self.checker.EC04_RECEIPTS)
+        self.assertEqual([], self.checker.validate_navigation(ROOT))
+        for index, (path, mutated) in enumerate(targets):
+            with self.subTest(index=index):
+                root = self.fixture()
+                (root / path).write_text(mutated)
+                self.assertTrue(any("historical Issue/PR" in error
+                                    for error in self.checker.validate_navigation(root)))
+
+    def test_ec04_report_is_covered_by_existing_privacy_guard(self):
+        self.assertEqual([], self.checker.validate_policy(ROOT))
+        for synthetic_private_value in ("/Users/synthetic/private", "/home/synthetic/private",
+                                        "github_pat_" + "x" * 20):
+            with self.subTest(value=synthetic_private_value):
+                root = self.fixture()
+                target = root / EC04_REPORT
+                target.write_text(target.read_text() + "\n" + synthetic_private_value + "\n")
+                self.assertTrue(any("private-path or credential pattern" in error
+                                    for error in self.checker.validate_policy(root)))
+
+    def test_receipt_sections_end_at_every_atx_heading(self):
+        for report, label, reference in (
+                (REPORT, PILOT_RECEIPT_LABELS[0], PILOT_RECEIPTS[0]),
+                (EC02_REPORT, EC02_RECEIPT_LABELS[0], EC02_RECEIPTS[0]),
+                (EC04_REPORT, EC04_RECEIPT_LABELS[0], EC04_RECEIPTS[0])):
+            original = (ROOT / report).read_text()
+            bullet = f"- [{label}]({reference})"
+            root = self.fixture()
+            for level in range(1, 7):
+                for heading in ("#" * level + " Outside receipts",
+                                "   " + "#" * level + "\tOutside receipts",
+                                "#" * level,
+                                "#" * level + "\r",
+                                "#" * level + "\rFollowing paragraph",
+                                "Preceding paragraph\r" + "#" * level + "\rFollowing paragraph"):
+                    with self.subTest(report=report, heading=heading):
+                        (root / report).write_text(original.replace(bullet, heading + "\n\n" + bullet))
+                        self.assertTrue(any("historical Issue/PR" in error
+                                            for error in self.checker.validate_navigation(root)))
 
 
 if __name__ == "__main__":

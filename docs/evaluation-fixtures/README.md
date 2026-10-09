@@ -7,7 +7,9 @@ are recorded in the [2026-10-07 pilot](../evaluation-results/ec05-ec06-pilot-202
 with both overall results UNCHECKABLE. The separate
 [2026-10-08 EC02 pilot](../evaluation-results/ec02-pilot-20261008.md) records one
 limited interaction: C1 PASS; C2/C3/C4 and overall UNCHECKABLE.
-EC01/EC03/EC04 have no trial evidence here.
+The separate [2026-10-09 EC04 pilot](../evaluation-results/ec04-checkpoint-pilot-20261009.md)
+records one checkpointed regression/fix attempt: C1/C2/C3 PASS; C4 and overall
+UNCHECKABLE. EC01/EC03 have no trial evidence here.
 Fixture consistency tests call **no model**,
 make no network requests, and do not populate an evaluation result. This is
 **not an agent grader**, experiment runner, runtime protocol or live CI record.
