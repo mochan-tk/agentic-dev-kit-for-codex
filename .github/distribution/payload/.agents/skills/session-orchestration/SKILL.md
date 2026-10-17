@@ -1,6 +1,6 @@
 ---
 name: session-orchestration
-description: Protocol for running work through parent/child agent sessions (e.g., the available Codex task/worktree tools, or any orchestrator dispatching cloud-agent runs). Use this whenever a session spawns or reports to another session, when starting work on a Task issue in a new session, when writing a completion/blocked/failed report, or when deciding what belongs in plan.md versus GitHub.
+description: Coordinate parent/child work sessions, Task startup and handoff, completion/blocked/failed reports, and plan.md versus GitHub records. Also use for a requested optional desktop chat-tree display inside a Codex project; display organization does not dispatch work.
 
 ---
 
@@ -402,6 +402,70 @@ review rework when possible, then clean up only owned resources through
 documented controls. No creator-scoped archive behavior is assumed.
 Project coordination lasts while the plan needs it; an Epic coordinator lasts
 until the Epic closes. A dead thread can be replaced from GitHub records.
+
+### Optional desktop chat-tree display
+
+Only for an explicit request to organize chats, use the available documented
+app controls to project the logical relationships as titles and manual order
+inside the existing Codex project. Native Fork chats are user-visible chats,
+not collaboration subagents. Neither Fork ancestry nor title indentation
+authenticates a role, isolates a worktree or changes the GitHub Issue graph.
+Project-parent display is optional; keep Epics siblings. This is a display
+convention, not native nesting, folding, or an automatic background service.
+
+1. **Observe before writing.** Discover the current app tools and their schemas;
+   read the exact host, project and thread IDs, project display grouping and
+   sort preference. Require manual chat order for this convention. Recents
+   and project chats share that preference: explain its wider effect and
+   obtain explicit human consent before changing it. Obtain consent for any
+   necessary grouping change too. If declined or the required capability is
+   unavailable, leave the UI untouched and offer a plain hierarchy in chat.
+   Do not move the tree into a custom section, out of its project, or change
+   unrelated pins/order. No filesystem/app-state scraping substitutes for a
+   missing documented control.
+2. **Resolve identity and authority.** Keep a replaceable local mapping of
+   exact host/project/thread IDs, logical parent ID, sibling order and prior
+   titles; reconcile it with current observations before each update. Titles
+   are labels, never IDs: two different Epics can each have a `Task3`. Resolve
+   ambiguous parentage with the user. Creating/forking a chat needs an explicit
+   human request; fork only the verified source ID. Record the returned child
+   ID and confirm project membership. Inherited history is not a new work
+   assignment. A display-only fork receives no execution prompt. Messaging
+   needs human authorization for each intended direction (including reports
+   back); a child request alone does not authorize a reply. Actual work still
+   needs the Task, ownership, branch/worktree and complete kickoff above.
+3. **Prepare the bounded display change.** Use concise role/Issue labels.
+   The root has no prefix; its children use `├─ ` or final-sibling `└─ `.
+   For each deeper level, prepend three U+2800 BRAILLE PATTERN BLANK characters
+   (`⠀⠀⠀`); omit vertical continuation bars. Keep the hierarchy in preorder
+   (parent, then each child's whole subtree). If font rendering or accessibility
+   makes blank indentation unsuitable, offer plain labels with explicit parent
+   references instead; do not promise pixel alignment.
+4. **Insert locally.** Place a new child after its preceding sibling's entire
+   subtree (or directly after the parent for the first child), before the next
+   outside anchor when known. Use same-project insertion controls and exact
+   IDs; preserve existing descendants and unrelated chats. With only a known
+   predecessor and a documented insert-before control, insert the new chat
+   before that predecessor, confirm success, then move the predecessor before
+   the new chat. Use the subtree's last row, not its root, as predecessor.
+   Recompute affected sibling `├─`/`└─` markers. Do not infer an unknown anchor
+   from a recency list or move an existing subtree as though it were one row.
+5. **Verify and stop honestly.** Record each mutation result and read back
+   exact titles/project membership. Distinguish that from a manual-order
+   readback and from an authorized visual check: `list_threads.threads` is
+   recency-ordered, not proof of project display order. If no order/visual
+   observation is available, report that limit. On partial failure, refusal
+   or an ambiguous result, stop affected mutations, retain known IDs/results
+   and report the partial state. Do not duplicate Forks, blindly retry, switch
+   tools to bypass refusal, or loop on settings. UI failure does not change
+   the durable Task status. Restore exact prior titles only when requested;
+   restoring a shared preference requires its own current consent.
+
+Examples and user-facing invocation are in the optional
+[desktop chat-tree guide](https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/distribution/chat-tree.md).
+The essential procedure above is installed; the public guide is not another
+payload file. Completed illustrative experiments or static checks do not prove
+the current client's rendering, message delivery or model compliance.
 
 ## Resume protocol (crash-only)
 
