@@ -392,6 +392,7 @@ behavior. Historical acceptance does not establish live behavior of later revisi
 | Opt in to separate Task metadata, retarget freshness and control drift checks | [Adopter CI companion](docs/distribution/adopter-ci.md) |
 | Review retrospective signals, official content checkpoints and feedback | [Ongoing improvement companions](docs/distribution/ongoing-improvement.md) |
 | Observe open PR checks and reviews manually | [Manual PR monitor](docs/distribution/pr-monitor.md) |
+| Opt in to a manual-order chat-tree display inside an existing Codex project | [Desktop chat-tree guide](docs/distribution/chat-tree.md) |
 | Understand the installed instructions and workflow | [Installed workflow guide](.github/distribution/payload/README.md) and [installed AGENTS](.github/distribution/payload/AGENTS.md) |
 | Walk through a first characterization Task with runnable reference tests | [Illustrative worked example](docs/worked-example.md) |
 | Understand Issue-graph authority | [Installed instructions](.github/distribution/payload/AGENTS.md) |
