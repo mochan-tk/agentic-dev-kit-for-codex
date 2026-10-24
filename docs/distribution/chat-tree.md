@@ -15,6 +15,36 @@ must explain that scope and obtain explicit consent before changing it.
 
 ## Ask for a display, not accidental execution
 
+The normal Epic-to-Task handoff now offers this choice when no applicable
+decision exists. The owner can apply the display or decline it; missing app
+capability is recorded as unavailable, and an unanswered choice stays pending.
+The Epic handoff or Task plan records the decision, its scope, permitted
+display operations, separate shared-preference consent and projection owner.
+Each following kickoff carries that record's link, so a new Task coordinator,
+supervisor or worker reads the same decision rather than losing it in chat
+history or asking the same question again. A choice of `apply` does not grant
+operations omitted from the owner's decision.
+
+For example, an owner can request a Task's existing coordinator chat plus
+display-only supervisor/worker chats from a specified source, with title/order
+changes inside the same project. Creating those chats requires that explicit
+request; changing shared sorting requires separate consent. The coordinator
+responsible for the projection reads back actual executor references first.
+When the Task coordinator is already a native chat, a possible display is:
+
+```text
+Task #12 coordinator
+└─ Task #12 supervisor
+⠀⠀⠀└─ PR #34 worker
+```
+
+The supervisor and worker may still execute as collaboration subagents in
+their assigned contexts. Their real references stay in claim/plan/dispatch
+records; private display-chat IDs belong to a separate replaceable mapping.
+No second supervisor/writer is created by this display. Declined, unavailable
+or pending display work leaves the UI untouched and ordinary authorized Task
+execution continues. A display failure is not a Task failure or completion.
+
 In a local Codex desktop project chat, for example:
 
 ```text

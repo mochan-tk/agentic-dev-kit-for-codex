@@ -14,6 +14,7 @@ PAYLOAD = ROOT / ".github/distribution/payload"
 SKILL = ".agents/skills/session-orchestration/SKILL.md"
 GUIDE = "docs/distribution/chat-tree.md"
 GUIDE_URL = "https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/" + GUIDE
+HANDOFF_PACKET = ROOT / "docs/evaluation-fixtures/chat-tree-handoff/input.json"
 
 
 def installer_fixture():
@@ -115,6 +116,40 @@ class ChatTreeDeliveryTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertEqual(before, self.fixture.snapshot(self.fixture.base))
         self.assertFalse(self.fixture.transaction.exists())
+
+
+class ChatTreeHandoffPacketTests(unittest.TestCase):
+    """Input integrity only; observed candidate behavior has separate receipts."""
+
+    def test_candidate_packet_binds_current_skill_without_live_authority(self):
+        packet = json.loads(HANDOFF_PACKET.read_text())
+        self.assertEqual("synthetic", packet["evidence_class"])
+        self.assertEqual("NOT_RUN", packet["evaluation_status"])
+        self.assertEqual([], packet["allowed_writes"])
+        self.assertEqual([], packet["external_operations"])
+        skill = packet["skill"]
+        self.assertEqual(str((PAYLOAD / SKILL).relative_to(ROOT)), skill["path"])
+        self.assertEqual(hashlib.sha256((ROOT / skill["path"]).read_bytes()).hexdigest(),
+                         skill["sha256"])
+
+    def test_candidate_references_are_unambiguous_and_controller_is_separate(self):
+        packet = json.loads(HANDOFF_PACKET.read_text())
+        scenarios = packet["scenarios"]
+        self.assertEqual(len(scenarios), len({case["id"] for case in scenarios}))
+        decisions = [case["owner_display_decision"]["record"] for case in scenarios
+                     if case["owner_display_decision"] is not None]
+        self.assertEqual(len(decisions), len(set(decisions)))
+        self.assertTrue(all(ref.startswith("synthetic:") for ref in decisions))
+        app = packet["context"]["app_observation"]
+        nodes = {node["id"]: node for node in app["nodes"]}
+        self.assertEqual(len(nodes), len(app["nodes"]))
+        self.assertEqual(set(nodes), set(app["owner_verified_order"]))
+        for node in nodes.values():
+            if node["parent"] is not None:
+                self.assertIn(node["parent"], nodes)
+        self.assertTrue((HANDOFF_PACKET.parent / "controller-review.md").is_file())
+        self.assertNotIn("expected", packet)
+        self.assertTrue(all("expected" not in case for case in scenarios))
 
 
 if __name__ == "__main__":

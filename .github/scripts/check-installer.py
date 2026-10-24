@@ -1053,7 +1053,7 @@ BOUNDARY_TARGETS = tuple(sorted((*BOUNDARY_BASE_PATHS, INVENTORY,
 )))
 BOUNDARY_DIGESTS = {
     ".github/distribution/adopter-ci/check-adopter-ci.py": "0bed9fa2501864eb68330bd6d6aecf228695320faaa146be5c47a5bda082a4fd",
-    ".github/distribution/payload.v1.tsv": "9d4762ec576b65de793c3186052f7b0ceef579408e1a0aae4c607c8ec57b60b0",
+    ".github/distribution/payload.v1.tsv": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
     ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
@@ -1149,7 +1149,7 @@ FINAL_TARGETS = tuple(sorted((*FINAL_BASE_PATHS, INVENTORY,
     "docs/known-limitations.md", "docs/provenance.md", "docs/product-scope.md", "docs/parity-status.md",
 )))
 FINAL_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "9d4762ec576b65de793c3186052f7b0ceef579408e1a0aae4c607c8ec57b60b0",
+    ".github/distribution/payload.v1.tsv": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3",
     ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",

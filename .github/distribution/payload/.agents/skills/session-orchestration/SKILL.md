@@ -118,6 +118,45 @@ task showing neither fails the wall.
 
 ## Child session protocol
 
+### Chat-tree choice at handoff
+
+Before an Epic hands a Task to a supervisor or sibling Task coordinator,
+read the applicable durable display decision. If none exists, offer the owner
+the optional sidebar projection of this Task's supervisor and worker, and
+record the reply on the Epic handoff or Task plan. Use `apply`, `declined`, or
+`unavailable` with a reason; an unanswered or ambiguous choice stays `pending`.
+An unavailable capability is not an owner decline. Keep ordinary authorized
+execution moving unless the owner explicitly made the display a prerequisite.
+
+Use a compact record, not a new ritual or runtime protocol:
+
+```text
+Chat-tree: <apply | declined | unavailable | pending>
+Decision: <owner decision reference and covered repository/Epic/Task scope>
+Display authority: <selected roles/chats, permitted creation/fork sources,
+  title/order changes, and messaging directions; none unless authorized>
+Shared preferences: <manual order already observed, or separate consent/reference>
+Projection owner: <responsible coordinator; capability or blocking reason>
+```
+
+Carry the Issue and this record's link through Project -> Epic -> Task and
+supervisor -> worker kickoffs. At Task coordinator/supervisor startup, read it
+back and reference it in the plan body without changing ritual first lines.
+Reuse a current, scoped decision; do not re-ask merely because transport
+changed. Missing, revoked, unreadable or out-of-scope authority permits no
+display writes; ask only for missing authority, never infer it from `apply`.
+An offer alone authorizes neither a new chat nor shared-sort changes.
+
+The named projection owner invokes the optional display procedure below as
+the actual supervisor/worker becomes known. Keep executing references in
+claim/plan/dispatch records; a separate private mapping connects each to its
+native display-chat ID and logical parent. If a Task coordinator chat is
+already the Task row, project the supervisor beneath it and the worker beneath
+that supervisor; reuse a verified native executor rather than duplicating it.
+Do not count a display-only fork as a second supervisor or writer, or send it
+an execution prompt. Declined/unavailable/pending decisions cause no UI
+mutation. Partial display failure is recorded separately from Task status.
+
 ### Startup decision
 
 Quiet/report `tuning-status.sh` has three states; warning-only CI mode is not
@@ -289,6 +328,7 @@ load-bearing, ADR-0003):
 ```markdown
 You are the WORKER session for Task issue #<n> in <owner>/<repo>.
 - Startup context: <current owner onboarding-decline decision link and covered scope, or none; read it, never infer from chat>.
+- Chat-tree context: <durable display-decision link; read its scope and projection owner, keep actual execution separate>.
 - Issue: <issue URL> — read it in full (`gh issue view <n> --comments`).
 - Plan of record (execute it; no plan gate of your own): <plan comment URL>
 - File ownership (verbatim from the issue — touch EXACTLY these):
@@ -312,7 +352,8 @@ merge — a phase started against a half-tuned repository verifies nothing.
 
 1. **Start an Epic's session when that phase's turn comes** — when its
    `blocked-by` Epics are closed, or the frontier has run dry. Hand it the
-   Epic number and nothing else; the Epic is the brief. Name it `Epic #<n>`
+   Epic number and the applicable durable chat-tree decision link; the Epic
+   is the brief. Name it `Epic #<n>`
    (session naming: §Codex topology and lifecycle).
 2. **Epic sessions are siblings, not descendants.** An Epic session that
    sees the next phase becoming actionable reports that to the Project
@@ -349,8 +390,10 @@ merge — a phase started against a half-tuned repository verifies nothing.
    Task issue created *before* any work begins, and run in a dedicated child
    session like any other task — never inline in the parent. No issue, no
    work: evidence recorded after the fact on a closed issue does not count.
-3. When dispatching a **supervisor**, pass the issue number only — the
-   issue is the brief, and name the session `Task #<n> supervisor`
+3. When dispatching a **supervisor** (including through a sibling Task
+   coordinator), pass the issue number and durable chat-tree decision link
+   from the handoff procedure above — the issue is the brief. Name the
+   supervisor session `Task #<n> supervisor`
    (workers: `PR #<n> worker`; naming rule in §Codex topology and lifecycle). If
    you feel the need to add substantial instructions in the dispatch message,
    the brief is incomplete: fix the issue first. Supervisor→worker kickoffs
@@ -405,7 +448,8 @@ until the Epic closes. A dead thread can be replaced from GitHub records.
 
 ### Optional desktop chat-tree display
 
-Only for an explicit request to organize chats, use the available documented
+Invoke this procedure for a direct explicit request or a current scoped
+`apply` decision carried by the handoff above. Use the available documented
 app controls to project the logical relationships as titles and manual order
 inside the existing Codex project. Native Fork chats are user-visible chats,
 not collaboration subagents. Neither Fork ancestry nor title indentation

@@ -1,0 +1,103 @@
+{
+  "format": "chat-tree-handoff-review-input/v1",
+  "case_version": 1,
+  "evidence_class": "synthetic",
+  "evaluation_status": "NOT_RUN",
+  "operation": "draft_handoffs_and_next_actions_only",
+  "request": "Use the supplied session-orchestration Skill to handle each independent scenario. Produce the proposed durable handoff/plan snippet, next actions or owner question, a proposed display when applicable, and what the supplied observations establish. Do not call external tools, write files, or fetch symbolic records. These authored scenarios grant no real permission. Decisions and observations from one scenario do not apply to another. Do not claim actions were executed.",
+  "allowed_writes": [],
+  "external_operations": [],
+  "skill": {
+    "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
+    "sha256": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69"
+  },
+  "context": {
+    "repository": "example/notes-app",
+    "epic": {"record": "synthetic:epic-120", "number": 120},
+    "task": {"record": "synthetic:task-121", "number": 121, "status": "in_progress"},
+    "plan": {
+      "record": "synthetic:task-121-plan",
+      "status": "accepted",
+      "objective": "Add a local note editor in the disposable example application.",
+      "owned_paths": ["src/editor.js", "tests/editor.test.js"],
+      "executing_supervisor": "/root/notes_supervisor",
+      "executing_worker": "/root/notes_supervisor/worker",
+      "worker_branch": "codex/task-121-editor",
+      "worker_worktree": "synthetic-isolated-worktree-121",
+      "ownership_observation": "The worker exists and is the only writer in that isolated worktree. The Task coordinator is a native chat; the supervisor and worker are collaboration subagents."
+    },
+    "app_observation": {
+      "origin": "authored_scenario_not_a_live_capture",
+      "host_id": "synthetic-local",
+      "project_id": "synthetic-project",
+      "grouping": "project",
+      "sort": "manual",
+      "capabilities": ["fork_verified_source", "rename_chat", "insert_before_same_project", "read_titles_and_project_membership"],
+      "manual_order_readback": null,
+      "visual_capture": null,
+      "nodes": [
+        {"id": "synthetic-project-chat", "label": "Project", "parent": null},
+        {"id": "synthetic-epic-chat", "label": "Epic #120", "parent": "synthetic-project-chat"},
+        {"id": "synthetic-task-chat", "label": "Task #121 coordinator", "parent": "synthetic-epic-chat"},
+        {"id": "synthetic-next-task-chat", "label": "Task #122 coordinator", "parent": "synthetic-epic-chat"}
+      ],
+      "owner_verified_order": ["synthetic-project-chat", "synthetic-epic-chat", "synthetic-task-chat", "synthetic-next-task-chat"]
+    }
+  },
+  "scenarios": [
+    {
+      "id": "initial_handoff",
+      "request": "Prepare the Epic-to-Task kickoff and continue the authorized editor work.",
+      "owner_display_decision": null
+    },
+    {
+      "id": "owner_reply",
+      "request": "Prepare the downstream supervisor and worker kickoffs and the display actions for this owner reply.",
+      "owner_display_decision": {
+        "record": "synthetic:owner-display-apply",
+        "scope": "Task #121 in example/notes-app and its verified supervisor and worker",
+        "reply": "Apply the sidebar display. Fork the verified Task #121 coordinator chat twice to create display-only supervisor and worker chats. Rename and arrange those chats beneath Task #121 inside this project. You may adjust affected Task #121 branch markers, but preserve Task #122 and unrelated chats. Send no messages to the display forks. Keep the already-manual shared sorting and current grouping unchanged."
+      }
+    },
+    {
+      "id": "owner_decline",
+      "request": "Prepare the Epic-to-Task kickoff after this reply.",
+      "owner_display_decision": {
+        "record": "synthetic:owner-display-decline",
+        "scope": "Task #121 in example/notes-app",
+        "reply": "No sidebar projection for this Task; continue using subagents."
+      }
+    },
+    {
+      "id": "surface_unavailable",
+      "request": "The owner asks for the display, but this surface exposes no documented chat-management controls. Prepare the handoff.",
+      "owner_display_decision": {"record": "synthetic:owner-display-request", "scope": "Task #121", "reply": "Show the supervisor and worker beneath this Task."},
+      "app_observation_override": {"capabilities": []}
+    },
+    {
+      "id": "shared_sort_question",
+      "request": "Prepare the next step. The owner has approved the same display-only forks and title/order changes as in this scenario's reply, but has not answered the shared preference question.",
+      "owner_display_decision": {
+        "record": "synthetic:owner-display-sort-pending",
+        "scope": "Task #121 in example/notes-app",
+        "reply": "Create supervisor and worker display forks from this Task coordinator and arrange their titles/order in this project. Do not change shared settings until I answer. Send no messages."
+      },
+      "app_observation_override": {"sort": "updated_at"}
+    },
+    {
+      "id": "partial_display_failure",
+      "request": "Prepare a recovery handoff from these authored operation results. The editor worker is still running.",
+      "owner_display_decision": {
+        "record": "synthetic:owner-display-partial",
+        "scope": "Task #121 in example/notes-app",
+        "reply": "Create two display-only supervisor and worker forks from the verified Task coordinator and arrange them inside this project. Keep shared settings unchanged and send no messages."
+      },
+      "operation_observations": [
+        {"operation": "fork_supervisor", "result": "success", "returned_id": "synthetic-display-supervisor"},
+        {"operation": "title_and_project_readback", "result": "success", "id": "synthetic-display-supervisor", "title": "Task #121 supervisor", "project_id": "synthetic-project"},
+        {"operation": "insert_supervisor_before_next_task", "result": "ambiguous", "id": "synthetic-display-supervisor"}
+      ],
+      "worker_display_chat": null
+    }
+  ]
+}
