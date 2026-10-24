@@ -167,9 +167,13 @@ push, force or automatic cleanup of adopter files occurs. Copy or stage failure
 is non-success and may leave partial installed files; inspect files and index
 for manual recovery. Keep the adopter exclusively owned during installation.
 
-Review git diff --cached, land the reviewed adoption on the remote default
-branch, then invoke the installed project-onboarding Skill. Setup helpers are
-never run by the installer.
+Review `git diff --cached` and land the reviewed adoption on the remote default
+branch before onboarding makes GitHub changes. Then open or select the adopter checkout in Codex
+in the desktop project prepared above. Start a new local chat and invoke
+`$project-onboarding` using that project's installed
+`.agents/skills/project-onboarding/SKILL.md`, with the prepared context ready.
+Confirm the chat reads the installed file in your application repository, not
+the kit's contributor checkout. Setup helpers are never run by the installer.
 
 The preserved [payload workflow guide](../../.github/distribution/payload/README.md)
 describes the internal engine when it says the installer does not stage files.
