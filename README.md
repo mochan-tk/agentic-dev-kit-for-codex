@@ -96,8 +96,9 @@ and [Chat versus Work](https://learn.chatgpt.com/docs/use-chatgpt#choose-how-you
 
 Use the root of an **existing Git repository** that no other agent or person
 is changing concurrently: the adopter root selected in your Codex desktop
-project above. Run these commands from a terminal at that root. You do not
-need to clone this kit first.
+project above. Use the **public one-command installer** below from a terminal
+at that root. This is the adopter installation route; do not clone this kit
+or run installer scripts from a kit checkout to adopt it.
 
 | Installation route | Additional utilities |
 |---|---|
@@ -135,7 +136,7 @@ curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex
 
 These commands execute downloaded code. Review the source before trusting it.
 For a fixed revision, caller-side `pipefail` to detect initial download failure,
-PowerShell flags, or local-source installation, see the
+or PowerShell flags, see the
 [installation guide](docs/distribution/source-first-installer.md#one-command-first-installation).
 If copying or staging fails, stop and review the reported partial state; do
 not assume the installer has rolled it back.
@@ -157,8 +158,9 @@ Keep your project's existing README, AGENTS, CI, and other customizations.
 If an existing `AGENTS.md` was preserved, explicitly connect the installed
 `.github/codex-instructions.md` and Skills as described in the
 [installed workflow guide](.github/distribution/payload/README.md).
-Its no-staging description applies to the local source engine; the external
-entry above stages new files. The public installation guide distinguishes both.
+For installation and staging, follow this public Quick start: the entry above
+stages new files. The preserved workflow guide's no-staging statement describes
+the internal engine, not the public installer's behavior.
 
 ### 3. Onboard in Codex
 
