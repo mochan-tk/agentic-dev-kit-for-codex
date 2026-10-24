@@ -12,6 +12,14 @@ repository, authenticated `gh`, `jq`, Git/Bash and Windows-specific tools,
 before starting. Codex CLI or the IDE extension alone does not satisfy the
 desktop requirement.
 
+For the optional Projects roadmap, repository authentication alone is not
+enough: queries need `read:project`, and creation/updates need `project` with
+classic/OAuth credentials. See [Projects prerequisites](../../README.md#prerequisites).
+Onboarding checks access early and records a scope failure separately from an
+absent or declined board. `gh auth refresh -s project` is an owner-operated
+remedy for stored `gh` credentials, never an automatic setup step. Board writes
+still need consent; planning can continue through Issues without a board.
+
 If the desktop app offers ChatGPT and Codex in its product selector, choose
 Codex for the kit's installation/onboarding/development work. ChatGPT Chat or
 Work is the preparation surface below, not a substitute for the local Codex

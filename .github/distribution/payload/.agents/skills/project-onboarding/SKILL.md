@@ -101,6 +101,16 @@ turned into interview questions. Firmware target envs are judged from the
 markers above; which machine physically hosts devices is discovered when
 routing first needs it (`exec:ide`), not interviewed up front.
 
+Check optional Projects access early with
+[Roadmap access and consent](../plan-management/SKILL.md#roadmap-access-and-consent).
+An authenticated `gh` with repository access may still lack Projects scopes.
+Report a confirmed scope failure and the owner-operated
+`gh auth refresh -s project` remedy now; do not run authentication changes or
+Project writes. Retain the bounded observation and any existing owner decision
+for the first draft Epic at P2-close (or the P6 evidence PR if drafts are
+skipped). Missing access does not stop onboarding or the material/model
+interview. Board creation remains a separate choice at first decomposition.
+
 ### P2 — Interview (hand-over only)
 
 The interview covers what the repository cannot answer for itself: **how
@@ -111,7 +121,7 @@ declared per task in File ownership at decomposition time, secrets
 specifics surface when work first touches them (baseline guardrails
 already ship in the instructions), and the Projects roadmap board is
 offered by the first decomposition run (consent-gated), not
-interviewed up front. Every
+interviewed up front; P1 only checks and explains optional access. Every
 question must be answerable by a project owner without digging through
 the repository.
 
@@ -216,6 +226,9 @@ give the adopter something to review during it:
    the pointer rides in the body because the closing chat handoff may never
    reach whoever picks the Epic up. Later phases stay coarse until their
    turn and say so instead.
+   Include the P1 roadmap observation/decision on the first Epic using the
+   bounded record format in plan-management; scope-missing is distinct from
+   declined, and an unperformed check is unavailable, not an absent board.
 4. Hand the adopter every Epic URL, first phase first, with: review these
    while I verify.
 

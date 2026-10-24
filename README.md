@@ -58,6 +58,16 @@ Before installation, prepare your specification context and create/select
 the adopter's Codex project as described below. Platform-specific installation
 utilities are listed in [step 1](#1-install-in-your-project).
 
+The optional GitHub Projects roadmap also needs Projects access: `read:project`
+for queries and `project` for creation/updates with classic/OAuth credentials
+([GitHub's scope guidance](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects)).
+Repository access alone is insufficient. If scopes are missing, the owner can
+run `gh auth refresh -s project` for stored `gh` credentials; environment tokens
+or other credential types may need their own permission update. The kit reports
+the gap early and asks separately before creating a board. It never refreshes
+credentials automatically, and a declined/unavailable board does not block
+Issue-based planning or development.
+
 ### Before you start: prepare context and a Codex project
 
 Use the required desktop app with your local application repository.
