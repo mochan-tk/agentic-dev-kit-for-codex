@@ -1170,7 +1170,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "5dd3d33de834cf34cc4ab607f6525bdef789a348cf9e7407cd29689cd69689c0"
+        "sha256": "e081c60892c315934a49a47ca935091d5cf396ca5962935077c015d8bc0fc761"
       },
       {
         "path": "docs/known-limitations.md",
@@ -1309,7 +1309,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "5dd3d33de834cf34cc4ab607f6525bdef789a348cf9e7407cd29689cd69689c0"
+        "sha256": "e081c60892c315934a49a47ca935091d5cf396ca5962935077c015d8bc0fc761"
       },
       {
         "path": "docs/known-limitations.md",
