@@ -42,14 +42,11 @@ this.
 
 ## Rolling-wave decomposition
 
-0. **Own the roadmap decision here, before the first decomposition.** Look for
-   `<repo> roadmap` with `gh project list --owner <owner>`. If it is absent
-   and no Epic carries a comment beginning `Roadmap board: declined`, ask one
-   consent question; on yes run `bash .github/scripts/setup-project.sh init`, on no
-   post that exact marker on the current Epic and continue. The marker is a
-   repository-wide decision: later decompositions search all `type:epic`
-   issues (open and closed), so a human is not asked again after the first
-   decline. A declined or unavailable board never blocks decomposition. Once
+0. **Own the roadmap decision here, before the first decomposition.** Reuse
+   the onboarding observation and follow [Roadmap access and consent](#roadmap-access-and-consent)
+   below before offering or writing to `<repo> roadmap`. Distinguish missing
+   scopes, an observed absent board, and an owner decline; none blocks Task
+   decomposition. Once
    the board exists, backfill every open `type:epic` issue returned by
    `gh issue list --label type:epic --state open` with `bash .github/scripts/setup-project.sh add`;
    onboarding created those sibling Epics before this first decomposition, so
@@ -190,6 +187,106 @@ are a flat array. Missing/incomplete graph data or 100 labels refuse because
 that export cannot prove label completeness at its cap. Unsupported client
 responses also refuse. These are read-back guards, not an atomic transaction,
 authenticated actor boundary or protection from later concurrent changes.
+
+## Roadmap access and consent
+
+Use this read-only preflight during onboarding P1 and before the first
+decomposition. Resolve the repository and intended Project owner first. Search
+all `type:epic` issues, open and closed, for an applicable owner decision and
+the latest roadmap observation. A current `Roadmap board: declined` is a
+repository-wide opt-out: cite it and do not ask again unless the owner changes
+that decision. A previous scope failure is an access observation, not a decline;
+carry its record instead of silently rediscovering it on each Task. Recheck
+after a reported permission change, changed owner/host, or a requested retry.
+Unreadable decision history grants no consent to create a board.
+
+For a fresh observation, run the following block from the adopter with
+`ROADMAP_OWNER` set to the reviewed owner login and `ROADMAP_REPO_NAME` to the
+repository name. Set `ROADMAP_CHOICE=declined` only for the applicable owner
+decision just read; otherwise use `pending`. This emits a **record draft**, not
+a comment or a write authorization. It neither refreshes credentials nor
+creates/changes a Project. Keep raw command responses private.
+
+<!-- BEGIN roadmap-access-preflight -->
+```bash
+roadmap_access() {
+  case "${ROADMAP_CHOICE:-pending}" in
+    declined) printf '%s\n' 'Roadmap board: declined'; return ;;
+    pending) ;;
+    *) printf '%s\n' 'Roadmap board: unavailable' 'Reason: unresolved owner decision'; return ;;
+  esac
+  local observation state
+  if observation=$(gh project list --owner "${ROADMAP_OWNER:?review Project owner}" \
+      --closed --limit 100 --format json 2>&1); then
+    state=$(printf '%s' "$observation" | jq -ser --arg title "${ROADMAP_REPO_NAME:?review repository} roadmap" '
+      if length != 1 then "unavailable" else .[0] |
+      if type != "object" or (.projects | type) != "array" or
+         (.totalCount | type) != "number" or .totalCount != (.projects | length) or
+         (all(.projects[]; (.title | type) == "string" and
+           (.number | type) == "number" and .number > 0 and
+           (.closed | type) == "boolean") | not)
+      then "unavailable"
+      else [.projects[] | select(.title == $title)] |
+        if length == 0 then "absent"
+        elif length == 1 and .[0].closed == false then "available"
+        else "unavailable" end
+      end end' 2>/dev/null) || state=unavailable
+    printf 'Roadmap board: %s\n' "$state"
+    case "$state" in
+      absent) printf '%s\n' 'Observation: complete list; no matching board' ;;
+      available) printf '%s\n' 'Observation: one open matching board; write permission unverified' ;;
+      *) printf '%s\n' 'Reason: incomplete, ambiguous, closed or unreadable board observation' ;;
+    esac
+  else
+    case "$observation" in
+      *INSUFFICIENT_SCOPES*|*'authentication token is missing required scopes [read:project]'*)
+        printf '%s\n' 'Roadmap board: scope-missing' \
+        'Required access: read:project for queries; project for creation/updates' \
+        'Owner remedy: gh auth refresh -s project' ;;
+      *) printf '%s\n' 'Roadmap board: unavailable' \
+        'Reason: Projects read failed; absence and missing scopes are unconfirmed' ;;
+    esac
+  fi
+}
+roadmap_access
+```
+<!-- END roadmap-access-preflight -->
+
+An incomplete list is not absence: if this bounded observation is unavailable,
+inspect complete paginated reads when useful; do not create a duplicate board
+or reopen a closed one. A successful read proves neither `project` mutation
+scope nor Project-owner permissions. For classic/OAuth credentials,
+[`read:project` permits queries and `project` permits queries and mutations](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects).
+For other credential types, verify the equivalent permission with the owner;
+do not infer it from token type, authentication success, or repository access.
+
+Tell the owner about `scope-missing` immediately, naming the missing Projects
+read capability and the separate write requirement, and offer the
+[owner-operated remedy](https://cli.github.com/manual/gh_project)
+`gh auth refresh -s project`. Never run it automatically or copy credential
+values/auth dumps into evidence. Environment-supplied credentials may require
+the owner to adjust their credential source instead; refreshing stored `gh`
+credentials is not proof that the active credential changed.
+
+Before decomposition, offer one scoped choice when no current decision exists:
+create the roadmap after the owner resolves access, decline it, or continue
+without it for now. Record the response; silence means pending, never decline
+or permission. On consent **and** verified write access, run the existing
+`bash .github/scripts/setup-project.sh init` for the reviewed owner/repository
+and read back its board identity and repository link. Authentication changes,
+board creation, and proposed date writes are separate decisions. No `init`,
+`add`, or `dates` writes occur with missing access or missing write consent.
+An unavailable/declined board or a pending answer never blocks otherwise
+authorized Issue/Task decomposition.
+
+Publish the bounded observation on the current Epic, with its first line
+`Roadmap board: scope-missing`, `absent`, `declined`, `available`, or
+`unavailable`, followed by the observation date, owner/repository, read/write
+capability, owner choice/decision link and next action. Preserve earlier facts
+with a new record when the state changes. During onboarding, carry the result
+to the first draft Epic at P2-close; if no Epic is created, use the onboarding
+evidence PR and its deferred ledger. Reuse that record in the first
+decomposition handoff. A local draft or a final chat alone is not durable proof.
 
 ## Roadmap scheduling
 
