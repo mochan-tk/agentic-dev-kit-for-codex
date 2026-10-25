@@ -1,4 +1,4 @@
-# Source-first installer
+# One-command installation and update
 
 Read [product scope](../product-scope.md), [limitations](../known-limitations.md) and
 [source provenance](../provenance.md) for shipped behavior and historical acceptance.
@@ -62,9 +62,9 @@ gate, a required external connector, or automatic context synchronization.
    for that discovery.
 3. Start a **local chat inside that Codex project**. Confirm the working
    directory and Git root name the adopter repository, then use a terminal
-   at that root for the **public one-command installation** below. The
-   [local-source alternative](#local-use) uses a separate kit-checkout terminal
-   location. Keep one writer and review existing changes before installation.
+   at that root for the **public one-command installation** below. Do not
+   clone the kit or run installer scripts from a kit checkout for adoption.
+   Keep one writer and review existing changes before installation.
 4. Review and land the installed files on the remote default branch, as
    described below. Start a new local chat in the same project for the
    installed onboarding Skill, with the prepared context ready. Answer its
@@ -83,16 +83,16 @@ controls available to you without assuming automatic cross-surface access.
 
 ## One-command first installation
 
-From an existing adopter Git root, the README Bash and PowerShell pipelines
-need no kit clone. External invocation defaults to apply and stages only files
-created in that invocation. Explicit --dry-run changes neither adopter files
+Use the [README Bash or PowerShell command](../../README.md#1-install-in-your-project)
+from an existing adopter Git root. This is the only adopter installation route
+and needs no kit clone. The public installer defaults to apply and stages only
+files created in that invocation. Explicit --dry-run changes neither adopter files
 nor index; disposable acquisition scratch is separate and removed on exit.
 Applying an install or known-old upgrade, recorded rollback and the public
 updater require the physical top level of a non-bare Git worktree.
 Git administration directories and bare repositories
 refuse, even when a public bootstrap finds every payload file already identical.
-Normal roots, linked worktrees and real submodules remain supported. Local
-dry-run previews retain their existing non-repository behavior.
+Normal roots, linked worktrees and real submodules remain supported.
 
 For an immutable reviewed revision, replace FULL_COMMIT_SHA with its full
 40-character SHA in both places, so initial entry and selected source agree:
@@ -124,10 +124,10 @@ The current bootstrap refuses selected revisions with either previous engine,
 including the accepted pre-repair revision. To install that historical revision,
 separately review and pin its own historical entry and selected revision together.
 A new entry is available through `main` only after its PR is merged; an unmerged
-repair does not change the public `main` download. Local entry and direct engine
-calls reject inherited repository/configuration context overrides before Git
-observations, including empty values. Genuine linked worktrees with `.git` files
-remain supported; call from a shell without those overrides.
+repair does not change the public `main` download. The installer rejects
+inherited repository/configuration context overrides before Git observations,
+including empty values. Genuine linked worktrees with `.git` files remain
+supported; call from a shell without those overrides.
 
 The initial downloaded script remains trusted executable code. A floating main
 URL can change; use reviewed immutable URLs when needed. Commit/blob/hash checks
@@ -143,9 +143,8 @@ irm https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/FULL_C
 
 PowerShell only locates Git for Windows Bash, downloads/dispatches the Bash
 entry, forwards an argument array and surfaces its failure; iex does not exit
-the interactive session. A saved local shim dispatches its adjacent entry.
-WSL is never substituted. PowerShell-host synthetic tests are separate from
-native Windows execution, which remains unmeasured.
+the interactive session. WSL is never substituted. PowerShell-host synthetic
+tests are separate from native Windows execution, which remains unmeasured.
 
 Before apply, the reviewed local planner validates every source and target
 path. Missing tracked paths, staged deletions, other conflicting index state,
@@ -160,53 +159,21 @@ push, force or automatic cleanup of adopter files occurs. Copy or stage failure
 is non-success and may leave partial installed files; inspect files and index
 for manual recovery. Keep the adopter exclusively owned during installation.
 
-Review git diff --cached, land the reviewed adoption on the remote default
-branch, then invoke the installed project-onboarding Skill. Setup helpers are
-never run by the installer.
+Review `git diff --cached` and land the reviewed adoption on the remote default
+branch before onboarding makes GitHub changes. Then open or select the adopter checkout in Codex
+in the desktop project prepared above. Start a new local chat and invoke
+`$project-onboarding` using that project's installed
+`.agents/skills/project-onboarding/SKILL.md`, with the prepared context ready.
+Confirm the chat reads the installed file in your application repository, not
+the kit's contributor checkout. Setup helpers are never run by the installer.
 
 The preserved [payload workflow guide](../../.github/distribution/payload/README.md)
-describes the local engine when it says the installer does not stage files.
-That remains true for local invocation below. The public external bootstrap is
-the separate default-apply entry that stages only newly installed paths; do not
-interpret the payload's local-engine statement as its external staging policy.
+describes the internal engine when it says the installer does not stage files.
+For adoption, follow this public guide: the one-command installer stages only
+newly installed paths. The internal-engine statement does not change that
+staging policy or provide an alternate installation route.
 
-## Local use
-
-Inspect the local source checkout first. Create an adopter Git repository
-yourself if needed. Do not run concurrently with another writer in it.
-For this alternative, run the following commands **from the reviewed kit
-checkout's root**, not the adopter root: the relative bootstrap path belongs
-to the kit source. Replace `/path/to/adopter` with your actual adopter root.
-Keep the Codex project's primary folder at the adopter; using a kit-source
-terminal for these commands does not change the onboarding project.
-
-```sh
-bash .github/scripts/scaffold-init.sh --dry-run /path/to/adopter
-bash .github/scripts/scaffold-init.sh --apply /path/to/adopter
-```
-
-The default is dry-run. `SCAFFOLD_SOURCE_DIR` optionally selects a local
-checkout or distribution root containing `.github/distribution/`; relative
-paths resolve before changing directories. An explicit invalid local source
-never falls back to network acquisition.
-Windows uses `.github/scripts/scaffold-init.ps1 --dry-run TARGET` and
-`--apply TARGET` through adjacent Git Bash. Bash 3.2+, Git, find, standard Unix
-utilities (including GNU/BSD stat), and either sha256sum or shasum are needed;
-public Bash acquisition additionally uses curl. No Python package or Rulesync
-is required. Later GitHub helper use separately needs authenticated gh and jq.
-Drive-form source and target paths use Git Bash's existing `cygpath -u`;
-missing or unsuccessful conversion fails rather than prepending the current
-directory. This boundary is mocked in offline tests, not measured on Windows.
-
-Review the plan before apply. Review the resulting Git diff, then stage,
-commit, and push explicitly, landing the reviewed installation on the remote
-default branch before onboarding's GitHub writes. Then open or select the adopter checkout in Codex
-through the desktop project prepared above. Start a new local chat and invoke
-`$project-onboarding` from its installed
-`.agents/skills/project-onboarding/SKILL.md`, using the installed file in that project. Keep the
-remote-default-before-GitHub-write, clean-checkout verify-by-running,
-evidence-PR, and durable deferred-work ledger gates from the source workflow.
-The installer itself runs none of the optional GitHub setup helpers.
+## Installed startup and Task records
 
 Shipped shell files have Git mode 100644: invoke the documented helpers with
 `bash`, or the existing PowerShell Git Bash entrypoint. The optional ritual
@@ -218,8 +185,6 @@ and verifies actual CUSTOMIZE removal plus bounded onboarding-only outputs.
 Initial adoption requires confirmed file absence, never a failed API read.
 An unrelated or unsupported PR uses the ordinary Task ritual. These are
 structural Git fixture checks, not proof of live GitHub or native Codex runtime.
-
-## Installed startup and Task records
 
 Read the installed session-orchestration Skill's startup decision table before
 starting onboarding. A scoped, unrevoked owner decline must have a durable
@@ -276,13 +241,14 @@ layout and checks every source digest before planning. The required
 | instance: agreement/context seeds and local changelog | no-op | preserve |
 | seed: README, gitignore, gitattributes | no-op | preserve |
 
-Local missing files are copied only by `--apply`; external invocation defaults to apply. Unrelated adopter files are never
-selected. Source/target/ancestor/leaf symlinks, broken links, path escapes,
-unlisted payload files, missing inputs, modified inventory layouts, and file/
+The public installer defaults to apply; `--dry-run` previews without installing
+or staging files. Unrelated adopter files are never selected. Source/target/
+ancestor/leaf symlinks, broken links, path escapes, unlisted payload files,
+missing inputs, modified inventory layouts, and file/
 directory collisions fail closed. A failing inventory enumeration is not an
-empty or successful inventory. The local engine leaves Git metadata and index untouched.
-External entry stages newly installed paths only. Neither mode supports overwrite,
-force, automatic init or commit.
+empty or successful inventory. The public entry stages newly installed paths
+only. It does not overwrite existing files, force an operation, initialize Git
+or commit changes.
 After preflight, a copy error can leave a reported partial install; review it
 before re-running. This is not atomic rollback or an adversarial concurrent
 filesystem mutation guarantee.
@@ -322,40 +288,20 @@ the adopter. Complete observations, commit chronology and final readbacks
 remain mandatory. Its commit limit is 250; sensor output does not replace CI,
 review, owner acceptance or authenticate a worker session.
 
-## Preservation-safe local upgrade and operation-scoped rollback
+## Upgrade preservation and operation-scoped rollback
 
-Local upgrade uses engine/tuned/instance class dispatch and
-two-version preservation tests. It does **not** reuse blind engine overwrite,
-automatic staging, changelog replacement or broad path discovery. Known-old
-checks, prewrite backups and explicit operation rollback are target additions.
-The 47 shipped payload paths/classes/modes and original source blob IDs remain
-fixed. Earlier workflow adaptations and the current boundary repair are recorded
-separately in provenance. The repair adds a local Git-context refusal and strict
-ritual UTF-8 handling while retaining the upgrade/rollback operation format and
-the original export seal.
+Use the [one-command explicit update](#one-command-explicit-update) with reviewed
+old/new commit IDs. Its engine uses engine/tuned/instance class dispatch,
+known-old checks, prewrite backups and explicit operation rollback. It does
+not blindly overwrite engine files, stage changes or replace the changelog.
+Both selected revisions must contain exactly the supported 47 ordered payload
+paths/classes, with single-link regular mode-0644 payload files and valid
+SHA-256 digests. A self-consistent manifest is integrity relative to the chosen
+input, **not source authenticity**.
 
-Select inspected local old/new roots containing `.github/distribution/`, an
-exclusively owned adopter Git root, and a new private transaction directory whose
-parent already exists. Sources and transaction must not overlap the adopter;
-the transaction must not overlap either source. The new root is selected with
-`SCAFFOLD_SOURCE_DIR`; `--old-source` is mandatory for upgrade. Old and new may
-be the same inspected source (a no-op if everything is present). Both inventories
-must contain exactly the reviewed 47 ordered paths/classes, with single-link
-regular mode-0644 payload files and valid SHA-256 digests. A self-consistent
-manifest is integrity relative to the chosen input, **not source authenticity**.
-
-```sh
-SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --upgrade --old-source /path/to/old-kit --transaction /path/to/private/update-1 --dry-run /path/to/adopter
-SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --upgrade --old-source /path/to/old-kit --transaction /path/to/private/update-1 --apply /path/to/adopter
-SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --rollback --transaction /path/to/private/update-1 --dry-run /path/to/adopter
-SCAFFOLD_SOURCE_DIR=/path/to/new-kit bash .github/scripts/scaffold-init.sh --rollback --transaction /path/to/private/update-1 --apply /path/to/adopter
-```
-
-The reviewed script being executed must support these options; do not execute an
-unreviewed script from a source merely because its inventory validates. The
-unchanged PowerShell entrypoint forwards the same arguments to Bash. Standard
-BSD/GNU `stat`, `cp`, `sort`, `wc`, `rmdir`, and `sync` supplement the installation
-prerequisites; no new Python, jq, service, or package installation is required.
+Standard BSD/GNU `stat`, `cp`, `sort`, `wc`, `rmdir`, and `sync` supplement the
+installation prerequisites; no new Python, jq, service, or package installation
+is required.
 
 Upgrade preflights the **whole** fixed inventory before mutation. Existing
 engine files must equal the old bytes/mode (replace), or the new bytes/mode
@@ -389,7 +335,7 @@ records, escapes, wrong target/source binding and tampered backups refuse. Data
 is parsed, never sourced/evaluated. Completion is reported only after affected
 states are verified and the final operation status is written/flushed. No Git
 HEAD/index operation, automatic staging, GitHub operation or credential access
-is part of installation, upgrade or rollback.
+is part of the upgrade or rollback engine.
 
 ### Recovery and refusal
 
@@ -476,8 +422,13 @@ An already-new operation retains sources without creating a transaction. A
 failure during acquisition or record preparation may need manual inspection;
 retained inputs alone are not proof of a complete rollback record.
 
-For a completed or modeled interrupted update with a complete transaction,
-run the retained engine without a network connection (Git Bash on Windows):
+### Offline recovery of a previous public update
+
+These commands only roll back an existing one-command update; they are not an
+installation route. For a completed or modeled interrupted update with a
+complete transaction, run its retained engine without a network connection
+(Git Bash on Windows). Use only the sources already retained by that update;
+do not substitute a kit checkout:
 
 ```sh
 RECOVERY=/path/to/the-original-private-recovery
