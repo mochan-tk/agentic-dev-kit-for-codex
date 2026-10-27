@@ -68,12 +68,12 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "aeda4919ff516492c4948c18beb62907d347279523588e0ccef68294dd0fbeaf",
+    ".github/distribution/payload.v1.tsv": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
-    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
     ".github/distribution/payload/.github/scripts/setup-project.sh": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",
     ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
@@ -162,7 +162,7 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "f406a0317537ef5e8a334789a96bc4c11080325c470aabbace3b065fa474db86"
+ADOPTER_RECORD_SHA256 = "dc360239765d739adce407f83e44e753ffe03225bf12179e76f1c5d913cc1131"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
 IMPROVEMENT_RECORD_SHA256 = "9eeafcf720b56992c544b3f20a520c572b4ac3f5e367c3453b3d8a53e43f7d7d"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
