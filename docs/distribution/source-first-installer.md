@@ -749,6 +749,19 @@ decision fields are not actual owner approval. Synthetic cases prove the
 procedure mechanics only; human independence, agreement and adoption review
 remain mandatory. No scheduler, retro engine or upstream send is installed.
 
+### Record adoption steering cost manually
+
+At each Epic retrospective, use the installed retro Skill’s
+[manual per-Epic steering tally](../../.github/distribution/payload/.agents/skills/retro/SKILL.md#manual-per-epic-steering-tally)
+to record re-prompts by topic, checker failures/dispositions and manual
+workarounds with revision, observation window, coverage and Task denominator.
+Copy its blank stub into the existing `.github/docs/agreements/retro-log.md`
+after prior history. Upgrades preserve that instance log, so existing adopters
+copy the stub voluntarily; no installer migration or telemetry is performed.
+Deduplicate stable event IDs, distinguish partial/UNKNOWN from zero, and keep
+waived failures separate from PASS. The synthetic exercise demonstrates counting;
+it is not an adopter result, an automatic collector or an upstream submission.
+
 ## Evidence boundary
 
 Mandatory product and installer checks validate the shipped scope and complete

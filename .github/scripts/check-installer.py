@@ -42,6 +42,8 @@ WORKFLOW_PAYLOAD_PATHS = (
 )
 # Explicit current adaptations do not expand the immutable historical baseline.
 WORKFLOW_CURRENT_EXTRA_PATHS = (
+    ".github/docs/agreements/retro-log.md",
+    ".agents/skills/retro/SKILL.md",
     ".github/ISSUE_TEMPLATE/ai-task.yml",
     ".agents/skills/plan-management/templates/task-body.md",
     ".agents/skills/verification/SKILL.md", ".github/PULL_REQUEST_TEMPLATE.md",
@@ -1061,13 +1063,13 @@ BOUNDARY_TARGETS = tuple(sorted((*BOUNDARY_BASE_PATHS, INVENTORY,
 )))
 BOUNDARY_DIGESTS = {
     ".github/distribution/adopter-ci/check-adopter-ci.py": "f81ff40e40c9f3109c2acbfdafdaf882447729cdd658d3ea68ae3743ea3bf73d",
-    ".github/distribution/payload.v1.tsv": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448",
+    ".github/distribution/payload.v1.tsv": "49adc6e80452cf2aeb2a309da888d441d5ad593a7697c4022904f06b37f2f145",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
     ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
     ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
     "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
-    "docs/distribution/source-first-installer.md": "64d7c404112d29b9f89e4dc4017fcc6d832efb13a2d31ba6ddcf605ddcf48261",
+    "docs/distribution/source-first-installer.md": "a6685ee1ccd49a79e6001fe2531b760a0765e72e2328deb61c92db68eb43a1cf",
     "docs/known-limitations.md": "f499ef7d9c641bf9d0fa2080a52235ec40455ea75fff93d19fbb3110504da65f",
     "docs/product-scope.md": "50edcc2f294d7355cff2b45d85c8da8f154b77d91eb0af78e097017e87db24d3",
     "docs/provenance.md": "a4ea663d1738d1577428b913a5a5f96442fc267f8ebf9642ad22512380479687",
@@ -1157,7 +1159,7 @@ FINAL_TARGETS = tuple(sorted((*FINAL_BASE_PATHS, INVENTORY,
     "docs/known-limitations.md", "docs/provenance.md", "docs/product-scope.md", "docs/parity-status.md",
 )))
 FINAL_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448",
+    ".github/distribution/payload.v1.tsv": "49adc6e80452cf2aeb2a309da888d441d5ad593a7697c4022904f06b37f2f145",
     ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
@@ -1166,7 +1168,7 @@ FINAL_DIGESTS = {
     ".github/scripts/setup-adopter-ci.py": "bc71de2c2dbc35bd7d2a53749b710e54618d7286d24784720eda261c39b4993c",
     "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
     "docs/distribution/companion-checks.md": "157e9a501961391c5832f37bd082bdd8f3096b59d0101b845c4ac497a3ffdfd4",
-    "docs/distribution/source-first-installer.md": "64d7c404112d29b9f89e4dc4017fcc6d832efb13a2d31ba6ddcf605ddcf48261",
+    "docs/distribution/source-first-installer.md": "a6685ee1ccd49a79e6001fe2531b760a0765e72e2328deb61c92db68eb43a1cf",
     "docs/known-limitations.md": "f499ef7d9c641bf9d0fa2080a52235ec40455ea75fff93d19fbb3110504da65f",
     "docs/parity-status.md": "cdaa3158ce05f722a6183e72559663033903cd61d89bd8cffa8ac8a2e469e79c",
     "docs/product-scope.md": "50edcc2f294d7355cff2b45d85c8da8f154b77d91eb0af78e097017e87db24d3",

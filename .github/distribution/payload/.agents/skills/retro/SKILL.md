@@ -149,6 +149,96 @@ diff -u --label "a/$LOG_PATH" --label "b/$LOG_PATH" "$LOG_PATH" "$SCRATCH/log" |
 ```
 <!-- END retro-retirement-diff -->
 
+## Manual per-Epic steering tally
+
+At an Epic retrospective, copy the blank stub below into the existing
+`.github/docs/agreements/retro-log.md`, after its prior table/history. Existing
+logs are preserved on upgrade; copy this section manually rather than replacing
+adopter records. This is a local, manually maintained tally, not telemetry or
+permission to transmit data upstream. Store only bounded durable references;
+never copy raw chats, credentials, private paths or environment dumps.
+
+Count from observed records, not memory. Assign each distinct event one stable
+ID within the Epic and retain it across copied reports. The same ID/evidence in
+a second transport is a duplicate; a genuinely new retry/re-prompt gets a new
+ID and occurrence reference. If identity is uncertain, mark coverage partial
+or UNKNOWN instead of inventing another event. Update dispositions on the
+existing failure ID; that does not create another checker failure.
+
+- **Re-prompt:** a human instruction repeated because earlier guidance was not
+  followed; use one primary topic: board fields, ritual evidence, scope or other.
+  Initial answers and newly requested work are not re-prompts.
+- **Checker failure:** one observed failed invocation, including a known checker
+  defect. Record its exact command/check and revision. Count distinct failures
+  separately from dispositions: fixed (linked correction and passing rerun),
+  waived (explicit scoped human decision; the failed check stays FAIL), or
+  defect filed (linked follow-up). A failure may be both defect filed and later
+  fixed, so disposition counts overlap and must not be added into a total.
+  Unresolved/missing decisions remain pending or UNKNOWN, never PASS.
+- **Manual workaround:** one applied workaround, grouped by topic (for example
+  helper retrieval); repeated reports of that application count once.
+
+Use `0` only with complete observation for that metric/topic and window. Partial
+coverage gives an observed lower bound (`>= n`); absent coverage gives `UNKNOWN`,
+not zero. Count each observed Task once in the denominator, including Tasks with
+zero events; list their durable IDs independently of the event ledger. Do not
+infer coverage of the whole Epic from that denominator. Compare releases only
+with compatible windows, coverage and Task denominators; split a window if the
+installed revision changes, and disclose local modifications.
+
+### Blank tally
+
+```markdown
+### Epic steering tally
+
+| Field | Value |
+|---|---|
+| Epic | <durable Epic URL> |
+| Installed kit revision / local modifications | <exact commit or UNKNOWN; modifications or none> |
+| Observation window / timezone | <start inclusive, end exclusive, timezone> |
+| Task denominator | <unique observed Task count and Task URLs, including zero-event Tasks> |
+| Sources and coverage limits | <bounded evidence references; complete/partial/UNKNOWN per topic below> |
+
+| Stable event ID | Task / observed time | Kind / primary topic | Bounded evidence | Disposition / linked decision or follow-up |
+|---|---|---|---|---|
+| <ID> | <Task URL / timestamp> | <re-prompt, checker failure, or workaround / topic> | <occurrence reference; check+revision for failure> | <fixed / waived / defect filed / pending / UNKNOWN; applicable links> |
+
+| Metric / topic | Distinct event IDs | Observed count | Coverage |
+|---|---|---|---|
+| Re-prompts / board fields | <IDs> | UNKNOWN | UNKNOWN |
+| Re-prompts / ritual evidence | <IDs> | UNKNOWN | UNKNOWN |
+| Re-prompts / scope | <IDs> | UNKNOWN | UNKNOWN |
+| Re-prompts / other | <IDs> | UNKNOWN | UNKNOWN |
+| Checker failures / all | <IDs> | UNKNOWN | UNKNOWN |
+| Failure dispositions / fixed; waived; defect filed | <IDs per disposition; may overlap> | UNKNOWN | UNKNOWN |
+| Manual workarounds / <topic> | <IDs> | UNKNOWN | UNKNOWN |
+```
+
+### Synthetic counting exercise
+
+This fictional exercise is not adopter evidence or an actual owner decision.
+Use an Epic `SYN-E1`, revision `1111111111111111111111111111111111111111`
+(no local modifications), window `[2026-10-01T00:00Z, 2026-10-02T00:00Z)` in UTC,
+and observed Tasks `SYN-T1`, `SYN-T2`, `SYN-T3` (denominator **3**). Coverage is
+complete for board fields, ritual evidence, scope and checker failures; partial
+for helper retrieval; UNKNOWN for other re-prompt topics. Each `SYN-*` reference
+below denotes a fictional bounded observation, not a live link.
+
+| Received records | Distinct event / fictional evidence | Tally contribution |
+|---|---|---|
+| r1, r2, copied r1 | Two board-field re-prompts on SYN-T1 / SYN-B1, SYN-B2 | board fields = 2 |
+| r3 | Ritual-evidence re-prompt on SYN-T2 / SYN-R1 | ritual evidence = 1 |
+| No scope events in complete observations | SYN-T1, SYN-T2 and SYN-T3 coverage | scope = 0; other = UNKNOWN |
+| f1, copied f1, then f1 disposition update | Failed `bash .github/scripts/check-task-ritual.sh 101` on SYN-T1 / SYN-F1 at the revision above; defect SYN-D1 filed, then corrected with passing rerun SYN-P1 | one failure; defect filed = 1 and fixed = 1 |
+| f2 | Failed `bash .github/scripts/check-task-ritual.sh 102` on SYN-T2 / SYN-F2 at the revision above; explicit scoped synthetic owner waiver SYN-O1 | one failure; waived = 1; original check remains FAIL |
+| w1, copied w1 | Helper-retrieval workaround applied once on SYN-T2 / SYN-W1 | observed helper retrieval >= 1 (partial coverage) |
+
+Result: **3** distinct re-prompts across the two observed topics (not a total
+for UNKNOWN topics); **2** checker failures, with overlapping disposition counts
+fixed **1**, waived **1**, defect filed **1**. SYN-T3 has no observed events but
+still counts in the denominator. No promotion, waiver, acceptance or upstream
+publication is authorized by recording this tally.
+
 ## Classify the root cause, then pick the asset
 
 | Root cause | Fix lands in |

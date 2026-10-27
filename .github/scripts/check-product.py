@@ -68,11 +68,13 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
+    ".github/distribution/payload/.github/docs/agreements/retro-log.md": "a380733ac883fb8b5dfe9f82575a1b034202e41c5c6ea43a05230b3a868c2abb",
+    ".github/distribution/payload/.agents/skills/retro/SKILL.md": "4274e6b96b00d4b27f5d39500b798320d481833005376447cbfe5e4c8d6369c2",
     ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml": "5e8a182ba6ecfd215cf040cdddaed977cfc519a123d23a55d5aca08eac11eaee",
     ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md": "326c8118ea762c8f20e13c05ba1b3b7d8f4a4ca93f0a855fdc951d096ef5e2b5",
     ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md": "ce0d238d6a75cf93b0a51df6481378183dafa440fddbe95b0be496c005e419ca",
     ".github/distribution/payload/.agents/skills/verification/SKILL.md": "a0ad0f31e7632d719b345b0855838e5f9b205d3d802bcaeaf6c16b6e19066b02",
-    ".github/distribution/payload.v1.tsv": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448",
+    ".github/distribution/payload.v1.tsv": "49adc6e80452cf2aeb2a309da888d441d5ad593a7697c4022904f06b37f2f145",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf",
