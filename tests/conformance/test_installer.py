@@ -768,6 +768,152 @@ sys.exit(0)
         self.assertNotIn('PASS:', result.stdout + result.stderr)
         return result
 
+    def known_pin_records(self, heading='## Verification'):
+        records = self.ordinary_records()
+        records['repos/{owner}/{repo}/issues/2']['body'] = heading + '\nKnown-defect pins: required\n'
+        records['repos/{owner}/{repo}/pulls/1']['body'] += (
+            '\n\n## Evidence\n\n### Known-defect pins\n\n'
+            '- Defect: Per-line and aggregate tax rounding disagree\n'
+            '  Test: tests/test_tax.py::test_known_tax_discrepancy\n'
+            '  Pinned: Stored total is 562; report total is 563\n'
+            '  Expected: Both totals agree under the approved tax rule\n'
+            '  Follow-up: https://github.com/fixture/adopter/issues/9\n')
+        records['repos/{owner}/{repo}/issues/9'] = {
+            'number': 9, 'html_url': 'https://github.com/fixture/adopter/issues/9',
+            'state': 'open', 'labels': [{'name': 'type:task'}]}
+        return records
+
+    def test_known_defect_pins_markdown_and_issue_form(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for heading in ('## Verification', '### Verification'):
+            with self.subTest(heading=heading):
+                records = self.known_pin_records(heading)
+                body = records['repos/{owner}/{repo}/pulls/1']['body']
+                pin = body.split('### Known-defect pins\n\n')[1]
+                # Two different tests for one defect share the same follow-up;
+                # another pin belongs to an Epic. Each unique Issue is read twice.
+                records['repos/{owner}/{repo}/pulls/1']['body'] += '\n' + pin.replace('test_known_tax_', 'test_other_tax_')
+                records['repos/{owner}/{repo}/pulls/1']['body'] += '\n' + pin.replace('/issues/9', '/issues/10')
+                records['repos/{owner}/{repo}/issues/10'] = dict(
+                    records['repos/{owner}/{repo}/issues/9'], number=10,
+                    html_url='https://github.com/fixture/adopter/issues/10', labels=[{'name': 'type:epic'}])
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                for number in (9, 10):
+                    self.assertEqual(2, sum(call[:2] == ['api', f'repos/{{owner}}/{{repo}}/issues/{number}']
+                                            for call in self.last_gh_calls))
+
+    def test_known_defect_pins_declaration_is_active_and_scoped(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        declaration = 'Known-defect pins: required'
+        inactive = [
+            '## Verification\n<!-- ' + declaration + ' -->',
+            '### Verification\n<!-- note\n' + declaration + '\n-->',
+            '## Verification\n```text\n' + declaration + '\n```',
+            '### Verification\n~~~~text\n' + declaration + '\n~~~~',
+            '## Verification\n```text\n    ```\n' + declaration + '\n```',
+            '### Verification\n~~~text\n\t~~~\n' + declaration + '\n~~~',
+            '## Verification\n    ' + declaration,
+            '## Verification\n\t' + declaration,
+            '## Summary\n' + declaration + '\n## Verification\nRun unit tests.',
+            '## Verification\nRun tests.\n## Notes\n' + declaration,
+            '## Verification\nThe example says ' + declaration,
+        ]
+        ordinary = self.packaged_json(RITUAL_PATH, self.ordinary_records(), '1', installed=True)
+        self.assertEqual(0, ordinary.returncode, ordinary.stdout + ordinary.stderr)
+        ordinary_calls = list(self.last_gh_calls)
+        for body in inactive:
+            with self.subTest(body=body):
+                records = self.ordinary_records()
+                records['repos/{owner}/{repo}/issues/2']['body'] = body
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertEqual(ordinary_calls, self.last_gh_calls)
+        for body in ('## Verification\n' + declaration + '\n' + declaration,
+                     '## Verification\n' + declaration + '\n## Verification\nRun tests.'):
+            records = self.known_pin_records()
+            records['repos/{owner}/{repo}/issues/2']['body'] = body
+            result = self.assert_ritual_refuses(records)
+            self.assertIn('known-defect-declaration', result.stdout + result.stderr)
+
+    def test_known_defect_pins_literal_comments_in_code_do_not_hide_declaration(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        for example in ('    <!-- example literal\n',
+                        '```text <!-- literal\nexample\n```\n',
+                        '~~~text <!-- literal\nexample\n   ~~~\n'):
+            with self.subTest(example=example):
+                task_body = '## Verification\n\n' + example + '\nKnown-defect pins: required\n'
+                records = self.ordinary_records()
+                records['repos/{owner}/{repo}/issues/2']['body'] = task_body
+                result = self.assert_ritual_refuses(records)
+                self.assertIn('known-defect-records', result.stdout + result.stderr)
+                records = self.known_pin_records()
+                records['repos/{owner}/{repo}/issues/2']['body'] = task_body
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_known_defect_pins_incomplete_or_placeholder_records_refuse(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        complete = self.known_pin_records()[pr]['body']
+        pin = complete.split('### Known-defect pins\n\n')[1]
+        cases = [complete.split('## Evidence')[0], complete.split('- Defect:')[0],
+                 complete + '\n- Defect: A second defect without the remaining fields\n',
+                 complete + '\n' + pin, complete.replace('  Test:', '  Unknown:'),
+                 complete.replace('  Pinned:', '  Test:'),
+                 complete.replace('## Evidence', '## Summary'),
+                 complete.replace('### Known-defect pins', '<!--\n### Known-defect pins') + '\n-->',
+                 complete.replace('### Known-defect pins', '```markdown\n### Known-defect pins') + '\n```']
+        for field in ('- Defect', '  Test', '  Pinned', '  Expected', '  Follow-up'):
+            line = next(line for line in pin.splitlines() if line.startswith(field + ':'))
+            cases += [complete.replace(line, field + ': '), complete.replace(line, field + ': TBD'),
+                      complete.replace(line, field + ': <value>'), complete.replace(line, field + ':   TBD')]
+        cases += [complete.replace('Per-line and aggregate tax rounding disagree', 'x' * 2049)]
+        cases += [complete + ''.join('\n' + pin.replace('test_known_tax_', f'test_{n}_tax_') for n in range(32))]
+        for index, body in enumerate(cases):
+            with self.subTest(case=index):
+                records = self.known_pin_records(); records[pr]['body'] = body
+                result = self.assert_ritual_refuses(records)
+                self.assertIn('known-defect-records', result.stdout + result.stderr)
+
+    def test_known_defect_pins_followup_metadata_and_drift_refuse(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        endpoint = 'repos/{owner}/{repo}/issues/9'
+        for defect in ('missing', 'read-error', 'number', 'url', 'pr', 'untyped', 'mixed',
+                       'bad-label', 'state-drift', 'type-drift', 'final-error'):
+            with self.subTest(defect=defect):
+                records = self.known_pin_records(); item = records[endpoint]
+                if defect == 'missing': del records[endpoint]
+                elif defect == 'read-error': records[endpoint] = {'__error__': True}
+                elif defect == 'number': item['number'] = 10
+                elif defect == 'url': item['html_url'] = 'https://github.com/other/repo/issues/9'
+                elif defect == 'pr': item['pull_request'] = {}
+                elif defect == 'untyped': item['labels'] = []
+                elif defect == 'mixed': item['labels'].append({'name': 'type:epic'})
+                elif defect == 'bad-label': item['labels'] = ['type:task']
+                else:
+                    changed = copy.deepcopy(item)
+                    if defect == 'state-drift': changed['state'] = 'closed'
+                    if defect == 'type-drift': changed['labels'] = [{'name': 'type:epic'}]
+                    if defect == 'final-error': changed = {'__error__': True}
+                    records[endpoint] = {'__responses__': [item, changed]}
+                self.assert_ritual_refuses(records)
+
+    def test_known_defect_pins_canonical_followup_only(self):
+        self.assertEqual(0, self.run_install('--apply').returncode)
+        pr = 'repos/{owner}/{repo}/pulls/1'
+        for reference in ('#9', 'https://github.com/other/repo/issues/9',
+                          'https://github.com/fixture/adopter/pull/9',
+                          'https://github.com/fixture/adopter/issues/9#issuecomment-3',
+                          'https://github.com/fixture/adopter/issues/09',
+                          '[Task](https://github.com/fixture/adopter/issues/9)'):
+            with self.subTest(reference=reference):
+                records = self.known_pin_records()
+                records[pr]['body'] = records[pr]['body'].replace(
+                    'https://github.com/fixture/adopter/issues/9', reference)
+                result = self.assert_ritual_refuses(records)
+                self.assertIn('known-defect-records', result.stdout + result.stderr)
+
     def test_ritual_commit_collection_fail_closed(self):
         self.assertEqual(0, self.run_install('--apply').returncode)
         pr = 'repos/{owner}/{repo}/pulls/1'

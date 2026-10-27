@@ -18,7 +18,7 @@
     {
       "path": ".github/distribution/adopter-ci/check-adopter-ci.py",
       "mode": "100644",
-      "sha256": "289d1692d7abc0853b0c5aaeab915db5db3da73ea6790ac4d99f44f8910e6ae5"
+      "sha256": "f81ff40e40c9f3109c2acbfdafdaf882447729cdd658d3ea68ae3743ea3bf73d"
     },
     {
       "path": ".github/distribution/adopter-ci/task-ritual.yml",
