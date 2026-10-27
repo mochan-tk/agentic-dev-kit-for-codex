@@ -69,9 +69,10 @@
       "destination": ".agents/skills/plan-management/templates/task-body.md",
       "source_path": ".github/skills/plan-management/templates/task-body.md",
       "source_blob": "2338d2e79db0afad54e498d5582b80ad63fa198f",
-      "target_sha256": "f3f89d95012c653587ba807a2928b1d34da65e9b563826b6db91f27ddf1b512b",
+      "target_sha256": "326c8118ea762c8f20e13c05ba1b3b7d8f4a4ca93f0a855fdc951d096ef5e2b5",
       "adaptations": [
-        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
+        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification."
       ]
     },
     {
@@ -127,11 +128,12 @@
       "destination": ".agents/skills/verification/SKILL.md",
       "source_path": ".github/skills/verification/SKILL.md",
       "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
-      "target_sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b",
+      "target_sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "After actual PR creation, reach the installed mode-0644 ritual sensor through Bash; distinguish observed head-bound evidence from CI, review and acceptance.",
-        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass.",
+        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification."
       ]
     },
     {
@@ -175,9 +177,10 @@
       "destination": ".github/ISSUE_TEMPLATE/ai-task.yml",
       "source_path": ".github/ISSUE_TEMPLATE/ai-task.yml",
       "source_blob": "f8d70b3d44f53de307d88284f192da79cdf45fdd",
-      "target_sha256": "228cf273cc279e696518a266b1f64d8da3ef45b2e021233b865582af1bbab3de",
+      "target_sha256": "5e8a182ba6ecfd215cf040cdddaed977cfc519a123d23a55d5aca08eac11eaee",
       "adaptations": [
-        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
+        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification."
       ]
     },
     {
@@ -202,10 +205,11 @@
       "destination": ".github/PULL_REQUEST_TEMPLATE.md",
       "source_path": ".github/PULL_REQUEST_TEMPLATE.md",
       "source_blob": "145a05bbc0050c215b397e7d7c029507c7f065fa",
-      "target_sha256": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2",
+      "target_sha256": "ce0d238d6a75cf93b0a51df6481378183dafa440fddbe95b0be496c005e419ca",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
-        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass.",
+        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification."
       ]
     },
     {
@@ -340,13 +344,14 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
+      "target_sha256": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
         "Validate one bounded whole dispatch reference and preserve ordinary branch, plan, chronology and release gates; retain exact old/new frontier anchors with equal onboarding base/head anchors.",
         "Bind ordinary typed PR/Task/complete comment/plan observations before and after validation; require complete supported commit evidence and calendar-valid timestamps without authenticating chronology.",
-        "Issue 65: distinguish actual CUSTOMIZE: placeholders from explanatory prose; permit only typed, read-back Epic references in structurally bounded onboarding proof, preserving ordinary Task gates."
+        "Issue 65: distinguish actual CUSTOMIZE: placeholders from explanatory prose; permit only typed, read-back Epic references in structurally bounded onboarding proof, preserving ordinary Task gates.",
+        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification."
       ]
     },
     {
@@ -723,12 +728,12 @@
       {
         "path": ".github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
+        "sha256": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792"
       },
       {
         "path": ".agents/skills/verification/SKILL.md",
         "mode": "100644",
-        "sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b"
+        "sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a"
       }
     ]
   },
@@ -916,12 +921,17 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136"
+        "sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
         "mode": "100644",
         "sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md",
+        "mode": "100644",
+        "sha256": "326c8118ea762c8f20e13c05ba1b3b7d8f4a4ca93f0a855fdc951d096ef5e2b5"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -936,12 +946,17 @@
       {
         "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
         "mode": "100644",
-        "sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b"
+        "sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a"
+      },
+      {
+        "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
+        "mode": "100644",
+        "sha256": "5e8a182ba6ecfd215cf040cdddaed977cfc519a123d23a55d5aca08eac11eaee"
       },
       {
         "path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
         "mode": "100644",
-        "sha256": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2"
+        "sha256": "ce0d238d6a75cf93b0a51df6481378183dafa440fddbe95b0be496c005e419ca"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -951,7 +966,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
+        "sha256": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
@@ -976,7 +991,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "33fab00ffa216b8f63349c8d75c53572711f1ed0ad5f80a6eec92486bf4ac47f"
+        "sha256": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
       },
       {
         "path": "tests/conformance/test_workflow_parity.py",
@@ -994,8 +1009,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136",
-        "target_blob": "bc401929a5fda3f5a12c3f14e92f535b49c0066b"
+        "target_sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4",
+        "target_blob": "567ac78a443d1ed9312a929e1b52a5f752621e9a"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1008,6 +1023,18 @@
         "target_mode": "100644",
         "target_sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857",
         "target_blob": "8c9e2ab724f2511de93a1e244f187059c559f0a0"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md",
+        "export": {
+          "path": ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md",
+          "mode": "100644",
+          "source_blob": "987f6d8b180bab1090ff639788c1af8e084e51c6",
+          "sha256": "f3f89d95012c653587ba807a2928b1d34da65e9b563826b6db91f27ddf1b512b"
+        },
+        "target_mode": "100644",
+        "target_sha256": "326c8118ea762c8f20e13c05ba1b3b7d8f4a4ca93f0a855fdc951d096ef5e2b5",
+        "target_blob": "d271c96fce4a79a4e8d9736739f62c64b831ca03"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -1042,8 +1069,20 @@
           "sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
         },
         "target_mode": "100644",
-        "target_sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b",
-        "target_blob": "62c54ae3ea2a205e048ff63c0a43d58bbbb3d2cf"
+        "target_sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a",
+        "target_blob": "967a4a60cd49577be78175eb7d2781ed1ddaf053"
+      },
+      {
+        "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
+        "export": {
+          "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
+          "mode": "100644",
+          "source_blob": "82c04343f48e166b6271c275b16eea507bc35c9c",
+          "sha256": "228cf273cc279e696518a266b1f64d8da3ef45b2e021233b865582af1bbab3de"
+        },
+        "target_mode": "100644",
+        "target_sha256": "5e8a182ba6ecfd215cf040cdddaed977cfc519a123d23a55d5aca08eac11eaee",
+        "target_blob": "4e3f360fbb6bdc80251a6b65f3d59d9b92ee5895"
       },
       {
         "path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
@@ -1054,8 +1093,8 @@
           "sha256": "a277e46753c687d79a5e67e29c0dd04c49e1bc3c48171a5e17e25def4c2955be"
         },
         "target_mode": "100644",
-        "target_sha256": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2",
-        "target_blob": "66abccebb0dab17674a7dd3a0485a574e087cf4d"
+        "target_sha256": "ce0d238d6a75cf93b0a51df6481378183dafa440fddbe95b0be496c005e419ca",
+        "target_blob": "d13ea8a7b283d4a49cde1e97feed5e0121db087b"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -1078,8 +1117,8 @@
           "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
         },
         "target_mode": "100644",
-        "target_sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
-        "target_blob": "ffaa720fec40d7e5f131d5f2e795c2fe0317a202"
+        "target_sha256": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792",
+        "target_blob": "57c0d9e4f0554206306ec3c2948ff5c048eddd86"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
@@ -1155,7 +1194,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
+        "sha256": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792"
       },
       {
         "path": "tests/conformance/test_frontier_cache.py",
@@ -1199,17 +1238,17 @@
       {
         "path": ".github/distribution/adopter-ci/check-adopter-ci.py",
         "mode": "100644",
-        "sha256": "289d1692d7abc0853b0c5aaeab915db5db3da73ea6790ac4d99f44f8910e6ae5"
+        "sha256": "f81ff40e40c9f3109c2acbfdafdaf882447729cdd658d3ea68ae3743ea3bf73d"
       },
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136"
+        "sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
+        "sha256": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792"
       },
       {
         "path": ".github/scripts/scaffold-init.sh",
@@ -1259,7 +1298,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "33fab00ffa216b8f63349c8d75c53572711f1ed0ad5f80a6eec92486bf4ac47f"
+        "sha256": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
       },
       {
         "path": "tests/conformance/test_installer_bootstrap.py",
@@ -1328,7 +1367,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136"
+        "sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1413,7 +1452,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "33fab00ffa216b8f63349c8d75c53572711f1ed0ad5f80a6eec92486bf4ac47f"
+        "sha256": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
       }
     ],
     "export_adaptations": [

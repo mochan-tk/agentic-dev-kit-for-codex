@@ -82,8 +82,10 @@ body:
       description: >-
         How to run the pre-placed tests that decide the acceptance criteria:
         commands with expected results, executable on the routed surface
-        (exec:cloud tasks get no hardware).
-      render: bash
+        (exec:cloud tasks get no hardware). Use Markdown fences for commands.
+        Only when tests intentionally pin known-wrong behavior, add the exact
+        line "Known-defect pins: required" outside code fences/comments;
+        otherwise omit it. See the verification Skill.
     validations:
       required: true
   - type: dropdown

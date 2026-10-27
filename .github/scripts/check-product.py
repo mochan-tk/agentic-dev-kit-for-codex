@@ -68,14 +68,16 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2",
-    ".github/distribution/payload/.agents/skills/verification/SKILL.md": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b",
-    ".github/distribution/payload.v1.tsv": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136",
+    ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml": "5e8a182ba6ecfd215cf040cdddaed977cfc519a123d23a55d5aca08eac11eaee",
+    ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md": "326c8118ea762c8f20e13c05ba1b3b7d8f4a4ca93f0a855fdc951d096ef5e2b5",
+    ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md": "ce0d238d6a75cf93b0a51df6481378183dafa440fddbe95b0be496c005e419ca",
+    ".github/distribution/payload/.agents/skills/verification/SKILL.md": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a",
+    ".github/distribution/payload.v1.tsv": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
-    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792",
     ".github/distribution/payload/.github/scripts/setup-project.sh": "4ff9e1fdf7e2566f9cc80f78559ba8f3ab23fd167eedd0e26944beb88ba6ad19",
     ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
@@ -164,7 +166,7 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "930a80cef9fdb8dd9cdd406757c5e95e501d3a83e58e6170cd6158aff63381e8"
+ADOPTER_RECORD_SHA256 = "e3f967ab438f8ca68a98e83d48c97189a93a89f0a79f7b6495a677b9607a5787"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
 IMPROVEMENT_RECORD_SHA256 = "20bd914b1c56506ae027fd9831e09fdde0f4a505a358d87f464bc259c7e39d3f"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"

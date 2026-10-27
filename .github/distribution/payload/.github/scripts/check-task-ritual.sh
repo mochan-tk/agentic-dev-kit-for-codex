@@ -705,7 +705,7 @@ task_query='
   end'
 observe_task() { api "repos/{owner}/{repo}/issues/${issue}" --jq "$task_query" 2>/dev/null; }
 task_snapshot=$(observe_task) || observation_fail task-read
-IFS=$'\t' read -r observed_issue _task_state comment_count _task_body _task_labels is_task <<< "$task_snapshot"
+IFS=$'\t' read -r observed_issue _task_state comment_count task_body_encoded _task_labels is_task <<< "$task_snapshot"
 [[ "$observed_issue" == "$issue" ]] || observation_fail task-identity
 
 # One pass over the issue's comments, emitting a TSV marker per ritual
@@ -995,6 +995,135 @@ else
 fi
 
 $ok || exit 1
+
+# This small grammar reads active ledger lines, not arbitrary Markdown prose.
+# Ignore comments, fenced examples and indented code before checking sections.
+active_ledger_lines() {
+  awk '
+    {
+      line=$0; sub(/\r$/, "", line)
+      if (fence != "") {
+        if (line ~ /^    / || line ~ /^ *	/) next
+        closer=line; sub(/^ */, "", closer)
+        if (substr(closer,1,1)==fence) {
+          run=closer; sub(fence=="`" ? "[^`].*$" : "[^~].*$", "", run)
+          tail=substr(closer,length(run)+1)
+          if (length(run)>=width && tail ~ /^[ \t]*$/) fence=""
+        }
+        next
+      }
+      # Literal comment markers in code must not open an HTML comment.
+      if (!comment) {
+        if (line ~ /^    / || line ~ /^ *	/) next
+        probe=line; sub(/^ */, "", probe)
+        if (probe ~ /^```/ || probe ~ /^~~~/) {
+          fence=substr(probe,1,1); run=probe
+          sub(fence=="`" ? "[^`].*$" : "[^~].*$", "", run); width=length(run); next
+        }
+      }
+      clean=""
+      while (length(line)) {
+        if (comment) {
+          end=index(line,"-->"); if (!end) { line=""; break }
+          line=substr(line,end+3); comment=0
+        } else {
+          start=index(line,"<!--")
+          if (!start) { clean=clean line; break }
+          clean=clean substr(line,1,start-1); line=substr(line,start+4); comment=1
+        }
+      }
+      if (clean ~ /^    / || clean ~ /^\t/) next
+      probe=clean; sub(/^ */, "", probe)
+      if (probe ~ /^```/ || probe ~ /^~~~/) {
+        fence=substr(probe,1,1); run=probe
+        sub(fence=="`" ? "[^`].*$" : "[^~].*$", "", run); width=length(run); next
+      }
+      sub(/[ \t]+$/, "", clean); print clean
+    }'
+}
+
+known_defect_requirement() {
+  active_ledger_lines | awk '
+    /^## Verification$/ || /^### Verification$/ {
+      level=($0 ~ /^###/ ? 3 : 2); sections++; inside=1; next
+    }
+    /^#+ / { heading=$0; sub(/ .*/, "", heading); if (length(heading)<=level) inside=0 }
+    inside && $0=="Known-defect pins: required" { required++ }
+    END {
+      if (required && (required!=1 || sections!=1)) exit 1
+      print required ? "required" : "absent"
+    }'
+}
+
+known_defect_followups() {
+  active_ledger_lines | awk -v repo="$repo_full" '
+    function reject() { bad=1; exit 1 }
+    function value(line, prefix, result, lower) {
+      if (substr(line,1,length(prefix))!=prefix) reject()
+      result=substr(line,length(prefix)+1)
+      if (!length(result) || length(result)>2048 || result ~ /[[:cntrl:]]/) reject()
+      lower=tolower(result); sub(/^ +/, "", lower)
+      if (lower ~ /^(todo|tbd|unknown|none|n\/a|\.\.\.|\?|-|<[^>]*>)$/) reject()
+      return result
+    }
+    /^## Evidence$/ { evidence=1; next }
+    /^## / { evidence=0; inside=0 }
+    /^### Known-defect pins$/ {
+      if (evidence) { if (++sections!=1 || field) reject(); inside=1; next }
+    }
+    /^### / { if (inside && field) reject(); inside=0 }
+    inside && NF {
+      if (!field) {
+        entry=value($0,"- Defect: "); field=1
+      } else if (field==1) { entry=entry "\t" value($0,"  Test: "); field=2
+      } else if (field==2) { entry=entry "\t" value($0,"  Pinned: "); field=3
+      } else if (field==3) { entry=entry "\t" value($0,"  Expected: "); field=4
+      } else {
+        url=value($0,"  Follow-up: "); prefix="https://github.com/" repo "/issues/"
+        if (substr(url,1,length(prefix))!=prefix) reject()
+        number=substr(url,length(prefix)+1)
+        if (number !~ /^[1-9][0-9]*$/ || length(number)>15) reject()
+        entry=entry "\t" url
+        if (seen[entry]++ || ++records>32) reject()
+        print number; field=0
+      }
+    }
+    END { if (bad || sections!=1 || !records || field) exit 1 }'
+}
+
+# jq variables are intentionally interpreted by jq, not Bash.
+# shellcheck disable=SC2016
+followup_query='
+  if type != "object" or (.number | type != "number" or . < 1 or floor != .)
+    or (.state != "open" and .state != "closed") or has("pull_request")
+    or (.html_url | type != "string") or (.labels | type != "array")
+    or any(.labels[]; type != "object" or (.name | type != "string" or length == 0))
+  then error("invalid follow-up observation") else
+    ([.labels[].name] | unique) as $labels |
+    if ([$labels[] | select(. == "type:task" or . == "type:epic")] | length) != 1
+    then error("follow-up must be exclusively Task or Epic") else
+      [.number, .html_url, .state, ($labels | tojson | @base64)] | @tsv
+    end
+  end'
+observe_followup() { api "repos/{owner}/{repo}/issues/$1" --jq "$followup_query" 2>/dev/null; }
+followup_numbers=()
+followup_snapshots=()
+task_body=$(printf '%s' "${task_body_encoded#b}" | base64 --decode) || observation_fail task-body
+pin_requirement=$(printf '%s\n' "$task_body" | known_defect_requirement) || observation_fail known-defect-declaration
+if [[ "$pin_requirement" == required ]]; then
+  pin_numbers=$(printf '%s\n' "$body" | known_defect_followups) || observation_fail known-defect-records
+  while IFS= read -r number; do
+    snapshot=$(observe_followup "$number") || observation_fail known-defect-followup-read
+    IFS=$'\t' read -r actual_number actual_url _followup_state _followup_labels <<< "$snapshot"
+    [[ "$actual_number" == "$number" && "$actual_url" == "https://github.com/${repo_full}/issues/${number}" ]] || observation_fail known-defect-followup-identity
+    followup_numbers+=("$number")
+    followup_snapshots+=("$snapshot")
+  done < <(printf '%s\n' "$pin_numbers" | sort -u)
+fi
+for ((pin_index=0; pin_index<${#followup_numbers[@]}; pin_index++)); do
+  final_followup=$(observe_followup "${followup_numbers[$pin_index]}") || observation_fail known-defect-followup-readback
+  [[ "$final_followup" == "${followup_snapshots[$pin_index]}" ]] || observation_fail known-defect-followup-drift
+done
 
 # Re-observe membership as well as selected IDs, so added/deleted/revised
 # decisions cannot escape the final check. These are bounded API observations,

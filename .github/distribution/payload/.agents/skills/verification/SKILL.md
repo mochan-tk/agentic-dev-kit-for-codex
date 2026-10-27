@@ -79,6 +79,32 @@ blocks `Outcome: completed` until the requester revises the work order
 (session-orchestration skill, Outcome notes); "pass (untested)" is not a
 result.
 
+## Known-defect pins
+
+When a characterization intentionally asserts known-wrong behavior, declare
+`Known-defect pins: required` as an active line in the Task **Verification**
+section, outside comments and code fences. Ordinary Tasks omit this declaration.
+For each pin, add the following five ordered fields under the PR **Evidence**
+subsection `### Known-defect pins` (at most 32 records, 2048 characters per value):
+
+```markdown
+- Defect: Per-line and aggregate tax rounding disagree
+  Test: tests/test_tax.py::test_known_tax_discrepancy
+  Pinned: Stored total is 562; report total is 563
+  Expected: Both totals agree under the approved tax rule
+  Follow-up: https://github.com/example/notes-app/issues/124
+```
+
+Replace the example URL with a canonical same-repository Task or Epic Issue
+responsible for fixing the defect and replacing the pin with a regression.
+No placeholders, empty fields, foreign repositories, or PR references are valid.
+The installed ritual checker validates declared records, reads the follow-up
+Issue type, and compares final observations; unavailable or changed evidence is
+non-success. Comments and fenced examples are not declarations or evidence.
+This check proves traceability, not the expected behavior or test quality.
+A passing characterization does **not** mean the defect is fixed: keep that
+limitation explicit in the evidence, and do not close its follow-up on pin PASS.
+
 ## Required Project close-out
 
 GitHub Projects is required by default. Before a Task is reported complete,

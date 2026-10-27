@@ -444,7 +444,7 @@ CONFIG = ".github/adopter-ci.json"
 META = ".github/workflows/task-ritual.yml"
 SELF = ".github/scripts/check-adopter-ci.py"
 RITUAL = ".github/scripts/check-task-ritual.sh"
-RITUAL_SHA256 = "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
+RITUAL_SHA256 = "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792"
 CONTROLS = ["metadata-workflow", "sensor", "installed-ritual", "code-events",
             "code-producers", "cancellation-isolation", "retarget-freshness"]
 MAX_BYTES = 1024 * 1024

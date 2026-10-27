@@ -26,6 +26,22 @@ session-orchestration skill; plan text auto-written here is a copy) -->
      under existing authorized access; prose and write success are not live proof.
      No unconditional Projects API call from repository-token CI is implied. -->
 
+<!-- Only for a Task whose Verification declares Known-defect pins: required:
+     add this active subsection under Evidence. Repeat the five ordered fields
+     for each pin (maximum 32 records; each value at most 2048 characters).
+     Replace every placeholder; use a canonical same-repository Task/Epic URL.
+     A passing characterization is not a defect fix. Do not close the defect
+     merely because this pin passes; the follow-up replaces it with a regression.
+
+### Known-defect pins
+
+- Defect: <known defect>
+  Test: <test file and case>
+  Pinned: <current known-wrong behavior>
+  Expected: <correct behavior under the agreed requirement>
+  Follow-up: https://github.com/<owner>/<repo>/issues/<number>
+-->
+
 ## Deviations
 
 <!-- Anything that differs from the Task brief, and why. Silent deviations are

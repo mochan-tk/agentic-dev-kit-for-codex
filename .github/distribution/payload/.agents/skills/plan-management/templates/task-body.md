@@ -50,7 +50,9 @@
 
 <!-- How to run the pre-placed tests that decide the acceptance criteria:
      commands with expected results, executable on the routed surface
-     (exec:cloud tasks get no hardware). -->
+     (exec:cloud tasks get no hardware). If tests intentionally pin known-wrong
+     behavior, add the exact active line Known-defect pins: required here,
+     outside comments/code fences. Otherwise omit it. See verification Skill. -->
 
 ```bash
 
