@@ -79,6 +79,33 @@ blocks `Outcome: completed` until the requester revises the work order
 (session-orchestration skill, Outcome notes); "pass (untested)" is not a
 result.
 
+## Required Project close-out
+
+GitHub Projects is required by default. Before a Task is reported complete,
+follow [required per-Task Project close-out](../plan-management/SKILL.md#required-per-task-project-close-out)
+and record either the exact-item Kind `Task` plus authorized Start/Target date
+comparison, or a scoped durable exception for environmental inability to
+create/use Projects or an explicit owner decision declining Projects.
+
+Use the installed `setup-project.sh verify` under existing authorized access;
+it acquires one fresh typed readback and compares all three expectations. An
+exact-item UI observation can substitute only with the same complete identity,
+values and comparison. Record the current PR head, observation time,
+repository/Project/Issue/item identity, expected and observed values, result,
+and schedule-decision reference in the Task and PR evidence. A present Status,
+CLI-null, successful write or unchecked evidence text is insufficient.
+
+Creation consent and date consent are separate. Pending answers or a date-only
+defer/decline do not become a Project exception; keep required close-out pending
+while otherwise authorized implementation can continue. Missing/mismatched
+values and incomplete/uncheckable reads are non-success. Cite the actual scoped
+exception when one applies; never manufacture a matching result or infer a
+decline from silence. The Issue graph remains authoritative.
+
+Do not add unconditional Projects queries to repository-token CI, widen scopes,
+or repair fields to make a check pass. The verifier proves comparison only,
+not the expected values' authorization, final acceptance, or merge permission.
+
 ## After PR creation, before ready-for-review
 
 Once the PR has its actual number, run the installed read-only ritual sensor

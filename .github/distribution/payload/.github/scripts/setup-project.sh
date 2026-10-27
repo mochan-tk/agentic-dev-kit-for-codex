@@ -15,6 +15,9 @@
 #                          [--owner <login>] [-R owner/repo]
 #   bash .github/scripts/setup-project.sh readback --project <number> --issue <n>
 #                          [--owner <login>] [-R owner/repo]
+#   bash .github/scripts/setup-project.sh verify --project <number> --issue <n>
+#                          --expect-kind Task --expect-start YYYY-MM-DD --expect-target YYYY-MM-DD
+#                          [--owner <login>] [-R owner/repo]
 #   bash .github/scripts/setup-project.sh --help
 #
 # Subcommands:
@@ -38,15 +41,21 @@
 #          means populated observations, not a match to expected values or
 #          authority; exit 1 reports missing values/item, 2 invalid arguments,
 #          and 3 uncheckable responses. See the installation guide for limits.
+#   verify Compare one readback with the supplied durable-plan Kind and dates.
+#          Exit 0 means an exact match, 1 mismatch/missing, 2 invalid inputs,
+#          3 uncheckable. Expectations do not prove consent or acceptance.
 #
 # Options:
 #   --owner <login>          Project owner login (user or org). Default: the
 #                            owner of the target repository.
 #   --title <title>          init: board title. Default: "<repo> roadmap".
-#   --project <number>       add/dates/readback: project number (printed by init).
-#   --issue <n>              add/dates/readback: issue number.
+#   --project <number>       add/dates/readback/verify: project number.
+#   --issue <n>              add/dates/readback/verify: issue number.
 #   --start <YYYY-MM-DD>     dates: start date.
 #   --target <YYYY-MM-DD>    dates: target date (not earlier than start).
+#   --expect-kind <kind>     verify: Task or Epic (Task for per-Task close-out).
+#   --expect-start <date>    verify: authorized Start date (YYYY-MM-DD).
+#   --expect-target <date>   verify: authorized Target date (not before start).
 #   -R, --repo <owner/repo>  Target repository. Default: the repository the
 #                            current directory belongs to (via `gh repo view`).
 #   -h, --help               Show this help and exit.
@@ -452,6 +461,13 @@ cmd_dates() {
 readback_error() { echo "error: Project readback is uncheckable: $*" >&2; exit 3; }
 
 RB_REPLY=""
+# Shared validation for observed dates and offline comparison expectations.
+# shellcheck disable=SC2016
+PROJECT_DATE_JQ='def date: type == "string" and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")
+  and (split("-") | map(tonumber) | .[0] as $year | .[1] as $month | .[2] as $day
+    | (if ($year % 400 == 0 or ($year % 4 == 0 and $year % 100 != 0)) then 29 else 28 end) as $feb
+    | $year >= 1 and $day <= [31,$feb,31,30,31,30,31,31,30,31,30,31][$month - 1]);'
+
 readback_query() {
   RB_REPLY="$(gh api graphql "$@" 2>/dev/null | head -c 1048577 | jq -Rsc '
     if utf8bytelength > 1048576 or index("\u0000") != null then error("size/bytes")
@@ -490,12 +506,8 @@ cmd_readback() {
     || readback_error "cannot resolve Project"
   [[ ${#project_id} -le 512 && "$project_id" =~ ^[A-Za-z0-9_=-]+$ ]] || readback_error "invalid Project identity"
 
-  common='def text: type == "string" and length > 0 and length <= 512 and (test("[\u0000-\u001f\u007f]") | not);
+  common="$PROJECT_DATE_JQ"'def text: type == "string" and length > 0 and length <= 512 and (test("[\u0000-\u001f\u007f]") | not);
     def number: type == "number" and . > 0 and floor == .;
-    def date: type == "string" and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")
-      and (split("-") | map(tonumber) | .[0] as $year | .[1] as $month | .[2] as $day
-        | (if ($year % 400 == 0 or ($year % 4 == 0 and $year % 100 != 0)) then 29 else 28 end) as $feb
-        | $year >= 1 and $day <= [31,$feb,31,30,31,30,31,31,30,31,30,31][$month - 1]);
     def issue: .__typename == "Issue" and (.id | text) and (.number | number)
       and (.url | text) and (.repository.nameWithOwner | text);
     def connection: type == "object" and (.nodes | type == "array" and length <= 100)
@@ -639,12 +651,66 @@ cmd_readback() {
   jq -e '.missing == []' <<<"$result" >/dev/null
 }
 
+# Comparison is separate from observation and authority. A fresh Bash process
+# keeps readback's errexit/pipefail behavior even though its status is captured.
+# There is exactly one acquisition, and no exception or repair bypass.
+# shellcheck disable=SC2016
+cmd_verify() {
+  local kind="" start="" target="" expected observation result status=0
+  local read_args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --expect-kind|--expect-start|--expect-target|--project|--issue|--owner|-R|--repo)
+        [[ $# -ge 2 && -n "$2" && "$2" != -* ]] || usage_error "missing value for $1"
+        case "$1" in
+          --expect-kind) [[ -z "$kind" ]] || usage_error "duplicate --expect-kind"; kind="$2" ;;
+          --expect-start) [[ -z "$start" ]] || usage_error "duplicate --expect-start"; start="$2" ;;
+          --expect-target) [[ -z "$target" ]] || usage_error "duplicate --expect-target"; target="$2" ;;
+          *) read_args+=("$1" "$2") ;;
+        esac
+        shift 2 ;;
+      -h|--help) usage; return 0 ;;
+      *) usage_error "unknown verify option: $1" ;;
+    esac
+  done
+  [[ "$kind" == Task || "$kind" == Epic ]] || usage_error "--expect-kind must be Task or Epic"
+  [[ ${#read_args[@]} -gt 0 ]] || usage_error "verify requires --project and --issue"
+  command -v jq >/dev/null 2>&1 || readback_error "jq CLI not found"
+  jq -ne --arg start "$start" --arg target "$target" "$PROJECT_DATE_JQ"'
+    ($start | date) and ($target | date) and $start <= $target' >/dev/null 2>&1 \
+    || usage_error "expected dates must be real YYYY-MM-DD dates with start <= target"
+  expected="$(jq -cn --arg kind "$kind" --arg start "$start" --arg target "$target" \
+    '{"Kind":$kind,"Start date":$start,"Target date":$target}')"
+  observation="$(bash "$0" readback "${read_args[@]}")" || status=$?
+  [[ "$status" != 2 ]] || return 2
+  if [[ "$status" == 0 || "$status" == 1 ]]; then
+    result="$(jq -ce --argjson expected "$expected" --argjson status "$status" '
+      select(.schema == "project-field-readback/v1" and
+        (($status == 0 and .state == "observed" and .missing == []) or
+         ($status == 1 and .state == "missing" and (.missing | length > 0))))
+      | . as $observation | {schema:"project-field-verification/v1",expected:$expected,observation:$observation,
+          differences:["Kind","Start date","Target date"] | map(. as $name |
+            select($observation.fields[$name] == null or $observation.fields[$name].value != $expected[$name]))}
+      | . + {state:(if .observation.state == "missing" then "missing"
+          elif .differences == [] then "match" else "mismatch" end)}' <<<"$observation" 2>/dev/null)" || result=""
+    if [[ -n "$result" ]]; then
+      printf '%s\n' "$result"
+      jq -e '.state == "match"' <<<"$result" >/dev/null
+      return
+    fi
+  fi
+  jq -cn --argjson expected "$expected" '{schema:"project-field-verification/v1",state:"uncheckable",
+    expected:$expected,observation:null,differences:null}'
+  return 3
+}
+
 case "${1:-}" in
   init)      shift; cmd_init "$@" ;;
   add)       shift; cmd_add "$@" ;;
   dates)     shift; cmd_dates "$@" ;;
   readback)  shift; cmd_readback "$@" ;;
+  verify)    shift; cmd_verify "$@" ;;
   -h|--help) usage; exit 0 ;;
-  "")        usage_error "missing subcommand (init, add, dates or readback)" ;;
+  "")        usage_error "missing subcommand (init, add, dates, readback or verify)" ;;
   *)         usage_error "unknown subcommand: $1" ;;
 esac

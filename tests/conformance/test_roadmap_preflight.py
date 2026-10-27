@@ -46,6 +46,8 @@ if a[:2] == ["project", "list"]:
             boards = [p for p in boards if not p["closed"]]
         print(json.dumps({"projects": boards, "totalCount": s.get("total", len(boards))}))
 elif a[:2] == ["api", "user"]:
+    if s.get("readback", {}).get("auth_error"):
+        sys.exit("synthetic authentication failure")
     print("fixture-owner")
 elif a[:2] == ["project", "create"]:
     mutation()
@@ -150,7 +152,8 @@ class RoadmapPreflightTests(unittest.TestCase):
                               "-R", "fixture-owner/sample"]
         result = subprocess.run(command, cwd=self.target,
                                 env=dict(self.env, ROADMAP_REPOSITORY="fixture-owner/sample",
-                                         ROADMAP_PROJECT="7", ROADMAP_ISSUE="23"),
+                                         ROADMAP_PROJECT="7", ROADMAP_ISSUE="23",
+                                         ROADMAP_EXPECT_START="2026-10-27", ROADMAP_EXPECT_TARGET="2026-11-02"),
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(code, result.returncode, result.stdout + result.stderr)
         self.assertEqual(before, self.installer.snapshot(self.target))
@@ -162,6 +165,95 @@ class RoadmapPreflightTests(unittest.TestCase):
                 self.assertTrue(query.startswith("query=query ProjectReadback"), query)
                 self.assertNotIn("mutation", query)
         return result
+
+    def verify(self, fixture, code=0, extra=None):
+        command = ["bash", ".github/scripts/setup-project.sh", "verify", "--project", "7", "--issue", "23",
+                   "--owner", "fixture-owner", "-R", "fixture-owner/sample"]
+        command += extra if extra is not None else ["--expect-kind", "Task", "--expect-start", "2026-10-27",
+                                                     "--expect-target", "2026-11-02"]
+        return self.readback(fixture, code, command)
+
+    def test_verify_exact_values_reuses_readback_once_without_writes(self):
+        result = json.loads(self.verify(readback_fixture()).stdout)
+        self.assertEqual("project-field-verification/v1", result["schema"])
+        self.assertEqual("match", result["state"])
+        self.assertEqual([], result["differences"])
+        self.assertEqual({"Kind": "Task", "Start date": "2026-10-27", "Target date": "2026-11-02"}, result["expected"])
+        self.assertEqual("PVTI_target", result["observation"]["item_id"])
+        self.assertEqual("I_target", result["observation"]["issue"]["id"])
+        self.assertEqual("PVT_fixture", result["observation"]["project"]["id"])
+        self.assertEqual("fixture-owner/sample", result["observation"]["repository"])
+        self.assertEqual(1, sum(c[:2] == ["project", "view"] for c in self.calls()))
+        self.assertEqual(2, sum(c[:2] == ["api", "graphql"] for c in self.calls()))
+
+    def test_installed_task_closeout_command_matches_actual_fields(self):
+        skill = self.target / ".agents/skills/plan-management/SKILL.md"
+        match = re.search(r"<!-- BEGIN roadmap-field-verify -->\n```bash\n(.*?)\n```\n"
+                          r"<!-- END roadmap-field-verify -->", skill.read_text(), re.S)
+        self.assertIsNotNone(match, "installed Task close-out command is missing")
+        result = json.loads(self.readback(readback_fixture(), command=["bash", "-c", match.group(1)]).stdout)
+        self.assertEqual("match", result["state"])
+        self.assertEqual("Task", result["expected"]["Kind"])
+
+    def test_verify_does_not_confuse_populated_values_with_expected_values(self):
+        for index, value in ((0, "Epic"), (1, "2026-10-28"), (2, "2026-11-03")):
+            with self.subTest(index=index):
+                f = readback_fixture()
+                node = f["values"][""]["data"]["node"]["fieldValues"]["nodes"][index]
+                node["name" if index == 0 else "date"] = value
+                result = json.loads(self.verify(f, 1).stdout)
+                self.assertEqual("mismatch", result["state"])
+                self.assertEqual([node["field"]["name"]], result["differences"])
+                self.assertEqual("observed", result["observation"]["state"])
+
+    def test_verify_missing_fields_and_item_never_pass(self):
+        for index in range(3):
+            with self.subTest(index=index):
+                f = readback_fixture()
+                fields = f["values"][""]["data"]["node"]["fieldValues"]
+                missing = fields["nodes"].pop(index)["field"]["name"]
+                fields["totalCount"] -= 1
+                result = json.loads(self.verify(f, 1).stdout)
+                self.assertEqual("missing", result["state"])
+                self.assertEqual([missing], result["differences"])
+                self.assertEqual([missing], result["observation"]["missing"])
+        f = readback_fixture()
+        f["items"][""]["data"]["node"]["items"].update(nodes=[], totalCount=0)
+        result = json.loads(self.verify(f, 1).stdout)
+        self.assertEqual("missing", result["state"])
+        self.assertIsNone(result["observation"]["item_id"])
+
+    def test_verify_propagates_uncheckable_reader_and_access_failures(self):
+        for fault in ("auth", "transport", "malformed", "duplicate", "incomplete", "identity"):
+            with self.subTest(fault=fault):
+                f = readback_fixture()
+                items = f["items"][""]["data"]["node"]["items"]
+                if fault == "auth": f["auth_error"] = True
+                elif fault == "transport": f["items"][""] = {"transport_error": True}
+                elif fault == "malformed": f["values"][""] = "not JSON"
+                elif fault == "duplicate":
+                    items["nodes"].append(copy.deepcopy(items["nodes"][0])); items["totalCount"] = 2
+                elif fault == "incomplete": items["totalCount"] = 2
+                elif fault == "identity": f["values"][""]["data"]["node"]["project"]["id"] = "PVT_other"
+                result = json.loads(self.verify(f, 3).stdout)
+                self.assertEqual("uncheckable", result["state"])
+                self.assertIsNone(result["observation"])
+                self.assertIsNone(result["differences"])
+
+    def test_verify_rejects_invalid_expectations_before_api_calls(self):
+        valid = ["--expect-kind", "Task", "--expect-start", "2026-10-27", "--expect-target", "2026-11-02"]
+        cases = [[], valid[:-2], valid[:-1], valid + ["--exception", "declined"], valid + ["--expect-kind", "Epic"],
+                 ["--expect-kind", "", *valid[2:]]]
+        for index, value in ((1, "Unknown"), (3, "2026-02-31"), (5, "2026-10-26"), (3, "1900-02-29")):
+            invalid = valid.copy(); invalid[index] = value; cases.append(invalid)
+        for flags in cases:
+            with self.subTest(flags=flags):
+                self.assertEqual("", self.verify(readback_fixture(), 2, flags).stdout)
+                self.assertEqual([], self.calls())
+        f = readback_fixture()
+        f["values"][""]["data"]["node"]["fieldValues"]["nodes"][1]["date"] = "2000-02-29"
+        valid[3] = "2000-02-29"
+        self.assertEqual("match", json.loads(self.verify(f, extra=valid).stdout)["state"])
 
     def test_documented_installed_readback_observes_typed_values_without_writes(self):
         skill = self.target / ".agents/skills/plan-management/SKILL.md"

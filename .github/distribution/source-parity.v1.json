@@ -25,13 +25,14 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474",
+      "target_sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged.",
         "Task 31: proactively propose roadmap dates after board setup and decomposition; scoped consent, durable Issue estimates, existing-date preservation and exact date-field readback; unchanged Project helper.",
         "Task 59: early read-only roadmap access observation, distinct scope-missing/absent/declined records, owner-operated remedy and separately consented board writes; unavailable boards remain nonblocking.",
-        "Issue 68: use the installed typed Project field readback or exact-item UI observation; compare Kind and dates with the current authorized record, never infer field success from item-list output or authorize repairs from observation."
+        "Issue 68: use the installed typed Project field readback or exact-item UI observation; compare Kind and dates with the current authorized record, never infer field success from item-list output or authorize repairs from observation.",
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
       ]
     },
     {
@@ -77,7 +78,7 @@
       "destination": ".agents/skills/project-onboarding/SKILL.md",
       "source_path": ".github/skills/project-onboarding/SKILL.md",
       "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
-      "target_sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3",
+      "target_sha256": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463",
       "adaptations": [
         "Carry approved P2 choice into explicit noninteractive P4 --source commands; require write consent and distinguish pending preparation from reviewed activation.",
         "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff.",
@@ -86,7 +87,8 @@
         "Task 27 at public base e7d830ddcac80ac03cf57313b9475747dbeee16b: keep P2 material/model questions pending until explicit answers; remove P4 silence-to-auto; use a final-chat wait on nonblocking surfaces without claiming native dialog persistence.",
         "Task 59: early read-only roadmap access observation, distinct scope-missing/absent/declined records, owner-operated remedy and separately consented board writes; unavailable boards remain nonblocking.",
         "Issue 65: document preserved marker explanations and conservative standalone Epic-only Refs syntax; unknown or closing relationships do not gain onboarding exemption.",
-        "Issue 67: prefer the reviewed onboarding correction; bound older-checker exception requests to exact evidence and explicit human disposition, preserve FAIL and retire only after the corrected installed checker passes the current PR."
+        "Issue 67: prefer the reviewed onboarding correction; bound older-checker exception requests to exact evidence and explicit human disposition, preserve FAIL and retire only after the corrected installed checker passes the current PR.",
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
       ]
     },
     {
@@ -102,13 +104,14 @@
       "destination": ".agents/skills/session-orchestration/SKILL.md",
       "source_path": ".github/skills/session-orchestration/SKILL.md",
       "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
-      "target_sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9",
+      "target_sha256": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf",
       "adaptations": [
         "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI.",
         "Explain bounded whole legacy/tool-scoped identifiers, separate actual reference from navigation/display names, and avoid a future PR-number requirement or identity/authentication claims.",
         "Add an optional requested desktop chat-tree display: consent-gated shared manual order, existing-project identity mapping, subtree-aware insertion and honest partial-state evidence; no runtime, native nesting, dispatch authority or additional payload paths. Carry a scoped durable display decision through Epic-to-Task and worker handoffs; keep display-only chat mappings separate from executing references and continue authorized work when display is declined or unavailable.",
         "Issue #64: installed local Git/claim observations and mandatory manual comparison replace the undefined checkout invocation; pinned companion remains optional. No automated occupancy/ownership verdict or action authority is claimed.",
-        "Issue 68: use the installed typed Project field readback or exact-item UI observation; compare Kind and dates with the current authorized record, never infer field success from item-list output or authorize repairs from observation."
+        "Issue 68: use the installed typed Project field readback or exact-item UI observation; compare Kind and dates with the current authorized record, never infer field success from item-list output or authorize repairs from observation.",
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
       ]
     },
     {
@@ -124,10 +127,11 @@
       "destination": ".agents/skills/verification/SKILL.md",
       "source_path": ".github/skills/verification/SKILL.md",
       "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
-      "target_sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4",
+      "target_sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
-        "After actual PR creation, reach the installed mode-0644 ritual sensor through Bash; distinguish observed head-bound evidence from CI, review and acceptance."
+        "After actual PR creation, reach the installed mode-0644 ritual sensor through Bash; distinguish observed head-bound evidence from CI, review and acceptance.",
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
       ]
     },
     {
@@ -198,9 +202,10 @@
       "destination": ".github/PULL_REQUEST_TEMPLATE.md",
       "source_path": ".github/PULL_REQUEST_TEMPLATE.md",
       "source_blob": "145a05bbc0050c215b397e7d7c029507c7f065fa",
-      "target_sha256": "a277e46753c687d79a5e67e29c0dd04c49e1bc3c48171a5e17e25def4c2955be",
+      "target_sha256": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2",
       "adaptations": [
-        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded."
+        "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
       ]
     },
     {
@@ -377,11 +382,12 @@
       "destination": ".github/scripts/setup-project.sh",
       "source_path": ".github/scripts/setup-project.sh",
       "source_blob": "4dd5b61186b8488e5e8fff143e5b40d3958087ca",
-      "target_sha256": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",
+      "target_sha256": "4ff9e1fdf7e2566f9cc80f78559ba8f3ab23fd167eedd0e26944beb88ba6ad19",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged.",
-        "Add a query-only exact Issue/Project readback with independently paginated typed field values, bounded observations and non-success on missing or uncheckable state; retain setup actuators."
+        "Add a query-only exact Issue/Project readback with independently paginated typed field values, bounded observations and non-success on missing or uncheckable state; retain setup actuators.",
+        "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass."
       ]
     },
     {
@@ -540,7 +546,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474"
+        "sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857"
       },
       {
         "path": ".agents/skills/plan-management/scripts/new-task.sh",
@@ -675,7 +681,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474"
+        "sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857"
       },
       {
         "path": ".agents/skills/plan-management/scripts/frontier.sh",
@@ -722,7 +728,7 @@
       {
         "path": ".agents/skills/verification/SKILL.md",
         "mode": "100644",
-        "sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+        "sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b"
       }
     ]
   },
@@ -798,7 +804,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9"
+        "sha256": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
@@ -808,7 +814,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
         "mode": "100644",
-        "sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3"
+        "sha256": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463"
       }
     ]
   },
@@ -910,22 +916,32 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b"
+        "sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474"
+        "sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
         "mode": "100644",
-        "sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3"
+        "sha256": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9"
+        "sha256": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+        "mode": "100644",
+        "sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b"
+      },
+      {
+        "path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
+        "mode": "100644",
+        "sha256": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -940,7 +956,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
         "mode": "100644",
-        "sha256": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b"
+        "sha256": "4ff9e1fdf7e2566f9cc80f78559ba8f3ab23fd167eedd0e26944beb88ba6ad19"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -978,8 +994,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b",
-        "target_blob": "c1feda8b1053b4cd32250fc1a37308cd4df53ee6"
+        "target_sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136",
+        "target_blob": "bc401929a5fda3f5a12c3f14e92f535b49c0066b"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -990,8 +1006,8 @@
           "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
         },
         "target_mode": "100644",
-        "target_sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474",
-        "target_blob": "a372e56ac461f65b7318ccaec6e767c1cea5b618"
+        "target_sha256": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857",
+        "target_blob": "8c9e2ab724f2511de93a1e244f187059c559f0a0"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -1002,8 +1018,8 @@
           "sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b"
         },
         "target_mode": "100644",
-        "target_sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3",
-        "target_blob": "0faece7f65f4d0b0b6b80295f3f7e604b714418c"
+        "target_sha256": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463",
+        "target_blob": "48c5cdeede2533d3b1c71766c579dca6274cb9da"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
@@ -1014,8 +1030,32 @@
           "sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b"
         },
         "target_mode": "100644",
-        "target_sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9",
-        "target_blob": "ac3772305a869243f88142cfcc9508310f5114f4"
+        "target_sha256": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf",
+        "target_blob": "6742e3cf0a14536d4db36bb0ffa671ce42af5853"
+      },
+      {
+        "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+        "export": {
+          "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
+          "mode": "100644",
+          "source_blob": "dc2f6048da629898f5eec9771a1e6a00b64215c3",
+          "sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
+        },
+        "target_mode": "100644",
+        "target_sha256": "7dca5474454b49711ba1a4819ad6dad04983be5519fc9ee59db10061557c6d9b",
+        "target_blob": "62c54ae3ea2a205e048ff63c0a43d58bbbb3d2cf"
+      },
+      {
+        "path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
+        "export": {
+          "path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md",
+          "mode": "100644",
+          "source_blob": "044152378126f5d16e0f9bd451b96173d96d6d45",
+          "sha256": "a277e46753c687d79a5e67e29c0dd04c49e1bc3c48171a5e17e25def4c2955be"
+        },
+        "target_mode": "100644",
+        "target_sha256": "fc23eb00f65815c1bd4d09c4a473f8020880854777786d28360622ec8e6e10e2",
+        "target_blob": "66abccebb0dab17674a7dd3a0485a574e087cf4d"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -1050,8 +1090,8 @@
           "sha256": "3cf882ba6d557b13417c518d02f3828dfb0a4b5de37c754a64afe14cd47e5b5f"
         },
         "target_mode": "100644",
-        "target_sha256": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",
-        "target_blob": "9940bccd33d34401cabd37820d5c5629e40e7922"
+        "target_sha256": "4ff9e1fdf7e2566f9cc80f78559ba8f3ab23fd167eedd0e26944beb88ba6ad19",
+        "target_blob": "3998b9e13ca5dfdaa6cf3a7722cd329923981ed2"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -1164,7 +1204,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b"
+        "sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1194,7 +1234,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "0c8176a78c7b491e18cf1b023f63a1f3dab2b02f75940b640e4487d4e0536ff9"
+        "sha256": "86e58d863c97750bf044eae35cdf9f32cab076f493572c5dc436bbfe2a503a45"
       },
       {
         "path": "docs/known-limitations.md",
@@ -1288,7 +1328,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b"
+        "sha256": "959ec04df9d563d92ecfb034e9fc9a2f7535278d1010f1f8617de6834b57f136"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1333,7 +1373,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "0c8176a78c7b491e18cf1b023f63a1f3dab2b02f75940b640e4487d4e0536ff9"
+        "sha256": "86e58d863c97750bf044eae35cdf9f32cab076f493572c5dc436bbfe2a503a45"
       },
       {
         "path": "docs/known-limitations.md",
