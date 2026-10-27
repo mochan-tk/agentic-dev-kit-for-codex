@@ -25,12 +25,13 @@
       "destination": ".agents/skills/plan-management/SKILL.md",
       "source_path": ".github/skills/plan-management/SKILL.md",
       "source_blob": "4c76ec1a95516358b038f915668e01eac7f126e5",
-      "target_sha256": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b",
+      "target_sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged.",
         "Task 31: proactively propose roadmap dates after board setup and decomposition; scoped consent, durable Issue estimates, existing-date preservation and exact date-field readback; unchanged Project helper.",
-        "Task 59: early read-only roadmap access observation, distinct scope-missing/absent/declined records, owner-operated remedy and separately consented board writes; unavailable boards remain nonblocking."
+        "Task 59: early read-only roadmap access observation, distinct scope-missing/absent/declined records, owner-operated remedy and separately consented board writes; unavailable boards remain nonblocking.",
+        "Issue 68: use the installed typed Project field readback or exact-item UI observation; compare Kind and dates with the current authorized record, never infer field success from item-list output or authorize repairs from observation."
       ]
     },
     {
@@ -101,12 +102,13 @@
       "destination": ".agents/skills/session-orchestration/SKILL.md",
       "source_path": ".github/skills/session-orchestration/SKILL.md",
       "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
-      "target_sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
+      "target_sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9",
       "adaptations": [
         "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI.",
         "Explain bounded whole legacy/tool-scoped identifiers, separate actual reference from navigation/display names, and avoid a future PR-number requirement or identity/authentication claims.",
         "Add an optional requested desktop chat-tree display: consent-gated shared manual order, existing-project identity mapping, subtree-aware insertion and honest partial-state evidence; no runtime, native nesting, dispatch authority or additional payload paths. Carry a scoped durable display decision through Epic-to-Task and worker handoffs; keep display-only chat mappings separate from executing references and continue authorized work when display is declined or unavailable.",
-        "Issue #64: installed local Git/claim observations and mandatory manual comparison replace the undefined checkout invocation; pinned companion remains optional. No automated occupancy/ownership verdict or action authority is claimed."
+        "Issue #64: installed local Git/claim observations and mandatory manual comparison replace the undefined checkout invocation; pinned companion remains optional. No automated occupancy/ownership verdict or action authority is claimed.",
+        "Issue 68: use the installed typed Project field readback or exact-item UI observation; compare Kind and dates with the current authorized record, never infer field success from item-list output or authorize repairs from observation."
       ]
     },
     {
@@ -538,7 +540,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b"
+        "sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474"
       },
       {
         "path": ".agents/skills/plan-management/scripts/new-task.sh",
@@ -673,7 +675,7 @@
       {
         "path": ".agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b"
+        "sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474"
       },
       {
         "path": ".agents/skills/plan-management/scripts/frontier.sh",
@@ -796,7 +798,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8"
+        "sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
@@ -908,12 +910,12 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3"
+        "sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
         "mode": "100644",
-        "sha256": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b"
+        "sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -923,7 +925,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8"
+        "sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -976,8 +978,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3",
-        "target_blob": "54f05a3008565e8c435e4d75741f7a8d07ed07af"
+        "target_sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b",
+        "target_blob": "c1feda8b1053b4cd32250fc1a37308cd4df53ee6"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -988,8 +990,8 @@
           "sha256": "f9fcf7cca7cecb550f3c3ea1212f32137ac1e114d9995144a965c49d6101e484"
         },
         "target_mode": "100644",
-        "target_sha256": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b",
-        "target_blob": "67bdad3f63c834d3d881f65cfc077ea49bdf3aba"
+        "target_sha256": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474",
+        "target_blob": "a372e56ac461f65b7318ccaec6e767c1cea5b618"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
@@ -1012,8 +1014,8 @@
           "sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b"
         },
         "target_mode": "100644",
-        "target_sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
-        "target_blob": "82f497f5abe7478b905abd7c7edd30d57b9c73fd"
+        "target_sha256": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9",
+        "target_blob": "ac3772305a869243f88142cfcc9508310f5114f4"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -1162,7 +1164,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3"
+        "sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1286,7 +1288,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3"
+        "sha256": "908e219aad86db63c294555f0e878a5d9a5b1339dc6dffd2d3c00fda3bc32d1b"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",

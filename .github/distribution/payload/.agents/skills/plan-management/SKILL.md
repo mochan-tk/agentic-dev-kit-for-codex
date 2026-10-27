@@ -334,10 +334,10 @@ pending date decision does not block otherwise authorized decomposition.
    Project fields are their projection. Re-read existing fields before writes;
    unexpected changes require reconciliation, not an overwrite.
 5. Apply each authorized span with the existing `setup-project.sh dates`
-   command below. Then read back both date fields for every exact Project item
-   and compare with the recorded proposal, using complete `gh project item-list`
-   output or paginated API reads. Field creation, item membership or a successful
-   command exit is not proof that both dates match. The helper writes the fields
+   command below. Then use [Project field readback](#project-field-readback)
+   for every exact Project item and compare Kind and both dates with the current
+   authorized proposal. Field creation, item membership or a successful write
+   exit is not proof that the values match. The `dates` command writes fields
    separately and performs no readback: a failure may leave one field changed.
    Report verified, pending and failed items separately; on partial or unknown
    results inspect actual state and stop the affected application, without an
@@ -347,6 +347,44 @@ pending date decision does not block otherwise authorized decomposition.
    table and apply the same scoped-decision/readback process. Estimated dates
    never clear blockers, set `ai:ready`, dispatch work or create a timer; actual
    execution still uses the frontier, ownership and human gates.
+
+### Project field readback
+
+From the adopter Git root, use the installed read-only helper below. Set
+`ROADMAP_REPOSITORY` (`owner/repo`), `ROADMAP_OWNER` (Project owner),
+`ROADMAP_PROJECT` (Project number) and `ROADMAP_ISSUE` (Issue number) from the
+current durable record; do not substitute another repository, board or item.
+
+<!-- BEGIN roadmap-field-readback -->
+```bash
+bash .github/scripts/setup-project.sh readback \
+  --repo "${ROADMAP_REPOSITORY:?set the reviewed owner/repo}" \
+  --owner "${ROADMAP_OWNER:?set the reviewed Project owner}" \
+  --project "${ROADMAP_PROJECT:?set the reviewed Project number}" \
+  --issue "${ROADMAP_ISSUE:?set the exact Issue number}"
+```
+<!-- END roadmap-field-readback -->
+
+This reads paginated GraphQL `fieldValues`, including
+`ProjectV2ItemFieldSingleSelectValue` and `ProjectV2ItemFieldDateValue`.
+Check exit status and the `project-field-readback/v1` result: repository,
+Project owner/number/ID, Issue URL/number and item ID must identify the intended
+item. `state: observed` means the three values were read, not that the schedule
+was approved or matches. Compare `fields.Kind` (`SINGLE_SELECT`) with the
+canonical Issue kind and `fields["Start date"]` / `fields["Target date"]`
+(`DATE`) with the current authorized proposal. Record the command, bounded
+identity/typed values, comparison and proposal reference on the Issue.
+
+Alternatively, inspect the exact Project item in the web UI and record its
+Project URL/owner/number, linked Issue URL, observation time and visible Kind,
+Start date and Target date, with the same proposal comparison. If identity or
+any required value cannot be observed, the UI does not establish success.
+`gh project item-list --format json` may establish membership; its null or
+omitted single-select/date fields are not evidence that values are absent,
+correct or require no action. Missing fields/items, mismatches, partial reads,
+errors or unreadable results remain non-success. Stop affected application and
+report the gap; observation never approves dates, repairs fields or retries
+writes automatically.
 
 ### Existing Project commands
 
