@@ -296,6 +296,45 @@ the adopter. Complete observations, commit chronology and final readbacks
 remain mandatory. Its commit limit is 250; sensor output does not replace CI,
 review, owner acceptance or authenticate a worker session.
 
+### Observe Project values without changing the board
+
+`gh project item-list --format json` can omit populated single-select/date
+values (reported with gh 2.102.0). A null `Kind`, `Start date` or `Target date`
+there is not evidence that the board is unset, and must not trigger corrective
+writes. From the installed application repository, use:
+
+```sh
+bash .github/scripts/setup-project.sh readback --owner OWNER --project 7 --issue 23 -R OWNER/REPO
+```
+
+Replace the owner, Project and Issue numbers with the selected identities.
+This query-only command resolves the exact repository Issue and Project,
+enumerates Project items, and reads the selected item's typed GraphQL
+`fieldValues`. Both connections are paginated independently, with a limit of
+10 pages/1,000 entries each and 1 MiB per response. It skips explicitly typed
+DraftIssue/PullRequest items; null/redacted content, duplicate identities,
+partial errors, changing anchors and incomplete pagination are uncheckable.
+It neither invokes setup writes nor refreshes credentials, and does not retry.
+
+The `project-field-readback/v1` JSON record contains Project/Issue identities,
+`item_id`, and `fields` keyed by `Kind`, `Start date`, and `Target date`, each
+with `field_id`, `type`, and `value`. Exit 0 / `state: observed` means all three
+values were observed, **not that they match the agreed Kind or schedule**.
+Compare each value with the current durable plan before recording verification.
+Exit 1 / `state: missing` emits explicit null fields and a `missing` list (or
+`item` if no matching item exists); missing values are non-success, not permission
+to invent dates. GraphQL lists set values, so absence does not distinguish an
+unset value from a missing field definition. Exit 2 is invalid usage, and exit 3
+is an uncheckable observation without a partial success record. Tool/authentication
+preflight failures are also non-success and may have no JSON record.
+
+This is a bounded observation, not an atomic snapshot, live adoption proof or
+write authority. If access, size or schema limits prevent readback, stop the
+affected verification. An explicit alternative is to open that exact Project
+item in GitHub's UI and inspect all three fields, recording the item/Issue link,
+observed values and comparison outcome; do not substitute an ambiguous CLI null.
+See GitHub's [typed Project field schema](https://docs.github.com/en/graphql/reference/projects).
+
 ## Upgrade preservation and operation-scoped rollback
 
 Use the [one-command explicit update](#one-command-explicit-update) with reviewed

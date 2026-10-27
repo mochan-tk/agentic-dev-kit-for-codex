@@ -13,6 +13,8 @@
 #   bash .github/scripts/setup-project.sh dates --project <number> --issue <n>
 #                          --start YYYY-MM-DD --target YYYY-MM-DD
 #                          [--owner <login>] [-R owner/repo]
+#   bash .github/scripts/setup-project.sh readback --project <number> --issue <n>
+#                          [--owner <login>] [-R owner/repo]
 #   bash .github/scripts/setup-project.sh --help
 #
 # Subcommands:
@@ -31,13 +33,18 @@
 #          target date earlier than the start date is rejected. Also sets
 #          the `Kind` field from the issue's labels (`type:epic` -> Epic,
 #          `type:task` -> Task) when the field and a matching label exist.
+#   readback Observe one exact Issue item's Kind, Start date and Target date
+#          through paginated typed GraphQL queries, without writes. Exit 0
+#          means populated observations, not a match to expected values or
+#          authority; exit 1 reports missing values/item, 2 invalid arguments,
+#          and 3 uncheckable responses. See the installation guide for limits.
 #
 # Options:
 #   --owner <login>          Project owner login (user or org). Default: the
 #                            owner of the target repository.
 #   --title <title>          init: board title. Default: "<repo> roadmap".
-#   --project <number>       add/dates: project number (printed by init).
-#   --issue <n>              add/dates: issue number to add or schedule.
+#   --project <number>       add/dates/readback: project number (printed by init).
+#   --issue <n>              add/dates/readback: issue number.
 #   --start <YYYY-MM-DD>     dates: start date.
 #   --target <YYYY-MM-DD>    dates: target date (not earlier than start).
 #   -R, --repo <owner/repo>  Target repository. Default: the repository the
@@ -50,8 +57,9 @@
 # its `configuration` input carries `visibleFieldIds` alone — so the Roadmap
 # view's date fields and "Group by: Kind" must be set once in the UI.
 #
-# Requires: gh >= 2.45 (`gh project link`) authenticated with the `project`
-# scope, and jq.
+# Requires: gh >= 2.45 (`gh project link`), jq, and authenticated credentials.
+# Readback needs Project read access (read:project for classic/OAuth tokens);
+# writes need project scope and separate authority.
 # Compatible with bash 3.2 (macOS /bin/bash).
 
 set -euo pipefail
@@ -438,11 +446,205 @@ cmd_dates() {
   apply_kind "$project" "$owner" "$issue"
 }
 
+# Reader failures never enter the existing setup actuators. Suppress raw API
+# diagnostics, which can contain private board data, and retain at most one
+# bounded page. No retries, pagination auto-following or gh --jq projections.
+readback_error() { echo "error: Project readback is uncheckable: $*" >&2; exit 3; }
+
+RB_REPLY=""
+readback_query() {
+  RB_REPLY="$(gh api graphql "$@" 2>/dev/null | head -c 1048577 | jq -Rsc '
+    if utf8bytelength > 1048576 or index("\u0000") != null then error("size/bytes")
+    else fromjson end
+    | if type == "object" and ((has("errors") | not) or .errors == [])
+         and (.data | type == "object") then . else error("response") end' 2>/dev/null)" \
+    || readback_error "transport, size, JSON or GraphQL error"
+}
+
+# $variables inside the single-quoted query/validators belong to GraphQL/jq.
+# shellcheck disable=SC2016
+cmd_readback() {
+  local project="" issue="" owner="" project_id query common data anchor="" candidate=""
+  local cursor="" cursors='[]' all='[]' page=0 total="" connection count more next observed result
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --project|--issue|--owner|-R|--repo)
+        [[ $# -ge 2 && -n "$2" && "$2" != -* ]] || usage_error "missing value for $1"
+        case "$1" in
+          --project) project="$2" ;; --issue) issue="$2" ;;
+          --owner) owner="$2" ;; -R|--repo) REPO="$2" ;;
+        esac
+        shift 2 ;;
+      -h|--help) usage; return 0 ;;
+      *) usage_error "unknown readback option: $1" ;;
+    esac
+  done
+  [[ "$project" =~ ^[1-9][0-9]{0,8}$ && "$issue" =~ ^[1-9][0-9]{0,8}$ ]] \
+    || usage_error "readback requires positive --project and --issue numbers"
+  require_tools
+  resolve_repo
+  owner="${owner:-$REPO_OWNER}"
+  [[ "$REPO_OWNER" =~ ^[A-Za-z0-9-]+$ && "$REPO_NAME" =~ ^[A-Za-z0-9_.-]+$ \
+     && "$owner" =~ ^[A-Za-z0-9-]+$ ]] || usage_error "invalid repository or owner"
+  project_id="$(gh project view "$project" --owner "$owner" --format json --jq '.id' 2>/dev/null | head -c 513)" \
+    || readback_error "cannot resolve Project"
+  [[ ${#project_id} -le 512 && "$project_id" =~ ^[A-Za-z0-9_=-]+$ ]] || readback_error "invalid Project identity"
+
+  common='def text: type == "string" and length > 0 and length <= 512 and (test("[\u0000-\u001f\u007f]") | not);
+    def number: type == "number" and . > 0 and floor == .;
+    def date: type == "string" and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")
+      and (split("-") | map(tonumber) | .[0] as $year | .[1] as $month | .[2] as $day
+        | (if ($year % 400 == 0 or ($year % 4 == 0 and $year % 100 != 0)) then 29 else 28 end) as $feb
+        | $year >= 1 and $day <= [31,$feb,31,30,31,30,31,31,30,31,30,31][$month - 1]);
+    def issue: .__typename == "Issue" and (.id | text) and (.number | number)
+      and (.url | text) and (.repository.nameWithOwner | text);
+    def connection: type == "object" and (.nodes | type == "array" and length <= 100)
+      and (.totalCount | type == "number" and floor == . and . >= 0 and . <= 1000)
+      and (.pageInfo | type == "object" and (.hasNextPage | type == "boolean")
+        and has("endCursor") and (if .hasNextPage then (.endCursor | text)
+          else (.endCursor == null or (.endCursor | text)) end));'
+  query='query ProjectReadbackItems($id: ID!, $repoOwner: String!, $repoName: String!, $issue: Int!, $after: String) {
+    repository(owner: $repoOwner, name: $repoName) { nameWithOwner issue(number: $issue) {
+      __typename id number url repository { nameWithOwner } } }
+    node(id: $id) { __typename ... on ProjectV2 { id number url
+      owner { __typename ... on User { login } ... on Organization { login } }
+      items(first: 100, after: $after) { totalCount pageInfo { hasNextPage endCursor }
+        nodes { id updatedAt content { __typename ... on Issue { id number url repository { nameWithOwner } }
+          ... on DraftIssue { id } ... on PullRequest { id } } } } } } }'
+  while :; do
+    page=$((page + 1)); [[ "$page" -le 10 ]] || readback_error "item page limit"
+    if [[ -z "$cursor" ]]; then
+      readback_query -f "query=$query" -f "id=$project_id" -f "repoOwner=$REPO_OWNER" -f "repoName=$REPO_NAME" -F "issue=$issue"
+    else
+      readback_query -f "query=$query" -f "id=$project_id" -f "repoOwner=$REPO_OWNER" -f "repoName=$REPO_NAME" -F "issue=$issue" -f "after=$cursor"
+    fi
+    data="$(jq -ce --arg id "$project_id" --arg owner "$owner" --arg repo "$REPO" \
+      --argjson project "$project" --argjson issue "$issue" "$common"'
+      .data | select(.repository.nameWithOwner == $repo and (.repository.issue | issue)
+        and .repository.issue.number == $issue and .repository.issue.repository.nameWithOwner == $repo
+        and .node.__typename == "ProjectV2" and .node.id == $id and .node.number == $project
+        and (.node.url | text) and (.node.owner.__typename == "User" or .node.owner.__typename == "Organization")
+        and .node.owner.login == $owner and (.node.items | connection)
+        and all(.node.items.nodes[]; (.id | text) and (.updatedAt | text) and
+          (.content | type == "object" and
+            (if .__typename == "Issue" then issue
+             elif .__typename == "DraftIssue" or .__typename == "PullRequest" then (.id | text)
+             else false end))))' <<<"$RB_REPLY" 2>/dev/null)" || readback_error "Project, Issue or item identity"
+    observed="$(jq -c '{project: (.node | {id,number,url,owner:.owner.login}), repository:.repository.nameWithOwner,
+      issue:(.repository.issue | {id,number,url})}' <<<"$data")"
+    [[ -z "$anchor" || "$anchor" == "$observed" ]] || readback_error "identity changed between pages"
+    anchor="$observed"
+    connection="$(jq -c '.node.items' <<<"$data")"
+    count="$(jq -r '.totalCount' <<<"$connection")"
+    [[ -z "$total" || "$total" == "$count" ]] || readback_error "item count changed"
+    total="$count"
+    all="$(jq -cn --argjson old "$all" --argjson new "$connection" '$old + $new.nodes')"
+    jq -e --argjson total "$total" 'length <= $total and ([.[].id] | length == (unique | length))' <<<"$all" >/dev/null \
+      || readback_error "duplicate or excessive items"
+    more="$(jq -r '.pageInfo.hasNextPage' <<<"$connection")"
+    if [[ "$more" == false ]]; then
+      [[ "$(jq length <<<"$all")" == "$total" ]] || readback_error "incomplete item enumeration"
+      break
+    fi
+    next="$(jq -r '.pageInfo.endCursor' <<<"$connection")"
+    [[ "$(jq '.nodes | length' <<<"$connection")" -gt 0 && "$(jq length <<<"$all")" -lt "$total" ]] \
+      || readback_error "inconsistent item pagination"
+    jq -e --arg next "$next" 'index($next) == null' <<<"$cursors" >/dev/null || readback_error "item cursor repeated"
+    cursors="$(jq -c --arg next "$next" '. + [$next]' <<<"$cursors")"; cursor="$next"
+  done
+  # An Issue number alone is not an identity. Check every matching ID against
+  # the resolved repository, number and URL before selecting exactly one item.
+  candidate="$(jq -c --argjson anchor "$anchor" '[.[] | select(.content.__typename == "Issue" and
+    (.content.id == $anchor.issue.id or (.content.number == $anchor.issue.number and
+      .content.repository.nameWithOwner == $anchor.repository)))]' <<<"$all")"
+  count="$(jq length <<<"$candidate")"
+  if [[ "$count" == 0 ]]; then
+    jq -c '. + {schema:"project-field-readback/v1",state:"missing",item_id:null,
+      fields:{"Kind":null,"Start date":null,"Target date":null},missing:["item"]}' <<<"$anchor"
+    return 1
+  fi
+  [[ "$count" == 1 ]] || readback_error "duplicate Issue items"
+  jq -e --argjson anchor "$anchor" '.[0].content | .id == $anchor.issue.id and .number == $anchor.issue.number
+    and .url == $anchor.issue.url and .repository.nameWithOwner == $anchor.repository' <<<"$candidate" >/dev/null \
+    || readback_error "mismatched Issue item"
+  candidate="$(jq -c '.[0]' <<<"$candidate")"
+  local item_id updated_at
+  item_id="$(jq -r '.id' <<<"$candidate")"; updated_at="$(jq -r '.updatedAt' <<<"$candidate")"
+  query='query ProjectReadbackValues($id: ID!, $after: String) {
+    node(id: $id) { __typename ... on ProjectV2Item { id updatedAt project { id }
+      content { __typename ... on Issue { id number url repository { nameWithOwner } } }
+      fieldValues(first: 100, after: $after) { totalCount pageInfo { hasNextPage endCursor }
+        nodes { __typename
+          ... on ProjectV2ItemFieldValueCommon { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldLabelValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldMilestoneValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldPullRequestValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldRepositoryValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldReviewerValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldUserValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemIssueFieldValue { field { ... on ProjectV2FieldCommon { id name dataType } } }
+          ... on ProjectV2ItemFieldSingleSelectValue { name }
+          ... on ProjectV2ItemFieldDateValue { date }
+        } } } } }'
+  all='[]'; cursor=""; cursors='[]'; page=0; total=""
+  while :; do
+    page=$((page + 1)); [[ "$page" -le 10 ]] || readback_error "field page limit"
+    if [[ -z "$cursor" ]]; then
+      readback_query -f "query=$query" -f "id=$item_id"
+    else
+      readback_query -f "query=$query" -f "id=$item_id" -f "after=$cursor"
+    fi
+    connection="$(jq -ce --arg id "$item_id" --arg updated "$updated_at" --argjson anchor "$anchor" "$common"'
+      .data.node | select(.__typename == "ProjectV2Item" and .id == $id and .updatedAt == $updated
+        and .project.id == $anchor.project.id and (.content | issue) and .content.id == $anchor.issue.id
+        and .content.number == $anchor.issue.number and .content.url == $anchor.issue.url
+        and .content.repository.nameWithOwner == $anchor.repository)
+      | .fieldValues | select(connection and all(.nodes[]; (.__typename | text) and (.field.id | text)
+        and (.field.name | text) and (.field.dataType | text)
+        and (if .field.name == "Kind" then .__typename == "ProjectV2ItemFieldSingleSelectValue"
+          and .field.dataType == "SINGLE_SELECT" and (.name | text)
+        elif .field.name == "Start date" or .field.name == "Target date" then
+          .__typename == "ProjectV2ItemFieldDateValue" and .field.dataType == "DATE"
+          and (.date | date)
+        else true end)))' <<<"$RB_REPLY" 2>/dev/null)" || readback_error "field metadata, value or item changed"
+    count="$(jq -r '.totalCount' <<<"$connection")"
+    [[ -z "$total" || "$total" == "$count" ]] || readback_error "field count changed"
+    total="$count"
+    # Retain only allowlisted metadata/values after validation, not unrelated
+    # Project field content. Both connections are bounded independently.
+    all="$(jq -cn --argjson old "$all" --argjson new "$connection" '$old + [$new.nodes[] |
+      {id:.field.id,name:.field.name,type:.field.dataType,value:(if .field.name == "Kind" then .name
+        elif .field.name == "Start date" or .field.name == "Target date" then .date else null end)}]')"
+    jq -e --argjson total "$total" 'length <= $total and ([.[].id] | length == (unique | length))
+      and ([.[] | select(.name == "Kind" or .name == "Start date" or .name == "Target date") | .name]
+        | length == (unique | length))' <<<"$all" >/dev/null || readback_error "duplicate or excessive fields"
+    more="$(jq -r '.pageInfo.hasNextPage' <<<"$connection")"
+    if [[ "$more" == false ]]; then
+      [[ "$(jq length <<<"$all")" == "$total" ]] || readback_error "incomplete field enumeration"
+      break
+    fi
+    next="$(jq -r '.pageInfo.endCursor' <<<"$connection")"
+    [[ "$(jq '.nodes | length' <<<"$connection")" -gt 0 && "$(jq length <<<"$all")" -lt "$total" ]] \
+      || readback_error "inconsistent field pagination"
+    jq -e --arg next "$next" 'index($next) == null' <<<"$cursors" >/dev/null || readback_error "field cursor repeated"
+    cursors="$(jq -c --arg next "$next" '. + [$next]' <<<"$cursors")"; cursor="$next"
+  done
+  result="$(jq -cn --argjson anchor "$anchor" --arg id "$item_id" --argjson values "$all" '
+    ["Kind","Start date","Target date"] as $names | $anchor + {schema:"project-field-readback/v1",item_id:$id,
+      fields:($names | map(. as $name | {key:$name,value:([$values[] | select(.name == $name) |
+        {field_id:.id,type,value}] | first // null)}) | from_entries),
+      missing:[$names[] as $name | select(all($values[]; .name != $name)) | $name]}
+    | . + {state:(if .missing == [] then "observed" else "missing" end)}')"
+  printf '%s\n' "$result"
+  jq -e '.missing == []' <<<"$result" >/dev/null
+}
+
 case "${1:-}" in
   init)      shift; cmd_init "$@" ;;
   add)       shift; cmd_add "$@" ;;
   dates)     shift; cmd_dates "$@" ;;
+  readback)  shift; cmd_readback "$@" ;;
   -h|--help) usage; exit 0 ;;
-  "")        usage_error "missing subcommand (init, add or dates)" ;;
+  "")        usage_error "missing subcommand (init, add, dates or readback)" ;;
   *)         usage_error "unknown subcommand: $1" ;;
 esac
