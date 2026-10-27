@@ -366,6 +366,29 @@ exemption. Initial adoption separately requires confirmed absence in the exact
 base, never an API failure. Unsupported combinations follow an ordinary planned
 Task; do not invent a historical Task or rewrite adopter files to obtain a pass.
 
+**Affected older checker — owner disposition.** Prefer applying the reviewed
+correction for [#65](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/65)
+through the explicit update procedure, then rerunning the installed checker.
+The temporary exception-request route applies only to an identified affected
+installed revision and an otherwise compliant, bounded onboarding PR failing
+for that specific defect. A corrected checker uses the normal route above;
+unrelated failures or unreadable proof are ineligible.
+
+Before requesting a decision, record on the evidence PR its exact base/HEAD,
+the installed checker revision and digest, command/exit status, bounded sanitized
+failure evidence, the defect reference, and the supervisor's assessment of the
+onboarding proof and remaining checks. Ask the human owner for an explicit
+durable decision naming the specific next operation and these bindings.
+Missing or stale authority stops that operation; a supervisor recommendation
+alone grants none. A changed PR base/HEAD requires a fresh assessment and
+decision. Keep the failed check recorded as **FAIL**: this route never skips
+checks, changes protection, or automatically authorizes acceptance or merge.
+
+Retire the exception only after the corrected **installed** checker passes
+against the current PR. Record its revision/digest, current base/HEAD and run
+evidence; preserve the original failure and owner decision. A fixed upstream
+source alone is not evidence of an adopter upgrade or a passing check.
+
 Then write the **Deferred from onboarding ledger**: collect every item
 left undone or unverified across P0–P5 — commands that could not run
 (missing tools), external operations (pushes, deploys, credentials,

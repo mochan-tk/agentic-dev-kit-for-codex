@@ -194,6 +194,18 @@ Initial adoption requires confirmed file absence, never a failed API read.
 An unrelated or unsupported PR uses the ordinary Task ritual. These are
 structural Git fixture checks, not proof of live GitHub or native Codex runtime.
 
+**Older onboarding checker affected by #65:** prefer
+the [explicit update](#one-command-explicit-update) with reviewed revisions,
+then verify the installed checker against the current onboarding PR. If that
+specific old-checker defect remains, follow the installed
+[P6 owner-disposition procedure](../../.github/distribution/payload/.agents/skills/project-onboarding/SKILL.md#p6--record).
+It requires exact PR/checker bindings, bounded failure evidence, supervisor
+assessment and an explicit scoped human decision before the requested operation.
+Failure remains **FAIL**; unrelated failures are ineligible and protections stay
+unchanged. Retire the exception only after the corrected installed checker
+passes the current PR, retaining the earlier failure/decision history. An
+upstream fix alone does not establish an installed correction.
+
 Read the installed session-orchestration Skill's startup decision table before
 starting onboarding. A scoped, unrevoked owner decline must have a durable
 reference; it is not inferred and does not authorize unrelated work. Preserve
