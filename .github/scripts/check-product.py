@@ -68,10 +68,10 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "aeda4919ff516492c4948c18beb62907d347279523588e0ccef68294dd0fbeaf",
-    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b",
+    ".github/distribution/payload.v1.tsv": "ae27b73d0a33a914859952928c609f33e35d5afa73abc4869b4dd62f34f743b8",
+    ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "52ef0e3bacf0ac7d4dd23640cb79cf9556bf24668e36ef46e7a3ddfc18f9f474",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3",
-    ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
+    ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "0cddb65927c17ff8258c37374b5e61964f32933ffa5ab6b0d2a31bbddda4bec9",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
     ".github/distribution/payload/.github/scripts/setup-project.sh": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",

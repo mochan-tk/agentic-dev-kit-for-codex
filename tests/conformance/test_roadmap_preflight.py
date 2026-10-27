@@ -141,13 +141,16 @@ class RoadmapPreflightTests(unittest.TestCase):
     def calls(self):
         return [json.loads(line) for line in self.calls_path.read_text().splitlines()]
 
-    def readback(self, fixture, code=0):
+    def readback(self, fixture, code=0, command=None):
         self.set_state(readback=fixture)
         before = self.installer.snapshot(self.target)
         state_before = self.state_path.read_bytes()
-        result = subprocess.run(["bash", ".github/scripts/setup-project.sh", "readback",
-                                 "--project", "7", "--issue", "23", "--owner", "fixture-owner",
-                                 "-R", "fixture-owner/sample"], cwd=self.target, env=self.env,
+        command = command or ["bash", ".github/scripts/setup-project.sh", "readback",
+                              "--project", "7", "--issue", "23", "--owner", "fixture-owner",
+                              "-R", "fixture-owner/sample"]
+        result = subprocess.run(command, cwd=self.target,
+                                env=dict(self.env, ROADMAP_REPOSITORY="fixture-owner/sample",
+                                         ROADMAP_PROJECT="7", ROADMAP_ISSUE="23"),
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(code, result.returncode, result.stdout + result.stderr)
         self.assertEqual(before, self.installer.snapshot(self.target))
@@ -160,11 +163,23 @@ class RoadmapPreflightTests(unittest.TestCase):
                 self.assertNotIn("mutation", query)
         return result
 
-    def test_readback_observes_typed_values_without_writes(self):
-        result = json.loads(self.readback(readback_fixture()).stdout)
+    def test_documented_installed_readback_observes_typed_values_without_writes(self):
+        skill = self.target / ".agents/skills/plan-management/SKILL.md"
+        match = re.search(r"<!-- BEGIN roadmap-field-readback -->\n```bash\n(.*?)\n```\n"
+                          r"<!-- END roadmap-field-readback -->", skill.read_text(), re.S)
+        self.assertIsNotNone(match, "installed readback command is missing")
+        result = json.loads(self.readback(readback_fixture(), command=["bash", "-c", match.group(1)]).stdout)
         self.assertEqual("project-field-readback/v1", result["schema"])
         self.assertEqual("observed", result["state"])
+        self.assertEqual("fixture-owner/sample", result["repository"])
+        self.assertEqual(dict(id="PVT_fixture", number=7, owner="fixture-owner",
+                              url="https://github.com/users/fixture-owner/projects/7"), result["project"])
+        self.assertEqual(dict(id="I_target", number=23,
+                              url="https://github.com/fixture-owner/sample/issues/23"), result["issue"])
         self.assertEqual("PVTI_target", result["item_id"])
+        self.assertEqual("SINGLE_SELECT", result["fields"]["Kind"]["type"])
+        self.assertEqual("DATE", result["fields"]["Start date"]["type"])
+        self.assertEqual("DATE", result["fields"]["Target date"]["type"])
         self.assertEqual("Task", result["fields"]["Kind"]["value"])
         self.assertEqual("2026-10-27", result["fields"]["Start date"]["value"])
         self.assertEqual("2026-11-02", result["fields"]["Target date"]["value"])

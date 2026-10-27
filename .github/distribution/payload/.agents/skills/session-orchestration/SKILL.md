@@ -266,8 +266,14 @@ Task and plan before continuing. A cache edit is not authorization.
 **Verify** (before any completion claim): run every command in the issue's
 Verification section; then confirm external state with commands, e.g.
 `gh pr view <pr> --json state,statusCheckRollup`, `gh pr checks <pr>`,
-`git status --short` (must be clean), and, when the task tracked Project
-items, `gh project item-list`. Evidence = command + observed result.
+`git status --short` (must be clean). When the Task tracked Project items,
+use the installed planning Skill's [Project field readback](../plan-management/SKILL.md#project-field-readback)
+to bind the exact repository/Project/Issue item and compare typed Kind and date
+values with the current authorized proposal (or record the exact-item UI
+alternative). `gh project item-list --format json` establishes membership only,
+not Kind/date equality. Missing or uncheckable values are non-success, never
+permission to repair fields or approve dates. Evidence = command/observation +
+identity, values and comparison.
 
 **Record before report** — the supervisor posts this comment on the Task issue, then (and
 only then) message the parent:
