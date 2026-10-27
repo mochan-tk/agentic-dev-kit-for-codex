@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Prove that work meets its Task issue — layered verification gates, the pre-PR checklist, the acceptance-criteria evidence table, and CI-failure triage. Use this before marking any PR ready for review, when writing the Verification section of a task brief, when a CI check fails, or when reviewing whether someone else's evidence actually proves their claim.
+description: Prove that work meets its Task issue — layered verification gates, implementer and supervisor checklists, the acceptance-criteria evidence table, and CI-failure triage. Use this before marking any PR ready for review, when writing the Verification section of a task brief, when a CI check fails, or when reviewing whether someone else's evidence actually proves their claim.
 ---
 
 # Verification
@@ -159,6 +159,59 @@ credentials, and customer records never land in issues, PRs, or commit
 messages — they live in access-controlled storage and the ledger links to
 them. A redacted excerpt plus a link beats a raw paste; a leaked ledger
 cannot be unleaked.
+
+## Supervisor verification checklist
+
+For each Task PR, inspect the evidence below and record bounded links, observed
+identities, results and observation time in the existing Task/PR evidence table.
+Worker narrative and checked boxes alone are not proof.
+
+1. **Bind the review.** Read the current Task, plan and PR from GitHub; record
+   repository, PR number, exact head/base SHAs and tested checkout commit/clean
+   state. If CI tests a generated merge commit, identify its head/base mapping;
+   a different or unmapped revision cannot prove this PR. Refresh affected
+   evidence after head, base or work-order changes.
+2. **Check scope.** Inspect the actual PR diff against the Task's owned paths
+   and accepted plan. Unplanned files or behavior require replan. Confirm any
+   [known-defect pins](#known-defect-pins) remain explicit limitations with
+   follow-ups; passing characterization does not prove the defect fixed.
+3. **Inspect platform CI.** Open actual check/run and job links, not just the
+   PR's “CI passes” text. Compare observed results with the current workflow's
+   expected matrix and the repository's required checks. Record tested SHA and
+   each required job's status; missing, pending, cancelled, skipped or failed
+   required coverage is not PASS. An aggregate green badge cannot fill a gap.
+4. **Reconcile tests.** Compare the Task's expected suites/counts with actual
+   commands, environment, passed/failed/skipped counts and clean-checkout proof
+   from local/CI results. Explain count changes and skips against the acceptance
+   criteria; unexplained differences withhold completion. Green exit status
+   alone does not establish that the intended tests ran.
+5. **Inspect the ritual result.** Check the installed
+   [after-PR sensor](#after-pr-creation-before-ready-for-review) result and its
+   current head/base and Task/plan binding. Missing, stale or uncheckable ritual
+   evidence is non-success; it cannot be replaced by a CI badge.
+6. **Check Project close-out.** Follow
+   [required Project close-out](#required-project-close-out): inspect exact-item
+   Kind `Task` and authorized Start/Target date comparison, identities and
+   schedule-decision link, or the actual scoped permitted exception. Board
+   presence, CLI-null or pending date consent is not sufficient.
+7. **Disposition every gap.** Map each acceptance criterion to current proof;
+   name missing/contradictory evidence and its next check/owner. Record independent
+   review against the same revision, reviewer/client and limitations. Unresolved
+   findings or required deferred proof block completion; a follow-up alone does
+   not waive them. Human final acceptance and merge permission remain separate.
+
+Reuse credible exact-revision CI evidence of a fresh/clean checkout and actual
+suite results; do not rebuild at every session tier. Missing, stale,
+contradictory or untrustworthy **test evidence** blocks completion until the
+relevant checks run from a fresh/clean checkout at the current revision; run
+the full suite when the accepted plan requires it. Authoritative fresh/clean
+CI may supply this proof without a duplicate supervisor-local rebuild. If CI
+cannot supply credible proof, perform an independent fresh-clone rerun. Record
+the gap/reason, checkout SHA/clean state, commands, counts/skips and results.
+A clone without running checks is not test evidence. Scope, platform-job,
+ritual, Project and review gaps need their own current evidence; local test
+success cannot substitute for it. A complete checklist supports a review
+recommendation, never self-authorized acceptance or merge.
 
 ## Four-quadrant diagnosis
 

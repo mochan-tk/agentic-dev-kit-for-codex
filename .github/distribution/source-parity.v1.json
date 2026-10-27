@@ -128,12 +128,13 @@
       "destination": ".agents/skills/verification/SKILL.md",
       "source_path": ".github/skills/verification/SKILL.md",
       "source_blob": "6d0916437bf490116cefaf71e234a6f1aa3eaf6a",
-      "target_sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a",
+      "target_sha256": "a0ad0f31e7632d719b345b0855838e5f9b205d3d802bcaeaf6c16b6e19066b02",
       "adaptations": [
         "Source behavior retained where applicable; Codex Skill/resource paths translated; unsupported platform guarantees excluded.",
         "After actual PR creation, reach the installed mode-0644 ritual sensor through Bash; distinguish observed head-bound evidence from CI, review and acceptance.",
         "Require Project close-out by default with scoped environment or explicit owner Project-decline exceptions; preserve separate date consent and Issue authority, and compare authorized Kind/dates using one query-only typed readback without a bypass.",
-        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification."
+        "Issue #70: conditional known-defect characterization records and same-repository typed follow-up verification.",
+        "Issue #71: supervisor checklist binds scope, platform CI/matrix and test counts, ritual, Project comparison or scoped exception, deferred proof and independent review to the current revision; reuse credible clean CI evidence and justify fresh-clone reruns without granting acceptance or merge."
       ]
     },
     {
@@ -733,7 +734,7 @@
       {
         "path": ".agents/skills/verification/SKILL.md",
         "mode": "100644",
-        "sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a"
+        "sha256": "a0ad0f31e7632d719b345b0855838e5f9b205d3d802bcaeaf6c16b6e19066b02"
       }
     ]
   },
@@ -921,7 +922,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4"
+        "sha256": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -946,7 +947,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/verification/SKILL.md",
         "mode": "100644",
-        "sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a"
+        "sha256": "a0ad0f31e7632d719b345b0855838e5f9b205d3d802bcaeaf6c16b6e19066b02"
       },
       {
         "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
@@ -1009,8 +1010,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4",
-        "target_blob": "567ac78a443d1ed9312a929e1b52a5f752621e9a"
+        "target_sha256": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448",
+        "target_blob": "13894a4a4ee4fd7688a43aac461eb132d1803fe8"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1069,8 +1070,8 @@
           "sha256": "77f5874cc710a858b6f26f902af2d1d2c7598b25a2a2ecbc692dd9a7f563e6d4"
         },
         "target_mode": "100644",
-        "target_sha256": "d7dcdd41f9e1737e38580d01ebe076aaf74cf7a95cf33117bc1cfb527d00d69a",
-        "target_blob": "967a4a60cd49577be78175eb7d2781ed1ddaf053"
+        "target_sha256": "a0ad0f31e7632d719b345b0855838e5f9b205d3d802bcaeaf6c16b6e19066b02",
+        "target_blob": "48f41efd175425773d9ba155a10c48dc26d0f97d"
       },
       {
         "path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml",
@@ -1243,7 +1244,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4"
+        "sha256": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1273,7 +1274,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "86e58d863c97750bf044eae35cdf9f32cab076f493572c5dc436bbfe2a503a45"
+        "sha256": "64d7c404112d29b9f89e4dc4017fcc6d832efb13a2d31ba6ddcf605ddcf48261"
       },
       {
         "path": "docs/known-limitations.md",
@@ -1367,7 +1368,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "36013e26d52f91d7286782ab9ae17588d25c5885ffae469124f8c5c445fce8e4"
+        "sha256": "fffbdc43f8b30795394959ebdbfac9718cf3b817174f59227c9f53c3e738b448"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1412,7 +1413,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "86e58d863c97750bf044eae35cdf9f32cab076f493572c5dc436bbfe2a503a45"
+        "sha256": "64d7c404112d29b9f89e4dc4017fcc6d832efb13a2d31ba6ddcf605ddcf48261"
       },
       {
         "path": "docs/known-limitations.md",

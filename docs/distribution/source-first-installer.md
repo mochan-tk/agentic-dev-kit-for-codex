@@ -312,6 +312,18 @@ the adopter. Complete observations, commit chronology and final readbacks
 remain mandatory. Its commit limit is 250; sensor output does not replace CI,
 review, owner acceptance or authenticate a worker session.
 
+### Supervisor verification before completion
+
+Use the installed verification Skill's
+[supervisor verification checklist](../../.github/distribution/payload/.agents/skills/verification/SKILL.md#supervisor-verification-checklist)
+for each Task PR. It binds scope, platform CI/matrix results, test counts/skips,
+ritual and Project proof to the current revision, and records unresolved gaps
+and independent review. In the adopter, the checklist lives in
+`.agents/skills/verification/SKILL.md`. Credible current-revision clean CI evidence
+can be reused; an independent fresh-clone rerun needs a specific test-evidence
+gap and actual check results. Completing the checklist does not grant acceptance
+or merge permission.
+
 ### Observe Project values without changing the board
 
 `gh project item-list --format json` can omit populated single-select/date
