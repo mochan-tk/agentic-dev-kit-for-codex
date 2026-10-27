@@ -353,8 +353,14 @@ Link the exact P0 adoption commit/tree and the evidence PR's base/head commits.
 If the adopter uses the optional sensor, run
 `bash .github/scripts/check-task-ritual.sh <pr-number>` read-only. Its Task-less
 onboarding exception requires complete exact-base/head trees, the reviewed
-payload anchor, base CUSTOMIZE markers actually removed from head instructions,
+payload anchor, actual `CUSTOMIZE:` placeholders removed from head instructions,
 and only tuning instructions, existing CI, context or retro evidence changes.
+Preserve explanatory prose that mentions `CUSTOMIZE`; it is not a placeholder.
+Draft Epics may be cited on standalone lines such as `Refs #2, #3.` or
+`Refs Epic #2`. Every number in those lines must resolve to an Issue labeled
+`type:epic` (and not `type:task`), with unchanged metadata at final readback.
+Closing keywords, mixed/unknown references and other relationship syntax do
+not receive this exception. A real Task link follows the ordinary ritual.
 A title alone, an unreadable proof or unrelated application change is not an
 exemption. Initial adoption separately requires confirmed absence in the exact
 base, never an API failure. Unsupported combinations follow an ordinary planned
