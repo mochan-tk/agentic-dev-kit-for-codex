@@ -9,7 +9,7 @@
   "external_operations": [],
   "skill": {
     "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
-    "sha256": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69"
+    "sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8"
   },
   "context": {
     "repository": "example/notes-app",
