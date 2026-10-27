@@ -374,10 +374,11 @@
       "destination": ".github/scripts/setup-project.sh",
       "source_path": ".github/scripts/setup-project.sh",
       "source_blob": "4dd5b61186b8488e5e8fff143e5b40d3958087ca",
-      "target_sha256": "3cf882ba6d557b13417c518d02f3828dfb0a4b5de37c754a64afe14cd47e5b5f",
+      "target_sha256": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
-        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged."
+        "Actionable shell invocations explicitly use Bash with installed mode 0644; descriptive resource references remain unchanged.",
+        "Add a query-only exact Issue/Project readback with independently paginated typed field values, bounded observations and non-success on missing or uncheckable state; retain setup actuators."
       ]
     },
     {
@@ -906,7 +907,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3"
+        "sha256": "2b96882fd75e921d9db203b78a94388acbb479c9ebf60118f79e9394a19a38fc"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -932,6 +933,11 @@
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
         "sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
+        "mode": "100644",
+        "sha256": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -969,8 +975,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3",
-        "target_blob": "f53724483df05c614dbc5bdec6d9e62cb5a806ce"
+        "target_sha256": "2b96882fd75e921d9db203b78a94388acbb479c9ebf60118f79e9394a19a38fc",
+        "target_blob": "c4ce0ff67dd33f1ad1e77b7944bd514db47fa7b6"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1031,6 +1037,18 @@
         "target_mode": "100644",
         "target_sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
         "target_blob": "ece641f1409c1a61826e6f936dce2f17896e6dd3"
+      },
+      {
+        "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
+        "export": {
+          "path": ".github/distribution/payload/.github/scripts/setup-project.sh",
+          "mode": "100644",
+          "source_blob": "168572a34670400bcd36dae14c5f494e39ef6896",
+          "sha256": "3cf882ba6d557b13417c518d02f3828dfb0a4b5de37c754a64afe14cd47e5b5f"
+        },
+        "target_mode": "100644",
+        "target_sha256": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",
+        "target_blob": "9940bccd33d34401cabd37820d5c5629e40e7922"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -1143,7 +1161,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3"
+        "sha256": "2b96882fd75e921d9db203b78a94388acbb479c9ebf60118f79e9394a19a38fc"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1173,7 +1191,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "e081c60892c315934a49a47ca935091d5cf396ca5962935077c015d8bc0fc761"
+        "sha256": "523fe541c3416ec8417c375a5e7f3d0f62d9c7100cfb1ced9e93e3355bda6ea4"
       },
       {
         "path": "docs/known-limitations.md",
@@ -1267,7 +1285,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3"
+        "sha256": "2b96882fd75e921d9db203b78a94388acbb479c9ebf60118f79e9394a19a38fc"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1312,7 +1330,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "e081c60892c315934a49a47ca935091d5cf396ca5962935077c015d8bc0fc761"
+        "sha256": "523fe541c3416ec8417c375a5e7f3d0f62d9c7100cfb1ced9e93e3355bda6ea4"
       },
       {
         "path": "docs/known-limitations.md",

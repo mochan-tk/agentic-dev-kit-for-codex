@@ -68,12 +68,13 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3",
+    ".github/distribution/payload.v1.tsv": "2b96882fd75e921d9db203b78a94388acbb479c9ebf60118f79e9394a19a38fc",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "887f0d56ebd78c7949f23f68c9118d0560593f00eeac3a95009b0f987ee8bdcc",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
+    ".github/distribution/payload/.github/scripts/setup-project.sh": "2ee8182e99166e7c6efce20bc961e5479e582ebd30730c0ecdb24be348e68a9b",
     ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
     "tests/conformance/test_source_first_governance.py": "f61833188bad887719cef5585d103da2bbda08fef76db12f598c56efa992dece"

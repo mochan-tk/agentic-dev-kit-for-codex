@@ -4,6 +4,7 @@ These tests do not prove a live credential's permissions or model compliance.
 """
 
 import json
+import copy
 import os
 from pathlib import Path
 import re
@@ -65,7 +66,15 @@ elif a[:2] == ["project", "link"]:
     save()
 elif a[:2] == ["api", "graphql"]:
     query = next(x for x in a if x.startswith("query="))
-    if "createProjectV2View" in query:
+    if "query ProjectReadback" in query:
+        kind = "items" if "ProjectReadbackItems" in query else "values"
+        cursor = next((x[6:] for x in a if x.startswith("after=")), "")
+        response = s["readback"][kind][cursor]
+        if isinstance(response, dict) and "transport_error" in response:
+            print("synthetic transport failure", file=sys.stderr)
+            sys.exit(1)
+        print(response if isinstance(response, str) else json.dumps(response))
+    elif "createProjectV2View" in query:
         mutation()
         s["views"].append(next(x[2:] for x in a if x.startswith("n=")))
         save()
@@ -76,6 +85,29 @@ elif a[:2] == ["api", "graphql"]:
 else:
     sys.exit("unexpected synthetic gh operation: " + repr(a))
 '''
+
+
+def readback_fixture():
+    issue = dict(id="I_target", number=23, url="https://github.com/fixture-owner/sample/issues/23",
+                 repository={"nameWithOwner": "fixture-owner/sample"}, __typename="Issue")
+    project = dict(id="PVT_fixture", number=7, url="https://github.com/users/fixture-owner/projects/7",
+                   owner={"__typename": "User", "login": "fixture-owner"}, __typename="ProjectV2")
+    item = dict(id="PVTI_target", content=issue, updatedAt="2026-10-27T00:00:00Z")
+    def connection(nodes):
+        return dict(nodes=nodes, totalCount=len(nodes), pageInfo=dict(hasNextPage=False, endCursor=None))
+    fields = [dict(__typename="ProjectV2ItemFieldSingleSelectValue", name="Task",
+                   field=dict(id="F_kind", name="Kind", dataType="SINGLE_SELECT")),
+              dict(__typename="ProjectV2ItemFieldDateValue", date="2026-10-27",
+                   field=dict(id="F_start", name="Start date", dataType="DATE")),
+              dict(__typename="ProjectV2ItemFieldDateValue", date="2026-11-02",
+                   field=dict(id="F_target", name="Target date", dataType="DATE"))]
+    fixture = dict(items={"": {"data": dict(repository=dict(nameWithOwner="fixture-owner/sample", issue=issue),
+                                         node=dict(project, items=connection([item]))) }},
+                values={"": {"data": {"node": dict(item, __typename="ProjectV2Item",
+                                                    project={"id": "PVT_fixture"}, fieldValues=connection(fields))}}})
+    # Raw transport pages have independent objects; avoid fixture aliasing
+    # that would accidentally mutate both the original and later readback.
+    return json.loads(json.dumps(fixture))
 
 
 class RoadmapPreflightTests(unittest.TestCase):
@@ -108,6 +140,146 @@ class RoadmapPreflightTests(unittest.TestCase):
 
     def calls(self):
         return [json.loads(line) for line in self.calls_path.read_text().splitlines()]
+
+    def readback(self, fixture, code=0):
+        self.set_state(readback=fixture)
+        before = self.installer.snapshot(self.target)
+        state_before = self.state_path.read_bytes()
+        result = subprocess.run(["bash", ".github/scripts/setup-project.sh", "readback",
+                                 "--project", "7", "--issue", "23", "--owner", "fixture-owner",
+                                 "-R", "fixture-owner/sample"], cwd=self.target, env=self.env,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(code, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(before, self.installer.snapshot(self.target))
+        self.assertEqual(state_before, self.state_path.read_bytes(), "readback mutated the board")
+        for call in self.calls():
+            self.assertIn(call[:2], (["api", "user"], ["project", "view"], ["api", "graphql"]))
+            if call[:2] == ["api", "graphql"]:
+                query = next(x for x in call if x.startswith("query="))
+                self.assertTrue(query.startswith("query=query ProjectReadback"), query)
+                self.assertNotIn("mutation", query)
+        return result
+
+    def test_readback_observes_typed_values_without_writes(self):
+        result = json.loads(self.readback(readback_fixture()).stdout)
+        self.assertEqual("project-field-readback/v1", result["schema"])
+        self.assertEqual("observed", result["state"])
+        self.assertEqual("PVTI_target", result["item_id"])
+        self.assertEqual("Task", result["fields"]["Kind"]["value"])
+        self.assertEqual("2026-10-27", result["fields"]["Start date"]["value"])
+        self.assertEqual("2026-11-02", result["fields"]["Target date"]["value"])
+        self.assertEqual([], result["missing"])
+
+    def test_readback_completes_both_connections_and_skips_known_non_issues(self):
+        f = readback_fixture()
+        first = f["items"][""]
+        target = first["data"]["node"]["items"]["nodes"][0]
+        first["data"]["node"]["items"] = dict(nodes=[dict(id="PVTI_draft", content=dict(
+            __typename="DraftIssue", id="D_one"), updatedAt="2026-10-27T00:00:00Z"),
+            dict(id="PVTI_pr", content=dict(__typename="PullRequest", id="PR_one"),
+                 updatedAt="2026-10-27T00:00:00Z")], totalCount=3,
+            pageInfo=dict(hasNextPage=True, endCursor="item-next"))
+        second = copy.deepcopy(first)
+        second["data"]["node"]["items"].update(nodes=[target], pageInfo=dict(hasNextPage=False, endCursor=None))
+        f["items"]["item-next"] = second
+        values = f["values"][""]["data"]["node"]["fieldValues"]
+        remaining = values["nodes"][1:]
+        values.update(nodes=values["nodes"][:1], pageInfo=dict(hasNextPage=True, endCursor="field-next"))
+        second_values = copy.deepcopy(f["values"][""])
+        second_values["data"]["node"]["fieldValues"].update(nodes=remaining, pageInfo=dict(hasNextPage=False, endCursor=None))
+        f["values"]["field-next"] = second_values
+        self.assertEqual("observed", json.loads(self.readback(f).stdout)["state"])
+        self.assertEqual(4, sum(call[:2] == ["api", "graphql"] for call in self.calls()))
+
+    def test_readback_reports_missing_values_and_missing_item_as_non_success(self):
+        f = readback_fixture()
+        fields = f["values"][""]["data"]["node"]["fieldValues"]
+        fields.update(nodes=fields["nodes"][:1], totalCount=1)
+        result = json.loads(self.readback(f, 1).stdout)
+        self.assertEqual("missing", result["state"])
+        self.assertEqual(["Start date", "Target date"], result["missing"])
+        self.assertIsNone(result["fields"]["Start date"])
+        f = readback_fixture()
+        f["items"][""]["data"]["node"]["items"].update(nodes=[], totalCount=0)
+        result = json.loads(self.readback(f, 1).stdout)
+        self.assertIsNone(result["item_id"])
+        self.assertIn("item", result["missing"])
+
+    def test_readback_dates_require_real_calendar_days_including_leap_years(self):
+        for day in ("2026-02-31", "2026-04-31", "2025-02-29", "1900-02-29", "0000-01-01"):
+            with self.subTest(invalid=day):
+                f = readback_fixture()
+                f["values"][""]["data"]["node"]["fieldValues"]["nodes"][1]["date"] = day
+                self.assertEqual("", self.readback(f, 3).stdout)
+        for day in ("2024-02-29", "2000-02-29", "2026-02-28", "2026-04-30"):
+            with self.subTest(valid=day):
+                f = readback_fixture()
+                f["values"][""]["data"]["node"]["fieldValues"]["nodes"][1]["date"] = day
+                result = json.loads(self.readback(f).stdout)
+                self.assertEqual(day, result["fields"]["Start date"]["value"])
+
+    def test_readback_refuses_identity_ambiguity_and_partial_errors(self):
+        for fault in ("wrong-project", "wrong-owner", "wrong-repo", "wrong-issue", "wrong-type", "null-content",
+                      "duplicate-item", "duplicate-issue", "error", "null-data", "truncated-count",
+                      "missing-pageinfo", "null-hasnext", "loop-cursor", "oversized"):
+            with self.subTest(fault=fault):
+                f = readback_fixture()
+                response = f["items"][""]
+                node = response["data"]["node"]
+                conn = node["items"]
+                item = conn["nodes"][0]
+                if fault == "wrong-project": node["number"] = 8
+                elif fault == "wrong-owner": node["owner"]["login"] = "other"
+                elif fault == "wrong-repo": response["data"]["repository"]["nameWithOwner"] = "other/sample"
+                elif fault == "wrong-issue": item["content"]["number"] = 24
+                elif fault == "wrong-type": item["content"]["__typename"] = "Redacted"
+                elif fault == "null-content": item["content"] = None
+                elif fault in ("duplicate-item", "duplicate-issue"):
+                    extra = copy.deepcopy(item)
+                    if fault == "duplicate-issue": extra["id"] = "PVTI_duplicate"
+                    conn["nodes"].append(extra)
+                    conn["totalCount"] = 2
+                elif fault == "error": response["errors"] = [{"message": "synthetic private error"}]
+                elif fault == "null-data": response["data"] = None
+                elif fault == "truncated-count": conn["totalCount"] = 2
+                elif fault == "missing-pageinfo": del conn["pageInfo"]
+                elif fault == "null-hasnext": conn["pageInfo"]["hasNextPage"] = None
+                elif fault == "loop-cursor":
+                    conn.update(totalCount=2, pageInfo=dict(hasNextPage=True, endCursor="repeat"))
+                    f["items"]["repeat"] = copy.deepcopy(response)
+                elif fault == "oversized": f["items"][""] = " " * 1048577
+                self.assertEqual("", self.readback(f, 3).stdout)
+
+    def test_readback_refuses_bad_field_pages_types_values_and_anchor_drift(self):
+        for fault in ("wrong-item", "wrong-project", "wrong-issue", "changed-at", "duplicate-field", "duplicate-name",
+                      "wrong-type", "wrong-data-type", "null-value", "invalid-date", "null-field",
+                      "truncated-count", "cursor-missing", "transport", "malformed", "two-documents"):
+            with self.subTest(fault=fault):
+                f = readback_fixture()
+                response = f["values"][""]
+                node = response["data"]["node"]
+                conn = node["fieldValues"]
+                field = conn["nodes"][0]
+                if fault == "wrong-item": node["id"] = "PVTI_other"
+                elif fault == "wrong-project": node["project"]["id"] = "PVT_other"
+                elif fault == "wrong-issue": node["content"]["id"] = "I_other"
+                elif fault == "changed-at": node["updatedAt"] = "2026-10-28T00:00:00Z"
+                elif fault in ("duplicate-field", "duplicate-name"):
+                    extra = copy.deepcopy(field)
+                    if fault == "duplicate-name": extra["field"]["id"] = "F_duplicate"
+                    conn["nodes"].append(extra)
+                    conn["totalCount"] = 4
+                elif fault == "wrong-type": field["__typename"] = "ProjectV2ItemFieldTextValue"
+                elif fault == "wrong-data-type": field["field"]["dataType"] = "TEXT"
+                elif fault == "null-value": field["name"] = None
+                elif fault == "invalid-date": conn["nodes"][1]["date"] = "2026-99-99"
+                elif fault == "null-field": field["field"] = None
+                elif fault == "truncated-count": conn["totalCount"] = 4
+                elif fault == "cursor-missing": conn["pageInfo"].update(hasNextPage=True)
+                elif fault == "transport": f["values"][""] = dict(transport_error=True)
+                elif fault == "malformed": f["values"][""] = '{"data":'
+                elif fault == "two-documents": f["values"][""] = json.dumps(response) + "\n{}"
+                self.assertEqual("", self.readback(f, 3).stdout)
 
     def probe(self, choice="pending"):
         skill = self.target / ".agents/skills/plan-management/SKILL.md"
