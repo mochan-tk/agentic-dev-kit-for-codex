@@ -6,7 +6,7 @@
 .agents/skills/plan-management/scripts/new-task.sh	engine	8a56d9b67be0917c8655888be495199f389e7a33723ee5dc8200cfc8c107268c
 .agents/skills/plan-management/templates/epic-body.md	engine	28adc386b85e5d9a4861aede3a476606b9b826a74d08308ac69461232aa248b4
 .agents/skills/plan-management/templates/task-body.md	engine	f3f89d95012c653587ba807a2928b1d34da65e9b563826b6db91f27ddf1b512b
-.agents/skills/project-onboarding/SKILL.md	engine	887f0d56ebd78c7949f23f68c9118d0560593f00eeac3a95009b0f987ee8bdcc
+.agents/skills/project-onboarding/SKILL.md	engine	6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3
 .agents/skills/retro/SKILL.md	engine	3ea6db90c6f44eb0709124b4c409d89bb7865395187a65bfad79c1aeb1e2de54
 .agents/skills/session-orchestration/SKILL.md	engine	16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8
 .agents/skills/task-routing/SKILL.md	engine	c378850de4a1b45471361c06438aa057603681c4073bfc5b113a8866577b4ac2

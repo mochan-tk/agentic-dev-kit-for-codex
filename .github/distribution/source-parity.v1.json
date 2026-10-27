@@ -76,7 +76,7 @@
       "destination": ".agents/skills/project-onboarding/SKILL.md",
       "source_path": ".github/skills/project-onboarding/SKILL.md",
       "source_blob": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
-      "target_sha256": "887f0d56ebd78c7949f23f68c9118d0560593f00eeac3a95009b0f987ee8bdcc",
+      "target_sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3",
       "adaptations": [
         "Carry approved P2 choice into explicit noninteractive P4 --source commands; require write consent and distinguish pending preparation from reviewed activation.",
         "Retain P0 remote-default-before-write, P3 clean-checkout measured commands, P6 evidence PR and durable deferred ledger; use adopter CI/local setup, optional governance and capability-gated sibling-epic handoff.",
@@ -84,7 +84,8 @@
         "Align explicit profile and new/canonical reconciliation with the installed setup helper; execute consent and preview blocks without guessing intent or weakening refusal gates.",
         "Task 27 at public base e7d830ddcac80ac03cf57313b9475747dbeee16b: keep P2 material/model questions pending until explicit answers; remove P4 silence-to-auto; use a final-chat wait on nonblocking surfaces without claiming native dialog persistence.",
         "Task 59: early read-only roadmap access observation, distinct scope-missing/absent/declined records, owner-operated remedy and separately consented board writes; unavailable boards remain nonblocking.",
-        "Issue 65: document preserved marker explanations and conservative standalone Epic-only Refs syntax; unknown or closing relationships do not gain onboarding exemption."
+        "Issue 65: document preserved marker explanations and conservative standalone Epic-only Refs syntax; unknown or closing relationships do not gain onboarding exemption.",
+        "Issue 67: prefer the reviewed onboarding correction; bound older-checker exception requests to exact evidence and explicit human disposition, preserve FAIL and retire only after the corrected installed checker passes the current PR."
       ]
     },
     {
@@ -805,7 +806,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
         "mode": "100644",
-        "sha256": "887f0d56ebd78c7949f23f68c9118d0560593f00eeac3a95009b0f987ee8bdcc"
+        "sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3"
       }
     ]
   },
@@ -907,7 +908,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "c0aa96d5ccf042d7520c08ccb089ee710a0b4e41e724cc9c813ab62186170bdd"
+        "sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -917,7 +918,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md",
         "mode": "100644",
-        "sha256": "887f0d56ebd78c7949f23f68c9118d0560593f00eeac3a95009b0f987ee8bdcc"
+        "sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
@@ -975,8 +976,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "c0aa96d5ccf042d7520c08ccb089ee710a0b4e41e724cc9c813ab62186170bdd",
-        "target_blob": "e97441dc2c1d4df271da22fd549b26d41e9cc194"
+        "target_sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3",
+        "target_blob": "54f05a3008565e8c435e4d75741f7a8d07ed07af"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -999,8 +1000,8 @@
           "sha256": "37ab768799e7fbd64087c355035fe15acf5f655bcb168191c764e95fe05e1a9b"
         },
         "target_mode": "100644",
-        "target_sha256": "887f0d56ebd78c7949f23f68c9118d0560593f00eeac3a95009b0f987ee8bdcc",
-        "target_blob": "9c196c7ed3746f92a3e233969dbf343b58d18bea"
+        "target_sha256": "6be2b55b115708faa896222faf6f892ac8e7bb4e21190c303533f9aec2a682d3",
+        "target_blob": "0faece7f65f4d0b0b6b80295f3f7e604b714418c"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
@@ -1161,7 +1162,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "c0aa96d5ccf042d7520c08ccb089ee710a0b4e41e724cc9c813ab62186170bdd"
+        "sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1191,7 +1192,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "523fe541c3416ec8417c375a5e7f3d0f62d9c7100cfb1ced9e93e3355bda6ea4"
+        "sha256": "0c8176a78c7b491e18cf1b023f63a1f3dab2b02f75940b640e4487d4e0536ff9"
       },
       {
         "path": "docs/known-limitations.md",
@@ -1285,7 +1286,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "c0aa96d5ccf042d7520c08ccb089ee710a0b4e41e724cc9c813ab62186170bdd"
+        "sha256": "4bc3d3fe91a3dfb306dafafd979f7b5194ca14987694e6dbeba7941a972ccbf3"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1330,7 +1331,7 @@
       {
         "path": "docs/distribution/source-first-installer.md",
         "mode": "100644",
-        "sha256": "523fe541c3416ec8417c375a5e7f3d0f62d9c7100cfb1ced9e93e3355bda6ea4"
+        "sha256": "0c8176a78c7b491e18cf1b023f63a1f3dab2b02f75940b640e4487d4e0536ff9"
       },
       {
         "path": "docs/known-limitations.md",
