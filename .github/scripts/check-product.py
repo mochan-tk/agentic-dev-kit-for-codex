@@ -53,6 +53,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
 }
 TEST_MODULES = (
+    "test_installed_preflight.py",
     "test_roadmap_preflight.py",
     "test_chat_tree.py",
     "test_adoption_evidence.py",
@@ -67,10 +68,10 @@ TEST_MODULES = (
 )
 # Exact current adaptations; the original export seal is never rewritten.
 WORKFLOW_EXPORT_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3",
+    ".github/distribution/payload.v1.tsv": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "3d70a52eb26fc3bfe16a61d23f47ab93b4fb2bceb69ef82ff561173d0fcb8a2b",
     ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "65afd89ad118d0d77336e758f0ba5b45508b9679a6962f9113814230f3bcef5c",
-    ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69",
+    ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
     ".github/distribution/payload/.github/scripts/setup-ruleset.sh": "84ecc688a1c84d398af7ce6a975a00770b2e1acc7d326828e0540b8d63ed5bba",

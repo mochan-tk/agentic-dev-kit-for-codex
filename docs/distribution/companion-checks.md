@@ -78,6 +78,12 @@ conflicting residual gates are not treated as success.
 
 ## Worktree: check a planned action without doing it
 
+This helper is optional automation. A fresh adopter can use the self-contained
+read-only observations and mandatory manual comparison in its installed
+`session-orchestration` Skill without downloading a helper or cloning this kit.
+The block below additionally parses the worktree inventory; neither route
+establishes current durable ownership, an exclusive lock or write authority.
+
 Supply the actual Git worktree root, planned branch, actual writer reference
 and a current claim readback file. The JSON shape is `{"claims":[...]}`; each
 entry has `branch`, `worktree`, `writer`, and `state` (`active` or `released`).
