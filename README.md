@@ -58,15 +58,23 @@ Before installation, prepare your specification context and create/select
 the adopter's Codex project as described below. Platform-specific installation
 utilities are listed in [step 1](#1-install-in-your-project).
 
-The optional GitHub Projects roadmap also needs Projects access: `read:project`
+The GitHub Projects roadmap is **required by default**, with durable scoped
+exceptions when the environment cannot create/use it or the owner explicitly
+declines Projects. It needs Projects access: `read:project`
 for queries and `project` for creation/updates with classic/OAuth credentials
 ([GitHub's scope guidance](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects)).
 Repository access alone is insufficient. If scopes are missing, the owner can
 run `gh auth refresh -s project` for stored `gh` credentials; environment tokens
 or other credential types may need their own permission update. The kit reports
 the gap early and asks separately before creating a board. It never refreshes
-credentials automatically, and a declined/unavailable board does not block
-Issue-based planning or development.
+credentials automatically. Record a declined/unavailable exception on the
+relevant Epic/Tasks; Issue-based planning and development can continue.
+Creation and date application need their applicable authorization. A pending
+answer or a date-only defer/decline is not a Project exception: otherwise
+authorized work may proceed, but required close-out stays pending. Before a
+Task is reported complete, verify Kind `Task` and both authorized dates on its
+exact Project item, or cite its exception. See the
+[close-out procedure](.github/distribution/payload/.agents/skills/plan-management/SKILL.md#required-per-task-project-close-out).
 
 ### Before you start: prepare context and a Codex project
 
@@ -328,7 +336,9 @@ handoff based on the committed files and GitHub records.
 
 The three shipped role definitions provide instructions. They do not establish
 authenticated identities or guarantee native role selection. A GitHub Projects
-board is optional; the Issue graph remains authoritative.
+board is required by default with the two recorded exceptions above; the Issue
+graph remains authoritative. A board match is verification evidence, not
+acceptance or merge authority.
 
 ### Human-on-the-Loop by design
 

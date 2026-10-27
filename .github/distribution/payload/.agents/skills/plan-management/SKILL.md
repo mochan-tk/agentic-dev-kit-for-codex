@@ -31,7 +31,7 @@ Requires GitHub CLI **v2.94.0 or later** (native `--parent`, `--blocked-by`,
 | Ready gate | label `ai:ready` | present only when the brief is complete enough for a context-free agent |
 | Plan exceptions | labels `needs:replan`, `needs:human` | set by executors; consumed by planner/orchestrator |
 | Risk gate | label `risk:high` | exception only: the task pauses after its plan comment until approved (see Intervening, and `session-orchestration`) |
-| Portfolio view | GitHub Project (optional) | group by Epic, surface `Blocked` markers; keep Project fields derived from issues, not the reverse |
+| Portfolio view | GitHub Project (required by default) | group by Epic, surface `Blocked` markers; record environmental inability or explicit owner decline as a scoped exception; fields remain derived from issues |
 
 **Tracking-graph rule.** Diagnosis walks exactly four edge types: Epic →
 sub-issue, `blocked-by`, in-body `#N` citations, and PR `Closes #N`. The one
@@ -44,9 +44,10 @@ this.
 
 0. **Own the roadmap decision here, before the first decomposition.** Reuse
    the onboarding observation and follow [Roadmap access and consent](#roadmap-access-and-consent)
-   below before offering or writing to `<repo> roadmap`. Distinguish missing
-   scopes, an observed absent board, and an owner decline; none blocks Task
-   decomposition. Once
+   below before creating or writing to `<repo> roadmap`. Projects is required
+   by default; distinguish recorded environmental inability, an observed absent
+   board, and explicit owner decline. Pending consent does not block otherwise
+   authorized decomposition, but does not satisfy required close-out. Once
    the board exists, backfill every open `type:epic` issue returned by
    `gh issue list --label type:epic --state open` with `bash .github/scripts/setup-project.sh add`;
    onboarding created those sibling Epics before this first decomposition, so
@@ -191,7 +192,13 @@ authenticated actor boundary or protection from later concurrent changes.
 ## Roadmap access and consent
 
 Use this read-only preflight during onboarding P1 and before the first
-decomposition. Resolve the repository and intended Project owner first. Search
+decomposition. **GitHub Projects is required by default.** The only default
+exceptions are an environment that cannot create/use Projects or an explicit
+owner decision not to use a Project. Record the scope, reason/evidence, decision
+link when applicable, and next action durably on the Epic/Task. A board is still
+a projection: the Issue graph remains authoritative. An absent board, an
+unanswered question, stale history, or a mismatched field is not an exception.
+Resolve the repository and intended Project owner first. Search
 all `type:epic` issues, open and closed, for an applicable owner decision and
 the latest roadmap observation. A current `Roadmap board: declined` is a
 repository-wide opt-out: cite it and do not ask again unless the owner changes
@@ -268,16 +275,21 @@ values/auth dumps into evidence. Environment-supplied credentials may require
 the owner to adjust their credential source instead; refreshing stored `gh`
 credentials is not proof that the active credential changed.
 
-Before decomposition, offer one scoped choice when no current decision exists:
-create the roadmap after the owner resolves access, decline it, or continue
-without it for now. Record the response; silence means pending, never decline
-or permission. On consent **and** verified write access, run the existing
+Before decomposition, request the scoped creation/use decision when it is not
+already authorized, recommending the roadmap. Record an explicit Project
+decline or evidenced environmental inability as an exception; a request to
+continue while the decision is pending does not waive required close-out.
+Silence means pending, never decline or permission. On consent **and** verified
+write access, run the existing
 `bash .github/scripts/setup-project.sh init` for the reviewed owner/repository
 and read back its board identity and repository link. Authentication changes,
 board creation, and proposed date writes are separate decisions. No `init`,
 `add`, or `dates` writes occur with missing access or missing write consent.
-An unavailable/declined board or a pending answer never blocks otherwise
-authorized Issue/Task decomposition.
+A recorded unavailable/declined exception permits Issue-based work and close-out
+without fabricated board proof. A pending answer permits otherwise authorized
+Issue/Task decomposition and implementation, but required close-out remains
+pending. Unknown access alone is not a completed exception: record what cannot
+be used and why, without inventing an owner decision or broadening permissions.
 
 Publish the bounded observation on the current Epic, with its first line
 `Roadmap board: scope-missing`, `absent`, `declined`, `available`, or
@@ -290,13 +302,15 @@ decomposition handoff. A local draft or a final chat alone is not durable proof.
 
 ## Roadmap scheduling
 
-Optional: visualize Epics and Tasks as spans on a Projects v2 roadmap. The
+Visualize Epics and Tasks as spans on the required-by-default Projects roadmap,
+unless a scoped exception above applies. The
 board stays a *view* of the issue graph — fields are derived from issues,
 never the reverse (see the Portfolio view row in the Data model). Rolling-wave
 steps 0, 1, 3, and 6 own *when* the board is offered, populated, and scheduled.
-Once a board is in use, proactively propose dates instead of leaving its
-items empty until the human asks again. A declined/unavailable board or a
-pending date decision does not block otherwise authorized decomposition.
+Proactively propose dates instead of leaving items empty until the human asks
+again. A recorded Project exception or pending date decision does not block
+otherwise authorized decomposition/implementation. Date consent remains
+separate; pending dates cannot satisfy required Task close-out.
 
 ### Proposed dates and application
 
@@ -326,7 +340,9 @@ pending date decision does not block otherwise authorized decomposition.
    duplicate approval round. Board creation consent alone does not authorize
    date writes. With no answer, pause only date application and end with the
    question; silence, a vanished dialog or elapsed time is not consent. An
-   explicit decline/defer leaves dates unchanged and is recorded.
+   explicit date decline/defer leaves dates unchanged and is recorded. It is
+   not a decline of Projects or an environmental exception; required close-out
+   remains pending until the schedule decision or work order is resolved.
 4. Before Project writes, record the authorized proposal, assumptions and
    decision on the relevant Epic/Task Issues. A shared table on the Epic may
    cover its Tasks; each affected Issue must link to its schedule record.
@@ -385,6 +401,53 @@ correct or require no action. Missing fields/items, mismatches, partial reads,
 errors or unreadable results remain non-success. Stop affected application and
 report the gap; observation never approves dates, repairs fields or retries
 writes automatically.
+
+### Required per-Task Project close-out
+
+Before reporting `Outcome: completed`, the supervisor records either current
+matching Project evidence or a scoped Project exception on the Task and in the
+PR evidence. Read the current schedule decision first; never pass invented or
+unapproved dates as expectations. Task Kind must be `Task` (the helper also
+supports `Epic` for an Epic comparison). Set the identity variables above and
+`ROADMAP_EXPECT_START` / `ROADMAP_EXPECT_TARGET` from that authorized record:
+
+<!-- BEGIN roadmap-field-verify -->
+```bash
+bash .github/scripts/setup-project.sh verify \
+  --repo "${ROADMAP_REPOSITORY:?set the reviewed owner/repo}" \
+  --owner "${ROADMAP_OWNER:?set the reviewed Project owner}" \
+  --project "${ROADMAP_PROJECT:?set the reviewed Project number}" \
+  --issue "${ROADMAP_ISSUE:?set the exact Task Issue number}" \
+  --expect-kind Task \
+  --expect-start "${ROADMAP_EXPECT_START:?read the authorized Start date}" \
+  --expect-target "${ROADMAP_EXPECT_TARGET:?read the authorized Target date}"
+```
+<!-- END roadmap-field-verify -->
+
+The query-only verifier invokes the existing reader once. Exit 0 and
+`project-field-verification/v1` `state: match` require all three exact values.
+Its `observation` contains the unchanged typed readback and exact identities;
+`expected` and `differences` show the comparison. Exit 1 is `mismatch`/`missing`,
+2 invalid expectations/usage, and 3 `uncheckable` (no trusted observation).
+Record the command, observation time, current PR head, Project/Issue/item
+identity, all expected/observed values, result and schedule-decision link.
+Use the exact-item UI alternative above only with the same complete comparison
+and evidence; CLI-null, Status alone or write success cannot substitute.
+
+| Situation | Required disposition before Task close-out |
+|---|---|
+| Project available, Kind and authorized dates match | Record the current comparison; retain all other verification and human acceptance gates. |
+| Environment cannot create/use Projects | Record the scoped inability and bounded evidence/reason on the Task; cite this exception in PR evidence. No permission expansion. |
+| Owner explicitly declines Projects | Read and cite the current scoped owner decision; record the exception. Silence is not decline. |
+| Project creation/use or date decision pending, including date-only defer/decline | Keep required close-out pending; ask the concrete decision/replan. Authorized implementation may continue. |
+| Values missing/mismatched or observation uncheckable | Report the gap and stop the affected verification; do not fabricate a match or automatically repair fields. |
+
+An exception is a separate durable disposition, never a fake verifier match or
+a bypass flag. Reuse applicable exception records without repeatedly asking;
+recheck when their conditions change. Run the verifier under existing authorized
+Projects access, not unconditionally in repository-token CI. Evidence prose is
+not live-state proof, the comparison does not verify consent, and a Project
+never changes Issue authority or grants acceptance/merge permission.
 
 ### Existing Project commands
 

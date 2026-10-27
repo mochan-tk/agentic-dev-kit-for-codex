@@ -17,6 +17,14 @@ session-orchestration skill; plan text auto-written here is a copy) -->
 | Criterion | Evidence (command / link) | Result |
 |---|---|---|
 |  |  |  |
+| Project close-out | Exact Project/Issue/item identity, observation time/current head, Kind `Task` and authorized Start/Target comparison + schedule-decision link; or scoped environmental-inability / explicit-Project-decline exception link | match / exception / pending / non-success |
+
+<!-- Projects is required by default; the Issue graph remains authoritative.
+     Pending creation/date consent or date-only defer/decline is not a Project
+     exception. Do not report Task completion while required close-out is pending.
+     Use the installed setup-project.sh verify (or complete exact-item UI proof)
+     under existing authorized access; prose and write success are not live proof.
+     No unconditional Projects API call from repository-token CI is implied. -->
 
 ## Deviations
 
@@ -42,4 +50,6 @@ None.
 - [ ] Every command in the issue's **Verification** section was run; output captured above.
 - [ ] No test, lint rule, or CI check was deleted, skipped, or weakened.
 - [ ] Record-before-report comment posted on the Task issue.
+- [ ] Required Project close-out has matching Kind/authorized-date evidence or a
+      linked scoped environment / explicit owner Project-decline exception.
 - [ ] All persistent artifacts in this PR are English-only.

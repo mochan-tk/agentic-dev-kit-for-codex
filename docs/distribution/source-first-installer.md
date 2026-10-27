@@ -12,13 +12,17 @@ repository, authenticated `gh`, `jq`, Git/Bash and Windows-specific tools,
 before starting. Codex CLI or the IDE extension alone does not satisfy the
 desktop requirement.
 
-For the optional Projects roadmap, repository authentication alone is not
+For the required-by-default Projects roadmap, repository authentication alone is not
 enough: queries need `read:project`, and creation/updates need `project` with
 classic/OAuth credentials. See [Projects prerequisites](../../README.md#prerequisites).
 Onboarding checks access early and records a scope failure separately from an
 absent or declined board. `gh auth refresh -s project` is an owner-operated
 remedy for stored `gh` credentials, never an automatic setup step. Board writes
-still need consent; planning can continue through Issues without a board.
+still need consent. Record a scoped exception for an environment that cannot
+create/use Projects or an explicit owner decline of Projects; Issue-based work
+can then proceed without fabricated board proof. Pending creation/date consent
+does not become an exception. Approved implementation may continue while an
+answer is pending, but required Task close-out must wait.
 
 If the desktop app offers ChatGPT and Codex in its product selector, choose
 Codex for the kit's installation/onboarding/development work. ChatGPT Chat or
@@ -79,7 +83,7 @@ gate, a required external connector, or automatic context synchronization.
    material and model questions explicitly; no answer is not `auto`.
 
 The Codex project is an execution context, distinct from a ChatGPT project
-used to prepare documents and from an optional GitHub Projects board. The
+used to prepare documents and from the GitHub Projects roadmap projection. The
 kit neither creates those app projects nor transfers conversation history.
 GitHub records and reviewed repository files remain the durable work record.
 
@@ -346,6 +350,40 @@ affected verification. An explicit alternative is to open that exact Project
 item in GitHub's UI and inspect all three fields, recording the item/Issue link,
 observed values and comparison outcome; do not substitute an ambiguous CLI null.
 See GitHub's [typed Project field schema](https://docs.github.com/en/graphql/reference/projects).
+
+### Verify required Task close-out
+
+Before reporting Task completion, compare the exact item's Kind `Task`, Start
+date and Target date with the current authorized schedule record:
+
+```sh
+bash .github/scripts/setup-project.sh verify --owner OWNER --project 7 --issue 23 -R OWNER/REPO \
+  --expect-kind Task --expect-start YYYY-MM-DD --expect-target YYYY-MM-DD
+```
+
+Replace the placeholders with the real identities and authorized dates; never
+invent values to pass. Expected dates must be valid calendar dates in order.
+The verifier calls the existing typed reader once, without writing or retrying.
+Its `project-field-verification/v1` JSON contains `expected`, the complete
+reader `observation`, and `differences`. Exit 0 / `match` means all three values
+match; exit 1 is `mismatch` or `missing`; exit 2 rejects invalid inputs before
+queries; exit 3 is `uncheckable` with no trusted observation. A match does not
+prove schedule authorization, final acceptance, or future board state.
+
+Record the command, current PR head, observation time, exact identities,
+expected/observed values, comparison and schedule-decision link in the Task and
+PR evidence. The exact-item UI alternative needs the same complete comparison.
+The two Project exceptions are documented environmental inability and explicit
+owner Project decline: record the scoped reason/evidence or decision link
+instead of a fake match. No helper bypass flag accepts an exception. An
+unanswered date question or a date-only defer/decline leaves close-out pending,
+even if implementation continues; it does not waive Project use. Resolve the
+specific schedule decision or work order with the owner.
+
+Run this under existing authorized Projects access, never unconditionally from
+ordinary repository-token CI. Text in an evidence table is not a substitute
+for actual observations. The Issue graph remains authoritative, and neither
+the verifier nor this policy grants board-write or permission-change authority.
 
 ## Upgrade preservation and operation-scoped rollback
 

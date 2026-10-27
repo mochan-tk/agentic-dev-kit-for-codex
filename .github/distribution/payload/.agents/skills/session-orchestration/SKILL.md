@@ -266,14 +266,19 @@ Task and plan before continuing. A cache edit is not authorization.
 **Verify** (before any completion claim): run every command in the issue's
 Verification section; then confirm external state with commands, e.g.
 `gh pr view <pr> --json state,statusCheckRollup`, `gh pr checks <pr>`,
-`git status --short` (must be clean). When the Task tracked Project items,
-use the installed planning Skill's [Project field readback](../plan-management/SKILL.md#project-field-readback)
-to bind the exact repository/Project/Issue item and compare typed Kind and date
-values with the current authorized proposal (or record the exact-item UI
-alternative). `gh project item-list --format json` establishes membership only,
-not Kind/date equality. Missing or uncheckable values are non-success, never
-permission to repair fields or approve dates. Evidence = command/observation +
-identity, values and comparison.
+`git status --short` (must be clean). Projects is required by default: apply
+[required per-Task Project close-out](../plan-management/SKILL.md#required-per-task-project-close-out).
+Record the exact-item `verify` result for Kind `Task` and both authorized dates
+(or the complete exact-item UI comparison), with schedule decision, observation
+time and current PR head. Alternatively cite a scoped durable exception for
+environmental inability to create/use Projects or explicit owner Project decline.
+Pending creation/date decisions and date-only decline/defer are not Project
+exceptions; authorized implementation may continue but required close-out stays
+pending. `gh project item-list --format json`, Status alone and write success
+cannot prove Kind/date equality. Missing, mismatched or uncheckable fields are
+non-success, never permission to repair fields or approve dates. Do not report
+`Outcome: completed` until this disposition and all other criteria are met.
+The Issue graph remains authoritative; verifier equality is not acceptance.
 
 **Record before report** — the supervisor posts this comment on the Task issue, then (and
 only then) message the parent:
@@ -285,6 +290,7 @@ only then) message the parent:
 | Criterion | Evidence (command / link) | Result |
 |---|---|---|
 | AC1 ... | `pio test -e native` -> 12 passed | pass |
+| Project close-out | <exact-item Kind/date comparison + schedule record, or scoped Project exception link> | <match / exception / pending / non-success> |
 **Deviations:** <none, or what differs from the brief and why>
 **Follow-ups:** <suggested downstream issue changes, or none>
 **Scaffold friction:** <none | retro:candidate issue link>

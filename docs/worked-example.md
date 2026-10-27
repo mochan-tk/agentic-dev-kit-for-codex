@@ -54,8 +54,11 @@ not actions performed by opening this guide.
    `AGENTS.md` and the required Skills. Do not claim automatic discovery was
    tested by this example.
 4. Complete the real onboarding decisions and review gate before starting the
-   Task. Projects/Rulesets choices remain real human decisions: this guide
-   neither declines nor authorizes them for you. Verify the baseline command
+   Task. Projects is required by default; record a scoped exception only for
+   environmental inability to create/use it or an explicit owner Project decline.
+   Rulesets, Project creation and date application still need their applicable
+   human decisions: this guide neither declines nor authorizes them for you.
+   Verify the baseline command
    below in the application repository. If onboarding is incomplete, tools are
    missing, or there is no test baseline, stop and follow the applicable installed
    procedure rather than silently assuming the example's prerequisites.
@@ -76,8 +79,10 @@ Read the installed `plan-management` and `session-orchestration` Skills. The
 [Epic template](../.github/distribution/payload/.agents/skills/plan-management/templates/epic-body.md)
 and [Task template](../.github/distribution/payload/.agents/skills/plan-management/templates/task-body.md)
 are the source for these shapes. Reuse an appropriate existing Epic; create one
-only with the applicable authority. An optional Projects board is a projection,
-not a substitute for the Issue graph. Publishing any Issue or comment is an
+only with the applicable authority. The required-by-default Projects board
+(or its recorded exception) does not replace the authoritative Issue graph.
+Propose the Task dates using the installed planning Skill; do not apply them
+without the applicable authorization. Publishing any Issue or comment is an
 explicit write; the following blocks do not publish anything.
 
 Illustrative Epic body:
@@ -240,6 +245,18 @@ is non-success; rerun the sensor if the head or Task/plan evidence changes.
 Replace `NOT_RUN` only with observed results bound to the actual candidate head.
 An independent review can be advisory; neither model praise nor green CI is a
 human acceptance/merge decision.
+
+Before Task close-out, follow the installed planning Skill's
+[required Project close-out](../.github/distribution/payload/.agents/skills/plan-management/SKILL.md#required-per-task-project-close-out).
+Use `setup-project.sh verify` with the actual Project/Issue identity, expected
+Kind `Task` and both authorized dates; record its comparison (or the complete
+exact-item UI proof), observation time, current PR head and schedule-decision
+link. Alternatively cite the Task's scoped environmental-inability or explicit
+Project-decline exception. This example supplies neither consent nor an
+exception. Missing/mismatched/uncheckable fields cannot pass; pending creation
+or date decisions, including a date-only defer/decline, keep required close-out
+pending while already-authorized implementation may continue. Do not add a
+Projects API query to ordinary repository-token CI or silently broaden scopes.
 
 Before the final narrative report, the supervisor records the structured Task
 outcome comment and updates the PR evidence using the installed session
