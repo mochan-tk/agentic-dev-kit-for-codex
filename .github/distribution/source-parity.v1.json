@@ -99,11 +99,12 @@
       "destination": ".agents/skills/session-orchestration/SKILL.md",
       "source_path": ".github/skills/session-orchestration/SKILL.md",
       "source_blob": "d50002b5a95fef18fb651cd4fe31b459593bedb0",
-      "target_sha256": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69",
+      "target_sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
       "adaptations": [
         "Retain roles, Task/PR ownership, dispatch/plan/outcome chronology, risk/recovery/escalation; replace Copilot APIs/parent nesting with verified Codex surface or explicit manual handoff; ritual sensor not enabled CI.",
         "Explain bounded whole legacy/tool-scoped identifiers, separate actual reference from navigation/display names, and avoid a future PR-number requirement or identity/authentication claims.",
-        "Add an optional requested desktop chat-tree display: consent-gated shared manual order, existing-project identity mapping, subtree-aware insertion and honest partial-state evidence; no runtime, native nesting, dispatch authority or additional payload paths. Carry a scoped durable display decision through Epic-to-Task and worker handoffs; keep display-only chat mappings separate from executing references and continue authorized work when display is declined or unavailable."
+        "Add an optional requested desktop chat-tree display: consent-gated shared manual order, existing-project identity mapping, subtree-aware insertion and honest partial-state evidence; no runtime, native nesting, dispatch authority or additional payload paths. Carry a scoped durable display decision through Epic-to-Task and worker handoffs; keep display-only chat mappings separate from executing references and continue authorized work when display is declined or unavailable.",
+        "Issue #64: installed local Git/claim observations and mandatory manual comparison replace the undefined checkout invocation; pinned companion remains optional. No automated occupancy/ownership verdict or action authority is claimed."
       ]
     },
     {
@@ -791,7 +792,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69"
+        "sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/retro/SKILL.md",
@@ -903,7 +904,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3"
+        "sha256": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -918,7 +919,7 @@
       {
         "path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md",
         "mode": "100644",
-        "sha256": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69"
+        "sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -966,8 +967,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3",
-        "target_blob": "f8457757f3994bf04e3885def1de259f2d3da9ad"
+        "target_sha256": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28",
+        "target_blob": "8e6dd7ba14f129c7c8fe3874d5ac8d183a03dd8d"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1002,8 +1003,8 @@
           "sha256": "d12aee29d7c768d2945229c6cc5a662a518ea89fdffff9e0d55e3bd2428a872b"
         },
         "target_mode": "100644",
-        "target_sha256": "48768e0d3091e73aa3b362bb3fd2ef83f5e075a4b13e7cb51b393da0026aed69",
-        "target_blob": "95a139f7696ca740b91c4f0955308ccaf527f525"
+        "target_sha256": "16f85fc1b9076af2af7704e0e48d5fab07bf62bb5df1e880b2d1e280fe52d5f8",
+        "target_blob": "82f497f5abe7478b905abd7c7edd30d57b9c73fd"
       },
       {
         "path": ".github/distribution/payload/.github/codex-instructions.md",
@@ -1140,7 +1141,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3"
+        "sha256": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
@@ -1264,7 +1265,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3"
+        "sha256": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
@@ -1304,7 +1305,7 @@
       {
         "path": "docs/distribution/companion-checks.md",
         "mode": "100644",
-        "sha256": "f020b57f6fdf9a2b9d2cf9fe1f79046594e2984cd36fe47d027497c058ceb762"
+        "sha256": "157e9a501961391c5832f37bd082bdd8f3096b59d0101b845c4ac497a3ffdfd4"
       },
       {
         "path": "docs/distribution/source-first-installer.md",

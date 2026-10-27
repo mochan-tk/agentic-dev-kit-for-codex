@@ -1053,7 +1053,7 @@ BOUNDARY_TARGETS = tuple(sorted((*BOUNDARY_BASE_PATHS, INVENTORY,
 )))
 BOUNDARY_DIGESTS = {
     ".github/distribution/adopter-ci/check-adopter-ci.py": "0bed9fa2501864eb68330bd6d6aecf228695320faaa146be5c47a5bda082a4fd",
-    ".github/distribution/payload.v1.tsv": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3",
+    ".github/distribution/payload.v1.tsv": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "319710322bbc97984bd6c5f17c81730cc4cbf400702f16b1f88a12ba5c8a33f7",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
     ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
@@ -1149,7 +1149,7 @@ FINAL_TARGETS = tuple(sorted((*FINAL_BASE_PATHS, INVENTORY,
     "docs/known-limitations.md", "docs/provenance.md", "docs/product-scope.md", "docs/parity-status.md",
 )))
 FINAL_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "73c444cad6d6cf6fe45fe45f47de2f4fda67f671db2aa980b1dcc90917d1ecb3",
+    ".github/distribution/payload.v1.tsv": "6d4f94b378085469d6f4cc70eff51fe40041dfae164094a23c7799577c7afe28",
     ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
@@ -1157,7 +1157,7 @@ FINAL_DIGESTS = {
     ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
     ".github/scripts/setup-adopter-ci.py": "bc71de2c2dbc35bd7d2a53749b710e54618d7286d24784720eda261c39b4993c",
     "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
-    "docs/distribution/companion-checks.md": "f020b57f6fdf9a2b9d2cf9fe1f79046594e2984cd36fe47d027497c058ceb762",
+    "docs/distribution/companion-checks.md": "157e9a501961391c5832f37bd082bdd8f3096b59d0101b845c4ac497a3ffdfd4",
     "docs/distribution/source-first-installer.md": "e081c60892c315934a49a47ca935091d5cf396ca5962935077c015d8bc0fc761",
     "docs/known-limitations.md": "f499ef7d9c641bf9d0fa2080a52235ec40455ea75fff93d19fbb3110504da65f",
     "docs/parity-status.md": "cdaa3158ce05f722a6183e72559663033903cd61d89bd8cffa8ac8a2e469e79c",

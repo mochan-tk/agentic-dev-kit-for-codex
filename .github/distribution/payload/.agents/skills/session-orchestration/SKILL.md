@@ -515,31 +515,92 @@ the current client's rendering, message delivery or model compliance.
 
 ### Reproducible worktree preflight
 
-Before a planned push, claim or archive, invoke the standalone companion from
-a reviewed kit checkout. It is not one of the installed 47 paths. Supply the
-actual target root and a bounded JSON readback of current durable declarations:
+Before a planned push or claim, use the installed observation block and manual
+comparison below. No kit checkout, download or uninstalled helper is required.
+Set `TASK_WORKTREE` to the actual worktree root, `PLANNED_BRANCH` to its intended
+branch, `ACTUAL_WORKER` to the verified worker reference, `PREFLIGHT_ACTION` to
+`push` or `claim`, and `CLAIM_READBACK` to a current local JSON readback of
+the durable declarations (at most 1 MiB and 128 claims):
 `{"claims":[{"writer":"actual-reference","branch":"planned-branch","worktree":"/actual/worktree","state":"active"}]}`.
-Use `released` only for an observed release. This data records declarations;
-the supervisor still verifies the actual worker and current Issue/PR ledger.
+Use physical absolute worktree paths and `released` only for an observed
+release. Do not manufacture this readback from the branch you hope to use.
+Keep the target and claims unchanged while observing. Output contains local
+paths: inspect locally and publish only a bounded conclusion and ledger links.
 
+<!-- BEGIN installed-worktree-observations -->
 ```bash
-bash "$REVIEWED_KIT/.github/scripts/worktree-preflight.sh" \
-  --target "$TASK_WORKTREE" --branch "$PLANNED_BRANCH" \
-  --writer "$ACTUAL_WORKER" --claims "$CLAIM_READBACK" --action push
+(
+  set -eu
+  : "${TASK_WORKTREE:?set the actual worktree root}" "${PLANNED_BRANCH:?set the planned branch}"
+  : "${ACTUAL_WORKER:?set the verified worker}" "${CLAIM_READBACK:?supply current claims}" "${PREFLIGHT_ACTION:?select push or claim}"
+  case "$PREFLIGHT_ACTION" in
+    push|claim) ;;
+    archive) printf '%s\n' 'UNKNOWN: archive needs current evidence and explicit human cleanup authority.'; exit 3 ;;
+    *) exit 2 ;;
+  esac
+  for context in GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_CONFIG GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS; do
+    [ -z "${!context+x}" ] || { printf '%s\n' 'UNKNOWN: inherited Git context can redirect observation; use a clean shell.'; exit 3; }
+  done
+  export GIT_OPTIONAL_LOCKS=0
+  target=$(cd "$TASK_WORKTREE" && pwd -P) || exit $?
+  root=$(git -C "$target" rev-parse --show-toplevel) || exit $?
+  [ "$target" = "$root" ] || { printf '%s\n' 'REFUSED: target is not the worktree root.'; exit 1; }
+  git -C "$target" check-ref-format "refs/heads/$PLANNED_BRANCH" || exit $?
+  head_branch=$(git -C "$target" symbolic-ref --quiet --short HEAD) || {
+    code=$?; [ "$code" = 1 ] || exit "$code"; head_branch='';
+  }
+  if [ "$PREFLIGHT_ACTION" = push ] && [ "$head_branch" != "$PLANNED_BRANCH" ]; then
+    printf '%s\n' 'REFUSED: detached HEAD or current branch differs from planned push.'; exit 1
+  fi
+  [ -f "$CLAIM_READBACK" ] && [ ! -L "$CLAIM_READBACK" ] && [ "$(wc -c < "$CLAIM_READBACK")" -le 1048576 ] || exit 3
+  jq -es --arg target "$target" --arg branch "$PLANNED_BRANCH" --arg writer "$ACTUAL_WORKER" '
+    length==1 and (.[0]|type=="object" and keys==["claims"] and (.claims|type)=="array" and (.claims|length)<=128
+      and all(.claims[];type=="object" and (keys|sort)==["branch","state","worktree","writer"]
+        and ([.branch,.worktree,.writer]|all(.[];type=="string" and length>0 and (test("[[:cntrl:]]")|not)))
+        and (.worktree|startswith("/") and (test("//|/\\.(/|$)|/\\.\\.(/|$)")|not))
+        and (.state=="active" or .state=="released"))
+      and ([.claims[]|select(.state=="active" and (.worktree==$target or .branch==$branch))] as $active
+        | ($active|length)==1 and $active[0].writer==$writer and $active[0].worktree==$target and $active[0].branch==$branch))' \
+    "$CLAIM_READBACK" >/dev/null || { printf '%s\n' 'REFUSED: invalid, missing or conflicting declared claims.'; exit 1; }
+  printf '%s\n' "Target: $target" "Current branch: ${head_branch:-DETACHED}" "Planned branch: $PLANNED_BRANCH"
+  git -C "$target" rev-parse --verify HEAD || exit $?
+  git -C "$target" -c core.quotePath=true status --short --untracked-files=all || exit $?
+  git -C "$target" -c core.quotePath=true worktree list --porcelain || exit $?
+  jq . "$CLAIM_READBACK" || exit $?
+  printf '%s\n' 'Observations collected; manual comparison required. This is not a verdict or action authority.'
+)
 ```
+<!-- END installed-worktree-observations -->
 
-Use `--action claim` before assigning a branch, or `--action archive` before
-considering archive/delete. Detached pushes and another worktree occupying
-the planned branch stop. Preserve commits and tracked/untracked changes;
-create or attach the intended branch only after resolving ownership. Never
-use force, unlock or prune to take a branch from another worker.
+**The supervisor must complete the comparison before proceeding.** Exit 0
+means observations were collected, not that ownership or occupancy passed:
 
-Archive always warns and returns non-success because this companion does not
-verify durable evidence/handoff or authorize cleanup. Retain diffs, commits,
-untracked recovery files and the handoff until a human inspects the current
-records and explicitly authorizes the exact cleanup. A nonempty URL or local
-file is not that evidence. The command performs read-only Git observations;
-it supplies no kernel lock, process-stop or client-native archive guarantee.
+- Compare the physical root, HEAD, current/planned branch and tracked/untracked
+  state with the Task plan and intended action. Detached pushes stop.
+- Inspect the complete worktree inventory: the target appears exactly once;
+  every record is complete; no other worktree occupies `refs/heads/<planned
+  branch>`. Decode Git-quoted paths when comparing. A missing, truncated or
+  ambiguous record is `UNKNOWN`, not an empty/available branch. Any conflicting
+  occupant stops; never force, unlock or prune to take another worker's branch.
+- Compare the claim readback with the **current Issue/PR ledger and actual
+  worker state**: exactly one active writer owns the target/branch, and any
+  predecessor has a verified release/handoff. JSON validity does not prove
+  freshness, authority or termination. Missing access, stale claims, uncertain
+  worker state or any failed command stops the action.
+- Record the bounded comparison and links before the separately authorized
+  action. Preserve commits and tracked/untracked changes when resolving a
+  mismatch; create or attach a branch only after ownership is resolved.
+
+Archive/delete remains non-success until a human inspects current evidence,
+handoff and recovery material and explicitly authorizes the exact cleanup.
+A nonempty URL or local file is not that evidence. These observations supply
+no exclusive lock, process-stop or client-native archive guarantee.
+
+For optional automated inventory parsing, use the
+[pinned worktree companion procedure](https://github.com/mochan-tk/agentic-dev-kit-for-codex/blob/main/docs/distribution/companion-checks.md#worktree-check-a-planned-action-without-doing-it).
+It specifies the fixed revision, digest, inputs and inspect-before-execute
+steps; it is outside the installed payload and never fetched implicitly.
+Its success still requires the supervisor's current durable ownership check.
 
 Sessions die without warning — network, quota, machine sleep, closed laptop.
 The scaffold has **no dedicated resume machinery** on purpose: the ordinary
