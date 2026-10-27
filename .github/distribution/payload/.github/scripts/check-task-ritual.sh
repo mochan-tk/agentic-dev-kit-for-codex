@@ -408,7 +408,7 @@ api() {
 }
 
 # Ordinary verdicts bind one typed PR observation, not independent mutable
-# field reads. Base64 preserves body bytes without evaluating shell content.
+# field reads. Base64 preserves body/title bytes without evaluating content.
 observation_fail() {
   echo "FAIL: PR #${PR} ritual observation unavailable, malformed or changed ($1)." >&2
   exit 1
@@ -423,15 +423,18 @@ pr_query='
     or (.commits | type != "number" or . < 0 or floor != .)
     or (.user.login | token | not) or (.user.type | token | not)
     or (.body != null and (.body | type != "string"))
+    or (.title != null and (.title | type != "string"))
   then error("invalid PR observation") else
     [.number, .base.sha, .head.sha, .head.ref, .commits, .base.repo.full_name,
-     ("b" + ((.body // "") | @base64)), .user.login, .user.type] | @tsv
+     ("b" + ((.body // "") | @base64)), .user.login, .user.type,
+     ("b" + ((.title // "") | @base64))] | @tsv
   end'
 observe_pr() { api "repos/{owner}/{repo}/pulls/${PR}" --jq "$pr_query" 2>/dev/null; }
 pr_snapshot=$(observe_pr) || observation_fail pr-read
-IFS=$'\t' read -r observed_pr observed_base observed_head head_ref commit_count repo_full body_encoded author author_type <<< "$pr_snapshot"
+IFS=$'\t' read -r observed_pr observed_base observed_head head_ref commit_count repo_full body_encoded author author_type title_encoded <<< "$pr_snapshot"
 [[ "$observed_pr" == "$PR" ]] || observation_fail pr-identity
 body=$(printf '%s' "${body_encoded#b}" | base64 -d) || observation_fail pr-body
+observed_title=$(printf '%s' "${title_encoded#b}" | base64 -d) || observation_fail pr-title
 
 # Only dependency bots are exempt — they do not hold sessions. Cloud coding
 # agents also author PRs as bots (user.type == "Bot"), and those *do* run
@@ -502,12 +505,67 @@ read_blob() {
   [[ "$observed" == "$oid" ]] || return 1
   printf '%s' "$encoded" | base64 -d
 }
+# Epic citations are not Task claims. Only the documented standalone Refs
+# lines qualify; every cited Issue must be a typed Epic, then remain unchanged.
+epic_query='
+  if type != "object" or (.number | type != "number" or . < 1 or floor != .)
+    or (.state != "open" and .state != "closed") or .pull_request != null
+    or (.labels | type != "array")
+    or any(.labels[]; type != "object" or (.name | type != "string" or length == 0))
+  then error("invalid referenced Issue") else
+    [.number, .state, ([.labels[].name] | sort | tojson | @base64),
+     (any(.labels[]; .name == "type:epic") and all(.labels[]; .name != "type:task"))] | @tsv
+  end'
+observe_epic() { api "repos/{owner}/{repo}/issues/$1" --jq "$epic_query" 2>/dev/null; }
+bootstrap_epic_rows=''
+bootstrap_ref_numbers=''
+bootstrap_refs_syntax() {
+  local line remainder=''
+  local syntax='^[[:space:]]*[Rr][Ee][Ff][Ss]?[[:space:]]+([Ee][Pp][Ii][Cc][[:space:]]+)?#[1-9][0-9]*([[:space:]]*,[[:space:]]*#[1-9][0-9]*)*[[:space:]]*\.?[[:space:]]*$'
+  # Ignore ordinary prose such as "fixes the commands", but do not let URL,
+  # qualified or Markdown targets disappear from the bare-#N Task parser.
+  # Normalize the remaining whitespace so a line break cannot hide a target.
+  local relationship='(^|[^[:alnum:]_])(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?|references?)[[:space:]*_:]*([A-Za-z]+[[:space:]]+)?(#[^[:space:]]+|https?://|[[:alnum:]_.-]+/[[:alnum:]_.-]+#|\[[^]]*\]\()'
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ $syntax ]]; then
+      bootstrap_ref_numbers="$bootstrap_ref_numbers"$'\n'"$(printf '%s\n' "$line" | grep -oE '#[0-9]+' | tr -d '#')"
+    else
+      remainder="$remainder"$'\n'"$line"
+    fi
+  done <<< "$body"
+  if printf '%s\n' "$remainder" | tr '\r\n' '  ' | grep -qiE "$relationship"; then
+    return 1
+  fi
+  bootstrap_ref_numbers=$(printf '%s\n' "$bootstrap_ref_numbers" | sed '/^$/d' | LC_ALL=C sort -u)
+}
+bootstrap_epic_refs() {
+  local number count=0 row identity _state _labels is_epic
+  while IFS= read -r number; do
+    count=$((count + 1)); [[ $count -le 128 ]] || proof_fail onboarding-reference-bound
+    row=$(observe_epic "$number") || proof_fail onboarding-reference-read
+    IFS=$'\t' read -r identity _state _labels is_epic <<< "$row"
+    [[ "$identity" == "$number" ]] || proof_fail onboarding-reference-identity
+    [[ "$is_epic" == true ]] || return 1
+    bootstrap_epic_rows="$bootstrap_epic_rows"$'\n'"$row"
+  done <<< "$bootstrap_ref_numbers"
+}
+bootstrap_readback() {
+  local row number again
+  again=$(observe_pr) || proof_fail pr-readback
+  [[ "$again" == "$pr_snapshot" ]] || proof_fail pr-drift
+  while IFS= read -r row; do
+    [[ -n "$row" ]] || continue
+    number=${row%%$'\t'*}
+    again=$(observe_epic "$number") || proof_fail onboarding-reference-readback
+    [[ "$again" == "$row" ]] || proof_fail onboarding-reference-drift
+  done <<< "$bootstrap_epic_rows"
+}
 bootstrap_exception() {
   local base head base_tree head_tree base_agents head_agents base_instructions head_instructions
   local base_anchor head_anchor title base_text head_text changed allowed path rebound output
   command -v git >/dev/null 2>&1 || proof_fail git-unavailable
-  base=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.base.sha') || proof_fail base-commit
-  head=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.head.sha') || proof_fail head-commit
+  base=$observed_base
+  head=$observed_head
   base_tree=$(read_tree "$base") || proof_fail base-tree
   head_tree=$(read_tree "$head") || proof_fail head-tree
   base_agents=$(entry "$base_tree" AGENTS.md) || proof_fail base-agents-lookup
@@ -516,26 +574,37 @@ bootstrap_exception() {
   head_instructions=$(entry "$head_tree" .github/codex-instructions.md) || proof_fail head-instructions-lookup
   base_anchor=$(entry "$base_tree" "$ADOPTION_ANCHOR") || proof_fail base-anchor-lookup
   head_anchor=$(entry "$head_tree" "$ADOPTION_ANCHOR") || proof_fail head-anchor-lookup
-  reviewed_adoption_anchor "$head_anchor" || return 1
-  regular_blob "$head_agents" && regular_blob "$head_instructions" || return 1
+  reviewed_adoption_anchor "$head_anchor" || proof_fail reviewed-anchor
+  if ! regular_blob "$head_agents" || ! regular_blob "$head_instructions"; then
+    proof_fail installed-instructions
+  fi
   head_text=$(read_blob "${head_instructions##*$'\t'}") || proof_fail head-instructions
 
   if [[ -z "$base_agents" && -z "$base_instructions" ]]; then
+    # Epic citations qualify only for adopted-base onboarding below; they
+    # cannot widen the separate, originally Task-less adoption exception.
+    [[ -z "$bootstrap_ref_numbers" ]] || proof_fail onboarding-adopted-base
     # Confirmed absence comes only from the complete exact-base tree. The
     # payload anchor distinguishes scaffold adoption from adding two filenames.
     rebound=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '[.base.sha, .head.sha] | @tsv') || proof_fail pr-readback
     [[ "$rebound" == "$base"$'\t'"$head" ]] || proof_fail pr-drift
+    bootstrap_readback
     echo "PASS: PR #${PR} adopts the source-first scaffold; complete exact-base absence and installed payload anchor verified."
     return 0
   fi
 
-  title=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '.title // ""') || proof_fail title
+  title=$observed_title
   [[ "$title" == 'scaffold: onboard '* ]] || return 1
   [[ "$base_anchor" == "$head_anchor" ]] || return 1
-  regular_blob "$base_agents" && regular_blob "$base_instructions" || return 1
-  [[ "$base_instructions" != "$head_instructions" ]] || return 1
+  if ! regular_blob "$base_agents" || ! regular_blob "$base_instructions"; then
+    proof_fail onboarding-base
+  fi
+  [[ "$base_instructions" != "$head_instructions" ]] || proof_fail onboarding-instructions-unchanged
   base_text=$(read_blob "${base_instructions##*$'\t'}") || proof_fail base-instructions
-  [[ "$base_text" == *CUSTOMIZE* && "$head_text" != *CUSTOMIZE* ]] || return 1
+  # Match the actual marker recognized by tuning-status, not prose that
+  # explains CUSTOMIZE without declaring a placeholder.
+  [[ "$base_text" == *CUSTOMIZE:* ]] || proof_fail onboarding-base-markers
+  [[ "$head_text" != *CUSTOMIZE:* ]] || proof_fail onboarding-markers-remain
 
   # P4 tuning / existing CI / P6 context and retro evidence only. Arbitrary
   # application work, AGENTS changes, and unsupported bootstrap combinations
@@ -564,19 +633,24 @@ bootstrap_exception() {
     fi
     regular_output "$output" || allowed=false
   done <<< "$changed"
-  $allowed || return 1
+  $allowed || proof_fail onboarding-outputs
   rebound=$(api "repos/{owner}/{repo}/pulls/${PR}" --jq '[.base.sha, .head.sha] | @tsv') || proof_fail pr-readback
   [[ "$rebound" == "$base"$'\t'"$head" ]] || proof_fail pr-drift
+  bootstrap_readback
   echo "PASS: PR #${PR} is the onboarding evidence PR; exact adopted base, changed tuned instructions, bounded outputs and unchanged PR bindings verified."
 }
 
 # A real Task relationship always follows the existing ordinary ritual path;
 # bootstrap proof availability must not disable normal, already-planned work.
-bootstrap_link=$(printf '%s\n' "$body" \
-  | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]+([A-Za-z]+[[:space:]]+)?#[0-9]+' \
-  | head -n1 || true)
-if [[ -z "$bootstrap_link" ]] && bootstrap_exception; then
-  exit 0
+if bootstrap_refs_syntax; then
+  if [[ -z "$bootstrap_ref_numbers" ]] && bootstrap_exception; then
+    exit 0
+  fi
+  if [[ -n "$bootstrap_ref_numbers" ]]; then
+    if [[ "$observed_title" == 'scaffold: onboard '* ]] && bootstrap_epic_refs && bootstrap_exception; then
+      exit 0
+    fi
+  fi
 fi
 
 # The first task link names the primary Task under review. A qualifier may sit

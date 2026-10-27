@@ -206,7 +206,7 @@ class InstallerTests(unittest.TestCase):
             return before_install, adopted
         if tune:
             path = self.target / ".github/codex-instructions.md"
-            path.write_text(path.read_text().replace("CUSTOMIZE", "CONFIGURED"))
+            path.write_text(re.sub(r"<!-- CUSTOMIZE:.*?-->", "", path.read_text(), flags=re.S))
         if application:
             (self.target / "application.py").write_text("print('application change')\n")
         if head_anchor is not None:
@@ -228,8 +228,10 @@ class InstallerTests(unittest.TestCase):
         meta = prefix + "/pulls/1"
         helper = (self.target / RITUAL_PATH).read_text()
         pr_query = helper.split("pr_query='", 1)[1].split("'", 1)[0]
+        title = 'adopt source-first kit' if initial else 'scaffold: onboard fixture'
         reply(meta, pr_query, '\t'.join(['1', base, head, 'fixture-branch', '1',
-                                       'fixture/adopter', 'b', 'owner', 'User']))
+                                       'fixture/adopter', 'b', 'owner', 'User',
+                                       'b' + base64.b64encode(title.encode()).decode()]))
         for query, value in {
             '[.user.login, .user.type] | @tsv': 'owner\tUser',
             '.body // ""': ('Refs #2\nPlan: https://github.com/fixture/adopter/issues/2#issuecomment-3'
@@ -346,6 +348,9 @@ print(value[1]); sys.exit(value[0])
 
     def test_f2_fresh_adoption_then_taskless_onboarding(self):
         base, head = self.adoption_fixture()
+        instructions = (self.target / ".github/codex-instructions.md").read_text()
+        self.assertIn("`CUSTOMIZE` markers remain", instructions)
+        self.assertNotIn("CUSTOMIZE:", instructions)
         result = self.ritual(base, head)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn("onboarding evidence PR", result.stdout)
@@ -370,7 +375,7 @@ print(value[1]); sys.exit(value[0])
         base, head = self.adoption_fixture(tune=False, application=True)
         self.assertNotEqual(0, self.ritual(base, head).returncode)
         instructions = self.target / ".github/codex-instructions.md"
-        instructions.write_text(instructions.read_text().replace("CUSTOMIZE", "CONFIGURED"))
+        instructions.write_text(re.sub(r"<!-- CUSTOMIZE:.*?-->", "", instructions.read_text(), flags=re.S))
         head = self.commit_adopter("tuning does not hide application work")
         self.assertNotEqual(0, self.ritual(base, head).returncode)
 
@@ -392,6 +397,163 @@ print(value[1]); sys.exit(value[0])
         result = self.ritual(base, head, defect="read-error", ordinary=True)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn('ritual in order', result.stdout)
+        records = self.ordinary_records()
+        records['repos/{owner}/{repo}/pulls/1']['title'] = 'scaffold: onboard fixture'
+        result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn('ritual in order', result.stdout)
+
+    def onboarding_records(self, base, head, body="", references=(2, 3)):
+        """Raw API objects from installed Git trees; actual jq queries run."""
+        prefix = "repos/{owner}/{repo}"
+        records = {
+            prefix: {"full_name": "fixture/adopter"},
+            prefix + "/pulls/1": {
+                "number": 1, "base": {"sha": base, "repo": {"full_name": "fixture/adopter"}},
+                "head": {"sha": head, "ref": "onboarding"}, "commits": 1,
+                "user": {"login": "owner", "type": "User"},
+                "body": body, "title": "scaffold: onboard fixture"}}
+        for number in references:
+            records[prefix + f"/issues/{number}"] = {
+                "number": number, "state": "open", "labels": [{"name": "type:epic"}],
+                "html_url": f"https://github.com/fixture/adopter/issues/{number}"}
+        for ref in (base, head):
+            tree = self.git("show", "-s", "--format=%T", ref)
+            records[prefix + "/git/commits/" + ref] = {"tree": {"sha": tree}}
+            rows = []
+            for line in self.git("ls-tree", "-rt", ref).splitlines():
+                metadata, name = line.split("\t", 1)
+                mode, kind, oid = metadata.split()
+                rows.append({"path": name, "mode": mode, "type": kind, "sha": oid})
+                if kind == "blob":
+                    data = subprocess.check_output(["git", "-C", str(self.target), "cat-file", "blob", oid])
+                    records[prefix + "/git/blobs/" + oid] = {
+                        "encoding": "base64", "content": base64.b64encode(data).decode()}
+            records[prefix + "/git/trees/" + tree] = {"sha": tree, "truncated": False, "tree": rows}
+        return records
+
+    def test_f2_onboarding_epic_refs_list_uses_complete_structural_proof(self):
+        base, head = self.adoption_fixture()
+        for body in ("Refs #2, #3.\n", "Refs Epic #2\nRefs #3\n"):
+            with self.subTest(body=body):
+                records = self.onboarding_records(base, head, body)
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn("onboarding evidence PR", result.stdout)
+                for number in (2, 3):
+                    self.assertGreaterEqual(sum(call[1] == f"repos/{{owner}}/{{repo}}/issues/{number}"
+                                                for call in self.last_gh_calls), 2)
+
+    def test_f2_onboarding_epic_refs_do_not_hide_application_changes(self):
+        base, head = self.adoption_fixture(application=True)
+        records = self.onboarding_records(base, head, "Refs #2, #3.")
+        result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("onboarding-outputs", result.stdout + result.stderr)
+
+    def test_f2_onboarding_epic_refs_require_adopted_base(self):
+        base, head = self.adoption_fixture(initial=True)
+        records = self.onboarding_records(base, head, "Refs #2, #3.")
+        result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("onboarding-adopted-base", result.stdout + result.stderr)
+        self.assertNotIn("PASS:", result.stdout)
+
+    def test_f2_onboarding_real_markers_report_specific_failure(self):
+        base, _ = self.adoption_fixture()
+        path = self.target / ".github/codex-instructions.md"
+        path.write_text(path.read_text() + "\n<!-- CUSTOMIZE: remaining actual placeholder -->\n")
+        head = self.commit_adopter("remaining placeholder")
+        result = self.packaged_json(RITUAL_PATH, self.onboarding_records(base, head), '1', installed=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("onboarding-markers-remain", result.stdout + result.stderr)
+
+    def test_f2_onboarding_reference_ambiguity_never_gets_exception(self):
+        base, head = self.adoption_fixture()
+        for body, labels in (
+            ("Closes #2", ["type:epic"]),
+            ("Refs #2, #3", ["type:task"]),
+            ("Refs #2, #3", ["type:epic", "type:task"]),
+            ("Refs #2, #3", []),
+            ("Refs #2, #3", ["not-an-epic"]),
+            ("Refs #2; #3", ["type:epic"]),
+            ("Refs #2, #3 and Closes #4", ["type:epic"]),
+        ):
+            with self.subTest(body=body, labels=labels):
+                records = self.onboarding_records(base, head, body)
+                records['repos/{owner}/{repo}/issues/3']['labels'] = [{"name": n} for n in labels]
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertNotIn("onboarding evidence PR", result.stdout)
+
+    def test_f2_onboarding_epic_metadata_failure_and_drift_refuse(self):
+        base, head = self.adoption_fixture()
+        for defect in ("missing", "wrong-number", "labels-type", "pull-request", "drift"):
+            with self.subTest(defect=defect):
+                records = self.onboarding_records(base, head, "Refs #2, #3.")
+                key = 'repos/{owner}/{repo}/issues/3'
+                if defect == "missing": records[key] = None
+                elif defect == "wrong-number": records[key]['number'] = 99
+                elif defect == "labels-type": records[key]['labels'] = ["type:epic"]
+                elif defect == "pull-request": records[key]['pull_request'] = {"url": "https://example.invalid/pr"}
+                else:
+                    old = records[key]
+                    changed = dict(old, labels=[{"name": "type:task"}])
+                    records[key] = {"__responses__": [old, changed]}
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertNotIn("onboarding evidence PR", result.stdout)
+
+    def test_f2_unsupported_relationship_targets_never_get_bootstrap_exception(self):
+        base, head = self.adoption_fixture()
+        for prefix in ("", "Refs #2\n"):
+            for relationship in (
+                "Closes https://github.com/fixture/adopter/issues/9",
+                "Refs https://github.com/fixture/adopter/issues/9",
+                "Fixes fixture/adopter#9",
+                "Refs fixture/adopter#9",
+                "Resolves [Task](https://github.com/fixture/adopter/issues/9)",
+                "References https://github.com/fixture/adopter/issues/9",
+                "Closes\nhttps://github.com/fixture/adopter/issues/9",
+                "**Closes** https://github.com/fixture/adopter/issues/9",
+                "Refs #2, malformed",
+            ):
+                body = prefix + relationship
+                with self.subTest(body=body):
+                    records = self.onboarding_records(base, head, body, references=(2, 9))
+                    records['repos/{owner}/{repo}/issues/9']['labels'] = [{"name": "type:task"}]
+                    result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertNotIn("onboarding evidence PR", result.stdout)
+                    self.assertNotIn("adopts the source-first scaffold", result.stdout)
+
+    def test_f2_onboarding_reference_prose_is_not_a_relationship(self):
+        base, head = self.adoption_fixture()
+        prose = ("## Summary\nThis PR fixes the project-specific commands after onboarding.\n"
+                 "References and decisions are recorded below.\n")
+        for body in (prose, prose + "\nRefs #2\n"):
+            with self.subTest(body=body):
+                records = self.onboarding_records(base, head, body)
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn("onboarding evidence PR", result.stdout)
+
+    def test_f2_onboarding_pr_binding_drift_and_invalid_title_refuse(self):
+        base, head = self.adoption_fixture()
+        for defect in ('body-drift', 'title-drift', 'invalid-title'):
+            with self.subTest(defect=defect):
+                records = self.onboarding_records(base, head, "Refs #2, #3.")
+                key = 'repos/{owner}/{repo}/pulls/1'
+                old = records[key]
+                if defect == 'invalid-title':
+                    old['title'] = {"text": "scaffold: onboard fixture"}
+                else:
+                    changed = dict(old, **({'body': 'Closes #9'} if defect == 'body-drift'
+                                          else {'title': 'unrelated application work'}))
+                    records[key] = {"__responses__": [old, changed]}
+                result = self.packaged_json(RITUAL_PATH, records, '1', installed=True)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertNotIn("onboarding evidence PR", result.stdout)
 
     def packaged_json(self, helper, records, *args, installed=False):
         # Execute the helper's actual --jq expression against raw GitHub JSON.
