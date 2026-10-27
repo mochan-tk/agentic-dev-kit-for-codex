@@ -19,7 +19,7 @@ FRONTIER_TARGETS = tuple(PAYLOAD + "/" + path for path in FRONTIER_PATHS) + (
     "tests/conformance/test_frontier_cache.py", "docs/parity-status.md")
 FRONTIER_BASELINE = "tests/fixtures/frontier-cache-baseline.json"
 FRONTIER_BASELINE_SHA256 = "f3cf28b75db5b960bbed78697515690800ffb301cb13c1e1445ccada964587d6"
-FRONTIER_DIGESTS = ('0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6', '075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150')
+FRONTIER_DIGESTS = ('0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6', '3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086')
 FRONTIER_CONTRACT = {
     "schema": "source-first-frontier-cache/v1",
     "source_repository": "mochan-tk/agentic-dev-kit-for-copilot",
@@ -611,7 +611,7 @@ def validate_task_selection(payload_data, parity):
     if (matches != ["f66d3aa5e73abf24052c70f557cd6df9177ca012", "cc888c829bc5957871376004cb59a93b4980b50f",
                     "5017ee6979eec83c867a2da02118e6b03205040c", blob]
             or '*) return 1 ;;' not in anchor
-            or '[[ "$base_anchor" == "$head_anchor" ]] || proof_fail onboarding-anchor' not in ritual):
+            or '[[ "$base_anchor" == "$head_anchor" ]] || return 1' not in ritual):
         errors.append("task selection exact ritual anchor compatibility drifted")
     ownership = payload_data[TASK_SELECTION_PATHS[2]].decode()
     if '.|./*|*/.|*/./*|*//*) invalid=1; continue ;;' not in ownership:
@@ -1052,9 +1052,9 @@ BOUNDARY_TARGETS = tuple(sorted((*BOUNDARY_BASE_PATHS, INVENTORY,
     "docs/provenance.md", "docs/product-scope.md",
 )))
 BOUNDARY_DIGESTS = {
-    ".github/distribution/adopter-ci/check-adopter-ci.py": "f1786e64683b2343447363d62499a257a052c6c6518a62255bd138a7d1c08f98",
-    ".github/distribution/payload.v1.tsv": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3",
-    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
+    ".github/distribution/adopter-ci/check-adopter-ci.py": "289d1692d7abc0853b0c5aaeab915db5db3da73ea6790ac4d99f44f8910e6ae5",
+    ".github/distribution/payload.v1.tsv": "12bcd92531555859c0a32090e26e494be08d4719a0c6a21a3886eb05962b1025",
+    ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
     ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
     ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
@@ -1149,7 +1149,7 @@ FINAL_TARGETS = tuple(sorted((*FINAL_BASE_PATHS, INVENTORY,
     "docs/known-limitations.md", "docs/provenance.md", "docs/product-scope.md", "docs/parity-status.md",
 )))
 FINAL_DIGESTS = {
-    ".github/distribution/payload.v1.tsv": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3",
+    ".github/distribution/payload.v1.tsv": "12bcd92531555859c0a32090e26e494be08d4719a0c6a21a3886eb05962b1025",
     ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
     ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",

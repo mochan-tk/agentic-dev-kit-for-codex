@@ -539,11 +539,11 @@ bootstrap_refs_syntax() {
   bootstrap_ref_numbers=$(printf '%s\n' "$bootstrap_ref_numbers" | sed '/^$/d' | LC_ALL=C sort -u)
 }
 bootstrap_epic_refs() {
-  local number count=0 row identity state labels is_epic
+  local number count=0 row identity _state _labels is_epic
   while IFS= read -r number; do
     count=$((count + 1)); [[ $count -le 128 ]] || proof_fail onboarding-reference-bound
     row=$(observe_epic "$number") || proof_fail onboarding-reference-read
-    IFS=$'\t' read -r identity state labels is_epic <<< "$row"
+    IFS=$'\t' read -r identity _state _labels is_epic <<< "$row"
     [[ "$identity" == "$number" ]] || proof_fail onboarding-reference-identity
     [[ "$is_epic" == true ]] || return 1
     bootstrap_epic_rows="$bootstrap_epic_rows"$'\n'"$row"
@@ -575,7 +575,9 @@ bootstrap_exception() {
   base_anchor=$(entry "$base_tree" "$ADOPTION_ANCHOR") || proof_fail base-anchor-lookup
   head_anchor=$(entry "$head_tree" "$ADOPTION_ANCHOR") || proof_fail head-anchor-lookup
   reviewed_adoption_anchor "$head_anchor" || proof_fail reviewed-anchor
-  regular_blob "$head_agents" && regular_blob "$head_instructions" || proof_fail installed-instructions
+  if ! regular_blob "$head_agents" || ! regular_blob "$head_instructions"; then
+    proof_fail installed-instructions
+  fi
   head_text=$(read_blob "${head_instructions##*$'\t'}") || proof_fail head-instructions
 
   if [[ -z "$base_agents" && -z "$base_instructions" ]]; then
@@ -593,8 +595,10 @@ bootstrap_exception() {
 
   title=$observed_title
   [[ "$title" == 'scaffold: onboard '* ]] || return 1
-  [[ "$base_anchor" == "$head_anchor" ]] || proof_fail onboarding-anchor
-  regular_blob "$base_agents" && regular_blob "$base_instructions" || proof_fail onboarding-base
+  [[ "$base_anchor" == "$head_anchor" ]] || return 1
+  if ! regular_blob "$base_agents" || ! regular_blob "$base_instructions"; then
+    proof_fail onboarding-base
+  fi
   [[ "$base_instructions" != "$head_instructions" ]] || proof_fail onboarding-instructions-unchanged
   base_text=$(read_blob "${base_instructions##*$'\t'}") || proof_fail base-instructions
   # Match the actual marker recognized by tuning-status, not prose that

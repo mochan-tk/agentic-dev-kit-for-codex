@@ -332,7 +332,7 @@
       "destination": ".github/scripts/check-task-ritual.sh",
       "source_path": ".github/scripts/check-task-ritual.sh",
       "source_blob": "9365796d80e80e6ee1a94bc6e0cb08686682852c",
-      "target_sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
+      "target_sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
       "adaptations": [
         "Source shell helper retained with Codex labels/paths where relevant; optional upstream-feedback loading removed; no installer invocation or live proof.",
         "Source-first bootstrap proof uses complete exact PR base/head trees and an installed engine blob; reject title-only, unreadable/false absence, malformed or unrelated-change proofs; preserve ordinary Task ritual and adopter records.",
@@ -713,7 +713,7 @@
       {
         "path": ".github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150"
+        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
       },
       {
         "path": ".agents/skills/verification/SKILL.md",
@@ -906,7 +906,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3"
+        "sha256": "12bcd92531555859c0a32090e26e494be08d4719a0c6a21a3886eb05962b1025"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -931,7 +931,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150"
+        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -969,8 +969,8 @@
           "sha256": "ef3d941abb98b95e71d17bd43d4313dde7be0c62c2322d4e2dc7f6ced8546a28"
         },
         "target_mode": "100644",
-        "target_sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3",
-        "target_blob": "f53724483df05c614dbc5bdec6d9e62cb5a806ce"
+        "target_sha256": "12bcd92531555859c0a32090e26e494be08d4719a0c6a21a3886eb05962b1025",
+        "target_blob": "45ae291b324dd21d6725019d7bdfe9bc2478ceb9"
       },
       {
         "path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md",
@@ -1029,8 +1029,8 @@
           "sha256": "1c9bd3c853a583d55853298c582e8ddf9e541535778c5284455648a0b498427e"
         },
         "target_mode": "100644",
-        "target_sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150",
-        "target_blob": "ece641f1409c1a61826e6f936dce2f17896e6dd3"
+        "target_sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086",
+        "target_blob": "ffaa720fec40d7e5f131d5f2e795c2fe0317a202"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh",
@@ -1094,7 +1094,7 @@
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150"
+        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
       },
       {
         "path": "tests/conformance/test_frontier_cache.py",
@@ -1138,17 +1138,17 @@
       {
         "path": ".github/distribution/adopter-ci/check-adopter-ci.py",
         "mode": "100644",
-        "sha256": "f1786e64683b2343447363d62499a257a052c6c6518a62255bd138a7d1c08f98"
+        "sha256": "289d1692d7abc0853b0c5aaeab915db5db3da73ea6790ac4d99f44f8910e6ae5"
       },
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3"
+        "sha256": "12bcd92531555859c0a32090e26e494be08d4719a0c6a21a3886eb05962b1025"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh",
         "mode": "100644",
-        "sha256": "075f84d344b51c6b2c0f9a266656ee6bccf01295b2dbae5d6e568e4a25b52150"
+        "sha256": "3ce7f5faa09309f4fcc7fb5575d2df1d2c5dc5baee2a8f24c37db58c56b74086"
       },
       {
         "path": ".github/scripts/scaffold-init.sh",
@@ -1267,7 +1267,7 @@
       {
         "path": ".github/distribution/payload.v1.tsv",
         "mode": "100644",
-        "sha256": "8f2d75a321cd314bdf9aa6aa0eca883061315affb362727c3ae1f9db6857d4b3"
+        "sha256": "12bcd92531555859c0a32090e26e494be08d4719a0c6a21a3886eb05962b1025"
       },
       {
         "path": ".github/distribution/payload/.github/scripts/tuning-status.sh",
