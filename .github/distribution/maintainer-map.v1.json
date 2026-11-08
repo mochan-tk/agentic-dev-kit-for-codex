@@ -1,0 +1,195 @@
+{
+  "schema": "maintainer-map/v1",
+  "source": ".github/distribution/payload.v1.tsv",
+  "source_sha256": "49adc6e80452cf2aeb2a309da888d441d5ad593a7697c4022904f06b37f2f145",
+  "files": [
+    {
+      "installed_path": ".agents/skills/context-collection/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/context-collection/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/context-distillation/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/context-distillation/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/plan-management/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/plan-management/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/plan-management/scripts/frontier.sh",
+      "payload_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/frontier.sh"
+    },
+    {
+      "installed_path": ".agents/skills/plan-management/scripts/new-task.sh",
+      "payload_path": ".github/distribution/payload/.agents/skills/plan-management/scripts/new-task.sh"
+    },
+    {
+      "installed_path": ".agents/skills/plan-management/templates/epic-body.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/plan-management/templates/epic-body.md"
+    },
+    {
+      "installed_path": ".agents/skills/plan-management/templates/task-body.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md"
+    },
+    {
+      "installed_path": ".agents/skills/project-onboarding/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/retro/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/retro/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/session-orchestration/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/task-routing/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/task-routing/SKILL.md"
+    },
+    {
+      "installed_path": ".agents/skills/verification/SKILL.md",
+      "payload_path": ".github/distribution/payload/.agents/skills/verification/SKILL.md"
+    },
+    {
+      "installed_path": ".codex/agents/orchestrator.toml",
+      "payload_path": ".github/distribution/payload/.codex/agents/orchestrator.toml"
+    },
+    {
+      "installed_path": ".codex/agents/planner.toml",
+      "payload_path": ".github/distribution/payload/.codex/agents/planner.toml"
+    },
+    {
+      "installed_path": ".codex/agents/reviewer.toml",
+      "payload_path": ".github/distribution/payload/.codex/agents/reviewer.toml"
+    },
+    {
+      "installed_path": ".gitattributes",
+      "payload_path": ".github/distribution/payload/.gitattributes"
+    },
+    {
+      "installed_path": ".github/ISSUE_TEMPLATE/ai-task.yml",
+      "payload_path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/ai-task.yml"
+    },
+    {
+      "installed_path": ".github/ISSUE_TEMPLATE/config.yml",
+      "payload_path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/config.yml"
+    },
+    {
+      "installed_path": ".github/ISSUE_TEMPLATE/epic.yml",
+      "payload_path": ".github/distribution/payload/.github/ISSUE_TEMPLATE/epic.yml"
+    },
+    {
+      "installed_path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "payload_path": ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md"
+    },
+    {
+      "installed_path": ".github/codex-instructions.md",
+      "payload_path": ".github/distribution/payload/.github/codex-instructions.md"
+    },
+    {
+      "installed_path": ".github/connectors/CONNECTOR-TEMPLATE.md",
+      "payload_path": ".github/distribution/payload/.github/connectors/CONNECTOR-TEMPLATE.md"
+    },
+    {
+      "installed_path": ".github/connectors/README.md",
+      "payload_path": ".github/distribution/payload/.github/connectors/README.md"
+    },
+    {
+      "installed_path": ".github/connectors/builtin.md",
+      "payload_path": ".github/distribution/payload/.github/connectors/builtin.md"
+    },
+    {
+      "installed_path": ".github/connectors/speckit.md",
+      "payload_path": ".github/distribution/payload/.github/connectors/speckit.md"
+    },
+    {
+      "installed_path": ".github/docs/agreements/README.md",
+      "payload_path": ".github/distribution/payload/.github/docs/agreements/README.md"
+    },
+    {
+      "installed_path": ".github/docs/agreements/adr/ADR-0000-template.md",
+      "payload_path": ".github/distribution/payload/.github/docs/agreements/adr/ADR-0000-template.md"
+    },
+    {
+      "installed_path": ".github/docs/agreements/glossary.md",
+      "payload_path": ".github/distribution/payload/.github/docs/agreements/glossary.md"
+    },
+    {
+      "installed_path": ".github/docs/agreements/non-goals.md",
+      "payload_path": ".github/distribution/payload/.github/docs/agreements/non-goals.md"
+    },
+    {
+      "installed_path": ".github/docs/agreements/requirements.md",
+      "payload_path": ".github/distribution/payload/.github/docs/agreements/requirements.md"
+    },
+    {
+      "installed_path": ".github/docs/agreements/retro-log.md",
+      "payload_path": ".github/distribution/payload/.github/docs/agreements/retro-log.md"
+    },
+    {
+      "installed_path": ".github/docs/context/README.md",
+      "payload_path": ".github/distribution/payload/.github/docs/context/README.md"
+    },
+    {
+      "installed_path": ".github/instructions/code-review.instructions.md",
+      "payload_path": ".github/distribution/payload/.github/instructions/code-review.instructions.md"
+    },
+    {
+      "installed_path": ".github/instructions/docs.instructions.md",
+      "payload_path": ".github/distribution/payload/.github/instructions/docs.instructions.md"
+    },
+    {
+      "installed_path": ".github/scripts/check-task-ritual.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/check-task-ritual.sh"
+    },
+    {
+      "installed_path": ".github/scripts/ownership-overlap.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/ownership-overlap.sh"
+    },
+    {
+      "installed_path": ".github/scripts/run.ps1",
+      "payload_path": ".github/distribution/payload/.github/scripts/run.ps1"
+    },
+    {
+      "installed_path": ".github/scripts/setup-labels.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/setup-labels.sh"
+    },
+    {
+      "installed_path": ".github/scripts/setup-project.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/setup-project.sh"
+    },
+    {
+      "installed_path": ".github/scripts/setup-ruleset.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/setup-ruleset.sh"
+    },
+    {
+      "installed_path": ".github/scripts/setup-sources.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/setup-sources.sh"
+    },
+    {
+      "installed_path": ".github/scripts/tuning-status.sh",
+      "payload_path": ".github/distribution/payload/.github/scripts/tuning-status.sh"
+    },
+    {
+      "installed_path": ".gitignore",
+      "payload_path": ".github/distribution/payload/.gitignore"
+    },
+    {
+      "installed_path": "AGENTS.md",
+      "payload_path": ".github/distribution/payload/AGENTS.md"
+    },
+    {
+      "installed_path": "README.md",
+      "payload_path": ".github/distribution/payload/README.md"
+    },
+    {
+      "installed_path": "SCAFFOLD-CHANGELOG.md",
+      "payload_path": ".github/distribution/payload/SCAFFOLD-CHANGELOG.md"
+    },
+    {
+      "installed_path": "docs/agreements/adr/ADR-0003-two-tier-task-execution.md",
+      "payload_path": ".github/distribution/payload/docs/agreements/adr/ADR-0003-two-tier-task-execution.md"
+    }
+  ]
+}

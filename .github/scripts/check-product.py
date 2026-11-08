@@ -55,6 +55,7 @@ CONNECTOR_FIXTURE_ADAPTATION = {
 TEST_MODULES = (
     "test_prerequisites.py",
     "test_spec_handoff.py",
+    "test_maintainer_map.py",
     "test_installed_preflight.py",
     "test_roadmap_preflight.py",
     "test_chat_tree.py",
