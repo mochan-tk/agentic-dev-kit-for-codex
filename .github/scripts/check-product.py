@@ -53,6 +53,8 @@ CONNECTOR_FIXTURE_ADAPTATION = {
     "scope": "copy-required-update-and-workflow-inputs-and-assert-complete-fixture"
 }
 TEST_MODULES = (
+    "test_prerequisites.py",
+    "test_spec_handoff.py",
     "test_installed_preflight.py",
     "test_roadmap_preflight.py",
     "test_chat_tree.py",
@@ -74,9 +76,9 @@ WORKFLOW_EXPORT_DIGESTS = {
     ".github/distribution/payload/.agents/skills/plan-management/templates/task-body.md": "326c8118ea762c8f20e13c05ba1b3b7d8f4a4ca93f0a855fdc951d096ef5e2b5",
     ".github/distribution/payload/.github/PULL_REQUEST_TEMPLATE.md": "ce0d238d6a75cf93b0a51df6481378183dafa440fddbe95b0be496c005e419ca",
     ".github/distribution/payload/.agents/skills/verification/SKILL.md": "a0ad0f31e7632d719b345b0855838e5f9b205d3d802bcaeaf6c16b6e19066b02",
-    ".github/distribution/payload.v1.tsv": "49adc6e80452cf2aeb2a309da888d441d5ad593a7697c4022904f06b37f2f145",
+    ".github/distribution/payload.v1.tsv": "fd73889793fb0c0af8140b987bfe0ff6b298010be65be2c699524005dd36b756",
     ".github/distribution/payload/.agents/skills/plan-management/SKILL.md": "e35eb719373451b7a8dbe3b3826f16ccb99acc9301d5ee726cbb6f42dac6d857",
-    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "2fd35a5e359fad33d39173718c9e1bca6b703ebe45c41908edcceb7637cb3463",
+    ".github/distribution/payload/.agents/skills/project-onboarding/SKILL.md": "536a62a158784f78ca8b499b3dad0a8824bf543dc54fb7a9de8d6aa620b81629",
     ".github/distribution/payload/.agents/skills/session-orchestration/SKILL.md": "913136aaf64bd1991a3b016224e0891726ab8febb403ebc0523757e2af9af8cf",
     ".github/distribution/payload/.github/codex-instructions.md": "8618593cbad6bc2b17c7b0385efb6f2a6c60aa5ac8879e07031b8c523a464cd2",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792",
@@ -168,11 +170,11 @@ FEEDBACK_CONTRACT = {
     "limits": "manual-not-automatic-source-hook-no-live-feedback-receiver-schedule-native-Windows-E01-runtime-or-release-claim",
 }
 ADOPTER_RECORD = ".github/distribution/adopter-ci.v1.json"
-ADOPTER_RECORD_SHA256 = "e3f967ab438f8ca68a98e83d48c97189a93a89f0a79f7b6495a677b9607a5787"
+ADOPTER_RECORD_SHA256 = "032dfce40347d1767ff434e0c2c7ad12dc286a583164d7a724648db0110177c2"
 IMPROVEMENT_RECORD = ".github/distribution/ongoing-improvement.v1.json"
-IMPROVEMENT_RECORD_SHA256 = "20bd914b1c56506ae027fd9831e09fdde0f4a505a358d87f464bc259c7e39d3f"
+IMPROVEMENT_RECORD_SHA256 = "e7221ab4a03bf792e14e6e34bdea0bbb12a48e38729d7832aac60cef7f82e684"
 MONITOR_RECORD = ".github/distribution/pr-monitor.v1.json"
-MONITOR_RECORD_SHA256 = "9d84d2ee0446d0a5ca6497ca476a5ad65b45e9859c65efe68532995337f0c919"
+MONITOR_RECORD_SHA256 = "7edc4e310f1c1b2173535c9a73e6b406bdd79c9d23678ae5433100a3a89d10d6"
 MONITOR_TARGETS = tuple(sorted((".github/scripts/pr-monitor.py", "README.md",
                                "docs/distribution/pr-monitor.md", "tests/conformance/test_pr_monitor.py")))
 # Independent implementation binding: changing only the manifest cannot waive

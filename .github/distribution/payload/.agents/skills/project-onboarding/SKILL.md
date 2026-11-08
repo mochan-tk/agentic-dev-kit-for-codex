@@ -176,6 +176,26 @@ The three steps are:
      repository are not part of this question — P1's inventory names
      them and agents read them in place.
 
+   **Advisory handoff presence check.** Once material is received (including
+   the spec-kit workspace or existing documents read in place), check these
+   seven observations: **goal**, **intended users**, **scope**, **non-goals**,
+   **constraints**, **acceptance criteria**, **unresolved questions**. Scope
+   and non-goals are separate observations within the README's six groups.
+   If a reviewed kit source checkout and Python 3.11+ are available, run
+   `python3 -I /path/to/reviewed-kit/.github/scripts/check-spec-handoff.py /path/to/material.md`
+   with all relevant Markdown/text paths in one invocation. The helper is
+   kit-side, not installed in the adopter. If unavailable, use the same
+   seven-point checklist procedurally and label the result as manual.
+   Report `Observed points: n/7` and name every missing point to the owner;
+   do not publish private source contents. Exit 0 means all points present,
+   exit 1 means missing points (a warning), and exit 2 means unreadable input
+   (not a completed check). This checks headings or clear mentions only,
+   never content quality or sufficient detail. Do not automatically block
+   onboarding on a warning: the owner decides whether to supply more context
+   or proceed with the named gaps. If they explicitly choose no material,
+   record the applicable missing points as warnings. This neither supplies
+   an interview answer nor bypasses the explicit-answer wait above.
+
    *(Ask in plain form — no scaffold jargon, no scaffold paths, and no
    landing mechanics (copy vs move vs reference index) in the questions
    or the choices; landing is the P4 seed step, not the adopter's
@@ -354,6 +374,36 @@ inventory table, the interview answers, and the P3 evidence log in the
 description. Append a `.github/docs/agreements/retro-log.md` row (failure class:
 `onboarding`). List any project-agnostic improvements you noticed as
 upstream candidates (see the retro skill, Upstreaming).
+
+**Introduction lead time.** Include this four-milestone record in the PR
+description before its final `## Next steps` section. It matches the kit's
+`docs/introduction.md` format (a source-side guide, not an installed file).
+Use ISO 8601 timestamps with a timezone and bounded evidence links, not raw
+logs or private material:
+
+<!-- BEGIN introduction-lead-time -->
+| Milestone | Definition | ISO 8601 timestamp (with timezone) | Evidence link |
+|---|---|---|---|
+| `adoption_started` | Owner explicitly starts this adoption attempt, before scaffold installation. | pending | pending |
+| `scaffold_on_default` | Reviewed scaffold first reaches the remote default branch; cite the adoption commit/tree. | pending | pending |
+| `onboarding_completed` | P0–P6 evidence and handoff are recorded and the onboarding evidence PR exists; this is not owner acceptance or merge. | pending | pending |
+| `first_task_closed` | The first post-onboarding Task completes its required close-out, including Project proof or its scoped exception. | pending | pending |
+<!-- END introduction-lead-time -->
+
+Future points stay `pending`; unrecoverable past times/evidence are `unknown`
+with a reason. Do not invent dates. A blocked PR leaves onboarding completion
+pending. Record that milestone only when P6 actually completes; acceptance and
+merge remain separate prerequisites for first Epic execution. First Task
+close-out is normally pending at P6: update this same evidence PR when it
+occurs. Four points define three adjacent intervals and a total:
+`scaffold_on_default - adoption_started` (installation/landing),
+`onboarding_completed - scaffold_on_default` (onboarding),
+`first_task_closed - onboarding_completed` (first Task), and
+`first_task_closed - adoption_started` (total introduction lead time).
+Use elapsed wall-clock time including waits, normalize timezones, require
+ordered observed endpoints with evidence, and state duration units/caveats.
+Unknown/pending endpoints produce unknown/pending durations, never zero.
+This is manual measurement, not acceptance or an automatic speed claim.
 
 Link the exact P0 adoption commit/tree and the evidence PR's base/head commits.
 If the adopter uses the optional sensor, run

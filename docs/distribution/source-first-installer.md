@@ -6,13 +6,18 @@ Read [product scope](../product-scope.md), [limitations](../known-limitations.md
 ## Prepare context and the desktop project
 
 **This kit requires the ChatGPT Codex desktop app**, not only for this
-walkthrough but for onboarding, coordination and development. Meet all
-[product prerequisites](../../README.md#prerequisites), including the GitHub
-repository, authenticated `gh`, `jq`, Git/Bash and Windows-specific tools,
-before starting. Codex CLI or the IDE extension alone does not satisfy the
-desktop requirement.
+walkthrough but for onboarding, coordination and development (Tier 1). The
+[product prerequisites](../../README.md#prerequisites) are cumulative: Tier 0
+covers installation/inspection with a GitHub repository/local checkout,
+authenticated `gh`, `jq`, Git/Bash and Windows-specific tools; Tier 1 adds the
+desktop app, prepared context, an adopter Codex project and the remote-default
+scaffold before onboarding; Tier 2 covers the Projects roadmap and required
+close-out. Tier 0 can be inspected before Tier 1 is ready. Codex CLI or the IDE
+extension alone does not satisfy the desktop requirement. The
+[introduction guide](../introduction.md) describes read-only source diagnostics;
+Python 3.11+ is needed only to run those diagnostics, not the shell installer.
 
-For the required-by-default Projects roadmap, repository authentication alone is not
+For the Tier 2 required-by-default Projects roadmap, repository authentication alone is not
 enough: queries need `read:project`, and creation/updates need `project` with
 classic/OAuth credentials. See [Projects prerequisites](../../README.md#prerequisites).
 Onboarding checks access early and records a scope failure separately from an
@@ -60,7 +65,10 @@ share. Reference drafts inform planning but do not become approved agreements
 without human review. This preparation is guidance, not an installer-enforced
 gate, a required external connector, or automatic context synchronization.
 
-### Create the Codex project before the first kit command
+### Create the Codex project for the Tier 1 workflow
+
+The full adoption walkthrough below prepares Tier 1 before installation;
+Tier 0 installation/inspection alone does not require an app project.
 
 1. Prepare or clone the **adopter Git repository**: the application you intend
    to build. The kit installer does not initialize Git or create the GitHub
