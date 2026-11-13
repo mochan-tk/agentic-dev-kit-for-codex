@@ -119,3 +119,7 @@ publisher identity. Inspect every file that will enter public Git history.
 See [product scope](docs/product-scope.md), [limitations](docs/known-limitations.md)
 and [source provenance](docs/provenance.md). Do not include private adopter
 data or operation backups in a bug report.
+
+For workflow use in this checkout, follow [maintainer mode](docs/maintainer-mode.md)
+to load canonical payload Skills explicitly without self-installation. Run
+`python3 .github/scripts/check-maintainer-map.py` alongside the local checks above.

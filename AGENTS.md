@@ -24,3 +24,7 @@ the current Issue or pull request before changing files.
 
 The product does not promise native Windows qualification, cross-client runtime
 parity, authenticated roles, automatic updates or a universal control plane.
+
+For explicit use of canonical payload Skills without self-installing this kit,
+follow [maintainer mode](docs/maintainer-mode.md). Resolve installed paths via
+its checked map; the contributor rules and current work order retain authority.
