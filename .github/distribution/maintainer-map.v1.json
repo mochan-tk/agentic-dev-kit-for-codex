@@ -1,7 +1,7 @@
 {
   "schema": "maintainer-map/v1",
   "source": ".github/distribution/payload.v1.tsv",
-  "source_sha256": "49adc6e80452cf2aeb2a309da888d441d5ad593a7697c4022904f06b37f2f145",
+  "source_sha256": "fd73889793fb0c0af8140b987bfe0ff6b298010be65be2c699524005dd36b756",
   "files": [
     {
       "installed_path": ".agents/skills/context-collection/SKILL.md",

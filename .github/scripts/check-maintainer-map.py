@@ -63,6 +63,9 @@ ALLOWLIST = (
     ("excluded-tests", "The onboarding Skill explicitly excludes contributor-only test internals.", {
         ".agents/skills/project-onboarding/SKILL.md": {".github/scripts/tests/"},
     }),
+    ("repo-tooling", "Kit-repository checker run from a reviewed kit checkout; it is not installed as payload.", {
+        ".agents/skills/project-onboarding/SKILL.md": {".github/scripts/check-spec-handoff.py"},
+    }),
 )
 
 

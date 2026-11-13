@@ -44,8 +44,8 @@ class MaintainerMapTests(unittest.TestCase):
     def test_current_payload_resolves_and_reports_counts(self):
         result = self.check()
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertIn("47 entries; 260 references checked in 44 text files", result.stdout)
-        self.assertIn("238 resolved, 22 allowlisted", result.stdout)
+        self.assertIn("47 entries; 261 references checked in 44 text files", result.stdout)
+        self.assertIn("238 resolved, 23 allowlisted", result.stdout)
 
     def test_missing_entry_fails(self):
         root = self.fixture()
