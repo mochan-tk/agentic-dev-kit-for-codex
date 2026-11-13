@@ -1074,7 +1074,7 @@ BOUNDARY_DIGESTS = {
     "docs/product-scope.md": "50edcc2f294d7355cff2b45d85c8da8f154b77d91eb0af78e097017e87db24d3",
     "docs/provenance.md": "a4ea663d1738d1577428b913a5a5f96442fc267f8ebf9642ad22512380479687",
     "tests/conformance/test_adopter_ci.py": "5c31532a3540f45c4b75f51fdc7a8c829584b73fc817be5d241fc0740e64c2e3",
-    "tests/conformance/test_installer.py": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f",
+    "tests/conformance/test_installer.py": "e0a6614643933fbf2e9a7f018454b791b580f6ef8769e57015962a5dd93362f0",
     "tests/conformance/test_installer_bootstrap.py": "4a7ee53eb6dc2994df2d223ab37c09fbd7db4860ade1cbd5a96632959ab9628f",
     "tests/conformance/test_installer_update.py": "34f4c2030e54e936c5836a8a54a9863e7e02ce843020a2834410b2ef1be2f3b6",
     "tests/conformance/test_product.py": "6efe7c59dea3140757ffc3c6520893342ae250fc82296627063ab9e02fa72a9e",
@@ -1176,7 +1176,7 @@ FINAL_DIGESTS = {
     "tests/conformance/test_companion_access.py": "77c1cccb9e016390bd75c12214668e7d909ebd86a66394cb4c101b83aebb8f44",
     "tests/conformance/test_connector_validation.py": "5ec3b5231ee75df9d34a1511e78cab93c3fc27f3dabd316189d859f105aee780",
     "tests/conformance/test_final_boundary.py": "3d9331ca38dd6f1fc4a30ccac03aff4df807868dbe45d7d8e1b48d9c01230bed",
-    "tests/conformance/test_installer.py": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
+    "tests/conformance/test_installer.py": "e0a6614643933fbf2e9a7f018454b791b580f6ef8769e57015962a5dd93362f0"
 }
 FINAL_CONTRACT = {
     "schema": "source-first-final-boundary/v1",
