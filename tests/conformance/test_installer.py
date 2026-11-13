@@ -151,9 +151,9 @@ class InstallerTests(unittest.TestCase):
         return self.git("rev-parse", "HEAD")
 
     def test_fixture_git_housekeeping_cannot_mutate_preservation_snapshots(self):
-        # Real Git control: a tiny threshold packs reachable loose objects on
-        # commit. Foreground maintenance makes this mechanism deterministic;
-        # it does not claim to reproduce the timing of a particular CI race.
+        # Real Git control: commit-time housekeeping is environment-dependent.
+        # Invoke housekeeping explicitly so reachable loose objects are packed
+        # without depending on automatic housekeeping during commit.
         defaults = self.base / "adversarial-gitconfig"
         defaults.write_text("[gc]\n auto = 1\n autoDetach = false\n"
                             "[maintenance]\n auto = true\n autoDetach = false\n")
@@ -180,6 +180,8 @@ class InstallerTests(unittest.TestCase):
                           "commit", "-qm", "reachable maintenance probes")
                 loose = [repository / ".git/objects" / oid[:2] / oid[2:] for oid, _content in blobs]
                 for oid, _content in blobs: git_probe("cat-file", "-e", oid)
+                if not isolated:
+                    git_probe("gc", "--auto")
                 self.assertEqual([isolated, isolated], [path.is_file() for path in loose])
                 if isolated:
                     self.assertEqual("0", git_probe("config", "--local", "--get", "gc.auto").stdout.strip())
