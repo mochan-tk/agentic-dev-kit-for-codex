@@ -39,26 +39,27 @@ native session hierarchy or a complete autonomous runtime.
 
 ### Prerequisites
 
-Using this kit requires:
+Prerequisites are cumulative. The [prerequisite registry](.github/distribution/prerequisites.v1.json)
+is the machine-readable source; the IDs below bind this table to its entries.
 
-- a GitHub repository with a local Git checkout;
-- the **[ChatGPT Codex desktop app](https://learn.chatgpt.com/docs/app)**;
-- authenticated [`gh`](https://cli.github.com/) with access to that repository;
-- `jq`;
-- Git and Bash 3.2 or later;
-- on Windows, [Git for Windows](https://gitforwindows.org/), including Git Bash.
+| Tier | Prerequisites added at this tier | Reach |
+|---|---|---|
+| Tier 0 — Install & inspect | GitHub repository and local checkout (`github-checkout`); Git (`git`); Bash 3.2+, with [Git for Windows](https://gitforwindows.org/) / Git Bash on Windows (`bash`); `jq` (`jq`); [`gh`](https://cli.github.com/) (`gh`), authenticated with access to the target repository (`repository-access`) | Install/stage the scaffold and read its documentation. |
+| Tier 1 — Onboard & run Tasks | **[ChatGPT Codex desktop app](https://learn.chatgpt.com/docs/app)** (`codex-desktop`); prepared specification context (`spec-context`); adopter Codex project (`codex-project`); scaffold landed on the remote default branch before onboarding (`remote-scaffold`) | Complete onboarding and run authorized Tasks locally. |
+| Tier 2 — Full operation | Projects `read:project` / `project` permissions (`projects-scope`); a board or a recorded scoped exception for environmental inability or explicit owner decline (`projects-board-or-exception`) | Operate the roadmap and perform required Task close-out. |
 
-**The desktop app is required for this OSS, not just for this tutorial.**
+**Tier 1: the desktop app is required for this OSS, not just for this tutorial.**
 Use Codex in the desktop app for onboarding, coordination and development.
 Codex CLI or the IDE extension alone is not a supported way to operate the
 kit. Running an installer or helper in a terminal does not replace this
 requirement; those commands do not check whether the app is installed.
 
-Before installation, prepare your specification context and create/select
-the adopter's Codex project as described below. Platform-specific installation
-utilities are listed in [step 1](#1-install-in-your-project).
+For the full adoption workflow, prepare specification context and create/select
+the adopter's Codex project as described below. Tier 0 installation/inspection can
+precede Tier 1 readiness; it does not complete onboarding. Platform-specific
+installation utilities are listed in [step 1](#1-install-in-your-project).
 
-The GitHub Projects roadmap is **required by default**, with durable scoped
+**Tier 2:** the GitHub Projects roadmap is **required by default**, with durable scoped
 exceptions when the environment cannot create/use it or the owner explicitly
 declines Projects. It needs Projects access: `read:project`
 for queries and `project` for creation/updates with classic/OAuth credentials
@@ -75,6 +76,20 @@ authorized work may proceed, but required close-out stays pending. Before a
 Task is reported complete, verify Kind `Task` and both authorized dates on its
 exact Project item, or cite its exception. See the
 [close-out procedure](.github/distribution/payload/.agents/skills/plan-management/SKILL.md#required-per-task-project-close-out).
+
+For a one-command read-only diagnosis, use Python 3.11+ on a machine with a
+reviewed kit source checkout (these diagnostics are not installed payload):
+
+```sh
+python3 -I /path/to/reviewed-kit/.github/scripts/check-prerequisites.py /path/to/adopter
+```
+
+The target defaults to the current directory. Missing prerequisites name their
+impact and remedy; desktop/context/project state remains explicit procedural
+confirmation. Diagnostics do not install, authenticate, grant consent or block
+onboarding. See the [introduction guide](docs/introduction.md) for exit statuses,
+the seven-point material check and lead-time records in the onboarding evidence PR.
+The source checkout is only for diagnostics; adoption still uses the public installer.
 
 ### Before you start: prepare context and a Codex project
 

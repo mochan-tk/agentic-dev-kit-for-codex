@@ -1,0 +1,82 @@
+{
+  "schema": "prerequisites/v1",
+  "tiers": [
+    {"tier": 0, "label": "Install & inspect", "reach": "Install/stage the scaffold and read its documentation."},
+    {"tier": 1, "label": "Onboard & run Tasks", "reach": "Complete onboarding and run authorized Tasks locally, with Tier 0 prerequisites."},
+    {"tier": 2, "label": "Full operation", "reach": "Operate the roadmap and perform required Task close-out, with Tier 0 and Tier 1 prerequisites."}
+  ],
+  "entries": [
+    {
+      "id": "github-checkout", "label": "GitHub repository and local checkout", "tier": 0, "kind": "state",
+      "detection": {"mode": "command", "commands": [["git", "rev-parse", "--is-inside-work-tree"], ["git", "remote", "get-url", "origin"]], "description": "Check the target worktree and canonical github.com origin; other hosts/remotes need procedural confirmation."},
+      "impact_if_missing": "There is no identified adopter worktree in which to install/stage the scaffold.",
+      "remedy": "Create/select the GitHub repository and its local non-bare checkout; confirm the adopter root and origin."
+    },
+    {
+      "id": "git", "label": "Git", "tier": 0, "kind": "tool",
+      "detection": {"mode": "command", "commands": [["git", "--version"]], "description": "Detect the executable and report its version."},
+      "impact_if_missing": "The installer cannot inspect the checkout or stage scaffold files.",
+      "remedy": "Install Git and put it on PATH; on Windows use Git for Windows."
+    },
+    {
+      "id": "bash", "label": "Bash 3.2+ (Git Bash on Windows)", "tier": 0, "kind": "tool",
+      "detection": {"mode": "command", "commands": [["bash", "--version"]], "description": "Check Bash >= 3.2; on Windows confirm Git Bash if the version output does not identify MSYS."},
+      "impact_if_missing": "The Bash installer and workflow helpers cannot run on the supported shell baseline.",
+      "remedy": "Install Bash 3.2 or later; Windows requires Git for Windows including Git Bash."
+    },
+    {
+      "id": "jq", "label": "jq", "tier": 0, "kind": "tool",
+      "detection": {"mode": "command", "commands": [["jq", "--version"]], "description": "Detect the executable and report its version."},
+      "impact_if_missing": "JSON-dependent scaffold helpers cannot inspect GitHub records.",
+      "remedy": "Install jq and make its executable available on PATH."
+    },
+    {
+      "id": "gh", "label": "GitHub CLI (gh)", "tier": 0, "kind": "tool",
+      "detection": {"mode": "command", "commands": [["gh", "--version"]], "description": "Detect the executable and report its version."},
+      "impact_if_missing": "The kit cannot query or operate on the adopter's GitHub work records.",
+      "remedy": "Install GitHub CLI and make gh available on PATH."
+    },
+    {
+      "id": "repository-access", "label": "gh authentication and repository access", "tier": 0, "kind": "scope",
+      "detection": {"mode": "command", "commands": [["gh", "api", "--hostname", "github.com", "--method", "GET", "--include", "user"], ["gh", "api", "--hostname", "github.com", "--method", "GET", "repos/{owner}/{repo}"]], "description": "Read active user authentication and target repository metadata; substitute owner/repo from the checked origin."},
+      "impact_if_missing": "GitHub work records cannot be read reliably, even though public installer acquisition can be anonymous.",
+      "remedy": "Have the owner authenticate gh (for example, gh auth login) and verify repository permissions and connectivity; the diagnostic never signs in or refreshes credentials."
+    },
+    {
+      "id": "codex-desktop", "label": "ChatGPT Codex desktop app", "tier": 1, "kind": "tool",
+      "detection": {"mode": "procedure", "description": "Confirm the owner can open and use Codex in the desktop app; app installation is not detected."},
+      "impact_if_missing": "Onboarding, coordination and development are unsupported with CLI/IDE alone.",
+      "remedy": "Prepare the required desktop app and use its Codex surface for this project."
+    },
+    {
+      "id": "spec-context", "label": "Prepared specification context", "tier": 1, "kind": "context",
+      "detection": {"mode": "procedure", "description": "Read the supplied material and run check-spec-handoff.py when available; a presence check is advisory, not a quality judgment."},
+      "impact_if_missing": "Onboarding lacks a reviewable goal and specification handoff for planning.",
+      "remedy": "Prepare/read the material and name missing goal, intended users, scope, non-goals, constraints, acceptance criteria and unresolved questions; the owner decides how to proceed."
+    },
+    {
+      "id": "codex-project", "label": "Adopter Codex project", "tier": 1, "kind": "state",
+      "detection": {"mode": "procedure", "description": "Confirm the adopter Git root is the desktop project's primary folder and the chat uses that root."},
+      "impact_if_missing": "The desktop workflow has no confirmed adopter execution context.",
+      "remedy": "Create/select the adopter Codex project, attach its repository root and confirm the local chat's working directory."
+    },
+    {
+      "id": "remote-scaffold", "label": "Scaffold on the remote default branch", "tier": 1, "kind": "state",
+      "detection": {"mode": "command", "commands": [["gh", "api", "--hostname", "github.com", "--method", "GET", "repos/{owner}/{repo}"], ["gh", "api", "--hostname", "github.com", "--method", "GET", "repos/{owner}/{repo}/contents/.github/codex-instructions.md?ref={default_branch}"]], "description": "Read the current default branch and its scaffold instruction anchor; resolve placeholders from metadata, not stale tracking refs. This is not full installation proof."},
+      "impact_if_missing": "Onboarding P0 cannot proceed to GitHub changes; new Tasks may start without the scaffold.",
+      "remedy": "Review and land the scaffold on the remote default branch through the normal owner approval process, then verify P0's exact adoption evidence."
+    },
+    {
+      "id": "projects-scope", "label": "GitHub Projects permissions", "tier": 2, "kind": "scope",
+      "detection": {"mode": "command", "commands": [["gh", "api", "--hostname", "github.com", "--method", "GET", "--include", "user"]], "description": "Inspect X-OAuth-Scopes: read:project for queries and project for writes (project includes read). Unexposed/non-classic permissions require procedural confirmation."},
+      "impact_if_missing": "Required-by-default roadmap queries or creation/updates cannot run; a recorded scoped exception may apply.",
+      "remedy": "For stored gh credentials the owner can run gh auth refresh -s project; environment tokens or other credential types need their own permission update. Never refresh automatically or treat scope detection as write consent."
+    },
+    {
+      "id": "projects-board-or-exception", "label": "Projects board or recorded scoped exception", "tier": 2, "kind": "state",
+      "detection": {"mode": "procedure", "description": "Read the applicable board/Task evidence or a durable scoped exception for environmental inability or explicit owner decline; neither is inferred by this diagnostic."},
+      "impact_if_missing": "Required Task close-out remains pending without the exact Project item's Kind Task and both authorized dates, or its exception.",
+      "remedy": "Obtain separate board/date authorization and verify close-out, or cite the environmental-inability/explicit-owner-decline exception on relevant Epic/Tasks. Pending consent and date-only defer/decline are not exceptions."
+    }
+  ]
+}
