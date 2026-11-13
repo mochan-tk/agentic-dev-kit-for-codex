@@ -1005,7 +1005,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
+        "sha256": "e0a6614643933fbf2e9a7f018454b791b580f6ef8769e57015962a5dd93362f0"
       },
       {
         "path": "tests/conformance/test_workflow_parity.py",
@@ -1336,7 +1336,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
+        "sha256": "e0a6614643933fbf2e9a7f018454b791b580f6ef8769e57015962a5dd93362f0"
       },
       {
         "path": "tests/conformance/test_installer_bootstrap.py",
@@ -1490,7 +1490,7 @@
       {
         "path": "tests/conformance/test_installer.py",
         "mode": "100644",
-        "sha256": "81eaa4525010ffea7157097115b5a902c5313697688e2c5419c581fb4f47939f"
+        "sha256": "e0a6614643933fbf2e9a7f018454b791b580f6ef8769e57015962a5dd93362f0"
       }
     ],
     "export_adaptations": [
