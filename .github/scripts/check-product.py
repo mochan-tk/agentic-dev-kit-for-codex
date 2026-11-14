@@ -398,6 +398,38 @@ def validate_export(root):
         expected = {row["path"][len(PAYLOAD) + 1:] for row in record["frozen_files"] if row["path"].startswith(PAYLOAD + "/")}
         if len(expected) != 47 or actual != expected:
             errors.append("approved 47-file payload layout changed")
+        inventory = read_bytes(root, ".github/distribution/payload.v1.tsv")
+        rows = [line.split(b"\t") for line in inventory.splitlines() if line and not line.startswith(b"#")]
+        layout = b"\n".join(sorted(b"\t".join(row[:2]) for row in rows)) + b"\n"
+        layout_sha256 = parity.get("payload_layout_sha256")
+        if not isinstance(layout_sha256, str) or re.fullmatch(r"[0-9a-fA-F]{64}", layout_sha256) is None:
+            errors.append("source parity payload_layout_sha256 must be a 64-hex string")
+        elif layout_sha256 != digest(layout):
+            errors.append("source parity payload_layout_sha256 differs from the canonical payload inventory layout")
+        payload_changes = {}
+        for key in ("added_payload_files", "removed_payload_files"):
+            paths = parity.get(key)
+            if (not isinstance(paths, list)
+                    or any(not isinstance(path, str) or path in ("", ".")
+                           or PurePosixPath(path).is_absolute() or str(PurePosixPath(path)) != path
+                           or ".." in PurePosixPath(path).parts
+                           or any(character in path for character in "\x00\t\r\n\\")
+                           for path in paths)):
+                errors.append("source parity " + key + " must be a list of destination-path strings")
+            else:
+                payload_changes[key] = set(paths)
+        if len(payload_changes) == 2:
+            added = payload_changes["added_payload_files"]
+            removed = payload_changes["removed_payload_files"]
+            inventory_paths = {row[0].decode("utf-8") for row in rows}
+            if added & removed:
+                errors.append("source parity added_payload_files and removed_payload_files must be disjoint")
+            if added & expected:
+                errors.append("source parity added_payload_files must not contain initial payload paths")
+            if not removed <= expected:
+                errors.append("source parity removed_payload_files must be a subset of initial payload paths")
+            if inventory_paths != (expected | added) - removed:
+                errors.append("source parity payload paths must equal (initial paths union added_payload_files) minus removed_payload_files")
         manifest = bound_json(root, HISTORY, HISTORY_SHA256)
         if record["fixture_manifest_sha256"] != HISTORY_SHA256 or len(manifest["entries"]) != 20:
             raise ValueError("fixture inventory")
