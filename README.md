@@ -22,14 +22,13 @@
   <a href="#documentation">Documentation</a>
 </p>
 
-Give Codex a repeatable way to prepare context, plan work, implement changes,
-and return evidence. Keep plans and decisions in GitHub, rather than relying
-on one conversation to remember everything.
+Give Codex a repeatable way to prepare context, plan, implement, and return
+evidence. Keep plans and decisions in GitHub instead of relying on one chat.
 
-Codex works inside a defined Task. Humans set direction, decide exceptions,
-and retain agreement, acceptance, and merge authority. The kit supplies the
-Skills, instructions, templates, and helpers for that workflow; it does not
-replace your application, development tools, or delivery process.
+Codex works within a defined Task. Humans set direction, decide exceptions,
+and retain agreement, acceptance, and merge authority. The kit's Skills,
+instructions, templates, and helpers support this workflow without replacing
+your application, development tools, or delivery process.
 
 Adapted from [Agentic Development Kit for GitHub Copilot](https://github.com/mochan-tk/agentic-dev-kit-for-copilot).
 This edition uses Codex Skill and role files without assuming the Copilot app's
@@ -39,8 +38,8 @@ native session hierarchy or a complete autonomous runtime.
 
 ### Prerequisites
 
-Prerequisites are cumulative. The [prerequisite registry](.github/distribution/prerequisites.v1.json)
-is the machine-readable source; the IDs below bind this table to its entries.
+Prerequisites are cumulative; the IDs below bind this table to the
+machine-readable [prerequisite registry](.github/distribution/prerequisites.v1.json).
 
 | Tier | Prerequisites added at this tier | Reach |
 |---|---|---|
@@ -49,15 +48,13 @@ is the machine-readable source; the IDs below bind this table to its entries.
 | Tier 2 — Full operation | Projects `read:project` / `project` permissions (`projects-scope`); a board or a recorded scoped exception for environmental inability or explicit owner decline (`projects-board-or-exception`) | Operate the roadmap and perform required Task close-out. |
 
 **Tier 1: the desktop app is required for this OSS, not just for this tutorial.**
-Use Codex in the desktop app for onboarding, coordination and development.
-Codex CLI or the IDE extension alone is not a supported way to operate the
-kit. Running an installer or helper in a terminal does not replace this
-requirement; those commands do not check whether the app is installed.
+Use the desktop app for onboarding, coordination and development; Codex CLI
+or the IDE extension alone is unsupported. Terminal installers and helpers
+neither replace this requirement nor check whether the app is installed.
 
-For the full adoption workflow, prepare specification context and create/select
-the adopter's Codex project as described below. Tier 0 installation/inspection can
-precede Tier 1 readiness; it does not complete onboarding. Platform-specific
-installation utilities are listed in [step 1](#1-install-in-your-project).
+For full adoption, prepare specification context and create/select the adopter's
+Codex project below. Tier 0 installation/inspection can precede Tier 1 readiness
+but does not complete onboarding. See [step 1](#1-install-in-your-project) for platform-specific installation utilities.
 
 **Tier 2:** the GitHub Projects roadmap is **required by default**, with durable scoped
 exceptions when the environment cannot create/use it or the owner explicitly
@@ -77,47 +74,44 @@ Task is reported complete, verify Kind `Task` and both authorized dates on its
 exact Project item, or cite its exception. See the
 [close-out procedure](.github/distribution/payload/.agents/skills/plan-management/SKILL.md#required-per-task-project-close-out).
 
-For a one-command read-only diagnosis, use Python 3.11+ on a machine with a
-reviewed kit source checkout (these diagnostics are not installed payload):
+For a one-command read-only diagnosis, use Python 3.11+ and a reviewed kit
+source checkout; these diagnostics are not installed payload:
 
 ```sh
 python3 -I /path/to/reviewed-kit/.github/scripts/check-prerequisites.py /path/to/adopter
 ```
 
 The target defaults to the current directory. Missing prerequisites name their
-impact and remedy; desktop/context/project state remains explicit procedural
+impact and remedy; desktop/context/project state needs explicit procedural
 confirmation. Diagnostics do not install, authenticate, grant consent or block
-onboarding. See the [introduction guide](docs/introduction.md) for exit statuses,
-the seven-point material check and lead-time records in the onboarding evidence PR.
-The source checkout is only for diagnostics; adoption still uses the public installer.
+onboarding. The [introduction guide](docs/introduction.md) covers exit statuses,
+the seven-point material check and onboarding evidence PR lead-time records.
+The checkout is only for diagnostics; adoption uses the public installer.
 
 ### Before you start: prepare context and a Codex project
 
-Use the required desktop app with your local application repository.
-In desktop versions with a product selector,
-select **Codex**, not ChatGPT Chat or Work, for installation and development.
+Use the required desktop app with your local application repository. If it has
+a product selector, select **Codex**, not ChatGPT Chat or Work, for installation
+and development.
 
 1. **Prepare specification context before using the kit.** Use ChatGPT
-   **Chat** for back-and-forth requirements clarification, or **Work** to
-   assemble a reviewable specification from your notes and sources. Write
-   down the goal, intended users, scope/non-goals, constraints, acceptance
-   criteria, and unresolved questions. Review the result; reuse suitable
-   existing specifications rather than recreating them. Prepare this handoff
-   before adoption; the installer does not validate its contents and no
-   external connector is required.
-2. **First in Codex, create or select your project.** Attach the local Git
-   repository where you will build your application and make its root the
-   project's primary folder. This is the **adopter repository**, not this
-   kit's source checkout. Prepare or clone the repository first if needed;
-   creating an app project does not replace Git setup. Start a local chat
-   inside that project and confirm its working directory before step 1 below.
+   **Chat** to clarify requirements interactively, or **Work** to assemble a
+   reviewable specification from notes and sources. Record the goal, intended
+   users, scope/non-goals, constraints, acceptance criteria, and unresolved
+   questions. Review it and reuse suitable existing specifications. Prepare
+   this handoff before adoption; the installer does not validate its contents
+   and no external connector is required.
+2. **First in Codex, create or select your project.** Attach your application's
+   local Git repository and make its root the project's primary folder. This
+   **adopter repository** is not the kit's source checkout. Prepare or clone it
+   first if needed; an app project does not replace Git setup. Start a local
+   chat in that project and confirm its working directory before step 1 below.
 3. **Bring the prepared context with you.** Save it in a readable file, attach
-   it, or paste the relevant text when the onboarding Skill asks for material.
-   For documents already committed in the adopter repository, give their
-   paths instead of duplicating them. Do not assume Chat/Work history, a
-   ChatGPT project, or a chat link automatically supplies context to Codex.
-   Share only material you are authorized to use; drafts are not approved
-   agreements until reviewed through the kit's human decision process.
+   it, or paste relevant text when the onboarding Skill asks for material.
+   Give paths for documents already committed in the adopter repository.
+   Do not assume Chat/Work history, a ChatGPT project, or a chat link automatically
+   supplies context to Codex. Share only authorized material; drafts become
+   approved agreements only through the kit's human review process.
 
 A Codex project selects the execution context. It is not a ChatGPT preparation
 project or a GitHub Projects board. See the [detailed preparation checklist](docs/distribution/source-first-installer.md#prepare-context-and-the-desktop-project)
@@ -127,11 +121,10 @@ and [Chat versus Work](https://learn.chatgpt.com/docs/use-chatgpt#choose-how-you
 
 ### 1. Install in your project
 
-Use the root of an **existing Git repository** that no other agent or person
-is changing concurrently: the adopter root selected in your Codex desktop
-project above. Use the **public one-command installer** below from a terminal
-at that root. This is the adopter installation route; do not clone this kit
-or run installer scripts from a kit checkout to adopt it.
+Run the **public one-command installer** below in a terminal at the adopter
+root selected in your Codex desktop project: an **existing Git repository**
+that no other agent or person is changing concurrently. To adopt the kit,
+use this route; do not clone it or run installer scripts from a kit checkout.
 
 | Installation route | Additional utilities |
 |---|---|
@@ -150,16 +143,15 @@ curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex
 irm https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-init.ps1 | iex
 ```
 
-Downloading the public kit needs no GitHub login. Operating the kit still
-requires the authenticated `gh` listed above; anonymous acquisition is not
-an alternative to the workflow prerequisites.
-The Windows entry uses Git Bash, not WSL. It has synthetic-test coverage;
-native Windows installation has not been measured.
+Downloading the public kit needs no GitHub login; operating it still requires
+the authenticated `gh` and other workflow prerequisites above. The Windows
+entry uses Git Bash, not WSL; it has synthetic-test coverage, but native Windows
+installation has not been measured.
 
-The installer resolves a source revision, validates the payload, installs it,
-and stages only newly installed files. It preserves existing project-owned
-files and refuses conflicting engine files or unsafe paths. It does **not**
-create a Git repository, commit, push, configure GitHub, or start onboarding.
+The installer resolves a source revision, validates and installs the payload,
+and stages only newly installed files. It preserves project-owned files and
+refuses conflicting engine files or unsafe paths. It does **not** create a Git
+repository, commit, push, configure GitHub, or start onboarding.
 
 To preview without changing project files or the Git index:
 
@@ -182,27 +174,25 @@ Inspect the staged changes:
 git diff --cached
 ```
 
-Other changes may already have been staged before installation. Commit only
-the adoption changes you have reviewed, and land them on the remote default
-branch through your normal approval process. Do this before onboarding makes
-GitHub changes.
+Other changes may already be staged. Commit only reviewed adoption changes
+and land them on the remote default branch through your normal approval
+process before onboarding makes GitHub changes.
 
 Keep your project's existing README, AGENTS, CI, and other customizations.
 If an existing `AGENTS.md` was preserved, explicitly connect the installed
 `.github/codex-instructions.md` and Skills as described in the
 [installed workflow guide](.github/distribution/payload/README.md).
-For installation and staging, follow this public Quick start: the entry above
-stages new files. The preserved workflow guide's no-staging statement describes
-the internal engine, not the public installer's behavior.
+Follow this public Quick start for installation and staging: the entry stages
+new files. The preserved guide's no-staging statement describes the internal
+engine, not the public installer.
 
 ### 3. Onboard in Codex
 
 Before invoking the Skill, open or select the adopter checkout in Codex—
-**your project**, not this kit's repository. In the desktop app, start a new
-local chat in the project prepared above so it can read the newly installed
-files. Keep your prepared specification context ready for the material
-question, and answer each pending question explicitly, including the model
-preference (`auto` is an explicit choice, not a timeout default).
+**your project**, not the kit's repository—and start a new local desktop chat
+in the prepared project to read the installed files. Have your specification
+context ready for the material question. Answer every pending question,
+including model preference, explicitly (`auto` is a choice, not a timeout default).
 
 In the desktop project chat, invoke the installed Skill:
 
@@ -210,8 +200,8 @@ In the desktop project chat, invoke the installed Skill:
 $project-onboarding
 ```
 
-If your desktop app version does not expose that invocation, use this
-explicit installed-file fallback in the same chat:
+If your desktop app version lacks that invocation, use this explicit
+installed-file fallback in the same chat:
 
 ```text
 Read and follow .agents/skills/project-onboarding/SKILL.md in this project.
@@ -220,18 +210,16 @@ Read and follow .agents/skills/project-onboarding/SKILL.md in this project.
 Confirm it reads the installed file, not the kit-development Skill. This is
 an explicit handoff, not a guarantee of automatic discovery in every app version.
 
-Onboarding inventories the project, verifies its existing commands, tunes
-project instructions, and prepares an evidence-bearing onboarding PR and
-planning handoff. It does not implement your application's next feature.
-Review the PR, resolve or record deferred work, and accept onboarding before
-moving on to ordinary development.
+Onboarding inventories the project, verifies existing commands, tunes its
+instructions, and prepares an evidence-bearing onboarding PR and planning
+handoff. It does not implement your application's next feature. Review the PR,
+resolve or record deferred work, and accept onboarding before ordinary development.
 
 After the reviewed installation reaches the remote default branch, onboarding
-runs canonical label setup and, when you supply a goal or material, drafts
-phase Epic Issues for your review.
-Those GitHub writes are distinct from optional Ruleset setup. Choose Enable
-now, Create disabled, or Skip explicitly; the write choices require a reviewed
-profile and separate consent. Skip performs no Ruleset operation.
+runs canonical label setup and drafts phase Epic Issues for review when you
+supply a goal or material. These writes are distinct from optional Ruleset
+setup: explicitly choose Enable now, Create disabled, or Skip. Writes require
+a reviewed profile and separate consent; Skip performs no Ruleset operation.
 The installer itself creates neither CI workflows nor branch protection. See the [onboarding Skill](.github/distribution/payload/.agents/skills/project-onboarding/SKILL.md).
 
 To connect Task records to PR checks, a separate [opt-in adopter CI companion](docs/distribution/adopter-ci.md)
@@ -243,8 +231,8 @@ considering check activation; it is outside the legacy 47-file update path.
 ### 4. Complete one small Task
 
 For an existing codebase, start with characterization tests for the area you
-intend to change, before feature work. This follows the onboarding Skill's
-legacy path and gives later changes an observed-behavior baseline. For example:
+intend to change. This onboarding Skill legacy path establishes an
+observed-behavior baseline before feature work. For example:
 
 ```text
 Use the installed kit workflow to add characterization tests for the existing
@@ -257,24 +245,24 @@ After the plan is agreed, implement and test the change, then open a PR
 with the results and any remaining concerns. Leave the merge decision to me.
 ```
 
-The [illustrative worked example](docs/worked-example.md) walks through a
-first characterization Task with locally runnable reference tests. It is not a
-record of accepted live work and is not installed into your project.
+The [illustrative worked example](docs/worked-example.md) covers a first
+characterization Task with locally runnable reference tests. It is neither
+accepted live work nor installed into your project.
 
-Review the Task, diff, and evidence—not only the final chat message. Accept,
-redirect, or reject the result. Use the retrospective workflow when repeated
-friction suggests a reusable improvement. After the characterization baseline
-is accepted, plan a small feature Task separately. For a new codebase, agree
-the initial behavior and tests in its first bounded Task.
+Review the Task, diff, and evidence—not only the final chat message—then accept,
+redirect, or reject. Use retrospectives when repeated friction suggests a
+reusable improvement. After accepting the characterization baseline, plan a
+small feature Task separately. For a new codebase, agree on initial behavior
+and tests in its first bounded Task.
 
 ### 5. Update explicitly when you choose
 
-You do not need a kit clone. Supply the full 40-character commit IDs for the
-version previously installed (`FROM`) and the reviewed new version (`TO`).
-Use the previous installation's recorded `source-commit` or accepted adoption
-record for `FROM`; if it is unknown, inspect that record before updating.
-Choose a **new recovery directory outside your project**, with an existing
-parent. Run from your project root; keep exclusive ownership during the update.
+No kit clone is needed. Supply full 40-character commit IDs for the installed
+version (`FROM`) and reviewed new version (`TO`). Use the previous installation's
+recorded `source-commit` or accepted adoption record for `FROM`; if unknown,
+inspect that record before updating. Choose a **new recovery directory outside your project**
+with an existing parent. Run from your project root with exclusive ownership
+during the update.
 
 ```sh
 FROM=FULL_OLD_COMMIT_SHA
@@ -284,8 +272,8 @@ set -o pipefail
 curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-update.sh | bash -s -- --from "$FROM" --to "$TO" --recovery "$RECOVERY"
 ```
 
-The default previews the update without changing project files, the index, or
-the requested recovery directory. Apply that explicit update with:
+The default previews without changing project files, the index, or the
+requested recovery directory. Apply the explicit update with:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/mochan-tk/agentic-dev-kit-for-codex/main/.github/scripts/scaffold-update.sh | bash -s -- --from "$FROM" --to "$TO" --recovery "$RECOVERY" --apply
@@ -311,11 +299,11 @@ unmeasured; updates are explicit and do not detect installed versions.
 
 ### 6. Check the project without cloning the kit
 
-Use the [fixed-revision companion commands](docs/distribution/companion-checks.md)
-to observe GitHub governance, check a planned worktree action, or validate
-connector definitions. Choose the check and supply your actual inputs; each
-Bash command downloads the complete unchanged helper, verifies its recorded
-SHA-256, and runs it without installing extra files into your project.
+The [fixed-revision companion commands](docs/distribution/companion-checks.md)
+observe GitHub governance, check planned worktree actions, or validate connector
+definitions. Choose a check and supply actual inputs; each Bash command downloads
+the complete unchanged helper, verifies its recorded SHA-256, and runs it
+without installing extra project files.
 
 Governance uses your existing authenticated `gh` for GET-only observations;
 the other checks are local after downloading. No command repairs settings,
@@ -324,8 +312,8 @@ evidence remains non-success. A successful check is not runtime qualification.
 
 ## How it works
 
-GitHub is the durable work record. Codex sessions carry out the work; they do
-not replace the Issue graph or the human decision to accept a result.
+GitHub is the durable work record. Codex sessions execute work without replacing
+the Issue graph or human acceptance.
 
 ```mermaid
 flowchart LR
@@ -349,23 +337,21 @@ handoff based on the committed files and GitHub records.
 | Task supervision | Scope, plan, one active writer, verification, and escalation |
 | Implementation worker | One scoped change, tests, commits, and evidence for a pull request |
 
-The three shipped role definitions provide instructions. They do not establish
-authenticated identities or guarantee native role selection. A GitHub Projects
-board is required by default with the two recorded exceptions above; the Issue
-graph remains authoritative. A board match is verification evidence, not
-acceptance or merge authority.
+The three shipped role definitions are instructions, not authenticated identities
+or guaranteed native role selection. A GitHub Projects board is required by
+default with the two recorded exceptions above; the Issue graph remains
+authoritative. A board match is verification evidence, not acceptance or merge authority.
 
 ### Human-on-the-Loop by design
 
-Routine, scoped work can proceed under the agreed plan without asking a human
-to approve every edit. Ambiguity, high risk, scope changes, and insufficient
-evidence return to human judgment. Agreement and merge authority stay with
-the owner.
+Routine, scoped work can follow the agreed plan without per-edit human approval.
+Ambiguity, high risk, scope changes, and insufficient evidence need human
+judgment. The owner retains agreement and merge authority.
 
-Four habits make that practical: record decisions before reporting them,
-verify before claiming completion, keep one writer per owned scope, and
-escalate rather than guess. Planned handoffs preserve the current Task,
-plan, and committed checkpoint; they are not automatic crash recovery.
+Record decisions before reporting them, verify before claiming completion,
+keep one writer per owned scope, and escalate rather than guess. Planned
+handoffs preserve the current Task, plan, and committed checkpoint;
+they are not automatic crash recovery.
 
 ## Eight Skills, one workflow
 
@@ -383,9 +369,9 @@ instructions for this kit are in [AGENTS.md](AGENTS.md).
 | [verification](.github/distribution/payload/.agents/skills/verification/SKILL.md) | Check the diff, test results, and current records against acceptance criteria |
 | [retro](.github/distribution/payload/.agents/skills/retro/SKILL.md) | Turn supported recurring problems into reviewed improvement proposals |
 
-Use the Skill needed for the current step; do not restart onboarding for each
-Task. Collected material and draft requirements are not automatically accepted
-project truth. Distillation and review are separate decisions.
+Use the current step's Skill; do not restart onboarding for each Task. Collected
+material and draft requirements are not automatically accepted project truth;
+distillation and review are separate decisions.
 
 ## Safety and project status
 
@@ -401,23 +387,23 @@ autonomous service or a guarantee that generated code is correct.
 | Codex compatibility | The ChatGPT Codex desktop app is required; CLI-only/IDE-only operation is unsupported. Evidence remains version/path-specific; automatic Skill discovery and cross-client parity are not promised |
 | Product and release | A source-first workflow kit with bounded product tests; native Windows and cross-client runtime parity remain unmeasured |
 
-The explicit governance, worktree and connector companions can run from a
-reviewed kit checkout or the [verified no-clone commands](docs/distribution/companion-checks.md).
-They are not additional files installed by the one-command entry. The
-consent-gated failure reporter also has a [verified no-clone draft/send guide](docs/distribution/feedback.md).
+Run the explicit governance, worktree and connector companions from a reviewed
+kit checkout or the [verified no-clone commands](docs/distribution/companion-checks.md);
+the one-command entry does not install them. The consent-gated failure reporter
+also has a [verified no-clone draft/send guide](docs/distribution/feedback.md).
 For manual text, use the [public feedback form](https://github.com/mochan-tk/agentic-dev-kit-for-codex/issues/new?template=feedback.yml)
 and review its privacy warning before submitting. Installation failures print
-fixed links to these routes; reporting remains an explicit separate action. See the
+fixed links to these routes; reporting is a separate explicit action. See the
 [helper and procedure guide](docs/distribution/source-first-installer.md#governance-worktree-and-retro-procedures).
 
-This repository has a clean product Git history and preserves the accepted
-predecessor's 47-file payload and installer engine. See
-[product scope](docs/product-scope.md) and [known limitations](docs/known-limitations.md)
-for current behavior and evidence boundaries. Earlier acceptance, research and
-unfinished runtime/release work remain in the [predecessor records](docs/provenance.md).
-The [dated evidence status](docs/evidence-status.md) separates baseline CI,
-synthetic conformance, the accepted historical desktop exercise and unmeasured
-behavior. Historical acceptance does not establish live behavior of later revisions.
+This repository's clean product Git history preserves the accepted predecessor's
+47-file payload and installer engine. [product scope](docs/product-scope.md) and
+[known limitations](docs/known-limitations.md) describe current behavior and evidence boundaries.
+Earlier acceptance, research and unfinished runtime/release work remain in the
+[predecessor records](docs/provenance.md). The [dated evidence status](docs/evidence-status.md)
+separates baseline CI, synthetic conformance, the accepted historical desktop
+exercise and unmeasured behavior. Historical acceptance does not establish
+live behavior of later revisions.
 
 ## Documentation
 
@@ -441,12 +427,11 @@ behavior. Historical acceptance does not establish live behavior of later revisi
 
 ## Contributing
 
-Use a bounded Task with a recorded plan, explicit file ownership, and evidence
-for the change. Preserve existing safeguards, add relevant regression tests,
-and leave acceptance and merge decisions to the owner.
+Use a bounded Task, recorded plan, explicit file ownership, and change evidence.
+Preserve safeguards, add relevant regression tests, and leave acceptance and
+merge to the owner.
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) and this repository's
-[AGENTS.md](AGENTS.md). These instructions govern contributions to the kit.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md), which govern kit contributions.
 
 A contributor quick check, from this kit's checkout:
 
@@ -456,17 +441,15 @@ python3 -I .github/scripts/check-installer.py
 git diff --check
 ```
 
-These are a starting subset; use the [full validation instructions](CONTRIBUTING.md#local-validation).
+Follow the [full validation instructions](CONTRIBUTING.md#local-validation) beyond this starting subset.
 Product CI runs quality and conformance checks without predecessor history or
-old Issue retrieval. Pinned lint-tool acquisition is a separate CI network step.
+old Issue retrieval; pinned lint-tool acquisition is a separate CI network step.
 
 ## Attribution and license
 
 This project adapts [Agentic Development Kit for GitHub Copilot](https://github.com/mochan-tk/agentic-dev-kit-for-copilot).
 The frozen behavioral source and target adaptations are recorded in
-[source parity](.github/distribution/source-parity.v1.json).
-The logo is reused from that same frozen source revision; it is an external
-reference, not a claim of OpenAI endorsement.
+[source parity](.github/distribution/source-parity.v1.json); the logo reuses that same revision as an
+external reference without claiming OpenAI endorsement.
 
-Licensed under the [MIT License](LICENSE). Your application's license remains
-yours; installing the kit does not replace it.
+Licensed under the [MIT License](LICENSE); installation does not replace your application's license.
