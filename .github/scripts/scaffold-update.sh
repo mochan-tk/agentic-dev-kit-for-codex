@@ -119,7 +119,7 @@ project() {
   chmod 644 "$SOURCE/$path"
 }
 acquire() {
-  local PIN="$1" SOURCE="$2" role="$3" manifest name class hash extra layout expected actual count engine_hash
+  local PIN="$1" SOURCE="$2" role="$3" manifest name class hash extra layout expected actual layout_sha engine_hash
   printf 'Acquiring %s source-commit=%s\n' "$REPO" "$PIN"
   object_git fetch --no-tags --depth=1 "https://github.com/$REPO" "$PIN" || fail 'pinned source fetch failed'
   [ "$(object_git rev-parse --verify 'FETCH_HEAD^{commit}')" = "$PIN" ] || fail 'fetched commit differs from requested commit'
@@ -127,17 +127,23 @@ acquire() {
   mkdir "$SOURCE"
   project .github/distribution/payload.v1.tsv
   manifest="$SOURCE/.github/distribution/payload.v1.tsv"
-  layout=""; expected=""; count=0
+  layout=""; expected=""
   while IFS=$'\t' read -r name class hash extra || [ -n "${name:-}" ]; do
     case "$name" in ''|'#'*) continue ;; esac
     [[ "$name" =~ ^[A-Za-z0-9._/-]+$ ]] && [[ "$hash" =~ ^[0-9a-f]{64}$ ]] && [ -z "$extra" ] || fail 'invalid payload inventory'
     case "$name" in /*|*/|*//*|.|..|./*|../*|*/./*|*/../*|*/.|*/..|.git|.git/*) fail 'unsafe payload path' ;; esac
     case "$class" in engine|tuned|instance|seed) ;; *) fail 'invalid preservation class' ;; esac
-    count=$((count + 1)); layout+="$name"$'\t'"$class"$'\n'; expected+=".github/distribution/payload/$name"$'\n'
+    layout+="$name"$'\t'"$class"$'\n'; expected+=".github/distribution/payload/$name"$'\n'
   done < "$manifest"
-  [ "$count" -eq 47 ] && [ "$(printf '%s' "$layout" | digest)" = 763ea43ca7f79b9774867e012ec92f742bc2cbb382f8fe46736f18cf945fc987 ] || fail 'unreviewed payload layout'
+  # FROM is manifest-only historical data. Only TO declares the new layout.
+  if [ "$role" = to ]; then
+    project .github/distribution/source-parity.v1.json
+    layout_sha="$(sed -n 's/.*"payload_layout_sha256": "\([0-9a-f]\{64\}\)".*/\1/p' "$SOURCE/.github/distribution/source-parity.v1.json")"
+    [[ "$layout_sha" =~ ^[0-9a-f]{64}$ ]] || fail 'missing or ambiguous payload layout digest'
+    [ "$(printf '%s' "$layout" | LC_ALL=C sort | digest)" = "$layout_sha" ] || fail 'unreviewed payload layout'
+  fi
   actual="$(object_git ls-tree -r --name-only "$PIN" -- .github/distribution/payload/)" || fail 'payload enumeration failed'
-  [ "$actual" = "${expected%$'\n'}" ] || fail 'unexpected or missing payload entries'
+  [ "$actual" = "$(printf '%s' "$expected" | LC_ALL=C sort)" ] || fail 'unexpected or missing payload entries'
   while IFS=$'\t' read -r name class hash extra || [ -n "${name:-}" ]; do
     case "$name" in ''|'#'*) continue ;; esac
     project ".github/distribution/payload/$name"
@@ -148,7 +154,8 @@ acquire() {
   case "$role:$engine_hash" in
     from:3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2) ;; # Historical data only; never executed.
     from:3a4c87a4427172cd9e30d897d807df7c4b721aa62884c8c772a69d77d1467284) ;; # Audit-base data only; never executed.
-    from:63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe|to:63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe) ;;
+    from:63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe) ;; # Step 1 data only; never executed.
+    from:f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04|to:f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04) ;;
     *) fail 'unreviewed engine bytes for selected source role' ;;
   esac
 }

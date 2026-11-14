@@ -34,7 +34,7 @@ class BootstrapTests(unittest.TestCase):
         cls.shared = tempfile.TemporaryDirectory(prefix="bootstrap-git-seed-")
         cls.seed = Path(cls.shared.name) / "source"
         cls.seed.mkdir()
-        for path in (ENTRY, PS_ENTRY, ENGINE, INVENTORY):
+        for path in (ENTRY, PS_ENTRY, ENGINE, INVENTORY, ".github/distribution/source-parity.v1.json"):
             dest = cls.seed / path
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, dest)
@@ -179,6 +179,41 @@ ref="${rest%/.github/scripts/scaffold-init.sh}"
             self.assertEqual(1, result.stderr.count("Optional public feedback"), result.stderr)
         self.assertEqual(before, self.snapshot())
         return result
+
+    def test_manifest_addition_and_permutation_public_install(self):
+        from test_installer_sets import change_payload, EXTRA, PARITY
+        change_payload(self.source, {EXTRA: "engine"}, permute=lambda rows: list(reversed(rows)))
+        self.command(self.source, "add", "-A")
+        self.command(self.source, "-c", "user.name=Fixture", "-c", "user.email=f@example.invalid",
+                     "commit", "-qm", "Synthetic manifest addition")
+        result = self.run_entry()
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual((self.source / PAYLOAD / EXTRA).read_bytes(), (self.target / EXTRA).read_bytes())
+        staged = self.git("diff", "--cached", "--name-only").splitlines()
+        self.assertIn(EXTRA, staged)
+        self.assertNotIn(PARITY, staged)
+
+    def test_public_layout_digest_zero_multiple_and_mismatch_refuse(self):
+        from test_installer_sets import PARITY
+        original = (ROOT / PARITY).read_text()
+        match = next(line for line in original.splitlines(keepends=True) if '"payload_layout_sha256":' in line)
+        for defect in ("missing", "duplicate", "mismatch"):
+            with self.subTest(defect=defect):
+                if defect == "missing":
+                    text = original.replace(match, "")
+                elif defect == "duplicate":
+                    text = original.replace(match, match + match)
+                else:
+                    text = original.replace(json.loads(original)["payload_layout_sha256"], "0" * 64)
+                (self.source / PARITY).write_text(text)
+                self.command(self.source, "add", "-A")
+                self.command(self.source, "-c", "user.name=Fixture", "-c", "user.email=f@example.invalid",
+                             "commit", "-qm", "Synthetic invalid layout")
+                before = self.snapshot()
+                result = self.run_entry()
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("layout", result.stderr)
+                self.assertEqual(before, self.snapshot())
 
     def test_readme_pipeline_exact_payload_stage_repeat_and_dry_run(self):
         result = self.run_entry()

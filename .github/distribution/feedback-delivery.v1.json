@@ -39,7 +39,7 @@
     {
       "path": ".github/scripts/scaffold-init.sh",
       "mode": "100644",
-      "sha256": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7"
+      "sha256": "50908d1881865b88df17edc319a0d106b37a0670e9a03ff2c6dd9e2be5af3d68"
     },
     {
       "path": "docs/distribution/feedback.md",

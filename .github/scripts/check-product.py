@@ -66,7 +66,7 @@ TEST_MODULES = (
     "test_interaction_fixtures.py",
     "test_code_change_fixtures.py",
     "test_adopter_ci.py", "test_ci_toolchain.py", "test_companion_access.py", "test_connector_validation.py", "test_installer.py",
-    "test_installer_bootstrap.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
+    "test_installer_bootstrap.py", "test_installer_sets.py", "test_installer_feedback.py", "test_feedback_delivery.py", "test_installer_update.py", "test_product.py", "test_ongoing_improvement.py",
     "test_source_first_governance.py", "test_source_first_procedures.py", "test_workflow_parity.py", "test_frontier_cache.py", "test_final_boundary.py", "test_pr_monitor.py",
 )
 # Exact current adaptations; the original export seal is never rewritten.
@@ -91,8 +91,8 @@ WORKFLOW_EXPORT_DIGESTS = {
 FRONTIER_EXPORT_PATH = PAYLOAD + "/.agents/skills/plan-management/scripts/frontier.sh"
 FRONTIER_EXPORT_SHA256 = "0f988399ca9f0d8a197964a8a5a5efec91bf1c1ccd18effb69544e3e238a7ca6"
 BOUNDARY_EXPORT_DIGESTS = {
-    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
-    ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
+    ".github/scripts/scaffold-init.sh": "50908d1881865b88df17edc319a0d106b37a0670e9a03ff2c6dd9e2be5af3d68",
+    ".github/scripts/scaffold-install.sh": "f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04"
 }
 FINAL_EXPORT_DIGESTS = {
     ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1"
@@ -137,7 +137,7 @@ PUBLIC_DOCS = (
     "docs/distribution/ongoing-improvement.md", "docs/distribution/feedback.md", "docs/parity-status.md", "docs/distribution/pr-monitor.md",
 )
 FEEDBACK_RECORD = ".github/distribution/feedback-delivery.v1.json"
-FEEDBACK_RECORD_SHA256 = "acaf0e7ae1cb8789ad479d0f7e1af1e3d0460b96e0b2f1085b53c4ad65184630"
+FEEDBACK_RECORD_SHA256 = "a5c9c26e5ecaed7d6eb3b1f886d8d20acd635d184aecdbd3e3878428f8f04fc5"
 FEEDBACK_GUIDE = "docs/distribution/feedback.md"
 FEEDBACK_BLOCK_SHA256 = "6851507e47ded37aa5258d20b9a6262d1e9117cb32782e70bc6fc3207acb82f3"
 FEEDBACK_EXPORT_DIGESTS = {
@@ -148,7 +148,7 @@ FEEDBACK_TARGET_DIGESTS = {
     ".github/scripts/feedback-lib.sh": "6dd41e7c3d5f7dea6e6735226cd794bf0d356e2b85bc637f2c027d50db756f20",
     ".github/scripts/report-installer-failure.sh": "9880d074c768c694816181af1f94e0288afa9a7cc15dc22537d701fcc9bd5e07",
     ".github/scripts/scaffold-init.ps1": "b5c36c6bb0c59b026c3492ad45e6bac16eab00426560cc8da492cae7e5d22a01",
-    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
+    ".github/scripts/scaffold-init.sh": "50908d1881865b88df17edc319a0d106b37a0670e9a03ff2c6dd9e2be5af3d68",
     "docs/distribution/feedback.md": "8183519eb660e1caa47f3b50b67b7ec7c28f5cdb0ad7ecd92ff968d858eec8b1",
     "tests/conformance/test_feedback_delivery.py": "c31029d4426e5a6615e7443e65f677ad9bc8eaf41bba94145cf21cc7fadbee01"
 }
@@ -396,10 +396,10 @@ def validate_export(root):
                 errors.append("approved export file changed: " + row["path"])
         actual = {str(p.relative_to(Path(root) / PAYLOAD)) for p in (Path(root) / PAYLOAD).rglob("*") if not p.is_dir() or p.is_symlink()}
         expected = {row["path"][len(PAYLOAD) + 1:] for row in record["frozen_files"] if row["path"].startswith(PAYLOAD + "/")}
-        if len(expected) != 47 or actual != expected:
-            errors.append("approved 47-file payload layout changed")
         inventory = read_bytes(root, ".github/distribution/payload.v1.tsv")
         rows = [line.split(b"\t") for line in inventory.splitlines() if line and not line.startswith(b"#")]
+        if actual != {row[0].decode("utf-8") for row in rows}:
+            errors.append("payload entries differ from the manifest path set")
         layout = b"\n".join(sorted(b"\t".join(row[:2]) for row in rows)) + b"\n"
         layout_sha256 = parity.get("payload_layout_sha256")
         if not isinstance(layout_sha256, str) or re.fullmatch(r"[0-9a-fA-F]{64}", layout_sha256) is None:
@@ -1007,7 +1007,7 @@ def main():
         print("ERROR: " + error)
     if errors:
         return 1
-    print("Product integrity: 47 payload paths with bounded current adaptations; 20 immutable historical entries plus accepted workflow baseline; complete product checks and navigation. Offline evidence only.")
+    print("Product integrity: manifest-driven payload paths with bounded current adaptations; 20 immutable historical entries plus accepted workflow baseline; complete product checks and navigation. Offline evidence only.")
     return 0
 
 

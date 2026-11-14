@@ -152,9 +152,17 @@ if [ "$OP" != install ]; then
     disjoint "$OLD" "$DEST"; disjoint "$OLD" "$TX"
   else [ -d "$TX" ] || fail 'transaction directory missing'; fi
 fi
-# The path/class digest is anchored in this reviewed executable, not supplied
-# by a possibly modified local source. File digests can change only within it.
-EXPECTED_LAYOUT_SHA256=763ea43ca7f79b9774867e012ec92f742bc2cbb382f8fe46736f18cf945fc987
+# Install and upgrade require the selected source's current layout declaration.
+# Historical retained rollback sources predate parity projection. Rollback binds
+# the complete manifest to local-upgrade/v1's sealed new-inventory and new-root;
+# all payload, record and backup no-link/size/digest checks still apply.
+if [ "$OP" != rollback ]; then
+  PARITY="$SRC/.github/distribution/source-parity.v1.json"
+  bounded_file "$PARITY" 1048576
+  EXPECTED_LAYOUT_SHA256="$(sed -n 's/.*"payload_layout_sha256": "\([0-9a-f]\{64\}\)".*/\1/p' "$PARITY")"
+  [[ "$EXPECTED_LAYOUT_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail 'missing or ambiguous payload layout digest'
+fi
+contains() { grep -Fxq -- "$1" <<< "$2"; }
 bounded_file "$MANIFEST" 16384
 NAMES=()
 CLASSES=()
@@ -163,13 +171,14 @@ ACTIONS=()
 SEEN=$'\n'
 COUNT=0
 LAYOUT=""
+SORTED_MANIFEST="$(LC_ALL=C sort "$MANIFEST")" || fail 'payload inventory sort failed'
 while IFS=$'\t' read -r name class sha extra || [ -n "${name:-}" ]; do
   case "$name" in '#'*|'') continue ;; esac
   safe_relative "$name" || fail 'unsafe payload path'
   [[ "$sha" =~ ^[0-9a-f]{64}$ ]] && [ -z "$extra" ] || fail 'malformed payload inventory row'
   case "$class" in engine|tuned|instance|seed) ;; *) fail 'unknown preservation class' ;; esac
   folded="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
-  case "$SEEN" in *$'\n'"$folded"$'\n'*) fail 'duplicate or case-colliding payload path' ;; esac
+  contains "$folded" "$SEEN" && fail 'duplicate or case-colliding payload path'
   SEEN+="$folded"$'\n'
   no_links "$PAYLOAD/$name" || fail 'source payload symlink'
   bounded_file "$PAYLOAD/$name" 1048576
@@ -200,55 +209,116 @@ while IFS=$'\t' read -r name class sha extra || [ -n "${name:-}" ]; do
   BEFORE+=("$before")
   LAYOUT+="$name"$'\t'"$class"$'\n'
   COUNT=$((COUNT + 1))
-done < "$MANIFEST"
-[ "$COUNT" -eq 47 ] || fail 'expected exactly 47 reviewed payload files'
-if command -v sha256sum >/dev/null 2>&1; then
-  ACTUAL_LAYOUT="$(printf '%s' "$LAYOUT" | sha256sum | cut -d ' ' -f1)"
-else
-  ACTUAL_LAYOUT="$(printf '%s' "$LAYOUT" | shasum -a 256 | cut -d ' ' -f1)"
+done <<< "$SORTED_MANIFEST"
+if [ "$OP" != rollback ]; then
+  ACTUAL_LAYOUT="$(printf '%s' "$LAYOUT" | LC_ALL=C sort | hash_text)"
+  [ "$ACTUAL_LAYOUT" = "$EXPECTED_LAYOUT_SHA256" ] || fail 'unreviewed payload path/class layout'
 fi
-[ "$ACTUAL_LAYOUT" = "$EXPECTED_LAYOUT_SHA256" ] || fail 'unreviewed payload path/class layout'
 # find never follows directory links. Extra files, special entries and links refuse.
 # Capture status in the main shell: process substitution would hide find errors.
 ACTUAL_ENTRIES="$(find "$PAYLOAD" -mindepth 1 ! -type d -print)" || fail 'payload enumeration failed'
 ACTUAL=0
 while IFS= read -r found; do
+  [ -n "$found" ] || continue
   relative="${found#"$PAYLOAD"/}"
   [ ! -L "$found" ] && [ -f "$found" ] || fail 'unexpected nonregular payload entry'
   folded="$(printf '%s' "$relative" | tr '[:upper:]' '[:lower:]')"
-  case "$SEEN" in *$'\n'"$folded"$'\n'*) ;; *) fail 'unreviewed extra payload entry' ;; esac
+  contains "$folded" "$SEEN" || fail 'unreviewed extra payload entry'
   ACTUAL=$((ACTUAL + 1))
 done <<< "$ACTUAL_ENTRIES"
 [ "$ACTUAL" -eq "$COUNT" ] || fail 'payload inventory is incomplete'
 
+REMOVE_DIRS=()
 if [ "$OP" = upgrade ]; then
+  # OLD is defined only by its inventory. Old parity is neither needed nor read.
   old_manifest="$OLD/.github/distribution/payload.v1.tsv"
   old_payload="$OLD/.github/distribution/payload"
   bounded_file "$old_manifest" 16384
-  old_count=0
+  OLD_NAMES=(); OLD_CLASSES=(); OLD_SEEN=$'\n'
   while IFS=$'\t' read -r name class sha extra || [ -n "${name:-}" ]; do
     case "$name" in '#'*|'') continue ;; esac
-    [ "$old_count" -lt 47 ] && [ "$name" = "${NAMES[$old_count]}" ] && [ "$class" = "${CLASSES[$old_count]}" ] || fail 'old source layout mismatch'
+    safe_relative "$name" || fail 'unsafe old payload path'
     [[ "$sha" =~ ^[0-9a-f]{64}$ ]] && [ -z "$extra" ] || fail 'old source malformed row'
+    case "$class" in engine|tuned|instance|seed) ;; *) fail 'unknown old preservation class' ;; esac
+    folded="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+    contains "$folded" "$OLD_SEEN" && fail 'duplicate or case-colliding old payload path'
+    OLD_SEEN+="$folded"$'\n'
     bounded_file "$old_payload/$name" 1048576
     [ "$FILE_MODE" = 644 ] && [ "$(digest "$old_payload/$name")" = "$sha" ] || fail 'old source bytes/mode drift'
-    OLD_HASHES+=("$sha"); old_count=$((old_count + 1))
+    OLD_NAMES+=("$name"); OLD_CLASSES+=("$class"); OLD_HASHES+=("$sha")
   done < "$old_manifest"
-  [ "$old_count" -eq 47 ] || fail 'old source inventory incomplete'
   old_entries="$(find "$old_payload" -mindepth 1 ! -type d -print)" || fail 'old source enumeration failed'
   old_count=0
   while IFS= read -r found; do
+    [ -n "$found" ] || continue
     relative="${found#"$old_payload"/}"
     folded="$(printf '%s' "$relative" | tr '[:upper:]' '[:lower:]')"
-    case "$SEEN" in *$'\n'"$folded"$'\n'*) ;; *) fail 'old source extra entry' ;; esac
+    contains "$folded" "$OLD_SEEN" || fail 'old source extra entry'
     bounded_file "$found" 1048576; old_count=$((old_count + 1))
   done <<< "$old_entries"
-  [ "$old_count" -eq 47 ] || fail 'old source inventory is incomplete'
-  for ((i=0; i<COUNT; i++)); do
-    if [ "${ACTIONS[$i]}" = upgrade ]; then
-      [ "${BEFORE[$i]}" = "${OLD_HASHES[$i]}" ] || fail 'unknown engine bytes; whole upgrade refused'
+  [ "$old_count" -eq "${#OLD_NAMES[@]}" ] || fail 'old source inventory is incomplete'
+  NEW_NAMES=("${NAMES[@]}"); NEW_CLASSES=("${CLASSES[@]}")
+  NEW_HASHES=("${HASHES[@]}"); NEW_ACTIONS=("${ACTIONS[@]}"); NEW_BEFORE=("${BEFORE[@]}")
+  union="$(printf '%s\n' "${NAMES[@]}" "${OLD_NAMES[@]}" | LC_ALL=C sort -u)"
+  NAMES=(); CLASSES=(); HASHES=(); ACTIONS=(); BEFORE=(); SEEN=$'\n'
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    folded="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+    contains "$folded" "$SEEN" && fail 'case-colliding old/new payload path'
+    SEEN+="$folded"$'\n'
+    new_index=-1; old_index=-1
+    for ((j=0; j<${#NEW_NAMES[@]}; j++)); do [ "$name" != "${NEW_NAMES[$j]}" ] || new_index=$j; done
+    for ((j=0; j<${#OLD_NAMES[@]}; j++)); do [ "$name" != "${OLD_NAMES[$j]}" ] || old_index=$j; done
+    if [ "$new_index" -ge 0 ]; then
+      class="${NEW_CLASSES[$new_index]}"; sha="${NEW_HASHES[$new_index]}"
+      action="${NEW_ACTIONS[$new_index]}"; before="${NEW_BEFORE[$new_index]}"
+      if [ "$old_index" -ge 0 ]; then
+        [ "$class" = "${OLD_CLASSES[$old_index]}" ] || fail "old source class mismatch: $name"
+      fi
+      if [ "$action" = upgrade ]; then
+        [ "$old_index" -ge 0 ] && [ "$before" = "${OLD_HASHES[$old_index]}" ] || fail 'unknown engine bytes; whole upgrade refused'
+      fi
+    else
+      class="${OLD_CLASSES[$old_index]}"; sha=-; action=delete
+      [ "$class" = engine ] || fail "removed non-engine path: $name"
+      no_links "$DEST/$name" && [ -f "$DEST/$name" ] || fail "removed engine missing or unsafe: $name"
+      bounded_file "$DEST/$name" 1048576
+      before="$(digest "$DEST/$name")"
+      [ "$FILE_MODE" = 644 ] && [ "$before" = "${OLD_HASHES[$old_index]}" ] || fail "removed engine modified: $name"
     fi
-    case "${ACTIONS[$i]}" in install|upgrade) CHANGES+=("$i") ;; esac
+    case "$action" in install|upgrade|delete) CHANGES+=("${#NAMES[@]}") ;; esac
+    NAMES+=("$name"); CLASSES+=("$class"); HASHES+=("$sha"); ACTIONS+=("$action"); BEFORE+=("$before")
+  done <<< "$union"
+  COUNT=${#NAMES[@]}
+  # Remove only directories wholly emptied by these deletions. An unrelated
+  # empty directory is still adopter content and keeps its ancestors alive.
+  remove_seen=$'\n'
+  for ((i=0; i<COUNT; i++)); do
+    [ "${ACTIONS[$i]}" = delete ] || continue
+    parent="$(dirname "${NAMES[$i]}")"
+    while [ "$parent" != . ]; do
+      removable=1
+      for ((j=0; j<COUNT; j++)); do
+        case "${NAMES[$j]}" in "$parent/"*) [ "${ACTIONS[$j]}" = delete ] || removable=0 ;; esac
+      done
+      contents="$(find "$DEST/$parent" -mindepth 1 -print)" || fail 'removal directory enumeration failed'
+      while IFS= read -r found; do
+        [ -n "$found" ] || continue
+        related=0; relative="${found#"$DEST"/}"
+        for ((j=0; j<COUNT; j++)); do
+          [ "${ACTIONS[$j]}" = delete ] || continue
+          if [ "$relative" = "${NAMES[$j]}" ]; then related=1
+          elif [ -d "$found" ] && [ ! -L "$found" ]; then
+            case "${NAMES[$j]}" in "$relative/"*) related=1 ;; esac
+          fi
+        done
+        [ "$related" = 1 ] || removable=0
+      done <<< "$contents"
+      if [ "$removable" = 1 ] && ! contains "$parent" "$remove_seen"; then
+        REMOVE_DIRS+=("$parent"); remove_seen+="$parent"$'\n'
+      fi
+      parent="$(dirname "$parent")"
+    done
   done
 fi
 
@@ -313,18 +383,41 @@ if [ "$OP" = rollback ]; then
   IFS=$'\t' read -r status progress extra < "$TX/status"
   [ "$(wc -l < "$TX/status" | tr -d ' ')" = 1 ] || fail 'malformed operation status'
   case "$status" in prepared|applied|partial|rolled-back) ;; *) fail 'unknown operation status' ;; esac
-  [[ "$progress" =~ ^[0-9]+$ ]] && [ "$progress" -le 47 ] && [ -z "$extra" ] || fail 'invalid operation progress'
+  [[ "$progress" =~ ^[0-9]+$ ]] && [ -z "$extra" ] || fail 'invalid operation progress'
   [ "$(printf '%s\t%s\n' "$status" "$progress" | hash_text)" = "$(digest "$TX/status")" ] || fail 'noncanonical operation status'
   R_NAMES=(); R_BEFORE=(); R_AFTER=(); R_STATE=(); R_DIRS=()
+  # Deleted paths are absent from the new inventory, but their rows retain
+  # their positions in the canonical union. Validate that union before writes.
+  union="$(printf '%s\n' "${NAMES[@]}")"; deleted_seen=$'\n'
+  while IFS=$'\t' read -r index name before after extra || [ -n "${index:-}" ]; do
+    [ "$after" = - ] || continue
+    safe_relative "$name" || fail 'unsafe removed operation path'
+    folded="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+    if contains "$folded" "$SEEN" || contains "$folded" "$deleted_seen"; then fail 'duplicate removed operation path'; fi
+    deleted_seen+="$folded"$'\n'; union+=$'\n'"$name"
+  done < "$TX/files.tsv"
+  union="$(printf '%s\n' "$union" | LC_ALL=C sort)"
+  U_NAMES=()
+  while IFS= read -r name; do [ -z "$name" ] || U_NAMES+=("$name"); done <<< "$union"
   previous=-1
   canonical_files=""
   expected_entries=$'\nmeta.tsv\nfiles.tsv\ndirectories.tsv\nrecord.sha256\nstatus\n'
   while IFS=$'\t' read -r index name before after extra || [ -n "${index:-}" ]; do
-    [[ "$index" =~ ^(0|[1-9][0-9]?)$ ]] && [ "$index" -lt 47 ] && [ "$index" -gt "$previous" ] || fail 'invalid operation index/order'
-    [ "$name" = "${NAMES[$index]}" ] && [ "$after" = "${HASHES[$index]}" ] && [ -z "$extra" ] || fail 'unreviewed operation path/post-state'
+    [[ "$index" =~ ^(0|[1-9][0-9]*)$ ]] && [ "$index" -lt "${#U_NAMES[@]}" ] && [ "$index" -gt "$previous" ] || fail 'invalid operation index/order'
+    [ "$name" = "${U_NAMES[$index]}" ] && [ -z "$extra" ] || fail 'unreviewed operation path/post-state'
+    class=engine
+    if [ "$after" = - ]; then
+      [[ "$before" =~ ^[0-9a-f]{64}$ ]] || fail 'invalid deletion pre-state'
+    else
+      matched=0
+      for ((j=0; j<COUNT; j++)); do
+        if [ "$name" = "${NAMES[$j]}" ] && [ "$after" = "${HASHES[$j]}" ]; then matched=1; class="${CLASSES[$j]}"; fi
+      done
+      [ "$matched" = 1 ] || fail 'unreviewed operation path/post-state'
+    fi
     [ "$before" = - ] || [[ "$before" =~ ^[0-9a-f]{64}$ ]] || fail 'invalid pre-state'
     if [ "$before" != - ]; then
-      [ "${CLASSES[$index]}" = engine ] && [ "$before" != "$after" ] || fail 'invalid replacement class/state'
+      [ "$class" = engine ] && [ "$before" != "$after" ] || fail 'invalid replacement class/state'
       bounded_file "$TX/before-${#R_NAMES[@]}" 1048576
       [ "$(digest "$TX/before-${#R_NAMES[@]}")" = "$before" ] || fail 'missing/tampered backup'
       expected_entries+="before-${#R_NAMES[@]}"$'\n'
@@ -339,7 +432,7 @@ if [ "$OP" = rollback ]; then
   [ "${#R_NAMES[@]}" -gt 0 ] && [ "$progress" -le "${#R_NAMES[@]}" ] || fail 'empty or inconsistent operation'
   [ "$(printf '%s' "$canonical_files" | hash_text)" = "$(digest "$TX/files.tsv")" ] || fail 'noncanonical operation files'
   dir_seen=$'\n'
-  canonical_dirs=""; previous_dir=""
+  canonical_dirs=""; previous_dir=""; restore_dirs=$'\n'
   while IFS= read -r name || [ -n "${name:-}" ]; do
     safe_relative "$name" || fail 'unsafe operation directory'
     [[ "$name" > "$previous_dir" ]] || fail 'noncanonical operation directory order'
@@ -349,6 +442,11 @@ if [ "$OP" = rollback ]; then
     [ "$related" = 1 ] || fail 'unrelated operation directory'
     no_links "$DEST/$name" || fail 'operation directory is a symlink'
     [ ! -e "$DEST/$name" ] || [ -d "$DEST/$name" ] || fail 'operation directory collision'
+    for ((j=0; j<${#R_NAMES[@]}; j++)); do
+      if [ "${R_AFTER[$j]}" = - ]; then
+        case "${R_NAMES[$j]}" in "$name/"*) restore_dirs+="$name"$'\n'; break ;; esac
+      fi
+    done
     R_DIRS+=("$name"); dir_seen+="$name"$'\n'
     canonical_dirs+="$name"$'\n'; previous_dir="$name"
     [ "${#R_DIRS[@]}" -le 128 ] || fail 'too many operation directories'
@@ -357,6 +455,7 @@ if [ "$OP" = rollback ]; then
   # Every extant entry under an operation-created directory must itself be
   # recorded. Unrelated additions stop rollback BEFORE any target write.
   for name in ${R_DIRS[@]+"${R_DIRS[@]}"}; do
+    contains "$name" "$restore_dirs" && continue
     [ -d "$DEST/$name" ] || continue
     contents="$(find "$DEST/$name" -mindepth 1 -print)" || fail 'operation directory enumeration failed'
     while IFS= read -r found; do
@@ -370,6 +469,14 @@ if [ "$OP" = rollback ]; then
       [ "$related" = 1 ] || fail 'unrelated entry in operation-created directory'
     done <<< "$contents"
   done
+  for ((j=0; j<${#R_NAMES[@]}; j++)); do
+    [ "${R_BEFORE[$j]}" != - ] || continue
+    parent="$(dirname "${R_NAMES[$j]}")"
+    while [ "$parent" != . ]; do
+      [ -d "$DEST/$parent" ] || contains "$parent" "$restore_dirs" || fail 'unrecorded restoration directory missing'
+      parent="$(dirname "$parent")"
+    done
+  done
   tx_entries="$(find "$TX" -mindepth 1 -maxdepth 1 -print)" || fail 'transaction enumeration failed'
   while IFS= read -r found; do
     case "$expected_entries" in *$'\n'"${found#"$TX"/}"$'\n'*) ;; *) fail 'unexpected transaction entry' ;; esac
@@ -378,6 +485,11 @@ if [ "$OP" = rollback ]; then
   printf 'operation=rollback mode=%s affected-files=%s\n' "$MODE" "${#R_NAMES[@]}"
   if [ "$MODE" = dry-run ] || [ "$status" = rolled-back ]; then printf '%s\n' 'No files or Git state were changed.'; exit 0; fi
   PROGRESS=0; OP_STARTED=1; trap operation_finish EXIT
+  for name in ${R_DIRS[@]+"${R_DIRS[@]}"}; do
+    contains "$name" "$restore_dirs" || continue
+    check_bindings; no_links "$DEST/$name" || fail 'restoration directory binding changed'
+    if [ ! -d "$DEST/$name" ]; then mkdir "$DEST/$name"; chmod 755 "$DEST/$name"; fi
+  done
   for ((j=0; j<${#R_NAMES[@]}; j++)); do
     check_bindings; name="${R_NAMES[$j]}"; file_state "$name"
     [ "$STATE" = "${R_STATE[$j]}" ] || fail 'target changed after rollback preflight'
@@ -393,7 +505,8 @@ if [ "$OP" = rollback ]; then
     PROGRESS=$((PROGRESS + 1)); write_status partial "$PROGRESS"
   done
   for ((j=${#R_DIRS[@]}-1; j>=0; j--)); do
-    name="${R_DIRS[$j]}"; check_bindings; no_links "$DEST/$name" || fail 'directory binding changed'
+    name="${R_DIRS[$j]}"; contains "$name" "$restore_dirs" && continue
+    check_bindings; no_links "$DEST/$name" || fail 'directory binding changed'
     [ ! -d "$DEST/$name" ] || rmdir "$DEST/$name" || fail 'created directory is not empty'
   done
   write_status rolled-back "$PROGRESS"; sync || fail 'rollback status flush failed'; OP_STARTED=0
@@ -440,13 +553,18 @@ if [ "$OP" = upgrade ]; then
       parent="$(dirname "$parent")"
     done
   done
+  for name in ${REMOVE_DIRS[@]+"${REMOVE_DIRS[@]}"}; do DIRS+=("$name"); done
   if [ "${#DIRS[@]}" -gt 0 ]; then printf '%s\n' "${DIRS[@]}" | sort > "$TX/directories.tsv"; fi
+  # Do not mutate a target with a record that exceeds rollback's existing bounds.
+  [ "${#DIRS[@]}" -le 128 ] || fail 'too many operation directories'
+  for f in meta.tsv files.tsv directories.tsv; do bounded_file "$TX/$f" 16384; done
   record_digest > "$TX/record.sha256"
   write_status prepared 0
   sync || fail 'recovery record flush failed before target mutation'
   # Once prepared, the data-only record itself must remain unchanged.
   read -r sealed < "$TX/record.sha256"
   while IFS= read -r name; do
+    contains "$name" "$remove_seen" && continue
     check_bindings; no_links "$DEST/$name" || fail 'directory link appeared'
     [ ! -e "$DEST/$name" ] || fail 'planned directory appeared'
     mkdir "$DEST/$name" || fail 'planned directory creation failed'
@@ -456,15 +574,25 @@ if [ "$OP" = upgrade ]; then
     i="${CHANGES[$j]}"; name="${NAMES[$i]}"; check_bindings
     [ "$(record_digest)" = "$sealed" ] || fail 'operation record changed'
     file_state "$name"; [ "$STATE" = "${BEFORE[$i]}" ] || fail 'target changed after full preflight'
-    bounded_file "$PAYLOAD/$name" 1048576
-    [ "$FILE_MODE" = 644 ] && [ "$(digest "$PAYLOAD/$name")" = "${HASHES[$i]}" ] || fail 'source changed before upgrade'
-    if [ "$STATE" = - ]; then
-      (set -o noclobber; cat "$PAYLOAD/$name" > "$DEST/$name") || fail 'new-file copy failed'
-    else cp "$PAYLOAD/$name" "$DEST/$name" || fail 'engine replacement failed'; fi
-    chmod 644 "$DEST/$name"
+    if [ "${ACTIONS[$i]}" = delete ]; then
+      rm -- "$DEST/$name" || fail 'recorded engine deletion failed'
+    else
+      bounded_file "$PAYLOAD/$name" 1048576
+      [ "$FILE_MODE" = 644 ] && [ "$(digest "$PAYLOAD/$name")" = "${HASHES[$i]}" ] || fail 'source changed before upgrade'
+      if [ "$STATE" = - ]; then
+        (set -o noclobber; cat "$PAYLOAD/$name" > "$DEST/$name") || fail 'new-file copy failed'
+      else cp "$PAYLOAD/$name" "$DEST/$name" || fail 'engine replacement failed'; fi
+      chmod 644 "$DEST/$name"
+    fi
     file_state "$name"; [ "$STATE" = "${HASHES[$i]}" ] || fail 'upgrade verification failed'
     PROGRESS=$((PROGRESS + 1)); write_status partial "$PROGRESS"
   done
+  # Only directories sealed in directories.tsv are eligible for removal.
+  while IFS= read -r name; do
+    contains "$name" "$remove_seen" || continue
+    check_bindings; no_links "$DEST/$name" || fail 'removal directory binding changed'
+    rmdir "$DEST/$name" || fail 'recorded removal directory is not empty'
+  done < <(LC_ALL=C sort -r "$TX/directories.tsv")
   write_status applied "$PROGRESS"; sync || fail 'operation status flush failed'; OP_STARTED=0
   printf '%s\n' 'Upgrade verified; retain the private operation record for explicit rollback. Review the Git diff; nothing was staged or committed.'
   exit 0

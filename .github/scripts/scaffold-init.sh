@@ -67,7 +67,7 @@ if [ "$SELECTED" -eq 0 ]; then
       [ ! -L "$ancestor" ] || fail 'local engine ancestor is a symlink'
       case "$ancestor" in */*) ancestor="${ancestor%/*}"; [ -n "$ancestor" ] || ancestor=/ ;; *) break ;; esac
     done
-    [ "$(digest < "$ENGINE")" = 63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe ] || fail 'unreviewed local engine bytes'
+    [ "$(digest < "$ENGINE")" = f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04 ] || fail 'unreviewed local engine bytes'
     # Keep the engine in this PID so terminating the entry cannot leave a
     # child installing. The verified engine's BASH_SOURCE and stdin stay intact.
     # Its operation_finish EXIT trap retains cleanup and calls this exit last.
@@ -148,6 +148,7 @@ if [ "$SELECTED" -eq 0 ]; then
     chmod 644 "$WORK/src/$path"
   }
   project .github/distribution/payload.v1.tsv
+  project .github/distribution/source-parity.v1.json
   MANIFEST="$WORK/src/.github/distribution/payload.v1.tsv"
   NAMES=(); LAYOUT=""; EXPECTED=""
   while IFS=$'\t' read -r name class hash extra || [ -n "${name:-}" ]; do
@@ -157,16 +158,18 @@ if [ "$SELECTED" -eq 0 ]; then
     case "$class" in engine|tuned|instance|seed) ;; *) fail 'invalid preservation class' ;; esac
     NAMES+=("$name"); LAYOUT+="$name"$'\t'"$class"$'\n'; EXPECTED+=".github/distribution/payload/$name"$'\n'
   done < "$MANIFEST"
-  [ "${#NAMES[@]}" -eq 47 ] && [ "$(printf '%s' "$LAYOUT" | digest)" = 763ea43ca7f79b9774867e012ec92f742bc2cbb382f8fe46736f18cf945fc987 ] || fail 'unreviewed payload layout'
+  layout_sha="$(sed -n 's/.*"payload_layout_sha256": "\([0-9a-f]\{64\}\)".*/\1/p' "$WORK/src/.github/distribution/source-parity.v1.json")"
+  [[ "$layout_sha" =~ ^[0-9a-f]{64}$ ]] || fail 'missing or ambiguous payload layout digest'
+  [ "$(printf '%s' "$LAYOUT" | LC_ALL=C sort | digest)" = "$layout_sha" ] || fail 'unreviewed payload layout'
   actual="$(object_git ls-tree -r --name-only "$PIN" -- .github/distribution/payload/)" || fail 'payload enumeration failed'
-  [ "$actual" = "${EXPECTED%$'\n'}" ] || fail 'unexpected or missing payload entries'
+  [ "$actual" = "$(printf '%s' "$EXPECTED" | LC_ALL=C sort)" ] || fail 'unexpected or missing payload entries'
   while IFS=$'\t' read -r name class hash extra || [ -n "${name:-}" ]; do
     case "$name" in ''|'#'*) continue ;; esac
     project ".github/distribution/payload/$name"
     [ "$(digest < "$WORK/src/.github/distribution/payload/$name")" = "$hash" ] || fail 'payload digest mismatch'
   done < "$MANIFEST"
   for path in .github/scripts/scaffold-init.sh .github/scripts/scaffold-init.ps1 .github/scripts/scaffold-install.sh; do project "$path"; done
-  [ "$(digest < "$WORK/src/.github/scripts/scaffold-install.sh")" = 63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe ] || fail 'unreviewed local engine bytes'
+  [ "$(digest < "$WORK/src/.github/scripts/scaffold-install.sh")" = f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04 ] || fail 'unreviewed local engine bytes'
   # All selected objects, layout and hashes passed before selected code runs.
   bash "$WORK/src/.github/scripts/scaffold-init.sh" --_selected "$PIN" "$WORK" "$@"
   exit "$?"

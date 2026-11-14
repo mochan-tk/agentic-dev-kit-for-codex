@@ -48,7 +48,7 @@ class UpdateTests(unittest.TestCase):
         cls.shared = tempfile.TemporaryDirectory(prefix="update-seed-")
         cls.seed = Path(cls.shared.name).resolve() / "source"
         cls.seed.mkdir()
-        for path in (ENTRY, PS_ENTRY, ENGINE, INVENTORY):
+        for path in (ENTRY, PS_ENTRY, ENGINE, INVENTORY, ".github/distribution/source-parity.v1.json"):
             dest = cls.seed / path
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, dest)
@@ -160,6 +160,32 @@ set -eu
             capture_output=True, text=True, timeout=90)
         self.assertEqual(fetches, [line for line in log.read_text().splitlines() if " fetch " in line])
         return result
+
+    def test_public_manifest_addition_deletion_and_offline_rollback(self):
+        from test_installer_sets import change_payload, EXTRA, PARITY
+        change_payload(self.source, {EXTRA: "engine"}, permute=lambda rows: list(reversed(rows)))
+        self.new = self.commit(self.source)
+        self.success(self.run_entry("--apply"))
+        self.assertFalse((self.recovery / "old" / PARITY).exists())
+        self.assertTrue((self.recovery / "new" / PARITY).is_file())
+        self.assertEqual((self.source / PAYLOAD / EXTRA).read_bytes(), (self.target / EXTRA).read_bytes())
+        before = self.snapshot()
+        self.old = self.new
+        change_payload(self.source, removals=(EXTRA,), permute=lambda rows: rows[11:] + rows[:11])
+        self.new = self.commit(self.source)
+        self.recovery = self.base / "deletion recovery"
+        self.success(self.run_entry("--apply"))
+        self.assertFalse((self.recovery / "old" / PARITY).exists())
+        tx = self.recovery / "transaction"
+        records = [row.split("\t") for row in (tx / "files.tsv").read_text().splitlines()]
+        self.assertEqual(1, len(records))
+        self.assertEqual(EXTRA, records[0][1])
+        self.assertEqual("-", records[0][3])
+        self.assertFalse((self.target / EXTRA).exists())
+        self.assertEqual(before[EXTRA][2], (tx / "before-0").read_bytes())
+        self.success(self.rollback("--apply"))
+        self.assertEqual(before, self.snapshot())
+        self.assertEqual(0o644, stat.S_IMODE((self.target / EXTRA).stat().st_mode))
 
     def test_standalone_entry_documents_explicit_inputs(self):
         result = subprocess.run([shutil.which("bash"), str(ROOT / ENTRY), "--help"],
