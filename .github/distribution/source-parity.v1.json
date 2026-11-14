@@ -480,6 +480,9 @@
       ]
     }
   ],
+  "payload_layout_sha256": "763ea43ca7f79b9774867e012ec92f742bc2cbb382f8fe46736f18cf945fc987",
+  "added_payload_files": [],
+  "removed_payload_files": [],
   "context_kickoff": {
     "schema": "builtin-context-kickoff/v1",
     "source_files": {
