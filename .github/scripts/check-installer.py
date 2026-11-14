@@ -30,7 +30,7 @@ FRONTIER_CONTRACT = {
     },
     "product_base": "00b27d7b4ec5310d9a8890a885536b0a437a454d",
     "product_base_tree": "4ec7f4c168463abf1991d9b44b747ef2755f4718",
-    "delivery": "47-fixed-paths-two-engine-adaptations-other-45-unchanged",
+    "delivery": "manifest-driven-paths-two-engine-adaptations-other-payload-unchanged",
     "cache": "parent-shell-indexed-arrays-canonical-host-repository-issue-valid-OPEN-CLOSED-invocation-only",
     "evidence": "real-bash-jq-synthetic-github-disposable-install-upgrade-rollback",
     "limits": "no-atomic-snapshot-lock-live-request-performance-or-runtime-claim",
@@ -72,7 +72,7 @@ WORKFLOW_CONTRACT = {
     },
     "product_base": "abd7a4fba7ef5ff484efff625e2474cc32d6ef7b",
     "product_base_tree": "417aefd9caca78c76fac8040b069b70525750c7a",
-    "delivery": "47-paths-six-explicit-payload-adaptations-installed-ritual-subcommands",
+    "delivery": "manifest-driven-paths-six-explicit-payload-adaptations-installed-ritual-subcommands",
     "evidence": "real-bash-jq-disposable-git-synthetic-github;startup-and-disposition-document-contracts",
     "limits": "no-live-governance-worker-runtime-identity-lock-or-release-claim;separate-publication-authority",
 }
@@ -95,7 +95,7 @@ GOVERNANCE_PROCEDURE_CONTRACT = {
         ".github/skills/retro/SKILL.md": "e0f059e8b98d9692c4ae47d45c9da49a9ab711f3",
         ".github/skills/project-onboarding/SKILL.md": "20643ee9c8f5c3e0221db41e05b0abe3e1b22943",
     },
-    "integration": "explicit-governance-and-worktree-companions-outside-47-payload;existing-retro-skill-blocks",
+    "integration": "explicit-governance-and-worktree-companions-outside-manifest-payload;existing-retro-skill-blocks",
     "baseline_commit": "bb9a55973d2cbbe640472691d239f85ce8d59449",
     "baseline_tree": "05ec8c5ccfb711e104c656d05d1109c6e9ba28fe",
     "clauses": ["G-002", "G-003", "G-004", "G-005", "G-006", "G-007", "G-008", "G-009", "W-003", "W-004", "W-005", "P-007", "P-012"],
@@ -685,14 +685,21 @@ def validate(root):
         inventory = regular_bytes(root, INVENTORY).decode()
         rows = [line.split("\t") for line in inventory.splitlines() if line and not line.startswith("#")]
         names = [row[0] for row in rows]
-        if names != sorted(EXPECTED) or any(len(row) != 3 for row in rows):
-            return ["installer inventory paths/order/columns differ from the exact reviewed set"]
+        if (any(len(row) != 3 for row in rows)
+                or len({name.lower() for name in names}) != len(names)
+                or any(re.fullmatch(r"[A-Za-z0-9._/-]+", name) is None
+                       or name.startswith(("/", ".git/")) or name == ".git"
+                       or any(part in ("", ".", "..") for part in name.split("/"))
+                       for name in names)):
+            return ["installer inventory paths/columns are unsafe or duplicated"]
         actual = {str(p.relative_to(root / PAYLOAD)) for p in (root / PAYLOAD).rglob("*") if not p.is_dir() or p.is_symlink()}
-        if actual != set(EXPECTED):
+        if actual != set(names):
             errors.append("installer payload has missing, extra or symlink entries")
         payload_data = {}
         for name, kind, digest in rows:
-            if kind != preservation_class(name) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            if (kind not in {"engine", "tuned", "instance", "seed"}
+                    or (name in EXPECTED and kind != preservation_class(name))
+                    or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
                 errors.append("installer inventory class/digest is invalid: " + name)
             data = regular_bytes(root, PAYLOAD + "/" + name)
             payload_data[name] = data
@@ -753,7 +760,7 @@ def validate(root):
                 source, blob = EXPECTED[name]
                 if set(row) != {"destination", "source_path", "source_blob", "target_sha256", "adaptations"} or row.get("source_path") != source or row.get("source_blob") != blob:
                     errors.append("installer source blob/path drift: " + name)
-                if row.get("target_sha256") != hashlib.sha256(payload_data[name]).hexdigest():
+                if name in payload_data and row.get("target_sha256") != hashlib.sha256(payload_data[name]).hexdigest():
                     errors.append("installer parity target digest drift: " + name)
                 if not isinstance(row.get("adaptations"), list) or not row["adaptations"] or any(not isinstance(x, str) or not x.strip() for x in row["adaptations"]):
                     errors.append("installer adaptation/limitation record missing: " + name)
@@ -776,7 +783,7 @@ def validate(root):
             # Glob/placeholder/producer-created paths are not installed inputs.
             for reference in re.findall(r"`((?:\.agents/|\.codex/|\.github/)[A-Za-z0-9_./-]+\.(?:md|sh|ps1|toml|yml))`", text):
                 optional = {".github/workflows/ci.yml", ".github/docs/context/SOURCES.md"}
-                if reference not in EXPECTED and reference not in optional:
+                if reference not in payload_data and reference not in optional:
                     errors.append("installer dangling concrete resource: " + name + " -> " + reference)
             if re.search(r"\bPIN-000[12]\b|phase-task-ownership|codex-runtime-profile|t11-colima|T12 sole active", text):
                 errors.append("installer payload leaks kit-development truth: " + name)
@@ -862,7 +869,7 @@ BOOTSTRAP_CONTRACT = {
     "trust": "initial-bootstrap-trusted-code-hashes-are-integrity-not-authentication",
     "limits": "exclusive-target-partial-failure-manual-recovery-native-windows-unmeasured",
 }
-LOCAL_ENGINE_SHA256 = "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe"
+LOCAL_ENGINE_SHA256 = "f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04"
 
 
 def validate_bootstrap(root):
@@ -903,8 +910,8 @@ UPDATE_CONTRACT = {
         ".github/scripts/scaffold-install.sh": "b903817e17f40f25c2a7fa41e58d003ae19cebfd"
     },
     "transport": "anonymous-https-exact-old-new-commits-bare-git-object-projection",
-    "engine_sha256": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
-    "preservation": "fixed-47-path-class-layout-known-old-engine-only-no-stage-commit-push",
+    "engine_sha256": "f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04",
+    "preservation": "manifest-driven-path-class-layout-known-old-engine-only-no-stage-commit-push",
     "preview": "default-owned-scratch-only-target-index-requested-recovery-unchanged",
     "recovery": "fresh-private-root-retained-old-new-transaction-siblings-offline-bound-rollback",
     "trust": "downloaded-entry-trusted-code-selected-updaters-never-executed-hashes-not-authentication",
@@ -1065,9 +1072,9 @@ BOUNDARY_DIGESTS = {
     ".github/distribution/adopter-ci/check-adopter-ci.py": "f81ff40e40c9f3109c2acbfdafdaf882447729cdd658d3ea68ae3743ea3bf73d",
     ".github/distribution/payload.v1.tsv": "fd73889793fb0c0af8140b987bfe0ff6b298010be65be2c699524005dd36b756",
     ".github/distribution/payload/.github/scripts/check-task-ritual.sh": "99798f3eea2371d64e8f81744f10fb9b6cf54c404a1fa407a7e92fc0df80c792",
-    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
-    ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
-    ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
+    ".github/scripts/scaffold-init.sh": "50908d1881865b88df17edc319a0d106b37a0670e9a03ff2c6dd9e2be5af3d68",
+    ".github/scripts/scaffold-install.sh": "f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04",
+    ".github/scripts/scaffold-update.sh": "50ad0c42686265eb5da61c4111b3dbdf1369d4675ccadc3dcce37bbbc343ae2f",
     "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
     "docs/distribution/source-first-installer.md": "dc8b15b4c1475c80ca55044b5e09b600820db2f8f105f90bbdc6c0fdca48068e",
     "docs/known-limitations.md": "f499ef7d9c641bf9d0fa2080a52235ec40455ea75fff93d19fbb3110504da65f",
@@ -1075,8 +1082,8 @@ BOUNDARY_DIGESTS = {
     "docs/provenance.md": "a4ea663d1738d1577428b913a5a5f96442fc267f8ebf9642ad22512380479687",
     "tests/conformance/test_adopter_ci.py": "5c31532a3540f45c4b75f51fdc7a8c829584b73fc817be5d241fc0740e64c2e3",
     "tests/conformance/test_installer.py": "e0a6614643933fbf2e9a7f018454b791b580f6ef8769e57015962a5dd93362f0",
-    "tests/conformance/test_installer_bootstrap.py": "4a7ee53eb6dc2994df2d223ab37c09fbd7db4860ade1cbd5a96632959ab9628f",
-    "tests/conformance/test_installer_update.py": "34f4c2030e54e936c5836a8a54a9863e7e02ce843020a2834410b2ef1be2f3b6",
+    "tests/conformance/test_installer_bootstrap.py": "9ddecea0817018de6771935fe2265681d51a940c715d23b4f317943db7db0c8c",
+    "tests/conformance/test_installer_update.py": "097bdb8b79f7689e47ff7a7cc3a98aeb9101d279e8cbe5864630909e54c4b481",
     "tests/conformance/test_product.py": "6efe7c59dea3140757ffc3c6520893342ae250fc82296627063ab9e02fa72a9e",
     "tests/conformance/test_workflow_parity.py": "9795c1e6ce3e2e9c7a113bead9e2f7d44849ce2db5038b1d2db19d195f122636"
 }
@@ -1084,7 +1091,7 @@ BOUNDARY_CONTRACT = {
     "schema": "source-first-boundary-repair/v1",
     "product_base": "c86064de19d6ddbeb61f5cf3633bb9fb52cac882",
     "product_base_tree": "81940d779a12ccb82587859cdf6cc07227db7721",
-    "delivery": "47-fixed-paths-ritual-only-payload-change-other-46-unchanged",
+    "delivery": "manifest-driven-paths-ritual-only-payload-change-other-payload-unchanged",
     "git_context": "reject-inherited-repository-overrides-before-local-observation",
     "update": "from-exact-previous-or-current-engine-data;to-exact-current-engine-only;execute-new-only",
     "previous_engine_sha256": "3c582e519c91a85641f672379f1513126ec209e7ce11c8ed1b3c20aa550f12b2",
@@ -1162,9 +1169,9 @@ FINAL_DIGESTS = {
     ".github/distribution/payload.v1.tsv": "fd73889793fb0c0af8140b987bfe0ff6b298010be65be2c699524005dd36b756",
     ".github/distribution/payload/.github/scripts/tuning-status.sh": "4713cc2e989456f2b7dd8af71c7ef3f3a05e1b8f3b1e670e10fe38cb1d2a33c1",
     ".github/scripts/governance-status.sh": "d13d1d5607cf653757c89468b6599992fba68c3e49015ece7d1ceb38c430c023",
-    ".github/scripts/scaffold-init.sh": "301b6b93dc7e27c596816d986bbe8b842cb4b27f196419bb1f8cbeb936a34bd7",
-    ".github/scripts/scaffold-install.sh": "63f027e7fef6565039c907c83094301cfe7b308eebeab3d64c7efd158d5e86fe",
-    ".github/scripts/scaffold-update.sh": "93766eca8a5e81b600ff3eacaff6fd0102cb70b7b79ce8dfa20e1605bcbf75ed",
+    ".github/scripts/scaffold-init.sh": "50908d1881865b88df17edc319a0d106b37a0670e9a03ff2c6dd9e2be5af3d68",
+    ".github/scripts/scaffold-install.sh": "f5e7737f65993e605ccf02265b421c019d06ad4b09abe3b4581fcb327efa8c04",
+    ".github/scripts/scaffold-update.sh": "50ad0c42686265eb5da61c4111b3dbdf1369d4675ccadc3dcce37bbbc343ae2f",
     ".github/scripts/setup-adopter-ci.py": "bc71de2c2dbc35bd7d2a53749b710e54618d7286d24784720eda261c39b4993c",
     "docs/distribution/adopter-ci.md": "0f6f3ac3a6815cde87ba889e6160a540f406959f7b2efef0f9858b6696b299cb",
     "docs/distribution/companion-checks.md": "157e9a501961391c5832f37bd082bdd8f3096b59d0101b845c4ac497a3ffdfd4",
@@ -1182,7 +1189,7 @@ FINAL_CONTRACT = {
     "schema": "source-first-final-boundary/v1",
     "product_base": "c2657da6f3fcda85d849df0f619287c5920c5265",
     "product_base_tree": "3401e6255a7bbb37272cc7a6b083f71d1d89451f",
-    "delivery": "47-fixed-paths-tuning-only-payload-change-other-46-unchanged",
+    "delivery": "manifest-driven-paths-tuning-only-payload-change-other-payload-unchanged",
     "target": "apply-upgrade-rollback-and-public-entry-require-physical-nonbare-worktree-root;local-preview-preserved",
     "setup": "reject-installer-context-and-indexed-GIT_CONFIG-overrides-before-Git;ordinary-config-isolation-preserved",
     "startup": "required-instruction-observation-error-overrides-markers;optional-CI-CODEOWNERS-advisory-agreements;CI-warning-only",
@@ -1256,7 +1263,7 @@ def main():
         print("ERROR: " + error)
     if errors:
         return 1
-    print("Installer inventory/parity: 47 files, 8 Skills, 3 role definitions; standalone feedback, connector-validation, governance and worktree companions; existing retro procedures; offline structural evidence only.")
+    print("Installer inventory/parity: manifest-driven payload, 8 Skills, 3 role definitions; standalone feedback, connector-validation, governance and worktree companions; existing retro procedures; offline structural evidence only.")
     return 0
 
 if __name__ == "__main__":
